@@ -67,3 +67,11 @@ export function confirmPasswordReset(token: string, newPassword: string): Promis
     body: JSON.stringify({ token, newPassword }),
   });
 }
+
+/** For an already-authenticated user; unlike password reset, this is sent with the bearer token attached. */
+export function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  return apiFetch<void>("/api/v1/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}

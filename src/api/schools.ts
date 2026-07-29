@@ -71,6 +71,11 @@ export function archiveSchool(schoolId: string): Promise<void> {
   return apiFetch<void>(`${ADMIN_BASE}/${schoolId}/archive`, { method: "PATCH" });
 }
 
+/** Un-archives the school - it returns to SUSPENDED, not ACTIVE; activate it separately. */
+export function restoreSchool(schoolId: string): Promise<void> {
+  return apiFetch<void>(`${ADMIN_BASE}/${schoolId}/restore`, { method: "PATCH" });
+}
+
 // School-admin self-service profile (the caller's own school - no id in the path).
 
 export function getMySchoolProfile(): Promise<SchoolView> {

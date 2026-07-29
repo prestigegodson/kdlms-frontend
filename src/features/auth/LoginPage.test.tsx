@@ -66,4 +66,25 @@ describe("LoginPage", () => {
     expect(await screen.findByText("Invalid email or password.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
   });
+
+  it("shows the school-suspended message on a 403 and stays on the login page", async () => {
+    vi.mocked(authApi.login).mockRejectedValue(
+      new ApiError(403, "Your school's account is currently suspended. Contact your administrator or KDLMS support."),
+    );
+
+    const router = createMemoryRouter(routes, { initialEntries: ["/login"] });
+    render(<RouterProvider router={router} />);
+    const user = userEvent.setup();
+
+    await user.type(screen.getByLabelText("Email"), "admin@suspended-school.example");
+    await user.type(screen.getByLabelText("Password"), "ChangeMe123!");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    expect(
+      await screen.findByText(
+        "Your school's account is currently suspended. Contact your administrator or KDLMS support.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
+  });
 });

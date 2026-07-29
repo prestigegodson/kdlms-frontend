@@ -6,9 +6,11 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
 import { BranchesPage } from "@/features/branches/BranchesPage";
 import { LandingPage } from "@/features/connectivity/LandingPage";
+import { PackagesPage } from "@/features/packages/PackagesPage";
 import { SchoolProfilePage } from "@/features/school/SchoolProfilePage";
 import { SchoolDetailPage } from "@/features/schools/SchoolDetailPage";
 import { SchoolsPage } from "@/features/schools/SchoolsPage";
+import { SubscriptionPage } from "@/features/subscription/SubscriptionPage";
 import { GuardianLayout } from "@/layouts/GuardianLayout";
 import { RootLayout } from "@/layouts/RootLayout";
 import { SchoolLayout } from "@/layouts/SchoolLayout";
@@ -43,7 +45,7 @@ export const routes: RouteObject[] = [
           { index: true, element: <SchoolsPage /> },
           { path: "schools", element: <SchoolsPage /> },
           { path: "schools/:schoolId", element: <SchoolDetailPage /> },
-          { path: "packages", element: <PlaceholderPage title="Packages" /> },
+          { path: "packages", element: <PackagesPage /> },
           { path: "templates", element: <PlaceholderPage title="Result Templates" /> },
         ],
       },
@@ -58,6 +60,7 @@ export const routes: RouteObject[] = [
           { index: true, element: <PlaceholderPage title="Dashboard" /> },
           { path: "branches", element: <BranchesPage /> },
           { path: "profile", element: <SchoolProfilePage /> },
+          { path: "subscription", element: <SubscriptionPage /> },
           { path: "academics", element: <PlaceholderPage title="Academics" /> },
           { path: "students", element: <PlaceholderPage title="Students" /> },
           { path: "assessments", element: <PlaceholderPage title="Assessments" /> },

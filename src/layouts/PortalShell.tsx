@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router";
+import { NavLink, Outlet } from "react-router";
 import type { Role } from "@/api/types";
+import { UserMenu } from "@/layouts/UserMenu";
 import { useAuthStore } from "@/stores/authStore";
 
 export interface NavItem {
@@ -13,6 +14,8 @@ export interface NavItem {
 interface PortalShellProps {
   portalName: string;
   navItems: NavItem[];
+  /** Rendered above the routed content, e.g. the school portal's subscription plan/limits/expiry banner. */
+  banner?: ReactNode;
   children?: ReactNode;
 }
 
@@ -21,22 +24,17 @@ interface PortalShellProps {
  * (system admin, school, guardian) each pass their own name and nav items;
  * routed content renders via <Outlet /> unless children are supplied.
  * Nav items are filtered by the current user's role (CLAUDE.md's
- * "navigation by role"), and the header shows who's signed in with a
- * logout action.
+ * "navigation by role"), and the header shows who's signed in via the
+ * account menu (see UserMenu) - a profile avatar that opens a dropdown with
+ * the user's name/role and their account actions (change password, log
+ * out), rather than bare buttons in the header itself.
  */
-export function PortalShell({ portalName, navItems, children }: PortalShellProps) {
+export function PortalShell({ portalName, navItems, banner, children }: PortalShellProps) {
   const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
-  const navigate = useNavigate();
 
   const visibleNavItems = navItems.filter(
     (item) => !item.roles || (user && item.roles.includes(user.role)),
   );
-
-  function handleLogout() {
-    logout();
-    navigate("/login", { replace: true });
-  }
 
   return (
     <div className="flex min-h-screen">
@@ -71,27 +69,12 @@ export function PortalShell({ portalName, navItems, children }: PortalShellProps
       </aside>
       <div className="flex-1">
         <header className="flex h-16 items-center justify-end gap-4 border-b border-gray-200 bg-white px-6">
-          {user ? (
-            <>
-              <span className="text-sm text-gray-700">
-                {user.firstName} {user.lastName}
-                <span className="ml-2 text-xs font-medium uppercase tracking-wide text-gray-400">
-                  {user.role}
-                </span>
-              </span>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="text-sm font-medium text-gray-500 hover:text-gray-700"
-              >
-                Log out
-              </button>
-            </>
-          ) : (
-            <span className="text-sm text-gray-500">Not signed in</span>
-          )}
+          {user ? <UserMenu user={user} /> : <span className="text-sm text-gray-500">Not signed in</span>}
         </header>
-        <main className="p-6">{children ?? <Outlet />}</main>
+        <main className="p-6">
+          {banner}
+          {children ?? <Outlet />}
+        </main>
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
@@ -40,6 +41,7 @@ export function BranchesPage() {
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<BranchView | null>(null);
+  const [deactivating, setDeactivating] = useState<BranchView | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   function fetchBranches() {
@@ -62,18 +64,22 @@ export function BranchesPage() {
     fetchBranches();
   }
 
-  async function toggleActive(branch: BranchView) {
+  async function activate(branch: BranchView) {
     setActionError(null);
     try {
-      if (branch.status === "ACTIVE") {
-        await deactivateBranch(branch.id);
-      } else {
-        await activateBranch(branch.id);
-      }
+      await activateBranch(branch.id);
       load();
     } catch (error) {
       setActionError(error instanceof ApiError ? error.message : "That action failed");
     }
+  }
+
+  // Called from the ConfirmDialog - a rejection surfaces inside the dialog
+  // instead of closing it, matching how SchoolDetailPage's confirmAndRun works.
+  async function confirmDeactivate(branch: BranchView) {
+    await deactivateBranch(branch.id);
+    setDeactivating(null);
+    load();
   }
 
   return (
@@ -136,7 +142,9 @@ export function BranchesPage() {
                           <button
                             type="button"
                             className="text-gray-500 hover:text-gray-700"
-                            onClick={() => toggleActive(branch)}
+                            onClick={() =>
+                              branch.status === "ACTIVE" ? setDeactivating(branch) : activate(branch)
+                            }
                           >
                             {branch.status === "ACTIVE" ? "Deactivate" : "Activate"}
                           </button>
@@ -179,6 +187,21 @@ export function BranchesPage() {
             setEditing(null);
             load();
           }}
+        />
+      )}
+      {deactivating && (
+        <ConfirmDialog
+          title="Deactivate this branch?"
+          message={
+            <>
+              <strong>{deactivating.name}</strong> will be deactivated. Staff and students there keep their
+              records but the branch stops appearing for new registrations until it's reactivated.
+            </>
+          }
+          confirmLabel="Deactivate"
+          variant="danger"
+          onConfirm={() => confirmDeactivate(deactivating)}
+          onClose={() => setDeactivating(null)}
         />
       )}
     </div>
