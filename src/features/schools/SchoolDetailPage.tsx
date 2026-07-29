@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { CredentialsReveal } from "@/components/ui/CredentialsReveal";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
@@ -221,33 +222,6 @@ export function SchoolDetailPage() {
   );
 }
 
-/**
- * A server-generated temporary password, shown exactly once - the create-school-admin
- * and reset-password flows both surface one of these, so the clipboard logic and the
- * "never retrievable again" copy live here rather than twice.
- */
-function TemporaryPasswordAlert({ email, temporaryPassword }: { email: string; temporaryPassword: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function copyPassword() {
-    await navigator.clipboard.writeText(temporaryPassword);
-    setCopied(true);
-  }
-
-  return (
-    <Alert variant="success" className="mt-4">
-      <p>
-        <strong>{email}</strong>&apos;s temporary password:{" "}
-        <code className="rounded bg-white px-1.5 py-0.5">{temporaryPassword}</code>
-      </p>
-      <p className="mt-1 text-xs text-green-700">Shown once, here, and never retrievable again - relay it now.</p>
-      <Button type="button" variant="secondary" className="mt-2" onClick={copyPassword}>
-        {copied ? "Copied!" : "Copy password"}
-      </Button>
-    </Alert>
-  );
-}
-
 function CreateSchoolAdminCard({ schoolId, onCreated }: { schoolId: string; onCreated: () => void }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -277,12 +251,18 @@ function CreateSchoolAdminCard({ schoolId, onCreated }: { schoolId: string; onCr
   return (
     <Card>
       <h2 className="text-sm font-semibold text-gray-900">Create a school admin</h2>
-      <p className="mt-1 text-sm text-gray-500">
-        The temporary password is shown once, here, and is never retrievable again - copy it to the
-        new admin now.
-      </p>
+      <p className="mt-1 text-sm text-gray-500">A welcome email with sign-in details is sent to them.</p>
 
-      {created && <TemporaryPasswordAlert email={created.user.email} temporaryPassword={created.temporaryPassword} />}
+      {created && (
+        <Alert variant="success" className="mt-4">
+          <p>
+            <strong>{created.user.email}</strong> has been created and sent a welcome email.
+          </p>
+          <div className="mt-2">
+            <CredentialsReveal email={created.user.email} temporaryPassword={created.temporaryPassword} />
+          </div>
+        </Alert>
+      )}
 
       <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
         {error && <Alert variant="error">{error}</Alert>}
@@ -387,7 +367,14 @@ function SchoolAdminsCard({ schoolId, refreshKey }: { schoolId: string; refreshK
         {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
 
         {justReset && (
-          <TemporaryPasswordAlert email={justReset.email} temporaryPassword={justReset.temporaryPassword} />
+          <Alert variant="success" className="mb-4">
+            <p>
+              <strong>{justReset.email}</strong>&apos;s password was reset and a new sign-in email was sent.
+            </p>
+            <div className="mt-2">
+              <CredentialsReveal email={justReset.email} temporaryPassword={justReset.temporaryPassword} />
+            </div>
+          </Alert>
         )}
 
         {state.kind === "loaded" && state.admins.length === 0 && (
@@ -439,7 +426,7 @@ function SchoolAdminsCard({ schoolId, refreshKey }: { schoolId: string; refreshK
                 {pendingReset.firstName} {pendingReset.lastName}
               </strong>
               &apos;s current password stops working immediately and they're signed out of any active
-              session. A new temporary password is shown once, here, for you to relay to them.
+              session. A welcome email with the new sign-in details is sent to them.
             </>
           }
           confirmLabel="Reset password"

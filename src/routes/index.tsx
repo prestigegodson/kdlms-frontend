@@ -1,6 +1,10 @@
 import { createBrowserRouter, type RouteObject } from "react-router";
 import { NotFoundPage } from "@/components/ui/NotFoundPage";
 import { PlaceholderPage } from "@/components/ui/PlaceholderPage";
+import { ClassDetailPage } from "@/features/academics/ClassDetailPage";
+import { ClassesPage } from "@/features/academics/ClassesPage";
+import { SessionsPage } from "@/features/academics/SessionsPage";
+import { SubjectsPage } from "@/features/academics/SubjectsPage";
 import { ForgotPasswordPage } from "@/features/auth/ForgotPasswordPage";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
@@ -11,6 +15,7 @@ import { SchoolProfilePage } from "@/features/school/SchoolProfilePage";
 import { SchoolDetailPage } from "@/features/schools/SchoolDetailPage";
 import { SchoolsPage } from "@/features/schools/SchoolsPage";
 import { SubscriptionPage } from "@/features/subscription/SubscriptionPage";
+import { TeachersPage } from "@/features/teachers/TeachersPage";
 import { GuardianLayout } from "@/layouts/GuardianLayout";
 import { RootLayout } from "@/layouts/RootLayout";
 import { SchoolLayout } from "@/layouts/SchoolLayout";
@@ -61,7 +66,11 @@ export const routes: RouteObject[] = [
           { path: "branches", element: <BranchesPage /> },
           { path: "profile", element: <SchoolProfilePage /> },
           { path: "subscription", element: <SubscriptionPage /> },
-          { path: "academics", element: <PlaceholderPage title="Academics" /> },
+          { path: "academics/sessions", element: <SessionsPage /> },
+          { path: "academics/subjects", element: <SubjectsPage /> },
+          { path: "academics/classes", element: <ClassesPage /> },
+          { path: "academics/classes/:classId", element: <ClassDetailPage /> },
+          { path: "academics/teachers", element: <TeachersPage /> },
           { path: "students", element: <PlaceholderPage title="Students" /> },
           { path: "assessments", element: <PlaceholderPage title="Assessments" /> },
           { path: "attendance", element: <PlaceholderPage title="Attendance" /> },

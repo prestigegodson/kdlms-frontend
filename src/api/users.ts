@@ -80,6 +80,26 @@ export function listUsers(page = 0, size = 20): Promise<Page<UserSummary>> {
   return apiFetch<Page<UserSummary>>(`/api/v1/users?page=${page}&size=${size}`);
 }
 
+export interface CreateTeacherRequest {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  /** Required for a SCHOOL_ADMIN caller; ignored (the caller's own branch is used) for a BRANCH_ADMIN caller. */
+  branchId?: string;
+}
+
+export function createTeacher(request: CreateTeacherRequest): Promise<CreateUserResult> {
+  return apiFetch<CreateUserResult>("/api/v1/users/teachers", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+export function listTeachers(page = 0, size = 20): Promise<Page<UserSummary>> {
+  return apiFetch<Page<UserSummary>>(`/api/v1/users/teachers?page=${page}&size=${size}`);
+}
+
 export function enableUser(userId: string): Promise<void> {
   return apiFetch<void>(`/api/v1/users/${userId}/enable`, { method: "PATCH" });
 }

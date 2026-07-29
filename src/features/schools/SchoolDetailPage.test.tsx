@@ -122,7 +122,7 @@ describe("SchoolDetailPage", () => {
     expect(screen.getByText("Ikeja")).toBeInTheDocument();
   });
 
-  it("confirming a password reset shows the new temporary password", async () => {
+  it("confirming a password reset reveals the new temporary password behind the collapsed toggle", async () => {
     vi.mocked(usersApi.resetUserPassword).mockResolvedValue({
       user: BRANCH_ADMIN,
       temporaryPassword: "fresh-temp-pass",
@@ -138,6 +138,9 @@ describe("SchoolDetailPage", () => {
     await user.click(within(dialog).getByRole("button", { name: "Reset password" }));
 
     expect(usersApi.resetUserPassword).toHaveBeenCalledWith(ACTIVE_SCHOOL.id, BRANCH_ADMIN.id);
+    expect(screen.queryByText("fresh-temp-pass")).not.toBeInTheDocument();
+
+    await user.click(await screen.findByRole("button", { name: /Show credentials/ }));
     expect(await screen.findByText("fresh-temp-pass")).toBeInTheDocument();
   });
 });

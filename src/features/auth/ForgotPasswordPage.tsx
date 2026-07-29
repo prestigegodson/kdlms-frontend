@@ -20,8 +20,9 @@ type Status =
  * way, so this can't be used to enumerate registered users (see
  * PasswordResetUseCase's Javadoc). A raw reset token only ever comes back
  * in the response when the backend has kdlms.password-reset.expose-token
- * enabled (no email delivery configured yet), in which case it's shown
- * here so the flow can be exercised end-to-end.
+ * enabled - a local/dev escape hatch for when kdlms.email.provider isn't
+ * set to a real delivery provider - in which case it's tucked behind a
+ * collapsed reveal so the flow can still be exercised end-to-end.
  */
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -55,12 +56,7 @@ export function ForgotPasswordPage() {
             <Alert variant="success">
               If an account exists for that email, a reset link has been sent.
             </Alert>
-            {status.devToken && (
-              <Alert variant="info">
-                Dev token (email delivery isn't configured):{" "}
-                <code className="break-all">{status.devToken}</code>
-              </Alert>
-            )}
+            {status.devToken && <DevTokenReveal token={status.devToken} />}
             <Link
               to="/login"
               className="block text-center text-sm font-medium text-brand-600 hover:text-brand-700"
@@ -94,5 +90,28 @@ export function ForgotPasswordPage() {
         )}
       </Card>
     </div>
+  );
+}
+
+/** Local escape hatch for testing the reset flow when no real email provider is configured - see kdlms.email.provider. */
+function DevTokenReveal({ token }: { token: string }) {
+  const [open, setOpen] = useState(false);
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        className="text-sm font-medium text-brand-600 hover:text-brand-700"
+        onClick={() => setOpen(true)}
+      >
+        Show dev token (no email delivery configured)
+      </button>
+    );
+  }
+
+  return (
+    <Alert variant="info">
+      Dev token: <code className="break-all">{token}</code>
+    </Alert>
   );
 }
