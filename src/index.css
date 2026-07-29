@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+/*
+ * Tailwind v4 is CSS-first: theme customization happens here via @theme,
+ * not in a tailwind.config.js. Extend this palette as the school-branding
+ * requirements from Phase 1 (school personalization) come in.
+ */
+@theme {
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-500: #4f46e5;
+  --color-brand-600: #4338ca;
+  --color-brand-700: #3730a3;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+}
