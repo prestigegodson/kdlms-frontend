@@ -54,7 +54,7 @@ export function ConfirmDialog({
     <Modal open onClose={onClose} title={title}>
       <div className="space-y-4">
         {error && <Alert variant="error">{error}</Alert>}
-        <div className="text-sm text-gray-700">{message}</div>
+        <div className="text-sm text-slate-700">{message}</div>
 
         {requiresTyping && (
           <FormField label={`Type "${confirmationText}" to confirm`} htmlFor="confirm-dialog-input">

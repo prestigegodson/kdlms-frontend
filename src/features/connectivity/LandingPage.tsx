@@ -4,8 +4,8 @@ import { ConnectivityPanel } from "@/features/connectivity/ConnectivityPanel";
 export function LandingPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
-      <h1 className="text-2xl font-bold text-gray-900">KDLMS</h1>
-      <p className="mt-2 text-gray-600">School Management SaaS - Phase 0 scaffold.</p>
+      <h1 className="font-display text-2xl font-medium text-slate-900">KDLMS</h1>
+      <p className="mt-2 text-slate-600">School Management SaaS - Phase 0 scaffold.</p>
       <div className="mt-8">
         <ConnectivityPanel />
       </div>

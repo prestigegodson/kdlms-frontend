@@ -10,10 +10,14 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
 import { BranchesPage } from "@/features/branches/BranchesPage";
 import { LandingPage } from "@/features/connectivity/LandingPage";
+import { GuardiansPage } from "@/features/guardians/GuardiansPage";
 import { PackagesPage } from "@/features/packages/PackagesPage";
 import { SchoolProfilePage } from "@/features/school/SchoolProfilePage";
 import { SchoolDetailPage } from "@/features/schools/SchoolDetailPage";
 import { SchoolsPage } from "@/features/schools/SchoolsPage";
+import { PromotionPage } from "@/features/students/PromotionPage";
+import { StudentDetailPage } from "@/features/students/StudentDetailPage";
+import { StudentsPage } from "@/features/students/StudentsPage";
 import { SubscriptionPage } from "@/features/subscription/SubscriptionPage";
 import { TeachersPage } from "@/features/teachers/TeachersPage";
 import { GuardianLayout } from "@/layouts/GuardianLayout";
@@ -63,15 +67,81 @@ export const routes: RouteObject[] = [
         ),
         children: [
           { index: true, element: <PlaceholderPage title="Dashboard" /> },
-          { path: "branches", element: <BranchesPage /> },
-          { path: "profile", element: <SchoolProfilePage /> },
-          { path: "subscription", element: <SubscriptionPage /> },
-          { path: "academics/sessions", element: <SessionsPage /> },
+          {
+            path: "branches",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
+                <BranchesPage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "profile",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN"]}>
+                <SchoolProfilePage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "subscription",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN"]}>
+                <SubscriptionPage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "academics/sessions",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
+                <SessionsPage />
+              </RequireRole>
+            ),
+          },
           { path: "academics/subjects", element: <SubjectsPage /> },
           { path: "academics/classes", element: <ClassesPage /> },
           { path: "academics/classes/:classId", element: <ClassDetailPage /> },
-          { path: "academics/teachers", element: <TeachersPage /> },
-          { path: "students", element: <PlaceholderPage title="Students" /> },
+          {
+            path: "academics/teachers",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
+                <TeachersPage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "students",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER"]}>
+                <StudentsPage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "students/promotion",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
+                <PromotionPage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "students/:studentId",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
+                <StudentDetailPage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "guardians",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
+                <GuardiansPage />
+              </RequireRole>
+            ),
+          },
           { path: "assessments", element: <PlaceholderPage title="Assessments" /> },
           { path: "attendance", element: <PlaceholderPage title="Attendance" /> },
         ],

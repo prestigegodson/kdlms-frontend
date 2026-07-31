@@ -10,6 +10,10 @@ export interface SubjectView {
   levelId: string;
   name: string;
   code?: string;
+  subjectGroupId?: string;
+  subjectGroupName?: string;
+  /** Which of terms 1-3 this subject is taught in, ascending - e.g. [1, 2, 3] or [3]. */
+  termNumbers: number[];
   status: SubjectStatus;
 }
 
@@ -17,11 +21,22 @@ export interface CreateSubjectRequest {
   levelId: string;
   name: string;
   code?: string;
+  /** Optional; when set, must be a subject group of this same level. */
+  subjectGroupId?: string;
+  /** Optional; omit or leave empty to default to every term. */
+  termNumbers?: number[];
 }
 
 export interface UpdateSubjectRequest {
   name: string;
   code?: string;
+  /** Optional; when set, must be a subject group of the subject's level. */
+  subjectGroupId?: string;
+  /**
+   * Optional; omit or leave empty to default to every term. Narrowing away a
+   * term with recorded assessments is rejected by the backend.
+   */
+  termNumbers?: number[];
 }
 
 const BASE = "/api/v1/subjects";

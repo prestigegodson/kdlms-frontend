@@ -35,20 +35,20 @@ export function ConnectivityPanel() {
 
   return (
     <Card className="max-w-md">
-      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
         Backend connectivity
       </h2>
       <div className="mt-3 flex items-center gap-3">
         {status.kind === "loading" && (
           <>
-            <Spinner className="text-brand-600" />
-            <span className="text-sm text-gray-600">Checking /api/v1/health…</span>
+            <Spinner className="text-brand-500" />
+            <span className="text-sm text-slate-600">Checking /api/v1/health…</span>
           </>
         )}
         {status.kind === "up" && (
           <>
             <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-            <span className="text-sm text-gray-900">
+            <span className="text-sm text-slate-900">
               {status.health.application} v{status.health.version} is{" "}
               <span className="font-medium text-green-700">{status.health.status}</span>
             </span>

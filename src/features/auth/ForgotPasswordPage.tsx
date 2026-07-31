@@ -4,9 +4,9 @@ import { requestPasswordReset } from "@/api/auth";
 import { ApiError } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
+import { AuthLayout } from "@/features/auth/AuthLayout";
 
 type Status =
   | { kind: "form" }
@@ -44,52 +44,45 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Card className="w-full max-w-sm">
-        <h1 className="text-lg font-semibold text-gray-900">Reset your password</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Enter your email and we'll send you a reset link.
-        </p>
-
-        {status.kind === "sent" ? (
-          <div className="mt-6 space-y-4">
-            <Alert variant="success">
-              If an account exists for that email, a reset link has been sent.
-            </Alert>
-            {status.devToken && <DevTokenReveal token={status.devToken} />}
-            <Link
-              to="/login"
-              className="block text-center text-sm font-medium text-brand-600 hover:text-brand-700"
-            >
-              Back to sign in
-            </Link>
-          </div>
-        ) : (
-          <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-            {status.kind === "error" && <Alert variant="error">{status.message}</Alert>}
-            <FormField label="Email" htmlFor="email">
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </FormField>
-            <Button type="submit" disabled={status.kind === "submitting"} className="w-full">
-              {status.kind === "submitting" ? "Sending…" : "Send reset link"}
-            </Button>
-            <Link
-              to="/login"
-              className="block text-center text-sm font-medium text-brand-600 hover:text-brand-700"
-            >
-              Back to sign in
-            </Link>
-          </form>
-        )}
-      </Card>
-    </div>
+    <AuthLayout title="Reset your password" description="Enter your email and we'll send you a reset link.">
+      {status.kind === "sent" ? (
+        <div className="mt-6 space-y-4">
+          <Alert variant="success">
+            If an account exists for that email, a reset link has been sent.
+          </Alert>
+          {status.devToken && <DevTokenReveal token={status.devToken} />}
+          <Link
+            to="/login"
+            className="block text-center text-sm font-medium text-brand-500 hover:text-brand-600"
+          >
+            Back to sign in
+          </Link>
+        </div>
+      ) : (
+        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+          {status.kind === "error" && <Alert variant="error">{status.message}</Alert>}
+          <FormField label="Email" htmlFor="email">
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </FormField>
+          <Button type="submit" loading={status.kind === "submitting"} className="w-full">
+            {status.kind === "submitting" ? "Sending…" : "Send reset link"}
+          </Button>
+          <Link
+            to="/login"
+            className="block text-center text-sm font-medium text-brand-500 hover:text-brand-600"
+          >
+            Back to sign in
+          </Link>
+        </form>
+      )}
+    </AuthLayout>
   );
 }
 
@@ -101,7 +94,7 @@ function DevTokenReveal({ token }: { token: string }) {
     return (
       <button
         type="button"
-        className="text-sm font-medium text-brand-600 hover:text-brand-700"
+        className="text-sm font-medium text-brand-500 hover:text-brand-600"
         onClick={() => setOpen(true)}
       >
         Show dev token (no email delivery configured)

@@ -9,6 +9,7 @@ import {
   updatePackage,
 } from "@/api/packages";
 import { ApiError } from "@/api/client";
+import { Package } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -18,6 +19,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import {
@@ -77,21 +79,22 @@ export function PackagesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Packages</h1>
-        <Button onClick={() => setCreateOpen(true)}>Add package</Button>
-      </div>
+      <PageHeader
+        title="Packages"
+        description="Plans schools can subscribe to."
+        actions={<Button onClick={() => setCreateOpen(true)}>Add package</Button>}
+      />
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
       {state.kind === "loading" && (
-        <div className="flex items-center gap-2 text-sm text-gray-500">
+        <div className="flex items-center gap-2 text-sm text-slate-500">
           <Spinner /> Loading packages…
         </div>
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {state.kind === "loaded" && state.packages.length === 0 && (
-        <EmptyState title="No packages yet" description="Create a package to get started." />
+        <EmptyState icon={Package} title="No packages yet" description="Create a package to get started." />
       )}
       {state.kind === "loaded" && state.packages.length > 0 && (
         <Card className="p-0">
@@ -100,7 +103,7 @@ export function PackagesPage() {
               <TableRow>
                 <TableHeaderCell>Name</TableHeaderCell>
                 <TableHeaderCell>Billing</TableHeaderCell>
-                <TableHeaderCell>Price</TableHeaderCell>
+                <TableHeaderCell numeric>Price</TableHeaderCell>
                 <TableHeaderCell>Branch limit</TableHeaderCell>
                 <TableHeaderCell>Student limit</TableHeaderCell>
                 <TableHeaderCell>Features</TableHeaderCell>
@@ -111,34 +114,38 @@ export function PackagesPage() {
             <TableBody>
               {state.packages.map((pkg) => (
                 <TableRow key={pkg.id}>
-                  <TableCell className="font-medium text-gray-900">{pkg.name}</TableCell>
-                  <TableCell>{pkg.billingCycle}</TableCell>
-                  <TableCell>
+                  <TableCell label="Name" className="font-medium text-slate-900">
+                    {pkg.name}
+                  </TableCell>
+                  <TableCell label="Billing">{pkg.billingCycle}</TableCell>
+                  <TableCell label="Price" numeric>
                     {pkg.currency} {pkg.price.toFixed(2)}
                   </TableCell>
-                  <TableCell>{pkg.multiBranch ? pkg.branchLimit : "1 (single branch)"}</TableCell>
-                  <TableCell>{pkg.activeStudentLimit}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
+                  <TableCell label="Branch limit">
+                    {pkg.multiBranch ? pkg.branchLimit : "1 (single branch)"}
+                  </TableCell>
+                  <TableCell label="Student limit">{pkg.activeStudentLimit}</TableCell>
+                  <TableCell label="Features">
+                    <div className="flex flex-wrap justify-end gap-1 sm:justify-start">
                       {pkg.quizSupport && <Badge variant="neutral">Quiz</Badge>}
                       {pkg.onDemandLearning && <Badge variant="neutral">Learning</Badge>}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell label="Status">
                     <Badge variant={pkg.status === "ACTIVE" ? "success" : "neutral"}>{pkg.status}</Badge>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex gap-3">
+                  <TableCell label="Actions">
+                    <div className="flex justify-end gap-3 sm:justify-start">
                       <button
                         type="button"
-                        className="text-brand-600 hover:text-brand-700"
+                        className="text-brand-500 hover:text-brand-600"
                         onClick={() => setEditing(pkg)}
                       >
                         Edit
                       </button>
                       <button
                         type="button"
-                        className="text-gray-500 hover:text-gray-700"
+                        className="text-slate-500 hover:text-slate-700"
                         onClick={() => toggleStatus(pkg)}
                       >
                         {pkg.status === "ACTIVE" ? "Retire" : "Reactivate"}
@@ -249,7 +256,7 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
             onChange={(event) => setDescription(event.target.value)}
           />
         </FormField>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="Billing cycle" htmlFor="package-billing-cycle">
             <Select
               id="package-billing-cycle"
@@ -282,12 +289,12 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
           />
         </FormField>
 
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-slate-700">
           <Checkbox checked={multiBranch} onChange={(event) => setMultiBranch(event.target.checked)} />
           Allow multiple branches
         </label>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="Branch limit" htmlFor="package-branch-limit">
             <Input
               id="package-branch-limit"
@@ -311,11 +318,11 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
           </FormField>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-slate-700">
           <Checkbox checked={quizSupport} onChange={(event) => setQuizSupport(event.target.checked)} />
           Quiz support
         </label>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-slate-700">
           <Checkbox
             checked={onDemandLearning}
             onChange={(event) => setOnDemandLearning(event.target.checked)}

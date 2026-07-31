@@ -4,9 +4,9 @@ import { confirmPasswordReset } from "@/api/auth";
 import { ApiError } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
+import { AuthLayout } from "@/features/auth/AuthLayout";
 
 type Status =
   { kind: "form" } | { kind: "submitting" } | { kind: "done" } | { kind: "error"; message: string };
@@ -35,51 +35,42 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Card className="w-full max-w-sm">
-        <h1 className="text-lg font-semibold text-gray-900">Choose a new password</h1>
-
-        {status.kind === "done" ? (
-          <div className="mt-6 space-y-4">
-            <Alert variant="success">Your password has been reset. You can now sign in.</Alert>
-            <Button className="w-full" onClick={() => navigate("/login", { replace: true })}>
-              Go to sign in
-            </Button>
-          </div>
-        ) : (
-          <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-            {status.kind === "error" && <Alert variant="error">{status.message}</Alert>}
-            <FormField label="Reset token" htmlFor="token">
-              <Input
-                id="token"
-                required
-                value={token}
-                onChange={(event) => setToken(event.target.value)}
-              />
-            </FormField>
-            <FormField label="New password" htmlFor="newPassword">
-              <Input
-                id="newPassword"
-                type="password"
-                autoComplete="new-password"
-                required
-                minLength={8}
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-              />
-            </FormField>
-            <Button type="submit" disabled={status.kind === "submitting"} className="w-full">
-              {status.kind === "submitting" ? "Resetting…" : "Reset password"}
-            </Button>
-            <Link
-              to="/login"
-              className="block text-center text-sm font-medium text-brand-600 hover:text-brand-700"
-            >
-              Back to sign in
-            </Link>
-          </form>
-        )}
-      </Card>
-    </div>
+    <AuthLayout title="Choose a new password">
+      {status.kind === "done" ? (
+        <div className="mt-6 space-y-4">
+          <Alert variant="success">Your password has been reset. You can now sign in.</Alert>
+          <Button className="w-full" onClick={() => navigate("/login", { replace: true })}>
+            Go to sign in
+          </Button>
+        </div>
+      ) : (
+        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+          {status.kind === "error" && <Alert variant="error">{status.message}</Alert>}
+          <FormField label="Reset token" htmlFor="token">
+            <Input id="token" required value={token} onChange={(event) => setToken(event.target.value)} />
+          </FormField>
+          <FormField label="New password" htmlFor="newPassword">
+            <Input
+              id="newPassword"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+            />
+          </FormField>
+          <Button type="submit" loading={status.kind === "submitting"} className="w-full">
+            {status.kind === "submitting" ? "Resetting…" : "Reset password"}
+          </Button>
+          <Link
+            to="/login"
+            className="block text-center text-sm font-medium text-brand-500 hover:text-brand-600"
+          >
+            Back to sign in
+          </Link>
+        </form>
+      )}
+    </AuthLayout>
   );
 }

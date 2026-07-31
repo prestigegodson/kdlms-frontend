@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 
 type LoadState =
@@ -54,7 +55,7 @@ export function SchoolProfilePage() {
 
   if (state.kind === "loading") {
     return (
-      <div className="flex items-center gap-2 text-sm text-gray-500">
+      <div className="flex items-center gap-2 text-sm text-slate-500">
         <Spinner /> Loading profile…
       </div>
     );
@@ -68,7 +69,7 @@ export function SchoolProfilePage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-xl font-semibold text-gray-900">School Profile</h1>
+      <PageHeader title="School profile" description="Contact details and branding for your school." />
 
       <Card>
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -108,12 +109,12 @@ export function SchoolProfilePage() {
               onChange={(event) => updateField("address", event.target.value)}
             />
           </FormField>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label="Primary color" htmlFor="profile-primary-color">
               <Input
                 id="profile-primary-color"
                 type="color"
-                value={school.primaryColor ?? "#4338ca"}
+                value={school.primaryColor ?? "#3B4FD9"}
                 onChange={(event) => updateField("primaryColor", event.target.value)}
               />
             </FormField>
@@ -121,7 +122,7 @@ export function SchoolProfilePage() {
               <Input
                 id="profile-secondary-color"
                 type="color"
-                value={school.secondaryColor ?? "#3730a3"}
+                value={school.secondaryColor ?? "#182057"}
                 onChange={(event) => updateField("secondaryColor", event.target.value)}
               />
             </FormField>

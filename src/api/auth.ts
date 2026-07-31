@@ -7,6 +7,7 @@ export interface UserSummary {
   email: string;
   firstName: string;
   lastName: string;
+  phone?: string;
   role: Role;
   schoolId?: string;
   branchId?: string;

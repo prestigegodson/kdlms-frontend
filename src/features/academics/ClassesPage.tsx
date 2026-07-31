@@ -11,6 +11,10 @@ import {
 } from "@/api/classes";
 import { ApiError } from "@/api/client";
 import { listLevels, type LevelView } from "@/api/levels";
+import { listMyClasses, type TeacherClassView } from "@/api/me";
+import type { Role } from "@/api/types";
+import { can } from "@/auth/permissions";
+import { Library } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -19,6 +23,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
@@ -29,11 +34,25 @@ type ListState =
   | { kind: "loaded"; classes: SchoolClassView[] }
   | { kind: "error"; message: string };
 
-/** Class management per branch/level for the caller's own school. */
+/**
+ * Class management per branch/level for the caller's own school. A TEACHER
+ * gets a distinct, read-only view scoped to classes they're assigned to
+ * (class-teacher or subject-teacher) rather than this admin listing - see
+ * {@link TeacherClasses}.
+ */
 export function ClassesPage() {
   const role = useAuthStore((state) => state.user?.role);
-  const canManage = role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
-  const isBranchScoped = role === "BRANCH_ADMIN" || role === "TEACHER";
+
+  if (role === "TEACHER") {
+    return <TeacherClasses />;
+  }
+
+  return <AdminClasses role={role} />;
+}
+
+function AdminClasses({ role }: { role: Role | undefined }) {
+  const canManage = can.manageAcademics(role);
+  const isBranchScoped = role === "BRANCH_ADMIN";
 
   const [branches, setBranches] = useState<BranchView[] | null>(null);
   const [levels, setLevels] = useState<LevelView[] | null>(null);
@@ -89,12 +108,13 @@ export function ClassesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Classes</h1>
-        {canManage && <Button onClick={() => setCreateOpen(true)}>Add class</Button>}
-      </div>
+      <PageHeader
+        title="Classes"
+        description="Classes for each level and branch."
+        actions={canManage && <Button onClick={() => setCreateOpen(true)}>Add class</Button>}
+      />
 
-      <div className="grid max-w-xl grid-cols-2 gap-4">
+      <div className="grid max-w-xl grid-cols-1 gap-4 sm:grid-cols-2">
         {!isBranchScoped && (
           <FormField label="Branch" htmlFor="class-branch-filter">
             <Select id="class-branch-filter" value={branchId} onChange={(event) => setBranchId(event.target.value)}>
@@ -122,13 +142,13 @@ export function ClassesPage() {
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
       {state.kind === "loading" && (
-        <div className="flex items-center gap-2 text-sm text-gray-500">
+        <div className="flex items-center gap-2 text-sm text-slate-500">
           <Spinner /> Loading classes…
         </div>
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {state.kind === "loaded" && state.classes.length === 0 && (
-        <EmptyState title="No classes yet" description="Add a class to get started." />
+        <EmptyState icon={Library} title="No classes yet" description="Add a class to get started." />
       )}
       {state.kind === "loaded" && state.classes.length > 0 && (
         <Card className="p-0">
@@ -144,30 +164,30 @@ export function ClassesPage() {
             <TableBody>
               {state.classes.map((schoolClass) => (
                 <TableRow key={schoolClass.id}>
-                  <TableCell className="font-medium text-gray-900">
+                  <TableCell label="Name" className="font-medium text-slate-900">
                     <Link to={`/school/academics/classes/${schoolClass.id}`} className="hover:underline">
                       {schoolClass.name}
                     </Link>
                   </TableCell>
-                  <TableCell>{schoolClass.classTeacherName ?? "—"}</TableCell>
-                  <TableCell>
+                  <TableCell label="Class teacher">{schoolClass.classTeacherName ?? "—"}</TableCell>
+                  <TableCell label="Status">
                     <Badge variant={schoolClass.status === "ACTIVE" ? "success" : "neutral"}>
                       {schoolClass.status}
                     </Badge>
                   </TableCell>
                   {canManage && (
-                    <TableCell>
+                    <TableCell label="Actions">
                       <div className="flex gap-3">
                         <button
                           type="button"
-                          className="text-brand-600 hover:text-brand-700"
+                          className="text-brand-500 hover:text-brand-600"
                           onClick={() => setEditing(schoolClass)}
                         >
                           Edit
                         </button>
                         <button
                           type="button"
-                          className="text-gray-500 hover:text-gray-700"
+                          className="text-slate-500 hover:text-slate-700"
                           onClick={() => toggleActive(schoolClass)}
                         >
                           {schoolClass.status === "ACTIVE" ? "Deactivate" : "Activate"}
@@ -208,6 +228,82 @@ export function ClassesPage() {
             load();
           }}
         />
+      )}
+    </div>
+  );
+}
+
+type TeacherClassesState =
+  | { kind: "loading" }
+  | { kind: "loaded"; classes: TeacherClassView[] }
+  | { kind: "error"; message: string };
+
+/** Read-only: only the classes the calling TEACHER class-teaches or subject-teaches (GET /api/v1/me/classes). */
+function TeacherClasses() {
+  const [state, setState] = useState<TeacherClassesState>({ kind: "loading" });
+
+  useEffect(() => {
+    listMyClasses()
+      .then((classes) => setState({ kind: "loaded", classes }))
+      .catch((error: unknown) =>
+        setState({
+          kind: "error",
+          message: error instanceof ApiError ? error.message : "Failed to load your classes",
+        }),
+      );
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="My classes" description="Classes you class-teach or subject-teach." />
+
+      {state.kind === "loading" && (
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <Spinner /> Loading your classes…
+        </div>
+      )}
+      {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
+      {state.kind === "loaded" && state.classes.length === 0 && (
+        <EmptyState
+          icon={Library}
+          title="No classes yet"
+          description="You have no class-teacher or subject-teacher assignments yet."
+        />
+      )}
+      {state.kind === "loaded" && state.classes.length > 0 && (
+        <Card className="p-0">
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>Name</TableHeaderCell>
+                <TableHeaderCell>Level</TableHeaderCell>
+                <TableHeaderCell>Your role</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {state.classes.map((schoolClass) => (
+                <TableRow key={schoolClass.classId}>
+                  <TableCell label="Name" className="font-medium text-slate-900">
+                    <Link to={`/school/academics/classes/${schoolClass.classId}`} className="hover:underline">
+                      {schoolClass.className}
+                    </Link>
+                  </TableCell>
+                  <TableCell label="Level">{schoolClass.levelName ?? "—"}</TableCell>
+                  <TableCell label="Your role">
+                    <div className="flex flex-wrap gap-2">
+                      {schoolClass.isClassTeacher && <Badge variant="success">Class teacher</Badge>}
+                      {schoolClass.subjectIds.length > 0 && (
+                        <Badge variant="neutral">
+                          Subject teacher ({schoolClass.subjectIds.length})
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       )}
     </div>
   );

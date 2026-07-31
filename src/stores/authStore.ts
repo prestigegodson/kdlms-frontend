@@ -3,6 +3,8 @@ import { persist } from "zustand/middleware";
 import * as authApi from "@/api/auth";
 import { setAccessTokenProvider, setRefreshHandler, setUnauthorizedHandler } from "@/api/client";
 import type { Role } from "@/api/types";
+import { useAcademicContextStore } from "@/stores/academicContextStore";
+import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 
 export interface AuthenticatedUser {
   id: string;
@@ -65,6 +67,11 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         const token = get().refreshToken;
         set({ user: null, accessToken: null, refreshToken: null });
+        // So a different user signing in next in this tab never inherits
+        // the previous one's cached class/subject-teacher capabilities or
+        // current-session/term label.
+        useTeacherScopeStore.getState().reset();
+        useAcademicContextStore.getState().reset();
         if (token) {
           // Best-effort: the local session is already cleared either way.
           authApi.logout(token).catch(() => undefined);

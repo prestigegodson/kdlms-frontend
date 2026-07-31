@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
 import {
   type AcademicSessionView,
+  addTerm,
   createSession,
   listSessions,
   listTerms,
@@ -9,7 +10,11 @@ import {
   setCurrentTerm,
   type TermInput,
   type TermView,
+  updateSession,
+  updateTerm,
 } from "@/api/sessions";
+import { can } from "@/auth/permissions";
+import { CalendarDays } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -18,6 +23,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { useAuthStore } from "@/stores/authStore";
@@ -30,13 +36,18 @@ type ListState =
 
 const DEFAULT_TERM_NAMES = ["First Term", "Second Term", "Third Term"];
 
-/** Session and term setup for the caller's own school - creating a session creates its three terms in one step. */
+/**
+ * Session and term setup for the caller's own school - a session starts with
+ * just its first term (dates for the rest are often unknown yet); terms 2
+ * and 3 are added later, and both the session and any term can be edited.
+ */
 export function SessionsPage() {
   const role = useAuthStore((state) => state.user?.role);
-  const canManage = role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  const canManage = can.manageAcademics(role);
 
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingSession, setEditingSession] = useState<AcademicSessionView | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -70,21 +81,22 @@ export function SessionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Sessions &amp; Terms</h1>
-        {canManage && <Button onClick={() => setCreateOpen(true)}>Add session</Button>}
-      </div>
+      <PageHeader
+        title="Sessions & terms"
+        description="The academic calendar: sessions and their terms."
+        actions={canManage && <Button onClick={() => setCreateOpen(true)}>Add session</Button>}
+      />
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
       {state.kind === "loading" && (
-        <div className="flex items-center gap-2 text-sm text-gray-500">
+        <div className="flex items-center gap-2 text-sm text-slate-500">
           <Spinner /> Loading sessions…
         </div>
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {state.kind === "loaded" && state.sessions.length === 0 && (
-        <EmptyState title="No sessions yet" description="Add a session to get started." />
+        <EmptyState icon={CalendarDays} title="No sessions yet" description="Add a session to get started." />
       )}
       {state.kind === "loaded" && state.sessions.length > 0 && (
         <Card className="p-0">
@@ -106,6 +118,7 @@ export function SessionsPage() {
                   expanded={expanded === session.id}
                   onToggleExpand={() => setExpanded(expanded === session.id ? null : session.id)}
                   onMakeCurrent={() => makeCurrent(session)}
+                  onEdit={() => setEditingSession(session)}
                   onActionError={setActionError}
                 />
               ))}
@@ -115,10 +128,23 @@ export function SessionsPage() {
       )}
 
       {createOpen && (
-        <CreateSessionModal
+        <SessionFormModal
+          mode="create"
           onClose={() => setCreateOpen(false)}
           onSaved={() => {
             setCreateOpen(false);
+            load();
+          }}
+        />
+      )}
+
+      {editingSession && (
+        <SessionFormModal
+          mode="edit"
+          session={editingSession}
+          onClose={() => setEditingSession(null)}
+          onSaved={() => {
+            setEditingSession(null);
             load();
           }}
         />
@@ -133,37 +159,51 @@ interface SessionRowProps {
   expanded: boolean;
   onToggleExpand: () => void;
   onMakeCurrent: () => void;
+  onEdit: () => void;
   onActionError: (message: string) => void;
 }
 
-function SessionRow({ session, canManage, expanded, onToggleExpand, onMakeCurrent, onActionError }: SessionRowProps) {
+function SessionRow({
+  session,
+  canManage,
+  expanded,
+  onToggleExpand,
+  onMakeCurrent,
+  onEdit,
+  onActionError,
+}: SessionRowProps) {
   return (
     <>
       <TableRow>
-        <TableCell className="font-medium text-gray-900">
+        <TableCell label="Name" className="font-medium text-slate-900">
           <button type="button" className="text-left hover:underline" onClick={onToggleExpand}>
             {session.name}
           </button>
         </TableCell>
-        <TableCell>{formatDateRange(session.startDate, session.endDate)}</TableCell>
-        <TableCell>
+        <TableCell label="Dates">{formatDateRange(session.startDate, session.endDate)}</TableCell>
+        <TableCell label="Status">
           <Badge variant={session.current ? "success" : "neutral"}>
             {session.current ? "Current" : "Not current"}
           </Badge>
         </TableCell>
         {canManage && (
-          <TableCell>
-            {!session.current && (
-              <button type="button" className="text-brand-600 hover:text-brand-700" onClick={onMakeCurrent}>
-                Make current
+          <TableCell label="Actions">
+            <div className="flex flex-wrap items-center gap-3">
+              {!session.current && (
+                <button type="button" className="text-brand-500 hover:text-brand-600" onClick={onMakeCurrent}>
+                  Make current
+                </button>
+              )}
+              <button type="button" className="text-brand-500 hover:text-brand-600" onClick={onEdit}>
+                Edit
               </button>
-            )}
+            </div>
           </TableCell>
         )}
       </TableRow>
       {expanded && (
         <TableRow>
-          <TableCell colSpan={canManage ? 4 : 3} className="bg-gray-50">
+          <TableCell colSpan={canManage ? 4 : 3} className="bg-slate-50">
             <TermsPanel sessionId={session.id} canManage={canManage} onActionError={onActionError} />
           </TableCell>
         </TableRow>
@@ -180,6 +220,8 @@ interface TermsPanelProps {
 
 function TermsPanel({ sessionId, canManage, onActionError }: TermsPanelProps) {
   const [terms, setTerms] = useState<TermView[] | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [editingTerm, setEditingTerm] = useState<TermView | null>(null);
 
   function fetchTerms() {
     listTerms(sessionId)
@@ -200,60 +242,114 @@ function TermsPanel({ sessionId, canManage, onActionError }: TermsPanelProps) {
 
   if (terms === null) {
     return (
-      <div className="flex items-center gap-2 py-2 text-sm text-gray-500">
+      <div className="flex items-center gap-2 py-2 text-sm text-slate-500">
         <Spinner /> Loading terms…
       </div>
     );
   }
 
   return (
-    <ul className="divide-y divide-gray-200 py-2">
-      {terms.map((term) => (
-        <li key={term.id} className="flex items-center justify-between py-2 text-sm">
-          <div>
-            <span className="font-medium text-gray-900">{term.name}</span>{" "}
-            <span className="text-gray-500">{formatDateRange(term.startDate, term.endDate)}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Badge variant={term.current ? "success" : "neutral"}>{term.current ? "Current" : "Not current"}</Badge>
-            {canManage && !term.current && (
-              <button
-                type="button"
-                className="text-brand-600 hover:text-brand-700"
-                onClick={() => makeCurrent(term.id)}
-              >
-                Make current
-              </button>
-            )}
-          </div>
-        </li>
-      ))}
-    </ul>
+    <div className="py-2">
+      <ul className="divide-y divide-slate-100">
+        {terms.map((term) => (
+          <li
+            key={term.id}
+            className="flex flex-col gap-2 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div>
+              <span className="font-medium text-slate-900">{term.name}</span>{" "}
+              <span className="text-slate-500">{formatDateRange(term.startDate, term.endDate)}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant={term.current ? "success" : "neutral"}>{term.current ? "Current" : "Not current"}</Badge>
+              {canManage && !term.current && (
+                <button
+                  type="button"
+                  className="text-brand-500 hover:text-brand-600"
+                  onClick={() => makeCurrent(term.id)}
+                >
+                  Make current
+                </button>
+              )}
+              {canManage && (
+                <button
+                  type="button"
+                  className="text-brand-500 hover:text-brand-600"
+                  onClick={() => setEditingTerm(term)}
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {canManage && terms.length < 3 && (
+        <button type="button" className="mt-2 text-sm text-brand-500 hover:text-brand-600" onClick={() => setAddOpen(true)}>
+          Add {DEFAULT_TERM_NAMES[terms.length]}
+        </button>
+      )}
+
+      {addOpen && (
+        <TermFormModal
+          mode="add"
+          sessionId={sessionId}
+          nextTermNumber={terms.length + 1}
+          onClose={() => setAddOpen(false)}
+          onSaved={() => {
+            setAddOpen(false);
+            fetchTerms();
+          }}
+        />
+      )}
+      {editingTerm && (
+        <TermFormModal
+          mode="edit"
+          sessionId={sessionId}
+          term={editingTerm}
+          onClose={() => setEditingTerm(null)}
+          onSaved={() => {
+            setEditingTerm(null);
+            fetchTerms();
+          }}
+        />
+      )}
+    </div>
   );
 }
 
-interface CreateSessionModalProps {
+interface SessionFormModalProps {
+  mode: "create" | "edit";
+  session?: AcademicSessionView;
   onClose: () => void;
   onSaved: () => void;
 }
 
-function CreateSessionModal({ onClose, onSaved }: CreateSessionModalProps) {
-  const [name, setName] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+/** Handles both creating a session (with its first term, or up to three) and editing an existing session's name/dates. */
+function SessionFormModal({ mode, session, onClose, onSaved }: SessionFormModalProps) {
+  const [name, setName] = useState(session?.name ?? "");
+  const [startDate, setStartDate] = useState(session?.startDate ?? "");
+  const [endDate, setEndDate] = useState(session?.endDate ?? "");
   const [terms, setTerms] = useState<TermInput[]>(
-    DEFAULT_TERM_NAMES.map((termName, index) => ({
-      termNumber: index + 1,
-      name: termName,
-      startDate: "",
-      endDate: "",
-    })),
+    mode === "create" ? [{ termNumber: 1, name: DEFAULT_TERM_NAMES[0], startDate: "", endDate: "" }] : [],
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function updateTerm(index: number, patch: Partial<TermInput>) {
+  function updateTermRow(index: number, patch: Partial<TermInput>) {
     setTerms((current) => current.map((term, i) => (i === index ? { ...term, ...patch } : term)));
+  }
+
+  function addTermRow() {
+    setTerms((current) => [
+      ...current,
+      { termNumber: current.length + 1, name: DEFAULT_TERM_NAMES[current.length], startDate: "", endDate: "" },
+    ]);
+  }
+
+  function removeLastTermRow() {
+    setTerms((current) => current.slice(0, -1));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -261,17 +357,21 @@ function CreateSessionModal({ onClose, onSaved }: CreateSessionModalProps) {
     setSubmitting(true);
     setError(null);
     try {
-      await createSession({ name, startDate, endDate, terms });
+      if (mode === "create") {
+        await createSession({ name, startDate, endDate: endDate || null, terms });
+      } else if (session) {
+        await updateSession(session.id, { name, startDate, endDate: endDate || null });
+      }
       onSaved();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to create session");
+      setError(err instanceof ApiError ? err.message : "Failed to save session");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal open onClose={onClose} title="Add session">
+    <Modal open onClose={onClose} title={mode === "create" ? "Add session" : "Edit session"}>
       <form className="space-y-4" onSubmit={handleSubmit}>
         {error && <Alert variant="error">{error}</Alert>}
         <FormField label="Session name" htmlFor="session-name">
@@ -283,7 +383,7 @@ function CreateSessionModal({ onClose, onSaved }: CreateSessionModalProps) {
             onChange={(event) => setName(event.target.value)}
           />
         </FormField>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="Session start date" htmlFor="session-start-date">
             <Input
               id="session-start-date"
@@ -293,9 +393,134 @@ function CreateSessionModal({ onClose, onSaved }: CreateSessionModalProps) {
               onChange={(event) => setStartDate(event.target.value)}
             />
           </FormField>
-          <FormField label="Session end date" htmlFor="session-end-date">
+          <FormField label="Session end date (optional)" htmlFor="session-end-date">
             <Input
               id="session-end-date"
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+            />
+          </FormField>
+        </div>
+
+        {mode === "create" && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-700">Terms</p>
+              <div className="flex items-center gap-3 text-sm">
+                {terms.length > 1 && (
+                  <button type="button" className="text-slate-500 hover:text-slate-700" onClick={removeLastTermRow}>
+                    Remove {DEFAULT_TERM_NAMES[terms.length - 1]}
+                  </button>
+                )}
+                {terms.length < 3 && (
+                  <button type="button" className="text-brand-500 hover:text-brand-600" onClick={addTermRow}>
+                    Add {DEFAULT_TERM_NAMES[terms.length]}
+                  </button>
+                )}
+              </div>
+            </div>
+            {terms.map((term, index) => (
+              <div key={term.termNumber} className="grid grid-cols-1 gap-3 rounded-control border border-slate-200 p-3 sm:grid-cols-3">
+                <FormField label="Name" htmlFor={`term-${term.termNumber}-name`}>
+                  <Input
+                    id={`term-${term.termNumber}-name`}
+                    required
+                    value={term.name}
+                    onChange={(event) => updateTermRow(index, { name: event.target.value })}
+                  />
+                </FormField>
+                <FormField label="Start date" htmlFor={`term-${term.termNumber}-start`}>
+                  <Input
+                    id={`term-${term.termNumber}-start`}
+                    type="date"
+                    required
+                    value={term.startDate}
+                    onChange={(event) => updateTermRow(index, { startDate: event.target.value })}
+                  />
+                </FormField>
+                <FormField label="End date" htmlFor={`term-${term.termNumber}-end`}>
+                  <Input
+                    id={`term-${term.termNumber}-end`}
+                    type="date"
+                    required
+                    value={term.endDate}
+                    onChange={(event) => updateTermRow(index, { endDate: event.target.value })}
+                  />
+                </FormField>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={submitting}>
+            {submitting ? "Saving…" : "Save"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+interface TermFormModalProps {
+  mode: "add" | "edit";
+  sessionId: string;
+  term?: TermView;
+  nextTermNumber?: number;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+/** Adds the next term to a session, or edits the name/dates of an existing one. */
+function TermFormModal({ mode, sessionId, term, nextTermNumber, onClose, onSaved }: TermFormModalProps) {
+  const [name, setName] = useState(term?.name ?? (nextTermNumber ? DEFAULT_TERM_NAMES[nextTermNumber - 1] : ""));
+  const [startDate, setStartDate] = useState(term?.startDate ?? "");
+  const [endDate, setEndDate] = useState(term?.endDate ?? "");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    try {
+      if (mode === "add" && nextTermNumber) {
+        await addTerm(sessionId, { termNumber: nextTermNumber, name, startDate, endDate });
+      } else if (term) {
+        await updateTerm(term.id, { name, startDate, endDate });
+      }
+      onSaved();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to save term");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={mode === "add" ? "Add term" : "Edit term"}>
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        {error && <Alert variant="error">{error}</Alert>}
+        <FormField label="Name" htmlFor="term-name">
+          <Input id="term-name" required value={name} onChange={(event) => setName(event.target.value)} />
+        </FormField>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField label="Start date" htmlFor="term-start-date">
+            <Input
+              id="term-start-date"
+              type="date"
+              required
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+            />
+          </FormField>
+          <FormField label="End date" htmlFor="term-end-date">
+            <Input
+              id="term-end-date"
               type="date"
               required
               value={endDate}
@@ -303,41 +528,6 @@ function CreateSessionModal({ onClose, onSaved }: CreateSessionModalProps) {
             />
           </FormField>
         </div>
-
-        <div className="space-y-3">
-          <p className="text-sm font-medium text-gray-700">Terms</p>
-          {terms.map((term, index) => (
-            <div key={term.termNumber} className="grid grid-cols-3 gap-3 rounded-md border border-gray-200 p-3">
-              <FormField label="Name" htmlFor={`term-${term.termNumber}-name`}>
-                <Input
-                  id={`term-${term.termNumber}-name`}
-                  required
-                  value={term.name}
-                  onChange={(event) => updateTerm(index, { name: event.target.value })}
-                />
-              </FormField>
-              <FormField label="Start date" htmlFor={`term-${term.termNumber}-start`}>
-                <Input
-                  id={`term-${term.termNumber}-start`}
-                  type="date"
-                  required
-                  value={term.startDate}
-                  onChange={(event) => updateTerm(index, { startDate: event.target.value })}
-                />
-              </FormField>
-              <FormField label="End date" htmlFor={`term-${term.termNumber}-end`}>
-                <Input
-                  id={`term-${term.termNumber}-end`}
-                  type="date"
-                  required
-                  value={term.endDate}
-                  onChange={(event) => updateTerm(index, { endDate: event.target.value })}
-                />
-              </FormField>
-            </div>
-          ))}
-        </div>
-
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel

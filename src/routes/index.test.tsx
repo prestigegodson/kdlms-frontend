@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { routes } from "@/routes";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetTeacherScopeStore } from "@/stores/teacherScopeStore";
 
 function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] });
@@ -13,6 +14,7 @@ function renderAt(path: string) {
 describe("router", () => {
   beforeEach(() => {
     resetAuthStore();
+    resetTeacherScopeStore();
     vi.stubGlobal(
       "fetch",
       vi.fn((url: string) => {
@@ -80,5 +82,83 @@ describe("router", () => {
     renderAt("/this-page-does-not-exist");
 
     expect(await screen.findByText("Page not found")).toBeInTheDocument();
+  });
+
+  describe("as a TEACHER", () => {
+    beforeEach(() => {
+      useAuthStore.setState({
+        user: {
+          id: "teacher-1",
+          email: "teacher@school.example",
+          firstName: "Tara",
+          lastName: "T",
+          role: "TEACHER",
+          schoolId: "school-1",
+          branchId: "branch-1",
+        },
+        accessToken: "access",
+        refreshToken: "refresh",
+      });
+    });
+
+    it("hides Sessions & Terms and Teachers from the sidebar, redirecting the sessions route to the dashboard", async () => {
+      renderAt("/school/academics/sessions");
+
+      expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+      expect(screen.queryByText("Sessions & Terms")).not.toBeInTheDocument();
+      expect(screen.queryByText("Teachers")).not.toBeInTheDocument();
+      expect(screen.queryByText("Branches")).not.toBeInTheDocument();
+    });
+
+    it("hides Attendance from the sidebar until capabilities load, then shows it only for a class teacher", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((url: string) => {
+          if (url.includes("/api/v1/me/capabilities")) {
+            return Promise.resolve({
+              ok: true,
+              status: 200,
+              json: () =>
+                Promise.resolve({ isClassTeacher: true, classTeacherClassIds: ["c1"], subjectTeacherClassIds: [] }),
+            });
+          }
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 }),
+          });
+        }),
+      );
+
+      renderAt("/school");
+
+      expect(await screen.findByText("Attendance")).toBeInTheDocument();
+    });
+
+    it("never shows Attendance for a subject-teacher-only account", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((url: string) => {
+          if (url.includes("/api/v1/me/capabilities")) {
+            return Promise.resolve({
+              ok: true,
+              status: 200,
+              json: () =>
+                Promise.resolve({ isClassTeacher: false, classTeacherClassIds: [], subjectTeacherClassIds: ["c2"] }),
+            });
+          }
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 }),
+          });
+        }),
+      );
+
+      renderAt("/school");
+
+      await screen.findByRole("heading", { name: "Dashboard" });
+      expect(screen.queryByText("Attendance")).not.toBeInTheDocument();
+    });
   });
 });

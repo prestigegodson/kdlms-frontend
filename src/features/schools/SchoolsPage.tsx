@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { ApiError } from "@/api/client";
 import { createSchool, listSchools, type SchoolView } from "@/api/schools";
+import { Building2 } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import {
   Table,
@@ -58,19 +60,24 @@ export function SchoolsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Schools</h1>
-        <Button onClick={() => setModalOpen(true)}>Onboard school</Button>
-      </div>
+      <PageHeader
+        title="Schools"
+        description="Every school (tenant) on the platform."
+        actions={<Button onClick={() => setModalOpen(true)}>Onboard school</Button>}
+      />
 
       {state.kind === "loading" && (
-        <div className="flex items-center gap-2 text-sm text-gray-500">
+        <div className="flex items-center gap-2 text-sm text-slate-500">
           <Spinner /> Loading schools…
         </div>
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {state.kind === "loaded" && state.schools.length === 0 && (
-        <EmptyState title="No schools yet" description="Onboard the first school to get started." />
+        <EmptyState
+          icon={Building2}
+          title="No schools yet"
+          description="Onboard the first school to get started."
+        />
       )}
       {state.kind === "loaded" && state.schools.length > 0 && (
         <Card className="p-0">
@@ -85,16 +92,16 @@ export function SchoolsPage() {
             <TableBody>
               {state.schools.map((school) => (
                 <TableRow key={school.id}>
-                  <TableCell>
+                  <TableCell label="Name">
                     <Link
                       to={`/admin/schools/${school.id}`}
-                      className="font-medium text-brand-600 hover:text-brand-700"
+                      className="font-medium text-brand-500 hover:text-brand-600"
                     >
                       {school.name}
                     </Link>
                   </TableCell>
-                  <TableCell>{school.code}</TableCell>
-                  <TableCell>
+                  <TableCell label="Code">{school.code}</TableCell>
+                  <TableCell label="Status">
                     <Badge variant={STATUS_VARIANT[school.status]}>{school.status}</Badge>
                   </TableCell>
                 </TableRow>

@@ -105,12 +105,12 @@ export function SchoolDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/admin/schools" className="text-sm text-brand-600 hover:text-brand-700">
+      <Link to="/admin/schools" className="text-sm text-brand-500 hover:text-brand-600">
         &larr; All schools
       </Link>
 
       {state.kind === "loading" && (
-        <div className="flex items-center gap-2 text-sm text-gray-500">
+        <div className="flex items-center gap-2 text-sm text-slate-500">
           <Spinner /> Loading…
         </div>
       )}
@@ -118,10 +118,10 @@ export function SchoolDetailPage() {
 
       {state.kind === "loaded" && (
         <>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">{state.school.name}</h1>
-              <p className="text-sm text-gray-500">Code: {state.school.code}</p>
+              <h1 className="font-display text-3xl font-medium text-slate-900">{state.school.name}</h1>
+              <p className="text-sm text-slate-500">Code: {state.school.code}</p>
             </div>
             <Badge variant={STATUS_VARIANT[state.school.status]}>{state.school.status}</Badge>
           </div>
@@ -129,16 +129,16 @@ export function SchoolDetailPage() {
           {actionError && <Alert variant="error">{actionError}</Alert>}
 
           <Card>
-            <h2 className="text-sm font-semibold text-gray-900">Profile</h2>
-            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              <dt className="text-gray-500">Email</dt>
-              <dd className="text-gray-900">{state.school.email ?? "—"}</dd>
-              <dt className="text-gray-500">Phone</dt>
-              <dd className="text-gray-900">{state.school.phone ?? "—"}</dd>
-              <dt className="text-gray-500">Address</dt>
-              <dd className="text-gray-900">{state.school.address ?? "—"}</dd>
+            <h2 className="text-sm font-semibold text-slate-900">Profile</h2>
+            <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
+              <dt className="text-slate-500">Email</dt>
+              <dd className="text-slate-900">{state.school.email ?? "—"}</dd>
+              <dt className="text-slate-500">Phone</dt>
+              <dd className="text-slate-900">{state.school.phone ?? "—"}</dd>
+              <dt className="text-slate-500">Address</dt>
+              <dd className="text-slate-900">{state.school.address ?? "—"}</dd>
             </dl>
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 flex flex-wrap gap-2">
               {state.school.status === "SUSPENDED" && (
                 <Button variant="secondary" onClick={() => runAction(activateSchool)}>
                   Activate
@@ -250,8 +250,8 @@ function CreateSchoolAdminCard({ schoolId, onCreated }: { schoolId: string; onCr
 
   return (
     <Card>
-      <h2 className="text-sm font-semibold text-gray-900">Create a school admin</h2>
-      <p className="mt-1 text-sm text-gray-500">A welcome email with sign-in details is sent to them.</p>
+      <h2 className="text-sm font-semibold text-slate-900">Create a school admin</h2>
+      <p className="mt-1 text-sm text-slate-500">A welcome email with sign-in details is sent to them.</p>
 
       {created && (
         <Alert variant="success" className="mt-4">
@@ -266,7 +266,7 @@ function CreateSchoolAdminCard({ schoolId, onCreated }: { schoolId: string; onCr
 
       <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
         {error && <Alert variant="error">{error}</Alert>}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="First name" htmlFor="admin-first-name">
             <Input
               id="admin-first-name"
@@ -352,15 +352,15 @@ function SchoolAdminsCard({ schoolId, refreshKey }: { schoolId: string; refreshK
   return (
     <Card className="p-0">
       <div className="p-6 pb-0">
-        <h2 className="text-sm font-semibold text-gray-900">Admins</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-sm font-semibold text-slate-900">Admins</h2>
+        <p className="mt-1 text-sm text-slate-500">
           This school's SCHOOL_ADMIN and BRANCH_ADMIN users. Reset a password for one who's locked out.
         </p>
       </div>
 
       <div className="p-6">
         {state.kind === "loading" && (
-          <div className="flex items-center gap-2 text-sm text-gray-500">
+          <div className="flex items-center gap-2 text-sm text-slate-500">
             <Spinner /> Loading…
           </div>
         )}
@@ -396,13 +396,13 @@ function SchoolAdminsCard({ schoolId, refreshKey }: { schoolId: string; refreshK
             <TableBody>
               {state.admins.map((admin) => (
                 <TableRow key={admin.id}>
-                  <TableCell>
+                  <TableCell label="Name">
                     {admin.firstName} {admin.lastName}
                   </TableCell>
-                  <TableCell>{admin.email}</TableCell>
-                  <TableCell>{admin.role}</TableCell>
-                  <TableCell>{admin.branchName ?? "—"}</TableCell>
-                  <TableCell>
+                  <TableCell label="Email">{admin.email}</TableCell>
+                  <TableCell label="Role">{admin.role}</TableCell>
+                  <TableCell label="Branch">{admin.branchName ?? "—"}</TableCell>
+                  <TableCell label="Status">
                     <Badge variant={USER_STATUS_VARIANT[admin.status]}>{admin.status}</Badge>
                   </TableCell>
                   <TableCell>
@@ -515,10 +515,10 @@ function SubscriptionCard({ schoolId }: { schoolId: string }) {
 
   return (
     <Card>
-      <h2 className="text-sm font-semibold text-gray-900">Subscription</h2>
+      <h2 className="text-sm font-semibold text-slate-900">Subscription</h2>
 
       {state.kind === "loading" && (
-        <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
+        <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
           <Spinner /> Loading…
         </div>
       )}
@@ -535,7 +535,7 @@ function SubscriptionCard({ schoolId }: { schoolId: string }) {
 
       {state.kind === "none" && (
         <>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-slate-500">
             No subscription has been assigned yet - this school's portal is read-only until one is.
           </p>
           <Button className="mt-3" onClick={() => setAssignOpen(true)}>
@@ -548,8 +548,8 @@ function SubscriptionCard({ schoolId }: { schoolId: string }) {
         <>
           <div className="mt-3 flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-900">{state.subscription.packageName}</p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm font-medium text-slate-900">{state.subscription.packageName}</p>
+              <p className="text-sm text-slate-500">
                 {formatDateRange(state.subscription.startDate, state.subscription.endDate)} (
                 {state.subscription.daysRemaining} days left)
               </p>
@@ -558,7 +558,7 @@ function SubscriptionCard({ schoolId }: { schoolId: string }) {
               {state.subscription.status}
             </Badge>
           </div>
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => setAssignOpen(true)}>
               Assign new package
             </Button>
@@ -668,7 +668,7 @@ function AssignSubscriptionModal({ schoolId, onClose, onAssigned }: AssignSubscr
         {error && <Alert variant="error">{error}</Alert>}
 
         {packages === null && (
-          <div className="flex items-center gap-2 text-sm text-gray-500">
+          <div className="flex items-center gap-2 text-sm text-slate-500">
             <Spinner /> Loading packages…
           </div>
         )}
@@ -691,10 +691,10 @@ function AssignSubscriptionModal({ schoolId, onClose, onAssigned }: AssignSubscr
                 ))}
               </Select>
             </FormField>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-slate-500">
               Leave the dates blank to start today and run for the package's billing cycle.
             </p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField label="Start date (optional)" htmlFor="assign-start-date">
                 <Input
                   id="assign-start-date"

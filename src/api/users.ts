@@ -100,6 +100,21 @@ export function listTeachers(page = 0, size = 20): Promise<Page<UserSummary>> {
   return apiFetch<Page<UserSummary>>(`/api/v1/users/teachers?page=${page}&size=${size}`);
 }
 
+/** Branch isn't here - a teacher's branch isn't editable, see the backend's {@code User#updateDetails}. */
+export interface UpdateTeacherRequest {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+}
+
+export function updateTeacher(userId: string, request: UpdateTeacherRequest): Promise<UserSummary> {
+  return apiFetch<UserSummary>(`/api/v1/users/teachers/${userId}`, {
+    method: "PUT",
+    body: JSON.stringify(request),
+  });
+}
+
 export function enableUser(userId: string): Promise<void> {
   return apiFetch<void>(`/api/v1/users/${userId}/enable`, { method: "PATCH" });
 }

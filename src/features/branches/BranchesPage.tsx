@@ -8,6 +8,8 @@ import {
   updateBranch,
 } from "@/api/branches";
 import { ApiError } from "@/api/client";
+import { can } from "@/auth/permissions";
+import { Building2 } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +19,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import {
   Table,
@@ -36,7 +39,7 @@ type ListState =
 /** School-portal branch management: list, create, edit, and deactivate/reactivate branches for the caller's own school. */
 export function BranchesPage() {
   const role = useAuthStore((state) => state.user?.role);
-  const canManage = role === "SCHOOL_ADMIN";
+  const canManage = can.manageBranches(role);
 
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [createOpen, setCreateOpen] = useState(false);
@@ -84,21 +87,22 @@ export function BranchesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Branches</h1>
-        {canManage && <Button onClick={() => setCreateOpen(true)}>Add branch</Button>}
-      </div>
+      <PageHeader
+        title="Branches"
+        description="Locations your school operates under."
+        actions={canManage && <Button onClick={() => setCreateOpen(true)}>Add branch</Button>}
+      />
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
       {state.kind === "loading" && (
-        <div className="flex items-center gap-2 text-sm text-gray-500">
+        <div className="flex items-center gap-2 text-sm text-slate-500">
           <Spinner /> Loading branches…
         </div>
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {state.kind === "loaded" && state.branches.length === 0 && (
-        <EmptyState title="No branches yet" description="Add a branch to get started." />
+        <EmptyState icon={Building2} title="No branches yet" description="Add a branch to get started." />
       )}
       {state.kind === "loaded" && state.branches.length > 0 && (
         <Card className="p-0">
@@ -114,7 +118,7 @@ export function BranchesPage() {
             <TableBody>
               {state.branches.map((branch) => (
                 <TableRow key={branch.id}>
-                  <TableCell className="font-medium text-gray-900">
+                  <TableCell label="Name" className="font-medium text-slate-900">
                     {branch.name}
                     {branch.main && (
                       <Badge variant="neutral" className="ml-2">
@@ -122,18 +126,18 @@ export function BranchesPage() {
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell>{branch.address ?? "—"}</TableCell>
-                  <TableCell>
+                  <TableCell label="Address">{branch.address ?? "—"}</TableCell>
+                  <TableCell label="Status">
                     <Badge variant={branch.status === "ACTIVE" ? "success" : "neutral"}>
                       {branch.status}
                     </Badge>
                   </TableCell>
                   {canManage && (
-                    <TableCell>
+                    <TableCell label="Actions">
                       <div className="flex gap-3">
                         <button
                           type="button"
-                          className="text-brand-600 hover:text-brand-700"
+                          className="text-brand-500 hover:text-brand-600"
                           onClick={() => setEditing(branch)}
                         >
                           Edit
@@ -141,7 +145,7 @@ export function BranchesPage() {
                         {!branch.main && (
                           <button
                             type="button"
-                            className="text-gray-500 hover:text-gray-700"
+                            className="text-slate-500 hover:text-slate-700"
                             onClick={() =>
                               branch.status === "ACTIVE" ? setDeactivating(branch) : activate(branch)
                             }

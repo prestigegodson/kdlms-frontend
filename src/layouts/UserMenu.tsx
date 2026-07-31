@@ -1,3 +1,4 @@
+import { KeyRound, LogOut } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { ChangePasswordDialog } from "@/features/auth/ChangePasswordDialog";
@@ -67,7 +68,7 @@ export function UserMenu({ user }: UserMenuProps) {
         aria-label="Account menu"
         onClick={() => setOpen((value) => !value)}
         className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-sm font-semibold
-          text-brand-700 hover:bg-brand-100"
+          text-brand-800 transition-colors hover:bg-brand-100"
       >
         {initialsOf(user)}
       </button>
@@ -80,29 +81,31 @@ export function UserMenu({ user }: UserMenuProps) {
             role="menu"
             tabIndex={-1}
             onKeyDown={handleKeyDown}
-            className="absolute right-0 z-50 mt-2 w-56 rounded-md border border-gray-200 bg-white py-1
+            className="absolute right-0 z-50 mt-2 w-56 rounded-panel border border-slate-200 bg-white py-1
               shadow-lg outline-none"
           >
-            <div className="border-b border-gray-100 px-4 py-2">
-              <p className="text-sm font-medium text-gray-900">
+            <div className="border-b border-slate-100 px-4 py-2">
+              <p className="text-sm font-medium text-slate-900">
                 {user.firstName} {user.lastName}
               </p>
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{user.role}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{user.role}</p>
             </div>
             <button
               type="button"
               role="menuitem"
               onClick={handleChangePassword}
-              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+              className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
             >
+              <KeyRound className="h-4 w-4 text-slate-400" aria-hidden="true" />
               Change password
             </button>
             <button
               type="button"
               role="menuitem"
               onClick={handleLogout}
-              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+              className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
             >
+              <LogOut className="h-4 w-4 text-slate-400" aria-hidden="true" />
               Log out
             </button>
           </div>

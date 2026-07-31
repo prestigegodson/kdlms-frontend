@@ -1,18 +1,123 @@
 @import "tailwindcss";
 
 /*
+ * Design tokens follow /style_guide.md — the source of record for all
+ * frontend styling (see CLAUDE.md's Frontend Design System section).
  * Tailwind v4 is CSS-first: theme customization happens here via @theme,
- * not in a tailwind.config.js. Extend this palette as the school-branding
- * requirements from Phase 1 (school personalization) come in.
+ * not in a tailwind.config.js.
+ *
+ * The guide's neutral ramp (slate) and semantic colors (success/warning/
+ * error/info) are byte-identical to Tailwind's built-in slate/green-600/
+ * amber-600/red-600/blue-600, so only brand (indigo) and accent (amber CTA)
+ * need custom stops here. Brand runs 50/100/200/400/500/600/800 per the
+ * guide — there is no 700 stop; hover states use 600, text-on-tint uses 800.
  */
 @theme {
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-500: #4f46e5;
-  --color-brand-600: #4338ca;
-  --color-brand-700: #3730a3;
+  --color-brand-50: #eef1fc;
+  --color-brand-100: #d6ddf8;
+  --color-brand-200: #aebaf1;
+  --color-brand-400: #5d75e3;
+  --color-brand-500: #3b4fd9;
+  --color-brand-600: #2f3fae;
+  --color-brand-800: #182057;
+
+  /*
+   * Accent amber is reserved for the one key CTA per view (style_guide.md
+   * §3/§5) — never for status/warning, which stays on the semantic amber-600
+   * (Tailwind's default `amber` scale) as a tint, not a fill.
+   */
+  --color-accent-50: #fff7e6;
+  --color-accent-100: #fdecc4;
+  --color-accent-200: #fbd888;
+  --color-accent-300: #f9c44d;
+  --color-accent-500: #f59e0b;
+  --color-accent-600: #c47d08;
+  --color-accent-800: #623e04;
+
+  --font-display: "Lexend Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+
+  /* controls (inputs/buttons) 6px, panels (alerts/menus) 8px, cards/modals 12px */
+  --radius-control: 6px;
+  --radius-panel: 8px;
+  --radius-card: 12px;
 }
 
 body {
-  @apply bg-gray-50 text-gray-900 antialiased;
+  @apply bg-slate-50 font-sans text-slate-900 antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  @apply font-display;
+}
+
+/* One focus treatment everywhere, replacing the previous outline/ring split between Button and form controls. */
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * Below `md`, list tables (components/ui/Table.tsx) collapse into stacked
+ * record cards instead of scrolling horizontally. A cell carrying a
+ * `label` prop (rendered as data-label) becomes a label/value row; a cell
+ * without one (e.g. a colSpan detail panel) renders as a plain full-width
+ * block, so nested content isn't forced into the label/value layout.
+ */
+@media (max-width: 767px) {
+  .responsive-table thead {
+    display: none;
+  }
+  .responsive-table,
+  .responsive-table tbody {
+    display: block;
+    width: 100%;
+  }
+  .responsive-table tr {
+    display: block;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+  }
+  .responsive-table tr:last-child {
+    margin-bottom: 0;
+  }
+  .responsive-table td {
+    display: block;
+    padding: 0.625rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .responsive-table td:last-child {
+    border-bottom: none;
+  }
+  .responsive-table td[data-label] {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .responsive-table td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #64748b;
+  }
 }

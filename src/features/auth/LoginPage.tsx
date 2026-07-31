@@ -3,9 +3,9 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { ApiError } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
+import { AuthLayout } from "@/features/auth/AuthLayout";
 import { homePathForRole } from "@/routes/roleHome";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -41,44 +41,38 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Card className="w-full max-w-sm">
-        <h1 className="text-lg font-semibold text-gray-900">Sign in to KDLMS</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Use the credentials your school or system admin gave you.
-        </p>
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-          {formError && <Alert variant="error">{formError}</Alert>}
-          <FormField label="Email" htmlFor="email">
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </FormField>
-          <FormField label="Password" htmlFor="password">
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </FormField>
-          <Button type="submit" disabled={status === "authenticating"} className="w-full">
-            {status === "authenticating" ? "Signing in…" : "Sign in"}
-          </Button>
-        </form>
-        <p className="mt-4 text-center text-sm text-gray-500">
-          <Link to="/forgot-password" className="font-medium text-brand-600 hover:text-brand-700">
-            Forgot your password?
-          </Link>
-        </p>
-      </Card>
-    </div>
+    <AuthLayout title="Sign in to KDLMS" description="Use the credentials your school or system admin gave you.">
+      <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+        {formError && <Alert variant="error">{formError}</Alert>}
+        <FormField label="Email" htmlFor="email">
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+        </FormField>
+        <FormField label="Password" htmlFor="password">
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </FormField>
+        <Button type="submit" loading={status === "authenticating"} className="w-full">
+          {status === "authenticating" ? "Signing in…" : "Sign in"}
+        </Button>
+      </form>
+      <p className="mt-4 text-center text-sm text-slate-500">
+        <Link to="/forgot-password" className="font-medium text-brand-500 hover:text-brand-600">
+          Forgot your password?
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }

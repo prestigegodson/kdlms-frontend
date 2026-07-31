@@ -1,3 +1,4 @@
+import { Building2, CreditCard, GraduationCap, Layers, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
 import { getMySubscription, type SubscriptionSummaryView } from "@/api/subscriptions";
@@ -5,7 +6,9 @@ import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
+import { StatTile } from "@/components/ui/StatTile";
 import { formatDateRange } from "@/utils/date";
 
 type LoadState =
@@ -42,11 +45,11 @@ export function SubscriptionPage() {
   }, []);
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <h1 className="text-xl font-semibold text-gray-900">Subscription</h1>
+    <div className="max-w-3xl space-y-6">
+      <PageHeader title="Subscription" description="Your school's current plan, limits, and usage." />
 
       {state.kind === "loading" && (
-        <div className="flex items-center gap-2 text-sm text-gray-500">
+        <div className="flex items-center gap-2 text-sm text-slate-500">
           <Spinner /> Loading subscription…
         </div>
       )}
@@ -54,53 +57,58 @@ export function SubscriptionPage() {
 
       {state.kind === "loaded" && !state.summary.hasSubscription && (
         <EmptyState
+          icon={CreditCard}
           title="No active subscription"
           description="Contact your system administrator to have a plan assigned. The portal stays read-only until then."
         />
       )}
 
       {state.kind === "loaded" && state.summary.hasSubscription && (
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-900">{state.summary.packageName}</p>
-              <p className="text-sm text-gray-500">
-                {formatDateRange(state.summary.startDate, state.summary.endDate)} ({state.summary.daysRemaining}{" "}
-                days left)
-              </p>
+        <>
+          <Card>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-900">{state.summary.packageName}</p>
+                <p className="text-sm text-slate-500">
+                  {formatDateRange(state.summary.startDate, state.summary.endDate)} (
+                  {state.summary.daysRemaining} days left)
+                </p>
+              </div>
+              <Badge variant={STATUS_VARIANT[state.summary.status]}>{state.summary.status}</Badge>
             </div>
-            <Badge variant={STATUS_VARIANT[state.summary.status]}>{state.summary.status}</Badge>
-          </div>
 
-          <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-            <dt className="text-gray-500">Billing cycle</dt>
-            <dd className="text-gray-900">{state.summary.billingCycle}</dd>
-            <dt className="text-gray-500">Price</dt>
-            <dd className="text-gray-900">
-              {state.summary.currency} {state.summary.price?.toFixed(2)}
-            </dd>
-            <dt className="text-gray-500">Branches</dt>
-            <dd className="text-gray-900">
-              {state.summary.branchesUsed} of {state.summary.multiBranch ? state.summary.branchLimit : 1}
-            </dd>
-            <dt className="text-gray-500">Active students</dt>
-            <dd className="text-gray-900">
-              {state.summary.activeStudentsUsed} of {state.summary.activeStudentLimit}
-            </dd>
-          </dl>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Badge variant={state.summary.multiBranch ? "success" : "neutral"}>
+                {state.summary.multiBranch ? "Multi-branch" : "Single branch"}
+              </Badge>
+              <Badge variant={state.summary.quizSupport ? "success" : "neutral"}>
+                {state.summary.quizSupport ? "Quiz support included" : "No quiz support"}
+              </Badge>
+              <Badge variant={state.summary.onDemandLearning ? "success" : "neutral"}>
+                {state.summary.onDemandLearning ? "On-demand learning included" : "No on-demand learning"}
+              </Badge>
+            </div>
+          </Card>
 
-          <div className="mt-6 flex flex-wrap gap-2">
-            <Badge variant={state.summary.multiBranch ? "success" : "neutral"}>
-              {state.summary.multiBranch ? "Multi-branch" : "Single branch"}
-            </Badge>
-            <Badge variant={state.summary.quizSupport ? "success" : "neutral"}>
-              {state.summary.quizSupport ? "Quiz support included" : "No quiz support"}
-            </Badge>
-            <Badge variant={state.summary.onDemandLearning ? "success" : "neutral"}>
-              {state.summary.onDemandLearning ? "On-demand learning included" : "No on-demand learning"}
-            </Badge>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <StatTile icon={Layers} label="Billing cycle" value={state.summary.billingCycle} />
+            <StatTile
+              icon={Sparkles}
+              label="Price"
+              value={`${state.summary.currency} ${state.summary.price?.toFixed(2)}`}
+            />
+            <StatTile
+              icon={Building2}
+              label="Branches"
+              value={`${state.summary.branchesUsed} / ${state.summary.multiBranch ? state.summary.branchLimit : 1}`}
+            />
+            <StatTile
+              icon={GraduationCap}
+              label="Active students"
+              value={`${state.summary.activeStudentsUsed} / ${state.summary.activeStudentLimit}`}
+            />
           </div>
-        </Card>
+        </>
       )}
     </div>
   );

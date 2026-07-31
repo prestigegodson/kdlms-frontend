@@ -11,7 +11,7 @@ import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 
 vi.mock("@/api/users", async () => {
   const actual = await vi.importActual<typeof import("@/api/users")>("@/api/users");
-  return { ...actual, listTeachers: vi.fn(), createTeacher: vi.fn() };
+  return { ...actual, listTeachers: vi.fn(), createTeacher: vi.fn(), updateTeacher: vi.fn() };
 });
 
 vi.mock("@/api/branches", async () => {
@@ -32,6 +32,7 @@ const TEACHER: UserSummary = {
   email: "sonia@school.example",
   firstName: "Sonia",
   lastName: "B",
+  phone: "080",
   role: "TEACHER",
   schoolId: "school-1",
   branchId: "branch-1",
@@ -117,5 +118,40 @@ describe("TeachersPage", () => {
 
     await user.click(within(confirmDialog).getByRole("button", { name: /Show credentials/ }));
     expect(within(confirmDialog).getByText("Xk4p-9Fmz")).toBeInTheDocument();
+  });
+
+  it("edits a teacher with a prefilled form and no branch field, then refreshes the list", async () => {
+    mockTeachers([TEACHER]);
+    vi.mocked(usersApi.updateTeacher).mockResolvedValue({ ...TEACHER, lastName: "Balogun", phone: "081" });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Edit teacher" });
+    expect(within(dialog).getByLabelText("First name")).toHaveValue("Sonia");
+    expect(within(dialog).getByLabelText("Last name")).toHaveValue("B");
+    expect(within(dialog).getByLabelText("Email")).toHaveValue("sonia@school.example");
+    expect(within(dialog).getByLabelText("Phone")).toHaveValue("080");
+    expect(within(dialog).queryByLabelText("Branch")).not.toBeInTheDocument();
+
+    await user.clear(within(dialog).getByLabelText("Last name"));
+    await user.type(within(dialog).getByLabelText("Last name"), "Balogun");
+    await user.clear(within(dialog).getByLabelText("Phone"));
+    await user.type(within(dialog).getByLabelText("Phone"), "081");
+    await user.click(within(dialog).getByRole("button", { name: "Save changes" }));
+
+    expect(usersApi.updateTeacher).toHaveBeenCalledWith(
+      "teacher-1",
+      expect.objectContaining({
+        firstName: "Sonia",
+        lastName: "Balogun",
+        email: "sonia@school.example",
+        phone: "081",
+      }),
+    );
+    expect(usersApi.listTeachers).toHaveBeenCalledTimes(2);
+    await screen.findByRole("button", { name: "Add teacher" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

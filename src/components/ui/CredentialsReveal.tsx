@@ -26,7 +26,7 @@ export function CredentialsReveal({ email, temporaryPassword }: CredentialsRevea
     return (
       <button
         type="button"
-        className="text-sm font-medium text-brand-600 hover:text-brand-700"
+        className="text-sm font-medium text-brand-500 hover:text-brand-600"
         onClick={() => setOpen(true)}
       >
         Show credentials (if the welcome email didn't arrive)
@@ -35,12 +35,12 @@ export function CredentialsReveal({ email, temporaryPassword }: CredentialsRevea
   }
 
   return (
-    <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-sm">
+    <div className="rounded-panel border border-slate-200 bg-slate-50 p-3 text-sm">
       <p>
         <strong>{email}</strong>&apos;s temporary password:{" "}
         <code className="rounded bg-white px-1.5 py-0.5">{temporaryPassword}</code>
       </p>
-      <p className="mt-1 text-xs text-gray-500">Shown once, here, and never retrievable again.</p>
+      <p className="mt-1 text-xs text-slate-500">Shown once, here, and never retrievable again.</p>
       <Button type="button" variant="secondary" className="mt-2" onClick={copyPassword}>
         {copied ? "Copied!" : "Copy password"}
       </Button>

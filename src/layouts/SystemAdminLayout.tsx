@@ -1,9 +1,10 @@
-import { PortalShell } from "@/layouts/PortalShell";
+import { Building2, FileText, Package } from "lucide-react";
+import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 
-const NAV_ITEMS = [
-  { label: "Schools", href: "/admin/schools" },
-  { label: "Packages", href: "/admin/packages" },
-  { label: "Result Templates", href: "/admin/templates" },
+const NAV_ITEMS: NavItem[] = [
+  { label: "Schools", href: "/admin/schools", icon: Building2 },
+  { label: "Packages", href: "/admin/packages", icon: Package },
+  { label: "Result Templates", href: "/admin/templates", icon: FileText },
 ];
 
 export function SystemAdminLayout() {
