@@ -2,6 +2,8 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as guardiansApi from "@/api/guardians";
+import type { GuardianView } from "@/api/guardians";
 import * as sessionsApi from "@/api/sessions";
 import type { AcademicSessionView } from "@/api/sessions";
 import * as studentsApi from "@/api/students";
@@ -27,7 +29,7 @@ vi.mock("@/api/sessions", async () => {
 
 vi.mock("@/api/guardians", async () => {
   const actual = await vi.importActual<typeof import("@/api/guardians")>("@/api/guardians");
-  return { ...actual };
+  return { ...actual, listGuardians: vi.fn(), linkGuardianToStudent: vi.fn() };
 });
 
 const STUDENT_VIEW: StudentView = {
@@ -71,6 +73,16 @@ const GUARDIAN_VIEW: StudentGuardianView = {
   guardianName: "Chidi Obi",
   email: "chidi@example.com",
   relationship: "FATHER",
+};
+
+const GUARDIAN_SEARCH_RESULT: GuardianView = {
+  id: "guardian-2",
+  schoolId: "school-1",
+  firstName: "Ngozi",
+  lastName: "Eze",
+  fullName: "Ngozi Eze",
+  email: "ngozi@example.com",
+  active: true,
 };
 
 function renderAsSchoolAdmin() {
@@ -137,5 +149,41 @@ describe("StudentDetailPage", () => {
     renderAsSchoolAdmin();
 
     expect(await screen.findByText("No guardians linked")).toBeInTheDocument();
+  });
+
+  // Regression for the "Failed to link guardian" bug: POST /guardians/{id}/students
+  // returns a 201 with an empty body, which used to make apiFetch call response.json()
+  // on nothing and throw - reporting failure even though the link was persisted.
+  it("links an existing guardian without showing an error, and refreshes the list", async () => {
+    vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+    vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+    vi.mocked(studentsApi.listStudentGuardians)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([GUARDIAN_VIEW]);
+    vi.mocked(guardiansApi.listGuardians).mockResolvedValue({
+      content: [GUARDIAN_SEARCH_RESULT],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 5,
+    });
+    vi.mocked(guardiansApi.linkGuardianToStudent).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByRole("heading", { name: "Ada Obi" });
+    await screen.findByText("No guardians linked");
+
+    await user.click(screen.getByRole("button", { name: "Link guardian" }));
+    const dialog = await screen.findByRole("dialog");
+
+    await user.type(within(dialog).getByPlaceholderText("Search by name or email"), "Ngozi");
+    await user.click(await within(dialog).findByText("Ngozi Eze"));
+    await user.click(within(dialog).getByRole("button", { name: "Link guardian" }));
+
+    expect(guardiansApi.linkGuardianToStudent).toHaveBeenCalledWith("guardian-2", "student-1", "MOTHER");
+    expect(await screen.findByText("Chidi Obi")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText("Failed to link guardian")).not.toBeInTheDocument();
   });
 });

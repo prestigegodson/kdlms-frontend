@@ -10,6 +10,7 @@ import * as levelsApi from "@/api/levels";
 import type { LevelView } from "@/api/levels";
 import { ClassesPage } from "@/features/academics/ClassesPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetLevelStore } from "@/stores/levelStore";
 
 vi.mock("@/api/classes", async () => {
   const actual = await vi.importActual<typeof import("@/api/classes")>("@/api/classes");
@@ -41,7 +42,16 @@ const MAIN_BRANCH: BranchView = {
   status: "ACTIVE",
 };
 
-const PRIMARY_LEVEL: LevelView = { id: "level-1", name: "PRIMARY", displayName: "Primary", rank: 4 };
+const PRIMARY_LEVEL: LevelView = {
+  id: "level-1",
+  baseLevel: "PRIMARY",
+  displayName: "Primary",
+  rank: 4,
+  status: "ACTIVE",
+  subjectCount: 0,
+  classCount: 0,
+  subjectGroupCount: 0,
+};
 
 const CLASS_VIEW: SchoolClassView = {
   id: "class-1",
@@ -85,6 +95,7 @@ function renderAsSchoolAdmin() {
 describe("ClassesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetLevelStore();
     vi.mocked(branchesApi.listBranches).mockResolvedValue({
       content: [MAIN_BRANCH],
       totalElements: 1,
@@ -95,13 +106,15 @@ describe("ClassesPage", () => {
     vi.mocked(levelsApi.listLevels).mockResolvedValue([PRIMARY_LEVEL]);
   });
 
-  it("lists classes with their status", async () => {
+  it("lists classes with their status and level", async () => {
     mockClasses([CLASS_VIEW]);
 
     renderAsSchoolAdmin();
 
     expect(await screen.findByText("Little Star 1")).toBeInTheDocument();
     expect(screen.getByText("ACTIVE")).toBeInTheDocument();
+    const table = screen.getByRole("table");
+    expect(within(table).getByText("Primary")).toBeInTheDocument();
   });
 
   it("creates a class for the selected branch and level", async () => {

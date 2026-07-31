@@ -104,8 +104,20 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     throw new ApiError(response.status, problem?.detail ?? response.statusText, problem);
   }
 
-  if (response.status === 204) {
+  // A body-less success response isn't always 204 (e.g. a `void` 201 Created
+  // handler still sends a zero-length body) - detect "nothing to parse" rather
+  // than special-casing one status, so parsing never throws on an empty body.
+  // (Optional chaining below tolerates lightweight Response fakes in tests that
+  // only implement `.json()`, falling back to the pre-existing behaviour.)
+  if (response.status === 204 || response.status === 205 || response.headers?.get?.("Content-Length") === "0") {
     return undefined as T;
+  }
+  if (typeof response.text === "function") {
+    const text = await response.text();
+    if (!text) {
+      return undefined as T;
+    }
+    return JSON.parse(text) as T;
   }
   return (await response.json()) as T;
 }

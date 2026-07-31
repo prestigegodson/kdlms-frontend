@@ -288,6 +288,7 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
           <div className="sm:col-span-1">
             <FormField label="Search students" htmlFor="place-search">
               <SearchInput
+                id="place-search"
                 value={query}
                 onChange={(value) => {
                   setQuery(value);

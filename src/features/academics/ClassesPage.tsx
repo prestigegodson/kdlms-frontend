@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { listBranches, type BranchView } from "@/api/branches";
 import {
@@ -10,7 +10,7 @@ import {
   updateClass,
 } from "@/api/classes";
 import { ApiError } from "@/api/client";
-import { listLevels, type LevelView } from "@/api/levels";
+import type { LevelView } from "@/api/levels";
 import { listMyClasses, type TeacherClassView } from "@/api/me";
 import type { Role } from "@/api/types";
 import { can } from "@/auth/permissions";
@@ -27,7 +27,9 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
+import { LevelSelect } from "@/features/academics/components/LevelSelect";
 import { useAuthStore } from "@/stores/authStore";
+import { useLevelStore } from "@/stores/levelStore";
 
 type ListState =
   | { kind: "loading" }
@@ -55,7 +57,8 @@ function AdminClasses({ role }: { role: Role | undefined }) {
   const isBranchScoped = role === "BRANCH_ADMIN";
 
   const [branches, setBranches] = useState<BranchView[] | null>(null);
-  const [levels, setLevels] = useState<LevelView[] | null>(null);
+  const levels = useLevelStore((storeState) => storeState.levels);
+  const fetchLevels = useLevelStore((storeState) => storeState.fetchIfNeeded);
   const [branchId, setBranchId] = useState("");
   const [levelId, setLevelId] = useState("");
   const [state, setState] = useState<ListState>({ kind: "loading" });
@@ -63,16 +66,19 @@ function AdminClasses({ role }: { role: Role | undefined }) {
   const [editing, setEditing] = useState<SchoolClassView | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  const levelNames = useMemo(
+    () => new Map(levels.map((level) => [level.id, level.displayName])),
+    [levels],
+  );
+
   useEffect(() => {
     if (!isBranchScoped) {
       listBranches()
         .then((page) => setBranches(page.content))
         .catch(() => setBranches([]));
     }
-    listLevels()
-      .then(setLevels)
-      .catch(() => setLevels([]));
-  }, [isBranchScoped]);
+    fetchLevels();
+  }, [isBranchScoped, fetchLevels]);
 
   function fetchClasses() {
     listClasses(branchId || undefined, levelId || undefined)
@@ -128,14 +134,13 @@ function AdminClasses({ role }: { role: Role | undefined }) {
           </FormField>
         )}
         <FormField label="Level" htmlFor="class-level-filter">
-          <Select id="class-level-filter" value={levelId} onChange={(event) => setLevelId(event.target.value)}>
-            <option value="">All levels</option>
-            {levels?.map((level) => (
-              <option key={level.id} value={level.id}>
-                {level.displayName}
-              </option>
-            ))}
-          </Select>
+          <LevelSelect
+            id="class-level-filter"
+            levels={levels}
+            value={levelId}
+            onChange={setLevelId}
+            allOptionLabel="All levels"
+          />
         </FormField>
       </div>
 
@@ -156,6 +161,7 @@ function AdminClasses({ role }: { role: Role | undefined }) {
             <TableHead>
               <TableRow>
                 <TableHeaderCell>Name</TableHeaderCell>
+                <TableHeaderCell>Level</TableHeaderCell>
                 <TableHeaderCell>Class teacher</TableHeaderCell>
                 <TableHeaderCell>Status</TableHeaderCell>
                 {canManage && <TableHeaderCell>Actions</TableHeaderCell>}
@@ -169,6 +175,7 @@ function AdminClasses({ role }: { role: Role | undefined }) {
                       {schoolClass.name}
                     </Link>
                   </TableCell>
+                  <TableCell label="Level">{levelNames.get(schoolClass.levelId) ?? "—"}</TableCell>
                   <TableCell label="Class teacher">{schoolClass.classTeacherName ?? "—"}</TableCell>
                   <TableCell label="Status">
                     <Badge variant={schoolClass.status === "ACTIVE" ? "success" : "neutral"}>
@@ -206,7 +213,7 @@ function AdminClasses({ role }: { role: Role | undefined }) {
         <ClassFormModal
           title="Add class"
           branches={branches ?? []}
-          levels={levels ?? []}
+          levels={levels}
           showBranchField={!isBranchScoped}
           onClose={() => setCreateOpen(false)}
           onSubmit={async (values) => {
@@ -335,7 +342,9 @@ function ClassFormModal({
   onSaved,
 }: ClassFormModalProps) {
   const [branchId, setBranchId] = useState(branches[0]?.id ?? "");
-  const [levelId, setLevelId] = useState(levels[0]?.id ?? "");
+  const [levelId, setLevelId] = useState(
+    levels.find((level) => level.status === "ACTIVE")?.id ?? "",
+  );
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -375,13 +384,7 @@ function ClassFormModal({
           </FormField>
         )}
         <FormField label="Level" htmlFor="class-level">
-          <Select id="class-level" required value={levelId} onChange={(event) => setLevelId(event.target.value)}>
-            {levels.map((level) => (
-              <option key={level.id} value={level.id}>
-                {level.displayName}
-              </option>
-            ))}
-          </Select>
+          <LevelSelect id="class-level" levels={levels} value={levelId} onChange={setLevelId} activeOnly required />
         </FormField>
         <FormField label="Name" htmlFor="class-name">
           <Input

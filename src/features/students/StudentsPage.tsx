@@ -124,12 +124,14 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <SearchInput
-          value={query}
-          onChange={resetToFirstPage(setQuery)}
-          placeholder="Search name or admission no."
-          className="sm:col-span-2 lg:col-span-1"
-        />
+        <FormField label="Search" htmlFor="student-search" className="sm:col-span-2 lg:col-span-1">
+          <SearchInput
+            id="student-search"
+            value={query}
+            onChange={resetToFirstPage(setQuery)}
+            placeholder="Search name or admission no."
+          />
+        </FormField>
         {!isBranchScoped && (
           <FormField label="Branch" htmlFor="student-branch-filter">
             <Select

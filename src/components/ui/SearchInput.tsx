@@ -9,6 +9,13 @@ interface SearchInputProps {
   className?: string;
   /** Milliseconds of typing pause before `onChange` fires. Defaults to 300ms. */
   debounceMs?: number;
+  /**
+   * Pass when this field sits under an external `<label htmlFor>` (e.g. a
+   * `FormField`), so it lines up with labelled sibling controls instead of
+   * floating above them. When set, the fallback `aria-label` is dropped so
+   * it doesn't shadow the visible label for assistive tech.
+   */
+  id?: string;
 }
 
 /**
@@ -23,7 +30,7 @@ interface SearchInputProps {
  * render. Committing a debounced change also sets `value` to that same
  * draft, so this is a no-op in the common case.
  */
-export function SearchInput({ value, onChange, placeholder, className = "", debounceMs = 300 }: SearchInputProps) {
+export function SearchInput({ value, onChange, placeholder, className = "", debounceMs = 300, id }: SearchInputProps) {
   const [draft, setDraft] = useState(value);
   const [lastSeenValue, setLastSeenValue] = useState(value);
 
@@ -48,12 +55,13 @@ export function SearchInput({ value, onChange, placeholder, className = "", debo
         aria-hidden="true"
       />
       <Input
+        id={id}
         type="search"
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
         placeholder={placeholder}
         className="pl-9"
-        aria-label={placeholder ?? "Search"}
+        aria-label={id ? undefined : (placeholder ?? "Search")}
       />
     </div>
   );

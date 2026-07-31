@@ -1,6 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
-import { listLevels, type LevelView } from "@/api/levels";
 import { listMySubjects, type TeacherSubjectAssignmentView } from "@/api/me";
 import {
   createSubjectGroup,
@@ -32,7 +31,9 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
+import { LevelSelect } from "@/features/academics/components/LevelSelect";
 import { useAuthStore } from "@/stores/authStore";
+import { useLevelStore } from "@/stores/levelStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 
 const ALL_TERM_NUMBERS = [1, 2, 3];
@@ -155,8 +156,13 @@ function AdminSubjects() {
   const role = useAuthStore((state) => state.user?.role);
   const canManage = can.manageAcademics(role);
 
-  const [levels, setLevels] = useState<LevelView[] | null>(null);
-  const [levelId, setLevelId] = useState("");
+  const levels = useLevelStore((storeState) => storeState.levels);
+  const levelsStatus = useLevelStore((storeState) => storeState.status);
+  const fetchLevels = useLevelStore((storeState) => storeState.fetchIfNeeded);
+  // Derived rather than synced via an effect: nothing chosen yet falls back
+  // to the first level once the store has loaded, with no setState-in-effect.
+  const [selectedLevelId, setSelectedLevelId] = useState<string | null>(null);
+  const levelId = selectedLevelId ?? levels[0]?.id ?? "";
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [groups, setGroups] = useState<SubjectGroupView[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
@@ -165,13 +171,8 @@ function AdminSubjects() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
-    listLevels()
-      .then((result) => {
-        setLevels(result);
-        setLevelId(result[0]?.id ?? "");
-      })
-      .catch(() => setLevels([]));
-  }, []);
+    fetchLevels();
+  }, [fetchLevels]);
 
   function fetchSubjects() {
     if (!levelId) return;
@@ -236,20 +237,14 @@ function AdminSubjects() {
         }
       />
 
-      {levels === null && (
+      {levelsStatus !== "loaded" && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
           <Spinner /> Loading levels…
         </div>
       )}
-      {levels !== null && levels.length > 0 && (
+      {levelsStatus === "loaded" && levels.length > 0 && (
         <FormField label="Level" htmlFor="subject-level-filter" className="max-w-xs">
-          <Select id="subject-level-filter" value={levelId} onChange={(event) => setLevelId(event.target.value)}>
-            {levels.map((level) => (
-              <option key={level.id} value={level.id}>
-                {level.displayName}
-              </option>
-            ))}
-          </Select>
+          <LevelSelect id="subject-level-filter" levels={levels} value={levelId} onChange={setSelectedLevelId} />
         </FormField>
       )}
 

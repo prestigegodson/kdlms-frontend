@@ -31,4 +31,15 @@ describe("SearchInput", () => {
     rerender(<SearchInput value="" onChange={vi.fn()} placeholder="Search students" />);
     expect(screen.getByPlaceholderText("Search students")).toHaveValue("");
   });
+
+  it("associates with an external label when given an id", () => {
+    render(
+      <>
+        <label htmlFor="student-search">Search</label>
+        <SearchInput id="student-search" value="" onChange={vi.fn()} placeholder="Search students" />
+      </>,
+    );
+
+    expect(screen.getByLabelText("Search")).toBe(screen.getByPlaceholderText("Search students"));
+  });
 });

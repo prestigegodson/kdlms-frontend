@@ -7,8 +7,10 @@ import {
   CreditCard,
   GraduationCap,
   LayoutDashboard,
+  Layers,
   Library,
   BookOpen,
+  Scale,
   School,
   Users,
 } from "lucide-react";
@@ -30,8 +32,24 @@ const NAV_ITEMS: NavItem[] = [
     // current session/term (the topbar's context chip), not this screen.
     roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"],
   },
+  {
+    label: "Levels",
+    href: "/school/academics/levels",
+    icon: Layers,
+    group: "Academics",
+    // School-wide, not branch-scoped - see auth/permissions.ts's manageLevels.
+    roles: ["SCHOOL_ADMIN"],
+  },
   { label: "Subjects", href: "/school/academics/subjects", icon: BookOpen, group: "Academics" },
   { label: "Classes", href: "/school/academics/classes", icon: Library, group: "Academics" },
+  {
+    label: "Grading systems",
+    href: "/school/assessments/grading",
+    icon: Scale,
+    group: "Academics",
+    // School-wide, not branch-scoped - see auth/permissions.ts's manageGradingSystems.
+    roles: ["SCHOOL_ADMIN"],
+  },
   { label: "Assessments", href: "/school/assessments", icon: ClipboardCheck, group: "Academics" },
   {
     label: "Attendance",

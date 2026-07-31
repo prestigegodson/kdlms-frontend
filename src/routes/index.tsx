@@ -3,8 +3,12 @@ import { NotFoundPage } from "@/components/ui/NotFoundPage";
 import { PlaceholderPage } from "@/components/ui/PlaceholderPage";
 import { ClassDetailPage } from "@/features/academics/ClassDetailPage";
 import { ClassesPage } from "@/features/academics/ClassesPage";
+import { LevelsPage } from "@/features/academics/LevelsPage";
 import { SessionsPage } from "@/features/academics/SessionsPage";
 import { SubjectsPage } from "@/features/academics/SubjectsPage";
+import { AssessmentsPage } from "@/features/assessments/AssessmentsPage";
+import { GradingSystemEditorPage } from "@/features/assessments/GradingSystemEditorPage";
+import { GradingSystemsPage } from "@/features/assessments/GradingSystemsPage";
 import { ForgotPasswordPage } from "@/features/auth/ForgotPasswordPage";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
@@ -99,6 +103,14 @@ export const routes: RouteObject[] = [
               </RequireRole>
             ),
           },
+          {
+            path: "academics/levels",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN"]}>
+                <LevelsPage />
+              </RequireRole>
+            ),
+          },
           { path: "academics/subjects", element: <SubjectsPage /> },
           { path: "academics/classes", element: <ClassesPage /> },
           { path: "academics/classes/:classId", element: <ClassDetailPage /> },
@@ -142,7 +154,23 @@ export const routes: RouteObject[] = [
               </RequireRole>
             ),
           },
-          { path: "assessments", element: <PlaceholderPage title="Assessments" /> },
+          { path: "assessments", element: <AssessmentsPage /> },
+          {
+            path: "assessments/grading",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN"]}>
+                <GradingSystemsPage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "assessments/grading/:levelId",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN"]}>
+                <GradingSystemEditorPage />
+              </RequireRole>
+            ),
+          },
           { path: "attendance", element: <PlaceholderPage title="Attendance" /> },
         ],
       },

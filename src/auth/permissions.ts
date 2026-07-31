@@ -37,6 +37,11 @@ export const can = {
     return role === "SCHOOL_ADMIN";
   },
 
+  /** Level rename/reorder/add/archive/delete - SCHOOL_ADMIN only, since levels are school-wide, not branch-scoped. */
+  manageLevels(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN";
+  },
+
   /**
    * Both admin roles always see attendance (read-only for them); a TEACHER
    * only when they class-teach at least one class - a subject-teacher-only
@@ -74,6 +79,26 @@ export const can = {
 
   /** Guardian provisioning and ward linking - not TEACHER-visible. */
   manageGuardians(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /** Per-level grading system configuration - SCHOOL_ADMIN only, school-wide like levels themselves. */
+  manageGradingSystems(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN";
+  },
+
+  /** Score/rating entry - TEACHER only, no admin correction path (mirrors markAttendance). */
+  recordAssessments(role: Role | undefined): boolean {
+    return role === "TEACHER";
+  },
+
+  /** Computed results and the broadsheet - admins read-only (their own branch for BRANCH_ADMIN), teacher's own classes. */
+  viewResults(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER";
+  },
+
+  /** The guardian-visibility publication gate - SCHOOL_ADMIN and BRANCH_ADMIN only. */
+  publishResults(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
   },
 };

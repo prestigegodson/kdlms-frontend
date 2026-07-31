@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { Menu, X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router";
+import { Link, Outlet, useLocation } from "react-router";
 import type { Role } from "@/api/types";
 import { UserMenu } from "@/layouts/UserMenu";
 import { useAuthStore } from "@/stores/authStore";
@@ -85,6 +85,29 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
     group.items.push(item);
   }
 
+  // Which single nav item is "active" for the current pathname. Deciding this
+  // per-link (e.g. via NavLink's own isActive) breaks down whenever one
+  // item's href is a path prefix of another's - e.g. "Assessments"
+  // (/school/assessments) and "Grading systems"
+  // (/school/assessments/grading) - because both links would independently
+  // match and highlight at once. Instead we look at the whole nav set here
+  // and pick the longest href that matches, so the most specific item wins.
+  const pathname = location.pathname.replace(/\/+$/, "") || "/";
+  const activeHref = visibleNavItems
+    .filter((item) => {
+      if (pathname === item.href) {
+        return true;
+      }
+      // Only treat an item as matching a descendant route once it's deeper
+      // than the portal root - otherwise the Dashboard link (e.g. "/school")
+      // would light up for every page in the portal.
+      return item.href.split("/").length > 2 && pathname.startsWith(`${item.href}/`);
+    })
+    .reduce<string | null>(
+      (longest, item) => (longest === null || item.href.length > longest.length ? item.href : longest),
+      null,
+    );
+
   // Close the drawer on every navigation so a link tap doesn't leave it open
   // behind the new page. Adjusted during render rather than in an effect -
   // this is the "reset state when a prop changes" case React's docs call
@@ -138,24 +161,25 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
               </p>
             )}
             <ul className={group.name ? "mt-2 space-y-1" : "space-y-1"}>
-              {group.items.map((item) => (
-                <li key={item.href}>
-                  <NavLink
-                    to={item.href}
-                    end={item.href.split("/").length <= 2}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2.5 rounded-control px-2.5 py-2 text-sm transition-colors ${
+              {group.items.map((item) => {
+                const isActive = item.href === activeHref;
+                return (
+                  <li key={item.href}>
+                    <Link
+                      to={item.href}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`flex items-center gap-2.5 rounded-control px-2.5 py-2 text-sm transition-colors ${
                         isActive
                           ? "bg-brand-50 font-medium text-brand-800"
                           : "text-slate-700 hover:bg-slate-100"
-                      }`
-                    }
-                  >
-                    {item.icon && <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />}
-                    {item.label}
-                  </NavLink>
-                </li>
-              ))}
+                      }`}
+                    >
+                      {item.icon && <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />}
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}

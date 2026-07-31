@@ -12,6 +12,7 @@ import * as subjectsApi from "@/api/subjects";
 import type { SubjectView } from "@/api/subjects";
 import { SubjectsPage } from "@/features/academics/SubjectsPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetLevelStore } from "@/stores/levelStore";
 import { resetTeacherScopeStore, useTeacherScopeStore } from "@/stores/teacherScopeStore";
 
 vi.mock("@/api/subjects", async () => {
@@ -47,7 +48,16 @@ vi.mock("@/api/levels", async () => {
   return { ...actual, listLevels: vi.fn() };
 });
 
-const PRIMARY_LEVEL: LevelView = { id: "level-1", name: "PRIMARY", displayName: "Primary", rank: 4 };
+const PRIMARY_LEVEL: LevelView = {
+  id: "level-1",
+  baseLevel: "PRIMARY",
+  displayName: "Primary",
+  rank: 4,
+  status: "ACTIVE",
+  subjectCount: 0,
+  classCount: 0,
+  subjectGroupCount: 0,
+};
 
 const SCIENCES_GROUP: SubjectGroupView = { id: "group-1", schoolId: "school-1", levelId: "level-1", name: "Sciences" };
 
@@ -142,6 +152,7 @@ describe("SubjectsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetTeacherScopeStore();
+    resetLevelStore();
     vi.mocked(levelsApi.listLevels).mockResolvedValue([PRIMARY_LEVEL]);
     vi.mocked(subjectGroupsApi.listSubjectGroups).mockResolvedValue([SCIENCES_GROUP]);
   });

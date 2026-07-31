@@ -5,6 +5,10 @@ type FetchStatus = "idle" | "loading" | "loaded" | "error";
 
 interface AcademicContextState {
   label: string | null;
+  /** Ids alongside the label - the assessment term pickers need these, the label alone (as before) is display-only. */
+  currentSessionId: string | null;
+  currentTermId: string | null;
+  currentTermNumber: number | null;
   status: FetchStatus;
   /** Fetches once per session; a repeat call while loaded/loading is a no-op. */
   fetchIfNeeded: () => Promise<void>;
@@ -24,9 +28,16 @@ interface AcademicContextState {
  * from stores/teacherScopeStore.ts's capabilities, which already carries it
  * without a second call.
  */
-export const useAcademicContextStore = create<AcademicContextState>((set, get) => ({
+const INITIAL_STATE = {
   label: null,
-  status: "idle",
+  currentSessionId: null,
+  currentTermId: null,
+  currentTermNumber: null,
+  status: "idle" as FetchStatus,
+};
+
+export const useAcademicContextStore = create<AcademicContextState>((set, get) => ({
+  ...INITIAL_STATE,
 
   fetchIfNeeded: async () => {
     if (get().status === "loading" || get().status === "loaded") {
@@ -37,24 +48,27 @@ export const useAcademicContextStore = create<AcademicContextState>((set, get) =
       const sessions = await listSessions(0, 50);
       const currentSession = sessions.content.find((session) => session.current);
       if (!currentSession) {
-        set({ label: null, status: "loaded" });
+        set({ ...INITIAL_STATE, status: "loaded" });
         return;
       }
       const terms = await listTerms(currentSession.id);
       const currentTerm = terms.find((term) => term.current);
       set({
         label: currentTerm ? `${currentSession.name} · ${currentTerm.name}` : currentSession.name,
+        currentSessionId: currentSession.id,
+        currentTermId: currentTerm?.id ?? null,
+        currentTermNumber: currentTerm?.termNumber ?? null,
         status: "loaded",
       });
     } catch {
-      set({ label: null, status: "error" });
+      set({ ...INITIAL_STATE, status: "error" });
     }
   },
 
-  reset: () => set({ label: null, status: "idle" }),
+  reset: () => set({ ...INITIAL_STATE }),
 }));
 
 /** Test helper: resets the store to its initial (unfetched) state - mirrors stores/teacherScopeStore.ts's resetTeacherScopeStore(). */
 export function resetAcademicContextStore(): void {
-  useAcademicContextStore.setState({ label: null, status: "idle" });
+  useAcademicContextStore.setState({ ...INITIAL_STATE });
 }
