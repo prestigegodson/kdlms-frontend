@@ -9,6 +9,7 @@ import { SubjectsPage } from "@/features/academics/SubjectsPage";
 import { AssessmentsPage } from "@/features/assessments/AssessmentsPage";
 import { GradingSystemEditorPage } from "@/features/assessments/GradingSystemEditorPage";
 import { GradingSystemsPage } from "@/features/assessments/GradingSystemsPage";
+import { AttendancePage } from "@/features/attendance/AttendancePage";
 import { ForgotPasswordPage } from "@/features/auth/ForgotPasswordPage";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
@@ -171,7 +172,7 @@ export const routes: RouteObject[] = [
               </RequireRole>
             ),
           },
-          { path: "attendance", element: <PlaceholderPage title="Attendance" /> },
+          { path: "attendance", element: <AttendancePage /> },
         ],
       },
       {

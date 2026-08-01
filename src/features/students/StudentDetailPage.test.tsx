@@ -24,7 +24,7 @@ vi.mock("@/api/students", async () => {
 
 vi.mock("@/api/sessions", async () => {
   const actual = await vi.importActual<typeof import("@/api/sessions")>("@/api/sessions");
-  return { ...actual, listSessions: vi.fn() };
+  return { ...actual, listSessions: vi.fn(), listTerms: vi.fn() };
 });
 
 vi.mock("@/api/guardians", async () => {
@@ -88,7 +88,14 @@ const GUARDIAN_SEARCH_RESULT: GuardianView = {
 function renderAsSchoolAdmin() {
   resetAuthStore();
   useAuthStore.setState({
-    user: { id: "user-1", email: "admin@school.example", firstName: "Ada", lastName: "Obi", role: "SCHOOL_ADMIN", schoolId: "school-1" },
+    user: {
+      id: "user-1",
+      email: "admin@school.example",
+      firstName: "Ada",
+      lastName: "Obi",
+      role: "SCHOOL_ADMIN",
+      schoolId: "school-1",
+    },
     accessToken: "access",
     refreshToken: "refresh",
   });
@@ -109,6 +116,8 @@ describe("StudentDetailPage", () => {
       number: 0,
       size: 50,
     });
+    // Fetched by the new StudentAttendanceCard section - not under test here.
+    vi.mocked(sessionsApi.listTerms).mockResolvedValue([]);
   });
 
   it("shows bio, enrollment history, and linked guardians", async () => {
@@ -181,7 +190,11 @@ describe("StudentDetailPage", () => {
     await user.click(await within(dialog).findByText("Ngozi Eze"));
     await user.click(within(dialog).getByRole("button", { name: "Link guardian" }));
 
-    expect(guardiansApi.linkGuardianToStudent).toHaveBeenCalledWith("guardian-2", "student-1", "MOTHER");
+    expect(guardiansApi.linkGuardianToStudent).toHaveBeenCalledWith(
+      "guardian-2",
+      "student-1",
+      "MOTHER",
+    );
     expect(await screen.findByText("Chidi Obi")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByText("Failed to link guardian")).not.toBeInTheDocument();

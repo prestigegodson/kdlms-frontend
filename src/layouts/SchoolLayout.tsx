@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { useEffect } from "react";
+import { can } from "@/auth/permissions";
 import { SubscriptionBanner } from "@/features/subscription/SubscriptionBanner";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useAcademicContextStore } from "@/stores/academicContextStore";
@@ -57,21 +58,51 @@ const NAV_ITEMS: NavItem[] = [
     icon: ClipboardList,
     group: "Academics",
     // Both admin roles always see it (read-only for them); a TEACHER only
-    // when they class-teach at least one class - see auth/permissions.ts.
+    // when they class-teach at least one class - see auth/permissions.ts's
+    // viewAttendance, the single source of truth nav/route/in-page controls
+    // all read from.
     visible: () => {
       const role = useAuthStore.getState().user?.role;
-      if (role !== "TEACHER") {
-        return true;
-      }
-      return useTeacherScopeStore.getState().capabilities?.isClassTeacher ?? false;
+      const isClassTeacher = useTeacherScopeStore.getState().capabilities?.isClassTeacher ?? false;
+      return can.viewAttendance(role, { isClassTeacher });
     },
   },
-  { label: "Teachers", href: "/school/academics/teachers", icon: Users, group: "People", roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"] },
+  {
+    label: "Teachers",
+    href: "/school/academics/teachers",
+    icon: Users,
+    group: "People",
+    roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"],
+  },
   { label: "Students", href: "/school/students", icon: GraduationCap, group: "People" },
-  { label: "Guardians", href: "/school/guardians", icon: Contact, group: "People", roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"] },
-  { label: "Branches", href: "/school/branches", icon: Building2, group: "Administration", roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"] },
-  { label: "School Profile", href: "/school/profile", icon: School, group: "Administration", roles: ["SCHOOL_ADMIN"] },
-  { label: "Subscription", href: "/school/subscription", icon: CreditCard, group: "Administration", roles: ["SCHOOL_ADMIN"] },
+  {
+    label: "Guardians",
+    href: "/school/guardians",
+    icon: Contact,
+    group: "People",
+    roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"],
+  },
+  {
+    label: "Branches",
+    href: "/school/branches",
+    icon: Building2,
+    group: "Administration",
+    roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"],
+  },
+  {
+    label: "School Profile",
+    href: "/school/profile",
+    icon: School,
+    group: "Administration",
+    roles: ["SCHOOL_ADMIN"],
+  },
+  {
+    label: "Subscription",
+    href: "/school/subscription",
+    icon: CreditCard,
+    group: "Administration",
+    roles: ["SCHOOL_ADMIN"],
+  },
 ];
 
 export function SchoolLayout() {
@@ -97,7 +128,9 @@ export function SchoolLayout() {
   const contextLabel =
     role === "TEACHER"
       ? (teacherCapabilities?.currentTermName ??
-        (teacherCapabilities?.currentTermNumber ? `Term ${teacherCapabilities.currentTermNumber}` : null))
+        (teacherCapabilities?.currentTermNumber
+          ? `Term ${teacherCapabilities.currentTermNumber}`
+          : null))
       : adminContextLabel;
 
   return (

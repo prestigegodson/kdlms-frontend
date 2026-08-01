@@ -27,6 +27,23 @@ export function formatLongDate(iso: string | null | undefined): string {
 }
 
 /** "2026-06-29", "2027-07-29" -> "29 June, 2026 - 29 July, 2027". */
-export function formatDateRange(start: string | null | undefined, end: string | null | undefined): string {
+export function formatDateRange(
+  start: string | null | undefined,
+  end: string | null | undefined,
+): string {
   return `${formatLongDate(start)} - ${formatLongDate(end)}`;
+}
+
+/**
+ * Today's date in the local timezone as "YYYY-MM-DD" - the LocalDate wire
+ * format the backend expects for `<input type="date">` values and query
+ * params. Deliberately not `new Date().toISOString()`, which reports UTC
+ * and can land on the wrong calendar day in positive-UTC-offset zones after
+ * local midnight.
+ */
+export function todayIso(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
 }

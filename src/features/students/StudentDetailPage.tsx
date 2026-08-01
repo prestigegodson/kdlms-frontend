@@ -24,6 +24,7 @@ import {
   type StudentView,
 } from "@/api/students";
 import { can } from "@/auth/permissions";
+import { StudentAttendanceCard } from "@/features/attendance/components/StudentAttendanceCard";
 import { UserPlus } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
@@ -37,11 +38,21 @@ import { Modal } from "@/components/ui/Modal";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
-import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from "@/components/ui/Table";
 import { useAuthStore } from "@/stores/authStore";
 import { formatLongDate } from "@/utils/date";
 
-type LoadState = { kind: "loading" } | { kind: "loaded"; student: StudentView } | { kind: "error"; message: string };
+type LoadState =
+  | { kind: "loading" }
+  | { kind: "loaded"; student: StudentView }
+  | { kind: "error"; message: string };
 
 const RELATIONSHIPS = ["FATHER", "MOTHER", "GUARDIAN", "OTHER"] as const;
 
@@ -63,7 +74,10 @@ export function StudentDetailPage() {
     getStudent(studentId)
       .then((student) => setState({ kind: "loaded", student }))
       .catch((error: unknown) =>
-        setState({ kind: "error", message: error instanceof ApiError ? error.message : "Failed to load student" }),
+        setState({
+          kind: "error",
+          message: error instanceof ApiError ? error.message : "Failed to load student",
+        }),
       );
   }
 
@@ -126,7 +140,11 @@ export function StudentDetailPage() {
         <div className="flex flex-wrap items-center gap-2">
           <Badge
             variant={
-              student.status === "ACTIVE" ? "success" : student.status === "WITHDRAWN" ? "danger" : "neutral"
+              student.status === "ACTIVE"
+                ? "success"
+                : student.status === "WITHDRAWN"
+                  ? "danger"
+                  : "neutral"
             }
           >
             {student.status}
@@ -185,7 +203,11 @@ export function StudentDetailPage() {
           </dl>
         </Card>
 
-        <GuardiansCard studentId={student.id} canManage={canManage} onActionError={setActionError} />
+        <GuardiansCard
+          studentId={student.id}
+          canManage={canManage}
+          onActionError={setActionError}
+        />
       </div>
 
       <EnrollmentHistoryCard
@@ -195,6 +217,8 @@ export function StudentDetailPage() {
         onTransferred={load}
         onActionError={setActionError}
       />
+
+      <StudentAttendanceCard studentId={student.id} />
 
       {editing && (
         <EditStudentModal
@@ -211,8 +235,8 @@ export function StudentDetailPage() {
           title="Graduate this student?"
           message={
             <>
-              <strong>{student.fullName}</strong> will be marked graduated and their current enrollment closed.
-              This can't be undone from here.
+              <strong>{student.fullName}</strong> will be marked graduated and their current
+              enrollment closed. This can't be undone from here.
             </>
           }
           confirmLabel="Graduate"
@@ -226,8 +250,8 @@ export function StudentDetailPage() {
           title="Withdraw this student?"
           message={
             <>
-              <strong>{student.fullName}</strong> will be marked withdrawn and their current enrollment closed.
-              They can be reinstated later.
+              <strong>{student.fullName}</strong> will be marked withdrawn and their current
+              enrollment closed. They can be reinstated later.
             </>
           }
           confirmLabel="Withdraw"
@@ -281,14 +305,28 @@ function EditStudentModal({ student, onClose, onSaved }: EditStudentModalProps) 
         {error && <Alert variant="error">{error}</Alert>}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="First name" htmlFor="edit-first-name">
-            <Input id="edit-first-name" required value={firstName} onChange={(event) => setFirstName(event.target.value)} />
+            <Input
+              id="edit-first-name"
+              required
+              value={firstName}
+              onChange={(event) => setFirstName(event.target.value)}
+            />
           </FormField>
           <FormField label="Last name" htmlFor="edit-last-name">
-            <Input id="edit-last-name" required value={lastName} onChange={(event) => setLastName(event.target.value)} />
+            <Input
+              id="edit-last-name"
+              required
+              value={lastName}
+              onChange={(event) => setLastName(event.target.value)}
+            />
           </FormField>
         </div>
         <FormField label="Other name" htmlFor="edit-other-name">
-          <Input id="edit-other-name" value={otherName} onChange={(event) => setOtherName(event.target.value)} />
+          <Input
+            id="edit-other-name"
+            value={otherName}
+            onChange={(event) => setOtherName(event.target.value)}
+          />
         </FormField>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="Gender" htmlFor="edit-gender">
@@ -303,7 +341,12 @@ function EditStudentModal({ student, onClose, onSaved }: EditStudentModalProps) 
             </Select>
           </FormField>
           <FormField label="Date of birth" htmlFor="edit-dob">
-            <Input id="edit-dob" type="date" value={dateOfBirth} onChange={(event) => setDateOfBirth(event.target.value)} />
+            <Input
+              id="edit-dob"
+              type="date"
+              value={dateOfBirth}
+              onChange={(event) => setDateOfBirth(event.target.value)}
+            />
           </FormField>
         </div>
         <div className="flex justify-end gap-2">
@@ -326,7 +369,12 @@ interface EnrollmentHistoryCardProps {
   onActionError: (message: string) => void;
 }
 
-function EnrollmentHistoryCard({ student, canManage, onTransferred, onActionError }: EnrollmentHistoryCardProps) {
+function EnrollmentHistoryCard({
+  student,
+  canManage,
+  onTransferred,
+  onActionError,
+}: EnrollmentHistoryCardProps) {
   const [history, setHistory] = useState<EnrollmentView[] | null>(null);
   const [sessions, setSessions] = useState<AcademicSessionView[] | null>(null);
   const [transferring, setTransferring] = useState(false);
@@ -334,7 +382,11 @@ function EnrollmentHistoryCard({ student, canManage, onTransferred, onActionErro
   useEffect(() => {
     listStudentEnrollments(student.id)
       .then(setHistory)
-      .catch((error: unknown) => onActionError(error instanceof ApiError ? error.message : "Failed to load enrollment history"));
+      .catch((error: unknown) =>
+        onActionError(
+          error instanceof ApiError ? error.message : "Failed to load enrollment history",
+        ),
+      );
     listSessions(0, 50)
       .then((page) => setSessions(page.content))
       .catch(() => setSessions([]));
@@ -366,7 +418,10 @@ function EnrollmentHistoryCard({ student, canManage, onTransferred, onActionErro
           </div>
         )}
         {history !== null && history.length === 0 && (
-          <EmptyState title="No enrollment history" description="This student has never been enrolled in a class." />
+          <EmptyState
+            title="No enrollment history"
+            description="This student has never been enrolled in a class."
+          />
         )}
         {history !== null && history.length > 0 && (
           <Table>
@@ -428,7 +483,8 @@ function TransferClassModal({ student, onClose, onSaved }: TransferClassModalPro
     listClasses(student.branchId, undefined, 0, 200)
       .then((page) => {
         const options = page.content.filter(
-          (schoolClass) => schoolClass.status === "ACTIVE" && schoolClass.id !== student.currentClassId,
+          (schoolClass) =>
+            schoolClass.status === "ACTIVE" && schoolClass.id !== student.currentClassId,
         );
         setClasses(options);
         setClassId(options[0]?.id ?? "");
@@ -455,14 +511,20 @@ function TransferClassModal({ student, onClose, onSaved }: TransferClassModalPro
       <form className="space-y-4" onSubmit={handleSubmit}>
         {error && <Alert variant="error">{error}</Alert>}
         <p className="text-sm text-slate-500">
-          Moves {student.fullName} to a different class in the same branch, within the current session.
+          Moves {student.fullName} to a different class in the same branch, within the current
+          session.
         </p>
         {classes !== null && classes.length === 0 && (
           <Alert variant="warning">No other active classes are available in this branch.</Alert>
         )}
         {classes !== null && classes.length > 0 && (
           <FormField label="Target class" htmlFor="transfer-class">
-            <Select id="transfer-class" required value={classId} onChange={(event) => setClassId(event.target.value)}>
+            <Select
+              id="transfer-class"
+              required
+              value={classId}
+              onChange={(event) => setClassId(event.target.value)}
+            >
               {classes.map((schoolClass) => (
                 <option key={schoolClass.id} value={schoolClass.id}>
                   {schoolClass.name}
@@ -498,7 +560,9 @@ function GuardiansCard({ studentId, canManage, onActionError }: GuardiansCardPro
   function fetchGuardians() {
     listStudentGuardians(studentId)
       .then(setGuardians)
-      .catch((error: unknown) => onActionError(error instanceof ApiError ? error.message : "Failed to load guardians"));
+      .catch((error: unknown) =>
+        onActionError(error instanceof ApiError ? error.message : "Failed to load guardians"),
+      );
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- onActionError is a stable setState setter
@@ -533,12 +597,18 @@ function GuardiansCard({ studentId, canManage, onActionError }: GuardiansCardPro
           </div>
         )}
         {guardians !== null && guardians.length === 0 && (
-          <EmptyState title="No guardians linked" description="Link an existing guardian or add a new one." />
+          <EmptyState
+            title="No guardians linked"
+            description="Link an existing guardian or add a new one."
+          />
         )}
         {guardians !== null && guardians.length > 0 && (
           <ul className="space-y-3">
             {guardians.map((guardian) => (
-              <li key={guardian.guardianId} className="flex items-center justify-between gap-3 text-sm">
+              <li
+                key={guardian.guardianId}
+                className="flex items-center justify-between gap-3 text-sm"
+              >
                 <div>
                   <p className="font-medium text-slate-900">{guardian.guardianName}</p>
                   <p className="text-slate-500">
@@ -575,8 +645,8 @@ function GuardiansCard({ studentId, canManage, onActionError }: GuardiansCardPro
           title="Unlink this guardian?"
           message={
             <>
-              <strong>{unlinking.guardianName}</strong> will no longer be linked to this student. Their account is
-              unaffected.
+              <strong>{unlinking.guardianName}</strong> will no longer be linked to this student.
+              Their account is unaffected.
             </>
           }
           confirmLabel="Unlink"
@@ -693,7 +763,9 @@ function LinkExistingGuardianForm({
           <Select
             id="link-relationship"
             value={relationship}
-            onChange={(event) => setRelationship(event.target.value as (typeof RELATIONSHIPS)[number])}
+            onChange={(event) =>
+              setRelationship(event.target.value as (typeof RELATIONSHIPS)[number])
+            }
           >
             {RELATIONSHIPS.map((option) => (
               <option key={option} value={option}>
@@ -757,23 +829,45 @@ function LinkNewGuardianForm({
       {error && <Alert variant="error">{error}</Alert>}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField label="First name" htmlFor="new-guardian-first-name">
-          <Input id="new-guardian-first-name" required value={firstName} onChange={(event) => setFirstName(event.target.value)} />
+          <Input
+            id="new-guardian-first-name"
+            required
+            value={firstName}
+            onChange={(event) => setFirstName(event.target.value)}
+          />
         </FormField>
         <FormField label="Last name" htmlFor="new-guardian-last-name">
-          <Input id="new-guardian-last-name" required value={lastName} onChange={(event) => setLastName(event.target.value)} />
+          <Input
+            id="new-guardian-last-name"
+            required
+            value={lastName}
+            onChange={(event) => setLastName(event.target.value)}
+          />
         </FormField>
       </div>
       <FormField label="Email" htmlFor="new-guardian-email">
-        <Input id="new-guardian-email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
+        <Input
+          id="new-guardian-email"
+          type="email"
+          required
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+        />
       </FormField>
       <FormField label="Phone" htmlFor="new-guardian-phone">
-        <Input id="new-guardian-phone" value={phone} onChange={(event) => setPhone(event.target.value)} />
+        <Input
+          id="new-guardian-phone"
+          value={phone}
+          onChange={(event) => setPhone(event.target.value)}
+        />
       </FormField>
       <FormField label="Relationship" htmlFor="new-guardian-relationship">
         <Select
           id="new-guardian-relationship"
           value={relationship}
-          onChange={(event) => setRelationship(event.target.value as (typeof RELATIONSHIPS)[number])}
+          onChange={(event) =>
+            setRelationship(event.target.value as (typeof RELATIONSHIPS)[number])
+          }
         >
           {RELATIONSHIPS.map((option) => (
             <option key={option} value={option}>
