@@ -31,7 +31,6 @@ export interface AssessmentSheetView {
   examWeight?: number;
   quizMax?: number;
   examMax?: number;
-  quizEnabled: boolean;
   boundaries: GradeBoundary[];
   ratingOptions: RatingOption[];
   rows: SheetRow[];

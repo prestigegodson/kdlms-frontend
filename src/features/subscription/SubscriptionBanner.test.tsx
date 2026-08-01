@@ -27,7 +27,7 @@ const ACTIVE_SUMMARY: SubscriptionSummaryView = {
   branchesUsed: 1,
   activeStudentLimit: 500,
   activeStudentsUsed: 10,
-  quizSupport: true,
+  takeHomeQuiz: true,
   onDemandLearning: false,
 };
 

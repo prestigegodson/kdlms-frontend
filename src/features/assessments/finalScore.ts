@@ -9,10 +9,11 @@ export interface FinalScoreResult {
 /**
  * Mirrors backend GradingSystem.computeFinalScore/gradeFor exactly, so the
  * entry grid can preview a score's final value and grade the moment a
- * teacher types it, before saving. Both components present -> each weighted
- * against its own max and summed; exactly one present -> that component
- * alone scaled to 100 (a quiz-support-less package, or a subject where only
- * the exam was entered, is graded on what exists); neither present -> null.
+ * teacher types it, before saving. A quiz is a mid-term checkpoint, not a
+ * term result, so it never grades on its own: both components present ->
+ * each weighted against its own max and summed; exam present without a
+ * quiz -> the exam alone scaled to 100 (graded on what exists); quiz
+ * present without an exam, or neither present -> null.
  */
 export function computeFinalScore(
   quizScore: number | null,
@@ -25,15 +26,13 @@ export function computeFinalScore(
 ): FinalScoreResult {
   const hasQuiz = quizScore !== null;
   const hasExam = examScore !== null;
-  if (!hasQuiz && !hasExam) {
+  if (!hasExam) {
     return { finalScore: null, grade: null, remark: null };
   }
 
   let raw: number;
-  if (hasQuiz && hasExam) {
+  if (hasQuiz) {
     raw = (quizScore / quizMax) * quizWeight + (examScore / examMax) * examWeight;
-  } else if (hasQuiz) {
-    raw = (quizScore / quizMax) * 100;
   } else {
     raw = (examScore as number) / examMax * 100;
   }

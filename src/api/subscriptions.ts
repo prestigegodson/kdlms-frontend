@@ -42,7 +42,7 @@ export interface SubscriptionSummaryView {
   branchesUsed: number;
   activeStudentLimit: number;
   activeStudentsUsed: number;
-  quizSupport: boolean;
+  takeHomeQuiz: boolean;
   onDemandLearning: boolean;
 }
 

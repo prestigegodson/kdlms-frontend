@@ -127,7 +127,7 @@ export function PackagesPage() {
                   <TableCell label="Student limit">{pkg.activeStudentLimit}</TableCell>
                   <TableCell label="Features">
                     <div className="flex flex-wrap justify-end gap-1 sm:justify-start">
-                      {pkg.quizSupport && <Badge variant="neutral">Quiz</Badge>}
+                      {pkg.takeHomeQuiz && <Badge variant="neutral">Take-home quizzes</Badge>}
                       {pkg.onDemandLearning && <Badge variant="neutral">Learning</Badge>}
                     </div>
                   </TableCell>
@@ -212,7 +212,7 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
   const [activeStudentLimit, setActiveStudentLimit] = useState(
     initial ? String(initial.activeStudentLimit) : "",
   );
-  const [quizSupport, setQuizSupport] = useState(initial?.quizSupport ?? false);
+  const [takeHomeQuiz, setTakeHomeQuiz] = useState(initial?.takeHomeQuiz ?? false);
   const [onDemandLearning, setOnDemandLearning] = useState(initial?.onDemandLearning ?? false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -231,7 +231,7 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
         multiBranch,
         branchLimit: multiBranch ? Number(branchLimit) : 1,
         activeStudentLimit: Number(activeStudentLimit),
-        quizSupport,
+        takeHomeQuiz,
         onDemandLearning,
       });
       onSaved();
@@ -319,9 +319,13 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
         </div>
 
         <label className="flex items-center gap-2 text-sm text-slate-700">
-          <Checkbox checked={quizSupport} onChange={(event) => setQuizSupport(event.target.checked)} />
-          Quiz support
+          <Checkbox checked={takeHomeQuiz} onChange={(event) => setTakeHomeQuiz(event.target.checked)} />
+          Take-home quizzes
         </label>
+        <p className="-mt-2 text-xs text-slate-500">
+          Entitlement for the future teacher-authored take-home quiz module - does not affect midterm quiz
+          recording, which is available on every package.
+        </p>
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <Checkbox
             checked={onDemandLearning}

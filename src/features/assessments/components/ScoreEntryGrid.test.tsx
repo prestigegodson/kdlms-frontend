@@ -20,7 +20,6 @@ const SHEET: AssessmentSheetView = {
   examWeight: 70,
   quizMax: 20,
   examMax: 80,
-  quizEnabled: true,
   boundaries: [
     { grade: "A", minScore: 70, maxScore: 100, remark: "Excellent" },
     { grade: "F", minScore: 0, maxScore: 69.99, remark: "Fail" },
@@ -65,6 +64,16 @@ describe("ScoreEntryGrid", () => {
     expect(await screen.findByText("100")).toBeInTheDocument();
     expect(screen.getByText("A")).toBeInTheDocument();
     expect(assessmentsApi.saveScores).not.toHaveBeenCalled();
+  });
+
+  it("leaves the final score and grade blank when only the quiz has been typed", async () => {
+    const user = userEvent.setup();
+    renderGrid();
+
+    await user.type(screen.getByLabelText(/Quiz/), "20");
+
+    // Final and Grade cells both render "—" - a quiz mark alone is not a term result.
+    expect(await screen.findAllByText("—")).toHaveLength(2);
   });
 
   it("shows the unsaved-changes count only once a cell has been edited", async () => {

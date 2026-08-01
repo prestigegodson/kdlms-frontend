@@ -27,7 +27,7 @@ const STARTER_PACKAGE: PackageView = {
   multiBranch: false,
   branchLimit: 1,
   activeStudentLimit: 50,
-  quizSupport: false,
+  takeHomeQuiz: false,
   onDemandLearning: false,
   status: "ACTIVE",
 };

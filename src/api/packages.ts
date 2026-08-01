@@ -15,7 +15,7 @@ export interface PackageView {
   multiBranch: boolean;
   branchLimit: number;
   activeStudentLimit: number;
-  quizSupport: boolean;
+  takeHomeQuiz: boolean;
   onDemandLearning: boolean;
   status: PackageStatus;
 }
@@ -29,7 +29,7 @@ export interface SavePackageRequest {
   multiBranch: boolean;
   branchLimit: number;
   activeStudentLimit: number;
-  quizSupport: boolean;
+  takeHomeQuiz: boolean;
   onDemandLearning: boolean;
 }
 

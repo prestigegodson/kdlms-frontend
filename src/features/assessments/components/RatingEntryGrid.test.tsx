@@ -16,7 +16,6 @@ const SHEET: AssessmentSheetView = {
   subjectId: "subject-1",
   termId: "term-1",
   assessmentMode: "QUALITATIVE",
-  quizEnabled: false,
   boundaries: [],
   ratingOptions: [
     { id: "rating-1", label: "Needs Reinforcement", rank: 1 },

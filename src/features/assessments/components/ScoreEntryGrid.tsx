@@ -132,9 +132,6 @@ export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
   return (
     <div className="space-y-4 pb-4">
       {error && <Alert variant="error">{error}</Alert>}
-      {!sheet.quizEnabled && (
-        <Alert variant="info">Quiz scoring isn't included in this school's plan - record exam scores only.</Alert>
-      )}
 
       <Table>
         <TableHead>
@@ -150,7 +147,7 @@ export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
           {sheet.rows.map((row, index) => {
             const draft = drafts[row.enrollmentId] ?? { quiz: "", exam: "" };
             const isDirty = dirty.has(row.enrollmentId);
-            const quizError = sheet.quizEnabled ? rowError(draft.quiz, quizMax) : null;
+            const quizError = rowError(draft.quiz, quizMax);
             const examError = rowError(draft.exam, examMax);
             const computed = computeFinalScore(
               parseScore(draft.quiz),
@@ -176,7 +173,6 @@ export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
                     step="any"
                     aria-label={`Quiz score for ${row.studentName}`}
                     className={`text-right tabular-nums ${isDirty ? "border-brand-400" : ""}`}
-                    disabled={!sheet.quizEnabled}
                     value={draft.quiz}
                     aria-invalid={quizError ? "true" : undefined}
                     onChange={(event) => updateCell(row.enrollmentId, "quiz", event.target.value)}

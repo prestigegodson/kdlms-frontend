@@ -81,8 +81,8 @@ export function SubscriptionPage() {
               <Badge variant={state.summary.multiBranch ? "success" : "neutral"}>
                 {state.summary.multiBranch ? "Multi-branch" : "Single branch"}
               </Badge>
-              <Badge variant={state.summary.quizSupport ? "success" : "neutral"}>
-                {state.summary.quizSupport ? "Quiz support included" : "No quiz support"}
+              <Badge variant={state.summary.takeHomeQuiz ? "success" : "neutral"}>
+                {state.summary.takeHomeQuiz ? "Take-home quizzes included" : "No take-home quizzes"}
               </Badge>
               <Badge variant={state.summary.onDemandLearning ? "success" : "neutral"}>
                 {state.summary.onDemandLearning ? "On-demand learning included" : "No on-demand learning"}
