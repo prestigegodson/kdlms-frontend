@@ -115,6 +115,14 @@ export function updateTeacher(userId: string, request: UpdateTeacherRequest): Pr
   });
 }
 
+/** {@code signatureFileId} may be {@code null} to clear a previously-set signature - the class-teacher signature slot on a printed result report (Phase 7). */
+export function updateTeacherSignature(userId: string, signatureFileId: string | null): Promise<UserSummary> {
+  return apiFetch<UserSummary>(`/api/v1/users/teachers/${userId}/signature`, {
+    method: "PATCH",
+    body: JSON.stringify({ signatureFileId }),
+  });
+}
+
 export function enableUser(userId: string): Promise<void> {
   return apiFetch<void>(`/api/v1/users/${userId}/enable`, { method: "PATCH" });
 }

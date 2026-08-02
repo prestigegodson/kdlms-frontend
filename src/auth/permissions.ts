@@ -101,4 +101,24 @@ export const can = {
   publishResults(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
   },
+
+  /** Designing master result templates on the layout canvas - SYSTEM_ADMIN only, outside tenant scope entirely. */
+  manageResultTemplates(role: Role | undefined): boolean {
+    return role === "SYSTEM_ADMIN";
+  },
+
+  /** A school's result-report branding and per-level template assignment - SCHOOL_ADMIN only (BRANCH_ADMIN is read-only, via viewReportSettings). */
+  manageReportSettings(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN";
+  },
+
+  /** Read-only view of a school's report settings/level-template assignments - SCHOOL_ADMIN and BRANCH_ADMIN. */
+  viewReportSettings(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /** Report preview/PDF download - same visibility as viewResults: admins (branch-scoped for BRANCH_ADMIN), a teacher's own classes. */
+  viewReports(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER";
+  },
 };

@@ -11,6 +11,8 @@ export interface UserSummary {
   role: Role;
   schoolId?: string;
   branchId?: string;
+  /** The image a printed result report's signature slot pulls for this user - undefined until set (Phase 7). */
+  signatureFileId?: string;
 }
 
 export interface SessionResponse {

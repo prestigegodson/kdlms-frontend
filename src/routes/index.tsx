@@ -17,6 +17,9 @@ import { BranchesPage } from "@/features/branches/BranchesPage";
 import { LandingPage } from "@/features/connectivity/LandingPage";
 import { GuardiansPage } from "@/features/guardians/GuardiansPage";
 import { PackagesPage } from "@/features/packages/PackagesPage";
+import { ReportSettingsPage } from "@/features/reporting/ReportSettingsPage";
+import { ReportsPage } from "@/features/reporting/ReportsPage";
+import { ResultTemplatesPage } from "@/features/reporting/ResultTemplatesPage";
 import { SchoolProfilePage } from "@/features/school/SchoolProfilePage";
 import { SchoolDetailPage } from "@/features/schools/SchoolDetailPage";
 import { SchoolsPage } from "@/features/schools/SchoolsPage";
@@ -31,6 +34,7 @@ import { SchoolLayout } from "@/layouts/SchoolLayout";
 import { SystemAdminLayout } from "@/layouts/SystemAdminLayout";
 import { HomeRedirect } from "@/routes/HomeRedirect";
 import { RequireRole } from "@/routes/RequireRole";
+import { TemplateDesignerRoute } from "@/routes/TemplateDesignerRoute";
 
 /**
  * Exported as a plain array (rather than only building `router` below) so
@@ -60,7 +64,8 @@ export const routes: RouteObject[] = [
           { path: "schools", element: <SchoolsPage /> },
           { path: "schools/:schoolId", element: <SchoolDetailPage /> },
           { path: "packages", element: <PackagesPage /> },
-          { path: "templates", element: <PlaceholderPage title="Result Templates" /> },
+          { path: "templates", element: <ResultTemplatesPage /> },
+          { path: "templates/:templateId", element: <TemplateDesignerRoute /> },
         ],
       },
       {
@@ -173,6 +178,15 @@ export const routes: RouteObject[] = [
             ),
           },
           { path: "attendance", element: <AttendancePage /> },
+          { path: "reports", element: <ReportsPage /> },
+          {
+            path: "reports/settings",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
+                <ReportSettingsPage />
+              </RequireRole>
+            ),
+          },
         ],
       },
       {

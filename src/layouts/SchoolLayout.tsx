@@ -5,6 +5,7 @@ import {
   ClipboardList,
   Contact,
   CreditCard,
+  FileText,
   GraduationCap,
   LayoutDashboard,
   Layers,
@@ -68,6 +69,14 @@ const NAV_ITEMS: NavItem[] = [
     },
   },
   {
+    label: "Reports",
+    href: "/school/reports",
+    icon: FileText,
+    group: "Academics",
+    // Same visibility as Assessments/broadsheets - admins (branch-scoped for
+    // BRANCH_ADMIN), a teacher's own classes - see auth/permissions.ts's viewReports.
+  },
+  {
     label: "Teachers",
     href: "/school/academics/teachers",
     icon: Users,
@@ -95,6 +104,15 @@ const NAV_ITEMS: NavItem[] = [
     icon: School,
     group: "Administration",
     roles: ["SCHOOL_ADMIN"],
+  },
+  {
+    label: "Report Settings",
+    href: "/school/reports/settings",
+    icon: FileText,
+    group: "Administration",
+    // SCHOOL_ADMIN edits branding/level templates; BRANCH_ADMIN sees the
+    // same screen read-only - see auth/permissions.ts's viewReportSettings.
+    roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"],
   },
   {
     label: "Subscription",

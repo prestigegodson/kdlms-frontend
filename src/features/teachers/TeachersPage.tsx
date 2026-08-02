@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import type { UserSummary } from "@/api/auth";
 import { listBranches, type BranchView } from "@/api/branches";
 import { ApiError } from "@/api/client";
-import { createTeacher, listTeachers, updateTeacher, type CreateUserResult } from "@/api/users";
+import { createTeacher, listTeachers, updateTeacher, updateTeacherSignature, type CreateUserResult } from "@/api/users";
 import { can } from "@/auth/permissions";
 import { Users } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
@@ -17,6 +17,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
+import { ImageUploadField } from "@/features/reporting/components/ImageUploadField";
 import { useAuthStore } from "@/stores/authStore";
 
 type ListState =
@@ -34,6 +35,7 @@ export function TeachersPage() {
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<UserSummary | null>(null);
+  const [signing, setSigning] = useState<UserSummary | null>(null);
 
   useEffect(() => {
     if (!isBranchScoped) {
@@ -105,13 +107,22 @@ export function TeachersPage() {
                   )}
                   {canManage && (
                     <TableCell label="Actions">
-                      <button
-                        type="button"
-                        className="text-brand-500 hover:text-brand-600"
-                        onClick={() => setEditing(teacher)}
-                      >
-                        Edit
-                      </button>
+                      <div className="flex justify-end gap-3 sm:justify-start">
+                        <button
+                          type="button"
+                          className="text-brand-500 hover:text-brand-600"
+                          onClick={() => setEditing(teacher)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="text-slate-500 hover:text-slate-700"
+                          onClick={() => setSigning(teacher)}
+                        >
+                          {teacher.signatureFileId ? "Signature" : "Add signature"}
+                        </button>
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
@@ -141,7 +152,60 @@ export function TeachersPage() {
           onSaved={load}
         />
       )}
+      {signing && (
+        <TeacherSignatureModal
+          teacher={signing}
+          onClose={() => setSigning(null)}
+          onSaved={() => {
+            setSigning(null);
+            load();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+interface TeacherSignatureModalProps {
+  teacher: UserSummary;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+/** The image a printed result report's class-teacher signature slot pulls for this teacher - see the `shared` FileStorage SPI (Phase 7). */
+function TeacherSignatureModal({ teacher, onClose, onSaved }: TeacherSignatureModalProps) {
+  const [signatureFileId, setSignatureFileId] = useState<string | undefined>(teacher.signatureFileId);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    try {
+      await updateTeacherSignature(teacher.id, signatureFileId ?? null);
+      onSaved();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to save this signature");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={`${teacher.firstName} ${teacher.lastName}'s signature`}>
+      <div className="space-y-4">
+        {error && <Alert variant="error">{error}</Alert>}
+        <ImageUploadField label="Signature image" fileId={signatureFileId} onChange={setSignatureFileId} />
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleSave} loading={saving}>
+            Save
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
