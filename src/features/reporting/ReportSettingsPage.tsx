@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   assignLevelTemplate,
+  clearLevelTemplate,
   getReportSettings,
   type LevelTemplateAssignmentView,
   listLevelTemplates,
@@ -91,6 +92,11 @@ export function ReportSettingsPage() {
     loadLevels();
   }
 
+  async function handleClear(levelId: string) {
+    await clearLevelTemplate(levelId);
+    loadLevels();
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -127,7 +133,7 @@ export function ReportSettingsPage() {
               <Spinner /> Loading levels…
             </div>
           ) : (
-            <LevelTemplateTable levels={levels} onAssign={handleAssign} editable={editable} />
+            <LevelTemplateTable levels={levels} onAssign={handleAssign} onClear={handleClear} editable={editable} />
           )}
         </div>
       </Card>
