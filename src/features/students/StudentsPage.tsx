@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { DateInput } from "@/components/ui/DateInput";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
@@ -24,6 +25,7 @@ import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { useAuthStore } from "@/stores/authStore";
+import { todayIso } from "@/utils/date";
 
 const PAGE_SIZE = 20;
 
@@ -356,7 +358,7 @@ function RegisterStudentModal({ branches, classes, showBranchField, onClose, onS
           </FormField>
         </div>
         <FormField label="Date of birth" htmlFor="register-dob">
-          <Input id="register-dob" type="date" value={dateOfBirth} onChange={(event) => setDateOfBirth(event.target.value)} />
+          <DateInput id="register-dob" max={todayIso()} value={dateOfBirth} onChange={setDateOfBirth} />
         </FormField>
         <div>
           <label className="flex items-center gap-2 text-sm text-slate-700">

@@ -19,6 +19,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { DateInput } from "@/components/ui/DateInput";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
@@ -385,21 +386,10 @@ function SessionFormModal({ mode, session, onClose, onSaved }: SessionFormModalP
         </FormField>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="Session start date" htmlFor="session-start-date">
-            <Input
-              id="session-start-date"
-              type="date"
-              required
-              value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
-            />
+            <DateInput id="session-start-date" required value={startDate} onChange={setStartDate} />
           </FormField>
           <FormField label="Session end date (optional)" htmlFor="session-end-date">
-            <Input
-              id="session-end-date"
-              type="date"
-              value={endDate}
-              onChange={(event) => setEndDate(event.target.value)}
-            />
+            <DateInput id="session-end-date" value={endDate} onChange={setEndDate} />
           </FormField>
         </div>
 
@@ -431,21 +421,19 @@ function SessionFormModal({ mode, session, onClose, onSaved }: SessionFormModalP
                   />
                 </FormField>
                 <FormField label="Start date" htmlFor={`term-${term.termNumber}-start`}>
-                  <Input
+                  <DateInput
                     id={`term-${term.termNumber}-start`}
-                    type="date"
                     required
                     value={term.startDate}
-                    onChange={(event) => updateTermRow(index, { startDate: event.target.value })}
+                    onChange={(value) => updateTermRow(index, { startDate: value })}
                   />
                 </FormField>
                 <FormField label="End date" htmlFor={`term-${term.termNumber}-end`}>
-                  <Input
+                  <DateInput
                     id={`term-${term.termNumber}-end`}
-                    type="date"
                     required
                     value={term.endDate}
-                    onChange={(event) => updateTermRow(index, { endDate: event.target.value })}
+                    onChange={(value) => updateTermRow(index, { endDate: value })}
                   />
                 </FormField>
               </div>
@@ -510,22 +498,10 @@ function TermFormModal({ mode, sessionId, term, nextTermNumber, onClose, onSaved
         </FormField>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="Start date" htmlFor="term-start-date">
-            <Input
-              id="term-start-date"
-              type="date"
-              required
-              value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
-            />
+            <DateInput id="term-start-date" required value={startDate} onChange={setStartDate} />
           </FormField>
           <FormField label="End date" htmlFor="term-end-date">
-            <Input
-              id="term-end-date"
-              type="date"
-              required
-              value={endDate}
-              onChange={(event) => setEndDate(event.target.value)}
-            />
+            <DateInput id="term-end-date" required value={endDate} onChange={setEndDate} />
           </FormField>
         </div>
         <div className="flex justify-end gap-2">

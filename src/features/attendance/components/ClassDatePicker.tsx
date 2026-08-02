@@ -1,5 +1,5 @@
+import { DateInput } from "@/components/ui/DateInput";
 import { FormField } from "@/components/ui/FormField";
-import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { todayIso } from "@/utils/date";
 
@@ -48,13 +48,7 @@ export function ClassDatePicker({
         </Select>
       </FormField>
       <FormField label="Date" htmlFor="attendance-date">
-        <Input
-          id="attendance-date"
-          type="date"
-          max={todayIso()}
-          value={date}
-          onChange={(event) => onDateChange(event.target.value)}
-        />
+        <DateInput id="attendance-date" max={todayIso()} value={date} onChange={onDateChange} />
       </FormField>
     </div>
   );

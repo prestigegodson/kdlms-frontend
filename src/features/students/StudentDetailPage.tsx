@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { DateInput } from "@/components/ui/DateInput";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
@@ -47,7 +48,7 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { useAuthStore } from "@/stores/authStore";
-import { formatLongDate } from "@/utils/date";
+import { formatLongDate, todayIso } from "@/utils/date";
 
 type LoadState =
   | { kind: "loading" }
@@ -341,12 +342,7 @@ function EditStudentModal({ student, onClose, onSaved }: EditStudentModalProps) 
             </Select>
           </FormField>
           <FormField label="Date of birth" htmlFor="edit-dob">
-            <Input
-              id="edit-dob"
-              type="date"
-              value={dateOfBirth}
-              onChange={(event) => setDateOfBirth(event.target.value)}
-            />
+            <DateInput id="edit-dob" max={todayIso()} value={dateOfBirth} onChange={setDateOfBirth} />
           </FormField>
         </div>
         <div className="flex justify-end gap-2">

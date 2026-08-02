@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CredentialsReveal } from "@/components/ui/CredentialsReveal";
+import { DateInput } from "@/components/ui/DateInput";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
@@ -696,20 +697,10 @@ function AssignSubscriptionModal({ schoolId, onClose, onAssigned }: AssignSubscr
             </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField label="Start date (optional)" htmlFor="assign-start-date">
-                <Input
-                  id="assign-start-date"
-                  type="date"
-                  value={startDate}
-                  onChange={(event) => setStartDate(event.target.value)}
-                />
+                <DateInput id="assign-start-date" value={startDate} onChange={setStartDate} />
               </FormField>
               <FormField label="End date (optional)" htmlFor="assign-end-date">
-                <Input
-                  id="assign-end-date"
-                  type="date"
-                  value={endDate}
-                  onChange={(event) => setEndDate(event.target.value)}
-                />
+                <DateInput id="assign-end-date" value={endDate} onChange={setEndDate} />
               </FormField>
             </div>
           </>
