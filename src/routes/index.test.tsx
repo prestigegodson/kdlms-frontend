@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { routes } from "@/routes";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import { resetTeacherScopeStore } from "@/stores/teacherScopeStore";
+import { resetWardStore } from "@/stores/wardStore";
 
 function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] });
@@ -15,6 +16,7 @@ describe("router", () => {
   beforeEach(() => {
     resetAuthStore();
     resetTeacherScopeStore();
+    resetWardStore();
     vi.stubGlobal(
       "fetch",
       vi.fn((url: string) => {
@@ -159,6 +161,53 @@ describe("router", () => {
 
       await screen.findByRole("heading", { name: "Dashboard" });
       expect(screen.queryByText("Attendance")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("as a GUARDIAN", () => {
+    beforeEach(() => {
+      useAuthStore.setState({
+        user: {
+          id: "guardian-1",
+          email: "guardian@example.com",
+          firstName: "Gina",
+          lastName: "G",
+          role: "GUARDIAN",
+          schoolId: "school-1",
+        },
+        accessToken: "access",
+        refreshToken: "refresh",
+      });
+      // The generic catch-all stub returns a Page-shaped body, but
+      // GET /api/v1/me/wards returns a bare array - override it so
+      // WardsPage doesn't crash trying to .map() over a Page object.
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((url: string) => {
+          if (url.includes("/api/v1/me/wards")) {
+            return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
+          }
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 }),
+          });
+        }),
+      );
+    });
+
+    it("shows the guardian nav and lands on My Wards", async () => {
+      renderAt("/guardian");
+
+      expect(await screen.findByRole("heading", { name: "My Wards" })).toBeInTheDocument();
+      expect(screen.getByText("Results")).toBeInTheDocument();
+      expect(screen.getByText("Attendance")).toBeInTheDocument();
+    });
+
+    it("is redirected away from /school to its own portal home", async () => {
+      renderAt("/school");
+
+      expect(await screen.findByRole("heading", { name: "My Wards" })).toBeInTheDocument();
     });
   });
 });

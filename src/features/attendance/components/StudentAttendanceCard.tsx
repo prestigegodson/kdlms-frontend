@@ -3,14 +3,10 @@ import { type StudentAttendanceSummaryView, getStudentTermSummary } from "@/api/
 import { ApiError } from "@/api/client";
 import { listSessions, listTerms, type TermView } from "@/api/sessions";
 import { Alert } from "@/components/ui/Alert";
-import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
-import { StatTile } from "@/components/ui/StatTile";
-import { statusBadgeVariant } from "@/features/attendance/attendanceStatus";
-import { formatLongDate } from "@/utils/date";
+import { AttendanceSummaryPanel } from "@/features/attendance/components/AttendanceSummaryPanel";
 
 interface StudentAttendanceCardProps {
   studentId: string;
@@ -91,34 +87,7 @@ export function StudentAttendanceCard({ studentId }: StudentAttendanceCardProps)
             <Spinner /> Loading…
           </div>
         )}
-        {summary && summary.daysMarked === 0 && (
-          <EmptyState
-            title="No attendance recorded"
-            description="Nobody has marked this student's register this term yet."
-          />
-        )}
-        {summary && summary.daysMarked > 0 && (
-          <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-              <StatTile label="Present" value={summary.present} />
-              <StatTile label="Absent" value={summary.absent} />
-              <StatTile label="Late" value={summary.late} />
-              <StatTile label="Excused" value={summary.excused} />
-              <StatTile label="Rate" value={`${summary.attendanceRate.toFixed(1)}%`} />
-            </div>
-            <ul className="mt-4 max-h-64 space-y-1 overflow-y-auto text-sm">
-              {summary.days.map((day) => (
-                <li
-                  key={day.date}
-                  className="flex items-center justify-between border-b border-slate-100 py-1.5 last:border-0"
-                >
-                  <span className="text-slate-600">{formatLongDate(day.date)}</span>
-                  <Badge variant={statusBadgeVariant(day.status)}>{day.status}</Badge>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
+        {summary && <AttendanceSummaryPanel summary={summary} />}
       </div>
     </Card>
   );

@@ -15,6 +15,9 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
 import { BranchesPage } from "@/features/branches/BranchesPage";
 import { LandingPage } from "@/features/connectivity/LandingPage";
+import { WardAttendancePage } from "@/features/guardian/WardAttendancePage";
+import { WardResultsPage } from "@/features/guardian/WardResultsPage";
+import { WardsPage } from "@/features/guardian/WardsPage";
 import { GuardiansPage } from "@/features/guardians/GuardiansPage";
 import { PackagesPage } from "@/features/packages/PackagesPage";
 import { ReportSettingsPage } from "@/features/reporting/ReportSettingsPage";
@@ -197,9 +200,9 @@ export const routes: RouteObject[] = [
           </RequireRole>
         ),
         children: [
-          { index: true, element: <PlaceholderPage title="My Wards" /> },
-          { path: "results", element: <PlaceholderPage title="Results" /> },
-          { path: "attendance", element: <PlaceholderPage title="Attendance" /> },
+          { index: true, element: <WardsPage /> },
+          { path: "results", element: <WardResultsPage /> },
+          { path: "attendance", element: <WardAttendancePage /> },
         ],
       },
       { path: "*", element: <NotFoundPage /> },

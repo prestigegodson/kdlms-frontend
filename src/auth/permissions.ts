@@ -6,11 +6,12 @@ export interface TeacherScope {
 }
 
 /**
- * Single source of truth for what each role may see and do in the School
- * portal - nav items (layouts/SchoolLayout.tsx), route guards
- * (routes/index.tsx), and in-page controls all read from here instead of
- * repeating `role === "..."` comparisons, so the three can't drift apart.
- * Mirrors the role capability matrix in CLAUDE.md's Roles section.
+ * Single source of truth for what each role may see and do across the
+ * School and Guardian portals - nav items (layouts/SchoolLayout.tsx,
+ * layouts/GuardianLayout.tsx), route guards (routes/index.tsx), and in-page
+ * controls all read from here instead of repeating `role === "..."`
+ * comparisons, so the three can't drift apart. Mirrors the role capability
+ * matrix in CLAUDE.md's Roles section.
  */
 export const can = {
   /** Sessions & terms, class/subject/teacher-assignment writes - SCHOOL_ADMIN and BRANCH_ADMIN only. */
@@ -120,5 +121,16 @@ export const can = {
   /** Report preview/PDF download - same visibility as viewResults: admins (branch-scoped for BRANCH_ADMIN), a teacher's own classes. */
   viewReports(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER";
+  },
+
+  /**
+   * The guardian portal (wards, published results, attendance, report
+   * download) - GUARDIAN only. Deliberately not `viewResults`/`viewReports`
+   * reused here: those gate the staff broadsheet/report screens and
+   * exclude GUARDIAN by design (a guardian's own results/report reads are
+   * ward-scoped and publication-gated, an entirely separate backend path).
+   */
+  viewWards(role: Role | undefined): boolean {
+    return role === "GUARDIAN";
   },
 };

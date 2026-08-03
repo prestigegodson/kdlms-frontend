@@ -5,6 +5,7 @@ import { setAccessTokenProvider, setRefreshHandler, setUnauthorizedHandler } fro
 import type { Role } from "@/api/types";
 import { useAcademicContextStore } from "@/stores/academicContextStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
+import { useWardStore } from "@/stores/wardStore";
 
 export interface AuthenticatedUser {
   id: string;
@@ -68,10 +69,11 @@ export const useAuthStore = create<AuthState>()(
         const token = get().refreshToken;
         set({ user: null, accessToken: null, refreshToken: null });
         // So a different user signing in next in this tab never inherits
-        // the previous one's cached class/subject-teacher capabilities or
-        // current-session/term label.
+        // the previous one's cached class/subject-teacher capabilities,
+        // current-session/term label, or linked wards.
         useTeacherScopeStore.getState().reset();
         useAcademicContextStore.getState().reset();
+        useWardStore.getState().reset();
         if (token) {
           // Best-effort: the local session is already cleared either way.
           authApi.logout(token).catch(() => undefined);
