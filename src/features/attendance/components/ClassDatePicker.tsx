@@ -1,7 +1,7 @@
 import { DateInput } from "@/components/ui/DateInput";
 import { FormField } from "@/components/ui/FormField";
 import { Select } from "@/components/ui/Select";
-import { todayIso } from "@/utils/date";
+import { isWeekend, todayIso } from "@/utils/date";
 
 export interface ClassOption {
   id: string;
@@ -14,6 +14,15 @@ interface ClassDatePickerProps {
   onClassChange: (classId: string) => void;
   date: string;
   onDateChange: (date: string) => void;
+  /**
+   * True when the school hasn't opted in to weekend attendance
+   * (`allowWeekendAttendance` - see `schoolSettingsStore`), so Saturdays
+   * and Sundays are greyed out. A register already marked on a weekend
+   * before the school opted out stays reachable at the API level even
+   * though the picker won't offer it here - see CLAUDE.md's attendance
+   * weekday rule.
+   */
+  disableWeekends?: boolean;
 }
 
 /**
@@ -30,6 +39,7 @@ export function ClassDatePicker({
   onClassChange,
   date,
   onDateChange,
+  disableWeekends,
 }: ClassDatePickerProps) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -48,7 +58,13 @@ export function ClassDatePicker({
         </Select>
       </FormField>
       <FormField label="Date" htmlFor="attendance-date">
-        <DateInput id="attendance-date" max={todayIso()} value={date} onChange={onDateChange} />
+        <DateInput
+          id="attendance-date"
+          max={todayIso()}
+          value={date}
+          onChange={onDateChange}
+          isDayDisabled={disableWeekends ? isWeekend : undefined}
+        />
       </FormField>
     </div>
   );

@@ -13,6 +13,7 @@ import {
   BookOpen,
   Scale,
   School,
+  Settings,
   Users,
 } from "lucide-react";
 import { useEffect } from "react";
@@ -21,6 +22,7 @@ import { SubscriptionBanner } from "@/features/subscription/SubscriptionBanner";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useAcademicContextStore } from "@/stores/academicContextStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 
 const NAV_ITEMS: NavItem[] = [
@@ -106,6 +108,14 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["SCHOOL_ADMIN"],
   },
   {
+    label: "School Settings",
+    href: "/school/settings",
+    icon: Settings,
+    group: "Administration",
+    // SCHOOL_ADMIN only, like School Profile - see auth/permissions.ts's manageSchoolSettings.
+    roles: ["SCHOOL_ADMIN"],
+  },
+  {
     label: "Report Settings",
     href: "/school/reports/settings",
     icon: FileText,
@@ -135,13 +145,20 @@ export function SchoolLayout() {
   const fetchAcademicContext = useAcademicContextStore((state) => state.fetchIfNeeded);
   const adminContextLabel = useAcademicContextStore((state) => state.label);
 
+  // Readable by every role this layout admits (SCHOOL_ADMIN, BRANCH_ADMIN,
+  // TEACHER - see SchoolSettingsController), unlike the role-gated fetches
+  // below - a TEACHER needs allowWeekendAttendance to shape the attendance
+  // date picker just as much as the admin roles need it for School Settings.
+  const fetchSchoolSettings = useSchoolSettingsStore((state) => state.fetchIfNeeded);
+
   useEffect(() => {
     if (role === "TEACHER") {
       fetchTeacherScope();
     } else if (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN") {
       fetchAcademicContext();
     }
-  }, [role, fetchTeacherScope, fetchAcademicContext]);
+    fetchSchoolSettings();
+  }, [role, fetchTeacherScope, fetchAcademicContext, fetchSchoolSettings]);
 
   const contextLabel =
     role === "TEACHER"

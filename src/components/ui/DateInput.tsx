@@ -19,6 +19,13 @@ interface DateInputProps {
   min?: string;
   /** ISO "YYYY-MM-DD" upper bound, inclusive. */
   max?: string;
+  /**
+   * Additional per-day exclusion on top of min/max (e.g. weekends) - see
+   * `ClassDatePicker`. Checked everywhere a date is validated: the calendar
+   * grid, `selectDay`, and typed-entry (`handleTextChange`/`draftLooksInvalid`),
+   * so a disabled day can't be typed in around the grid's disabled cells.
+   */
+  isDayDisabled?: (day: Date) => boolean;
   required?: boolean;
   disabled?: boolean;
   className?: string;
@@ -100,7 +107,17 @@ function buildGrid(month: Date): Date[] {
  * Escape/Tab handling below calls `stopPropagation` so it doesn't also
  * trigger Modal's Escape-closes/Tab-traps handling on the modal underneath.
  */
-export function DateInput({ id, value, onChange, min, max, required, disabled, className = "" }: DateInputProps) {
+export function DateInput({
+  id,
+  value,
+  onChange,
+  min,
+  max,
+  isDayDisabled,
+  required,
+  disabled,
+  className = "",
+}: DateInputProps) {
   const [draft, setDraft] = useState(value);
   const [lastSeenValue, setLastSeenValue] = useState(value);
 
@@ -124,9 +141,27 @@ export function DateInput({ id, value, onChange, min, max, required, disabled, c
   const today = new Date();
   const selectedDate = parseIsoDate(value);
 
+  // Single source of truth for "can this date be picked" - the calendar
+  // grid, selectDay, and both typed-entry checks below all defer to this so
+  // a disabled day can never be typed in around the grid's disabled cells.
+  function isIsoDisabled(iso: string): boolean {
+    if (min !== undefined && iso < min) {
+      return true;
+    }
+    if (max !== undefined && iso > max) {
+      return true;
+    }
+    if (isDayDisabled) {
+      const date = parseIsoDate(iso);
+      if (date && isDayDisabled(date)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function isDisabledDay(day: Date): boolean {
-    const iso = toIso(day);
-    return (min !== undefined && iso < min) || (max !== undefined && iso > max);
+    return isIsoDisabled(toIso(day));
   }
 
   function computePosition() {
@@ -336,7 +371,7 @@ export function DateInput({ id, value, onChange, min, max, required, disabled, c
       return;
     }
     const iso = formatted;
-    if ((min === undefined || iso >= min) && (max === undefined || iso <= max)) {
+    if (!isIsoDisabled(iso)) {
       onChange(iso);
     }
   }
@@ -352,7 +387,7 @@ export function DateInput({ id, value, onChange, min, max, required, disabled, c
         return true;
       }
       const iso = formatDigits(draftDigits);
-      return (min !== undefined && iso < min) || (max !== undefined && iso > max);
+      return isIsoDisabled(iso);
     })();
 
   const grid = buildGrid(viewDate);

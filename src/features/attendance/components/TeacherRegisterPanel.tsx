@@ -11,19 +11,27 @@ import {
   AttendanceRegisterGrid,
 } from "@/features/attendance/components/AttendanceRegisterGrid";
 import { ClassDatePicker } from "@/features/attendance/components/ClassDatePicker";
-import { todayIso } from "@/utils/date";
+import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
+import { mostRecentWeekdayIso, todayIso } from "@/utils/date";
 import { ClipboardList } from "lucide-react";
 
 /**
  * A class teacher's marking flow: pick a class (class-taught only - a
  * subject-teacher-only account has nothing to mark, see CLAUDE.md) and a
- * date, then fill in the register. Defaults to today's date on the first
- * class-taught class.
+ * date, then fill in the register. Defaults to today's date - or the most
+ * recent weekday, if the school hasn't opted in to weekend attendance and
+ * today is a Saturday/Sunday - on the first class-taught class.
  */
 export function TeacherRegisterPanel() {
+  // Fetched by SchoolLayout's mount effect (same pattern as teacherScopeStore/
+  // academicContextStore) - just read here.
+  const allowWeekendAttendance = useSchoolSettingsStore(
+    (state) => state.settings?.allowWeekendAttendance ?? false,
+  );
+
   const [classes, setClasses] = useState<TeacherClassView[] | null>(null);
   const [classId, setClassId] = useState("");
-  const [date, setDate] = useState(todayIso());
+  const [date, setDate] = useState(() => (allowWeekendAttendance ? todayIso() : mostRecentWeekdayIso()));
 
   const [register, setRegister] = useState<AttendanceRegisterView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -99,6 +107,7 @@ export function TeacherRegisterPanel() {
           onClassChange={setClassId}
           date={date}
           onDateChange={setDate}
+          disableWeekends={!allowWeekendAttendance}
         />
       )}
 

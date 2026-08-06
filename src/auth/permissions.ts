@@ -113,6 +113,17 @@ export const can = {
     return role === "SCHOOL_ADMIN";
   },
 
+  /**
+   * School-wide operational policy toggles (currently just weekend
+   * attendance) - SCHOOL_ADMIN only, like manageLevels/manageGradingSystems.
+   * BRANCH_ADMIN and TEACHER can still read the underlying flag (see
+   * schoolSettingsStore, which the attendance date picker relies on) - this
+   * gate is only for the School Settings screen itself.
+   */
+  manageSchoolSettings(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN";
+  },
+
   /** Read-only view of a school's report settings/level-template assignments - SCHOOL_ADMIN and BRANCH_ADMIN. */
   viewReportSettings(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";

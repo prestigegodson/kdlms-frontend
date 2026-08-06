@@ -2,6 +2,8 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as classesApi from "@/api/classes";
+import type { SchoolClassView } from "@/api/classes";
 import * as guardiansApi from "@/api/guardians";
 import type { GuardianView } from "@/api/guardians";
 import * as sessionsApi from "@/api/sessions";
@@ -19,7 +21,13 @@ vi.mock("@/api/students", async () => {
     listStudentEnrollments: vi.fn(),
     listStudentGuardians: vi.fn(),
     graduateStudent: vi.fn(),
+    transferStudentClass: vi.fn(),
   };
+});
+
+vi.mock("@/api/classes", async () => {
+  const actual = await vi.importActual<typeof import("@/api/classes")>("@/api/classes");
+  return { ...actual, listClasses: vi.fn() };
 });
 
 vi.mock("@/api/sessions", async () => {
@@ -45,6 +53,8 @@ const STUDENT_VIEW: StudentView = {
   status: "ACTIVE",
   currentClassId: "class-1",
   currentClassName: "Primary 1",
+  currentLevelId: "level-primary",
+  currentLevelName: "Primary",
   currentSessionId: "session-1",
 };
 
@@ -148,6 +158,43 @@ describe("StudentDetailPage", () => {
     await user.click(within(dialog).getByRole("button", { name: "Graduate" }));
 
     expect(studentsApi.graduateStudent).toHaveBeenCalledWith("student-1");
+  });
+
+  it("only offers same-level classes when transferring", async () => {
+    vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+    vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([ENROLLMENT_VIEW]);
+    vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+    vi.mocked(studentsApi.transferStudentClass).mockResolvedValue(STUDENT_VIEW);
+    const sameLevelClass: SchoolClassView = {
+      id: "class-2",
+      schoolId: "school-1",
+      branchId: "branch-1",
+      levelId: "level-primary",
+      name: "Primary 2",
+      status: "ACTIVE",
+    };
+    vi.mocked(classesApi.listClasses).mockResolvedValue({
+      content: [sameLevelClass],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 200,
+    });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByRole("heading", { name: "Ada Obi" });
+
+    await user.click(screen.getByRole("button", { name: "Transfer class" }));
+    const dialog = await screen.findByRole("dialog");
+
+    expect(classesApi.listClasses).toHaveBeenCalledWith("branch-1", "level-primary", 0, 200);
+    expect(within(dialog).getByText("Primary 2")).toBeInTheDocument();
+    expect(within(dialog).queryByText("Primary 1")).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "Transfer" }));
+
+    expect(studentsApi.transferStudentClass).toHaveBeenCalledWith("student-1", "class-2");
   });
 
   it("shows an empty state when no guardians are linked", async () => {

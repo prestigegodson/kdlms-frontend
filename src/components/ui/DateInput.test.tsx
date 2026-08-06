@@ -9,18 +9,33 @@ function Labeled({
   onChange,
   min,
   max,
+  isDayDisabled,
 }: {
   value: string;
   onChange: (value: string) => void;
   min?: string;
   max?: string;
+  isDayDisabled?: (day: Date) => boolean;
 }) {
   return (
     <>
       <label htmlFor="the-date">The date</label>
-      <DateInput id="the-date" value={value} onChange={onChange} min={min} max={max} />
+      <DateInput
+        id="the-date"
+        value={value}
+        onChange={onChange}
+        min={min}
+        max={max}
+        isDayDisabled={isDayDisabled}
+      />
     </>
   );
+}
+
+/** Saturday/Sunday - the same predicate `ClassDatePicker` passes for `disableWeekends`. */
+function isWeekend(day: Date): boolean {
+  const weekday = day.getDay();
+  return weekday === 0 || weekday === 6;
 }
 
 describe("DateInput", () => {
@@ -89,6 +104,35 @@ describe("DateInput", () => {
     expect(outOfRangeDay).toBeDisabled();
     await user.click(outOfRangeDay);
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("disables days excluded by isDayDisabled and does not select them", async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(<Labeled value="2026-08-01" onChange={onChange} isDayDisabled={isWeekend} />);
+
+    await user.click(screen.getByRole("button", { name: "Open calendar" }));
+    const saturday = await screen.findByRole("gridcell", { name: "15" });
+    const monday = await screen.findByRole("gridcell", { name: "17" });
+
+    expect(saturday).toBeDisabled();
+    expect(monday).not.toBeDisabled();
+    await user.click(saturday);
+    expect(onChange).not.toHaveBeenCalled();
+
+    await user.click(monday);
+    expect(onChange).toHaveBeenCalledWith("2026-08-17");
+  });
+
+  it("blocks typing a date excluded by isDayDisabled, same as min/max", async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(<Labeled value="" onChange={onChange} isDayDisabled={isWeekend} />);
+
+    await user.type(screen.getByLabelText("The date"), "2026-08-15");
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("The date")).toHaveAttribute("aria-invalid", "true");
   });
 
   it("closes on Escape and returns focus to the field", async () => {

@@ -20,6 +20,8 @@ export interface StudentView {
   status: StudentStatus;
   currentClassId?: string;
   currentClassName?: string;
+  currentLevelId?: string;
+  currentLevelName?: string;
   currentSessionId?: string;
 }
 

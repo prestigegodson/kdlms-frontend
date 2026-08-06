@@ -53,3 +53,26 @@ export function formatDateRange(
 export function todayIso(): string {
   return toIso(new Date());
 }
+
+/** True for Saturday/Sunday - see `ClassDatePicker`'s weekday-only default (CLAUDE.md's attendance rules). */
+export function isWeekend(date: Date): boolean {
+  const day = date.getDay();
+  return day === 0 || day === 6;
+}
+
+/**
+ * Today if it's a weekday, otherwise the most recent Friday - the default
+ * date `TeacherRegisterPanel` seeds when the school hasn't opted in to
+ * weekend attendance, so opening the page on a Saturday/Sunday doesn't land
+ * on a date the picker immediately greys out.
+ */
+export function mostRecentWeekdayIso(): string {
+  const date = new Date();
+  const day = date.getDay();
+  if (day === 0) {
+    date.setDate(date.getDate() - 2);
+  } else if (day === 6) {
+    date.setDate(date.getDate() - 1);
+  }
+  return toIso(date);
+}

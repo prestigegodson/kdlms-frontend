@@ -26,6 +26,7 @@ import { ReportSettingsPage } from "@/features/reporting/ReportSettingsPage";
 import { ReportsPage } from "@/features/reporting/ReportsPage";
 import { ResultTemplatesPage } from "@/features/reporting/ResultTemplatesPage";
 import { SchoolProfilePage } from "@/features/school/SchoolProfilePage";
+import { SchoolSettingsPage } from "@/features/school/SchoolSettingsPage";
 import { SchoolDetailPage } from "@/features/schools/SchoolDetailPage";
 import { SchoolsPage } from "@/features/schools/SchoolsPage";
 import { PromotionPage } from "@/features/students/PromotionPage";
@@ -95,6 +96,14 @@ export const routes: RouteObject[] = [
             element: (
               <RequireRole roles={["SCHOOL_ADMIN"]}>
                 <SchoolProfilePage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "settings",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN"]}>
+                <SchoolSettingsPage />
               </RequireRole>
             ),
           },

@@ -476,7 +476,10 @@ function TransferClassModal({ student, onClose, onSaved }: TransferClassModalPro
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listClasses(student.branchId, undefined, 0, 200)
+    if (!student.currentLevelId) {
+      return;
+    }
+    listClasses(student.branchId, student.currentLevelId, 0, 200)
       .then((page) => {
         const options = page.content.filter(
           (schoolClass) =>
@@ -486,7 +489,11 @@ function TransferClassModal({ student, onClose, onSaved }: TransferClassModalPro
         setClassId(options[0]?.id ?? "");
       })
       .catch(() => setClasses([]));
-  }, [student.branchId, student.currentClassId]);
+  }, [student.branchId, student.currentClassId, student.currentLevelId]);
+
+  // A student with no active enrollment has no level to scope the picker to - treat that the
+  // same as "no other classes available" rather than leaving the modal stuck on "loading".
+  const classOptions = student.currentLevelId ? classes : [];
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -507,13 +514,17 @@ function TransferClassModal({ student, onClose, onSaved }: TransferClassModalPro
       <form className="space-y-4" onSubmit={handleSubmit}>
         {error && <Alert variant="error">{error}</Alert>}
         <p className="text-sm text-slate-500">
-          Moves {student.fullName} to a different class in the same branch, within the current
-          session.
+          Moves {student.fullName} to a different class in{" "}
+          {student.currentLevelName ?? "the same level"}, within the same branch and current
+          session. Use promotion or placement to move them to another level.
         </p>
-        {classes !== null && classes.length === 0 && (
-          <Alert variant="warning">No other active classes are available in this branch.</Alert>
+        {classOptions !== null && classOptions.length === 0 && (
+          <Alert variant="warning">
+            No other active class in {student.currentLevelName ?? "this level"} is available in
+            this branch.
+          </Alert>
         )}
-        {classes !== null && classes.length > 0 && (
+        {classOptions !== null && classOptions.length > 0 && (
           <FormField label="Target class" htmlFor="transfer-class">
             <Select
               id="transfer-class"
@@ -521,7 +532,7 @@ function TransferClassModal({ student, onClose, onSaved }: TransferClassModalPro
               value={classId}
               onChange={(event) => setClassId(event.target.value)}
             >
-              {classes.map((schoolClass) => (
+              {classOptions.map((schoolClass) => (
                 <option key={schoolClass.id} value={schoolClass.id}>
                   {schoolClass.name}
                 </option>
