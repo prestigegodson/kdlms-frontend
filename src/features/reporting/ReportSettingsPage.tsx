@@ -38,6 +38,7 @@ export function ReportSettingsPage() {
   const editable = can.manageReportSettings(role);
 
   const [branding, setBranding] = useState<BrandingValues>(BLANK);
+  const [brandingLoaded, setBrandingLoaded] = useState(false);
   const [levels, setLevels] = useState<LevelTemplateAssignmentView[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -62,7 +63,8 @@ export function ReportSettingsPage() {
           principalSignatureFileId: settings.principalSignatureFileId,
         }),
       )
-      .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load settings"));
+      .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load settings"))
+      .finally(() => setBrandingLoaded(true));
     loadLevels();
   }, []);
 
@@ -108,16 +110,24 @@ export function ReportSettingsPage() {
 
       <Card>
         <h2 className="mb-4 font-display text-lg font-medium text-slate-900">Branding</h2>
-        <BrandingFields values={branding} onChange={editable ? setBranding : () => undefined} />
-        {editable && (
-          <div className="mt-6 flex items-center gap-3">
-            <Button onClick={handleSave} loading={saving}>
-              Save settings
-            </Button>
-            {saved && !saveError && <span className="text-sm text-green-700">Saved.</span>}
+        {!brandingLoaded ? (
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <Spinner /> Loading…
           </div>
+        ) : (
+          <>
+            <BrandingFields values={branding} onChange={editable ? setBranding : () => undefined} />
+            {editable && (
+              <div className="mt-6 flex items-center gap-3">
+                <Button onClick={handleSave} loading={saving}>
+                  Save settings
+                </Button>
+                {saved && !saveError && <span className="text-sm text-green-700">Saved.</span>}
+              </div>
+            )}
+            {saveError && <Alert variant="error" className="mt-4">{saveError}</Alert>}
+          </>
         )}
-        {saveError && <Alert variant="error" className="mt-4">{saveError}</Alert>}
       </Card>
 
       <Card className="p-0">

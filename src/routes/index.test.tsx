@@ -77,7 +77,7 @@ describe("router", () => {
 
     renderAt("/");
 
-    expect(await screen.findByRole("heading", { name: "Schools" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
   });
 
   it("renders a 404 page for an unknown route", async () => {

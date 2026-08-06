@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { StatTile } from "@/components/ui/StatTile";
@@ -56,7 +57,7 @@ function WardCard({ ward }: WardCardProps) {
         </div>
         <Badge variant="brand">{ward.relationship}</Badge>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatTile label="Class" value={ward.currentClassName ?? "—"} />
         <StatTile label="Level" value={ward.levelName ?? "—"} />
         {attendanceRate != null && (
@@ -77,7 +78,7 @@ function WardCard({ ward }: WardCardProps) {
 
 /** Guardian portal index - one card per linked ward. */
 export function WardsPage() {
-  const { wards, status, fetchIfNeeded } = useWardStore();
+  const { wards, status, errorMessage, fetchIfNeeded, retry } = useWardStore();
 
   useEffect(() => {
     fetchIfNeeded();
@@ -92,6 +93,7 @@ export function WardsPage() {
           <Spinner /> Loading…
         </div>
       )}
+      {status === "error" && <ErrorState message={errorMessage ?? "Failed to load your wards"} onRetry={retry} />}
       {status === "loaded" && wards.length === 0 && (
         <EmptyState
           icon={Users}

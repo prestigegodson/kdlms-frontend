@@ -27,6 +27,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
+import { TableSkeleton } from "@/components/ui/TableSkeleton";
 import { useAuthStore } from "@/stores/authStore";
 
 const PAGE_SIZE = 20;
@@ -101,9 +102,9 @@ export function GuardiansPage() {
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
       {state.kind === "loading" && (
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading guardians…
-        </div>
+        <Card className="p-0">
+          <TableSkeleton columns={5} />
+        </Card>
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {state.kind === "loaded" && state.page.content.length === 0 && (

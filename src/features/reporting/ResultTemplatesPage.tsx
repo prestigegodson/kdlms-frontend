@@ -1,5 +1,5 @@
 import { FileText } from "lucide-react";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { ApiError } from "@/api/client";
 import {
@@ -11,7 +11,9 @@ import {
   retireResultTemplate,
   type ResultTemplateSummary,
 } from "@/api/resultTemplates";
+import { listSchools, type SchoolView } from "@/api/schools";
 import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -24,13 +26,15 @@ import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { starterLayoutsForMode } from "@/features/reporting/components/designer/starterLayouts";
+import { TemplateAvailabilityModal } from "@/features/reporting/components/TemplateAvailabilityModal";
 import { TemplateStatusBadge } from "@/features/reporting/components/TemplateStatusBadge";
+import { SchoolSelect } from "@/features/schools/components/SchoolSelect";
 
 const BASE_LEVELS = ["PRE_SCHOOL", "PRE_NURSERY", "NURSERY", "PRIMARY", "SECONDARY"];
 
 type ListState =
   | { kind: "loading" }
-  | { kind: "loaded"; templates: ResultTemplateSummary[] }
+  | { kind: "loaded"; templates: ResultTemplateSummary[]; schools: SchoolView[] }
   | { kind: "error"; message: string };
 
 /**
@@ -47,10 +51,12 @@ export function ResultTemplatesPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [retiring, setRetiring] = useState<ResultTemplateSummary | null>(null);
   const [deleting, setDeleting] = useState<ResultTemplateSummary | null>(null);
+  const [changingAvailability, setChangingAvailability] = useState<ResultTemplateSummary | null>(null);
+  const [schoolFilter, setSchoolFilter] = useState("");
 
   function fetchTemplates() {
-    listResultTemplates()
-      .then((templates) => setState({ kind: "loaded", templates }))
+    Promise.all([listResultTemplates(0, 200), listSchools(0, 500)])
+      .then(([page, schoolPage]) => setState({ kind: "loaded", templates: page.content, schools: schoolPage.content }))
       .catch((error: unknown) =>
         setState({ kind: "error", message: error instanceof ApiError ? error.message : "Failed to load templates" }),
       );
@@ -75,6 +81,31 @@ export function ResultTemplatesPage() {
     }
   }
 
+  const schoolNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    if (state.kind === "loaded") {
+      for (const school of state.schools) {
+        map.set(school.id, school.name);
+      }
+    }
+    return map;
+  }, [state]);
+
+  const hasAnyBoundTemplate = state.kind === "loaded" && state.templates.some((template) => template.schoolId);
+
+  const visibleTemplates =
+    state.kind === "loaded"
+      ? state.templates.filter((template) => {
+          if (!schoolFilter) {
+            return true;
+          }
+          if (schoolFilter === "SHARED") {
+            return !template.schoolId;
+          }
+          return template.schoolId === schoolFilter;
+        })
+      : [];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -98,6 +129,25 @@ export function ResultTemplatesPage() {
           description="Create a template to give schools a result sheet to personalize."
         />
       )}
+      {state.kind === "loaded" && state.templates.length > 0 && hasAnyBoundTemplate && (
+        <div className="flex flex-wrap items-end gap-3">
+          <FormField label="Availability" htmlFor="template-school-filter" className="w-full sm:w-64">
+            <Select
+              id="template-school-filter"
+              value={schoolFilter}
+              onChange={(event) => setSchoolFilter(event.target.value)}
+            >
+              <option value="">All templates</option>
+              <option value="SHARED">Shared (all schools)</option>
+              {state.schools.map((school) => (
+                <option key={school.id} value={school.id}>
+                  {school.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        </div>
+      )}
       {state.kind === "loaded" && state.templates.length > 0 && (
         <Card className="p-0">
           <Table>
@@ -106,18 +156,26 @@ export function ResultTemplatesPage() {
                 <TableHeaderCell>Name</TableHeaderCell>
                 <TableHeaderCell>Mode</TableHeaderCell>
                 <TableHeaderCell>Stage</TableHeaderCell>
+                <TableHeaderCell>Availability</TableHeaderCell>
                 <TableHeaderCell>Status</TableHeaderCell>
                 <TableHeaderCell>Actions</TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {state.templates.map((template) => (
+              {visibleTemplates.map((template) => (
                 <TableRow key={template.id}>
                   <TableCell label="Name" className="font-medium text-slate-900">
                     {template.name}
                   </TableCell>
                   <TableCell label="Mode">{template.assessmentMode === "NUMERIC" ? "Numeric" : "Qualitative"}</TableCell>
                   <TableCell label="Stage">{template.baseLevel ?? "Any"}</TableCell>
+                  <TableCell label="Availability">
+                    {template.schoolId ? (
+                      <Badge variant="info">{schoolNameById.get(template.schoolId) ?? "Unknown school"}</Badge>
+                    ) : (
+                      <span className="text-slate-500">All schools</span>
+                    )}
+                  </TableCell>
                   <TableCell label="Status">
                     <TemplateStatusBadge status={template.status} />
                   </TableCell>
@@ -129,6 +187,13 @@ export function ResultTemplatesPage() {
                         onClick={() => navigate(`/admin/templates/${template.id}`)}
                       >
                         Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="text-brand-500 hover:text-brand-600"
+                        onClick={() => setChangingAvailability(template)}
+                      >
+                        Change school
                       </button>
                       {template.status !== "PUBLISHED" && (
                         <button
@@ -166,6 +231,7 @@ export function ResultTemplatesPage() {
 
       {createOpen && (
         <CreateTemplateModal
+          schools={state.kind === "loaded" ? state.schools : []}
           onClose={() => setCreateOpen(false)}
           onCreated={(templateId) => navigate(`/admin/templates/${templateId}`)}
         />
@@ -198,20 +264,33 @@ export function ResultTemplatesPage() {
           }}
         />
       )}
+      {changingAvailability && (
+        <TemplateAvailabilityModal
+          template={changingAvailability}
+          schools={state.kind === "loaded" ? state.schools : []}
+          onClose={() => setChangingAvailability(null)}
+          onSaved={() => {
+            setChangingAvailability(null);
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }
 
 interface CreateTemplateModalProps {
+  schools: SchoolView[];
   onClose: () => void;
   onCreated: (templateId: string) => void;
 }
 
-function CreateTemplateModal({ onClose, onCreated }: CreateTemplateModalProps) {
+function CreateTemplateModal({ schools, onClose, onCreated }: CreateTemplateModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [assessmentMode, setAssessmentMode] = useState<ReportAssessmentMode>("NUMERIC");
   const [baseLevel, setBaseLevel] = useState("");
+  const [schoolId, setSchoolId] = useState("");
   const [starterId, setStarterId] = useState(starterLayoutsForMode("NUMERIC")[0].id);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -234,6 +313,7 @@ function CreateTemplateModal({ onClose, onCreated }: CreateTemplateModalProps) {
         description: description || undefined,
         assessmentMode,
         baseLevel: baseLevel || undefined,
+        schoolId: schoolId || undefined,
         layout: starter.build(),
       });
       onCreated(template.id);
@@ -286,9 +366,19 @@ function CreateTemplateModal({ onClose, onCreated }: CreateTemplateModalProps) {
             ))}
           </Select>
         </FormField>
+        <FormField label="Available to" htmlFor="template-school">
+          <SchoolSelect
+            id="template-school"
+            schools={schools}
+            value={schoolId}
+            onChange={setSchoolId}
+            allOptionLabel="All schools"
+          />
+        </FormField>
         <p className="text-xs text-slate-500">
-          The mode and stage can't be changed after creation - a different shape needs a new template. The starter
-          layout is just a starting point on the canvas - rearrange or clear it freely.
+          The mode and stage can't be changed after creation - a different shape needs a new template. The school it's
+          available to can be changed later, but only while no school has it assigned to a level. The starter layout
+          is just a starting point on the canvas - rearrange or clear it freely.
         </p>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

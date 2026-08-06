@@ -1,6 +1,6 @@
 import { createBrowserRouter, type RouteObject } from "react-router";
 import { NotFoundPage } from "@/components/ui/NotFoundPage";
-import { PlaceholderPage } from "@/components/ui/PlaceholderPage";
+import { RouteErrorBoundary } from "@/components/ui/RouteErrorBoundary";
 import { ClassDetailPage } from "@/features/academics/ClassDetailPage";
 import { ClassesPage } from "@/features/academics/ClassesPage";
 import { LevelsPage } from "@/features/academics/LevelsPage";
@@ -15,6 +15,8 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
 import { BranchesPage } from "@/features/branches/BranchesPage";
 import { LandingPage } from "@/features/connectivity/LandingPage";
+import { AdminDashboardPage } from "@/features/dashboard/AdminDashboardPage";
+import { SchoolDashboardPage } from "@/features/dashboard/SchoolDashboardPage";
 import { WardAttendancePage } from "@/features/guardian/WardAttendancePage";
 import { WardResultsPage } from "@/features/guardian/WardResultsPage";
 import { WardsPage } from "@/features/guardian/WardsPage";
@@ -48,7 +50,7 @@ import { TemplateDesignerRoute } from "@/routes/TemplateDesignerRoute";
 export const routes: RouteObject[] = [
   {
     element: <RootLayout />,
-    errorElement: <NotFoundPage />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       { index: true, element: <HomeRedirect /> },
       { path: "status", element: <LandingPage /> },
@@ -63,7 +65,7 @@ export const routes: RouteObject[] = [
           </RequireRole>
         ),
         children: [
-          { index: true, element: <SchoolsPage /> },
+          { index: true, element: <AdminDashboardPage /> },
           { path: "schools", element: <SchoolsPage /> },
           { path: "schools/:schoolId", element: <SchoolDetailPage /> },
           { path: "packages", element: <PackagesPage /> },
@@ -79,7 +81,7 @@ export const routes: RouteObject[] = [
           </RequireRole>
         ),
         children: [
-          { index: true, element: <PlaceholderPage title="Dashboard" /> },
+          { index: true, element: <SchoolDashboardPage /> },
           {
             path: "branches",
             element: (

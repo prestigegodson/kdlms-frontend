@@ -16,11 +16,13 @@ interface LevelTemplateTableProps {
  * One row per active level: its assessment mode, which template it
  * currently resolves to (or "Platform default" when the school hasn't
  * picked one explicitly - see CLAUDE.md's template-resolution order), and a
- * picker over that mode's PUBLISHED templates plus whichever template is
- * currently assigned (even if since retired, so the select's value always
- * has a matching option). Selecting a template applies immediately, the
- * same single-action-per-control convention publish/retire buttons
- * elsewhere in the app use, rather than a form with its own Save button.
+ * picker over that mode's PUBLISHED templates this school may use - shared
+ * ones plus any made specifically for this school (marked "made for your
+ * school") - plus whichever template is currently assigned (even if since
+ * retired, so the select's value always has a matching option). Selecting a
+ * template applies immediately, the same single-action-per-control
+ * convention publish/retire buttons elsewhere in the app use, rather than a
+ * form with its own Save button.
  */
 export function LevelTemplateTable({ levels, onAssign, onClear, editable }: LevelTemplateTableProps) {
   const [savingLevelId, setSavingLevelId] = useState<string | null>(null);
@@ -72,6 +74,7 @@ export function LevelTemplateTable({ levels, onAssign, onClear, editable }: Leve
                         <option key={template.id} value={template.id}>
                           {template.name}
                           {template.baseLevel ? ` — ${template.baseLevel}` : ""}
+                          {template.schoolId ? " (made for your school)" : ""}
                           {template.status !== "PUBLISHED" ? " (retired)" : ""}
                         </option>
                       ))}

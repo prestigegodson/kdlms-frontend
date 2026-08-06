@@ -64,7 +64,7 @@ export function PromotionPage() {
         description="Move a whole class into a new session, or search for and place individual students."
       />
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => setMode("promote")}

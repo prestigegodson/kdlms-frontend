@@ -12,8 +12,7 @@ import {
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { FormField } from "@/components/ui/FormField";
-import { Input } from "@/components/ui/Input";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Spinner } from "@/components/ui/Spinner";
 import { GradeBoundaryRows } from "@/features/assessments/components/GradeBoundaryRows";
 import { type RatingScaleRow, RatingScaleRows } from "@/features/assessments/components/RatingScaleRows";
@@ -63,13 +62,13 @@ export function GradingSystemEditorPage() {
 
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [mode, setMode] = useState<AssessmentMode>("NUMERIC");
-  const [name, setName] = useState("");
   const [weighting, setWeighting] = useState<WeightingValues>({
     quizWeight: 30,
     examWeight: 70,
     quizMax: 100,
     examMax: 100,
   });
+  const [showPosition, setShowPosition] = useState(true);
   const [boundaries, setBoundaries] = useState<GradeBoundary[]>([]);
   const [ratingOptions, setRatingOptions] = useState<RatingScaleRow[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -82,13 +81,13 @@ export function GradingSystemEditorPage() {
       .then((system) => {
         setState({ kind: "loaded", system });
         setMode(system.assessmentMode);
-        setName(system.name);
         setWeighting({
           quizWeight: system.quizWeight ?? 30,
           examWeight: system.examWeight ?? 70,
           quizMax: system.quizMax ?? 100,
           examMax: system.examMax ?? 100,
         });
+        setShowPosition(system.showPosition);
         setBoundaries(system.boundaries);
         setRatingOptions(system.ratingOptions.map((option) => ({ label: option.label, description: option.description ?? "" })));
       })
@@ -102,11 +101,6 @@ export function GradingSystemEditorPage() {
     if (!levelId) return;
     setError(null);
     setSaved(false);
-
-    if (!name.trim()) {
-      setError("Give this grading system a name.");
-      return;
-    }
 
     if (mode === "NUMERIC") {
       if (weighting.quizWeight + weighting.examWeight !== 100) {
@@ -129,10 +123,9 @@ export function GradingSystemEditorPage() {
     setSubmitting(true);
     try {
       if (mode === "NUMERIC") {
-        await saveNumericGradingSystem(levelId, { name, ...weighting, boundaries });
+        await saveNumericGradingSystem(levelId, { ...weighting, showPosition, boundaries });
       } else {
         await saveQualitativeGradingSystem(levelId, {
-          name,
           ratingOptions: ratingOptions.map((option, index) => ({
             label: option.label,
             description: option.description || undefined,
@@ -195,16 +188,20 @@ export function GradingSystemEditorPage() {
           </button>
         </div>
 
-        <Card>
-          <FormField label="Name" htmlFor="grading-name">
-            <Input id="grading-name" required value={name} onChange={(event) => setName(event.target.value)} />
-          </FormField>
-        </Card>
-
         {mode === "NUMERIC" ? (
           <>
             <Card>
               <WeightingFields values={weighting} onChange={setWeighting} />
+            </Card>
+            <Card>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <Checkbox checked={showPosition} onChange={(e) => setShowPosition(e.target.checked)} />
+                Show class position on reports
+              </label>
+              <p className="mt-1 text-sm text-slate-500">
+                Turning this off hides position from the printed report and the guardian portal. Staff still see it
+                on the broadsheet.
+              </p>
             </Card>
             <Card>
               <GradeBoundaryRows boundaries={boundaries} onChange={setBoundaries} />

@@ -44,7 +44,7 @@ export function GradeBoundaryRows({ boundaries, onChange }: GradeBoundaryRowsPro
         {boundaries.map((boundary, index) => (
           <div
             key={index}
-            className="grid grid-cols-2 gap-3 rounded-control border border-slate-200 p-3 sm:grid-cols-5 sm:items-end"
+            className="grid grid-cols-1 gap-3 rounded-control border border-slate-200 p-3 sm:grid-cols-5 sm:items-end"
           >
             <FormField label="Grade" htmlFor={`boundary-${index}-grade`}>
               <Input

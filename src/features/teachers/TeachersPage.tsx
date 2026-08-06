@@ -15,8 +15,8 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
-import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
+import { TableSkeleton } from "@/components/ui/TableSkeleton";
 import { ImageUploadField } from "@/features/reporting/components/ImageUploadField";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -76,9 +76,9 @@ export function TeachersPage() {
       />
 
       {state.kind === "loading" && (
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading teachers…
-        </div>
+        <Card className="p-0">
+          <TableSkeleton columns={4} />
+        </Card>
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {state.kind === "loaded" && state.teachers.length === 0 && (

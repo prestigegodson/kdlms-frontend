@@ -674,7 +674,7 @@ function AssignSubscriptionModal({ schoolId, onClose, onAssigned }: AssignSubscr
           </div>
         )}
         {packages?.length === 0 && (
-          <Alert variant="error">No active packages exist yet - create one first.</Alert>
+          <Alert variant="warning">No active packages exist yet - create one first.</Alert>
         )}
         {packages !== null && packages.length > 0 && (
           <>

@@ -21,7 +21,6 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
-import { Spinner } from "@/components/ui/Spinner";
 import {
   Table,
   TableBody,
@@ -30,6 +29,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@/components/ui/Table";
+import { TableSkeleton } from "@/components/ui/TableSkeleton";
 
 type ListState =
   | { kind: "loading" }
@@ -88,9 +88,9 @@ export function PackagesPage() {
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
       {state.kind === "loading" && (
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading packages…
-        </div>
+        <Card className="p-0">
+          <TableSkeleton columns={8} />
+        </Card>
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {state.kind === "loaded" && state.packages.length === 0 && (

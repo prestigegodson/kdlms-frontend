@@ -10,6 +10,7 @@ import {
   updateResultTemplate,
 } from "@/api/resultTemplates";
 import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
@@ -173,6 +174,7 @@ function TemplateDesignerBody({ initialTemplate }: { initialTemplate: ResultTemp
           </FormField>
           <div className="flex items-center gap-2 pb-2">
             <TemplateStatusBadge status={template.status} />
+            {template.schoolId && <Badge variant="info">School-specific</Badge>}
             <span className="text-xs text-slate-500">
               {template.assessmentMode === "NUMERIC" ? "Numeric" : "Qualitative"} · {template.baseLevel ?? "Any stage"}
             </span>

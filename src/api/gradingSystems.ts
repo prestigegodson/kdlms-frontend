@@ -27,28 +27,28 @@ export interface GradingSystemView {
   levelId: string;
   levelName: string;
   baseLevel: string;
-  name: string;
   assessmentMode: AssessmentMode;
   quizWeight?: number;
   examWeight?: number;
   quizMax?: number;
   examMax?: number;
+  /** Whether class position is shown on the rendered report and the guardian portal. Always true for QUALITATIVE. */
+  showPosition: boolean;
   boundaries: GradeBoundary[];
   ratingOptions: RatingOption[];
   configured: boolean;
 }
 
 export interface SaveNumericGradingSystemRequest {
-  name: string;
   quizWeight: number;
   examWeight: number;
   quizMax: number;
   examMax: number;
+  showPosition: boolean;
   boundaries: GradeBoundary[];
 }
 
 export interface SaveQualitativeGradingSystemRequest {
-  name: string;
   ratingOptions: Array<{ label: string; description?: string; rank: number }>;
 }
 

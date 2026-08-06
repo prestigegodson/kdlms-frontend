@@ -11,6 +11,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
@@ -33,7 +34,7 @@ const PUBLISHED_ONLY = (term: WardTermView) => term.resultsPublished;
  * itself 404s on an unpublished term regardless.
  */
 export function WardResultsPage() {
-  const { wards, selectedWardId, status, fetchIfNeeded } = useWardStore();
+  const { wards, selectedWardId, status, errorMessage: wardError, fetchIfNeeded, retry } = useWardStore();
   const [termId, setTermId] = useState("");
   const [result, setResult] = useState<WardTermResultView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -112,6 +113,7 @@ export function WardResultsPage() {
           <Spinner /> Loading…
         </div>
       )}
+      {status === "error" && <ErrorState message={wardError ?? "Failed to load your wards"} onRetry={retry} />}
       {status === "loaded" && wards.length === 0 && (
         <EmptyState title="No wards linked yet" description="Contact your school if you believe this is a mistake." />
       )}

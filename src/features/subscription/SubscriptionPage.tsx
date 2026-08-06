@@ -90,7 +90,7 @@ export function SubscriptionPage() {
             </div>
           </Card>
 
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
             <StatTile icon={Layers} label="Billing cycle" value={state.summary.billingCycle} />
             <StatTile
               icon={Sparkles}

@@ -15,12 +15,12 @@ const NUMERIC_SYSTEM: GradingSystemView = {
   levelId: "level-1",
   levelName: "Primary",
   baseLevel: "PRIMARY",
-  name: "Standard",
   assessmentMode: "NUMERIC",
   quizWeight: 30,
   examWeight: 70,
   quizMax: 100,
   examMax: 100,
+  showPosition: true,
   boundaries: [
     { grade: "A", minScore: 70, maxScore: 100, remark: "Excellent" },
     { grade: "F", minScore: 0, maxScore: 69.99, remark: "Fail" },
@@ -70,5 +70,36 @@ describe("GradingSystemEditorPage", () => {
 
     expect(await screen.findByText(/no gaps or overlaps/)).toBeInTheDocument();
     expect(gradingApi.saveNumericGradingSystem).not.toHaveBeenCalled();
+  });
+
+  it("show position defaults to checked and saves true when left alone", async () => {
+    const user = userEvent.setup();
+    vi.mocked(gradingApi.saveNumericGradingSystem).mockResolvedValue(NUMERIC_SYSTEM);
+    renderPage();
+
+    const checkbox = await screen.findByRole("checkbox", { name: /show class position on reports/i });
+    expect(checkbox).toBeChecked();
+
+    await user.click(screen.getByRole("button", { name: "Save grading system" }));
+
+    expect(gradingApi.saveNumericGradingSystem).toHaveBeenCalledWith(
+      "level-1",
+      expect.objectContaining({ showPosition: true }),
+    );
+  });
+
+  it("unchecking show position sends showPosition: false", async () => {
+    const user = userEvent.setup();
+    vi.mocked(gradingApi.saveNumericGradingSystem).mockResolvedValue({ ...NUMERIC_SYSTEM, showPosition: false });
+    renderPage();
+
+    const checkbox = await screen.findByRole("checkbox", { name: /show class position on reports/i });
+    await user.click(checkbox);
+    await user.click(screen.getByRole("button", { name: "Save grading system" }));
+
+    expect(gradingApi.saveNumericGradingSystem).toHaveBeenCalledWith(
+      "level-1",
+      expect.objectContaining({ showPosition: false }),
+    );
   });
 });

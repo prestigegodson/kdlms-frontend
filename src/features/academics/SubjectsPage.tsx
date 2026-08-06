@@ -663,7 +663,7 @@ function SubjectGroupsModal({ levelId, groups, onClose, onChanged }: SubjectGrou
           </ul>
         )}
 
-        <form className="flex items-end gap-2" onSubmit={handleCreate}>
+        <form className="flex flex-wrap items-end gap-2" onSubmit={handleCreate}>
           <FormField label="New group name" htmlFor="new-subject-group-name" className="flex-1">
             <Input
               id="new-subject-group-name"

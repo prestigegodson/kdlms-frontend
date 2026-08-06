@@ -4,6 +4,7 @@ import { ApiError } from "@/api/client";
 import { getWardAttendance } from "@/api/wards";
 import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { AttendanceSummaryPanel } from "@/features/attendance/components/AttendanceSummaryPanel";
@@ -19,7 +20,7 @@ import { useWardStore } from "@/stores/wardStore";
  * CLAUDE.md's Domain Rules).
  */
 export function WardAttendancePage() {
-  const { wards, selectedWardId, status, fetchIfNeeded } = useWardStore();
+  const { wards, selectedWardId, status, errorMessage: wardError, fetchIfNeeded, retry } = useWardStore();
   const [termId, setTermId] = useState("");
   const [summary, setSummary] = useState<StudentAttendanceSummaryView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -56,6 +57,7 @@ export function WardAttendancePage() {
           <Spinner /> Loading…
         </div>
       )}
+      {status === "error" && <ErrorState message={wardError ?? "Failed to load your wards"} onRetry={retry} />}
       {status === "loaded" && wards.length === 0 && (
         <EmptyState title="No wards linked yet" description="Contact your school if you believe this is a mistake." />
       )}
