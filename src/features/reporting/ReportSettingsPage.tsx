@@ -20,18 +20,15 @@ import { useAuthStore } from "@/stores/authStore";
 
 const BLANK: BrandingValues = {
   logoFileId: undefined,
-  primaryColor: "",
-  secondaryColor: "",
-  fontFamily: "",
   principalName: "",
   principalSignatureFileId: undefined,
 };
 
 /**
- * A school's result-report personalization: branding (logo, colors, font,
- * principal name/signature) and which PUBLISHED template each active level
- * uses. SCHOOL_ADMIN edits; BRANCH_ADMIN sees the same screen read-only -
- * see `auth/permissions.ts`'s `manageReportSettings`/`viewReportSettings`.
+ * A school's result-report personalization: branding (logo, principal
+ * name/signature) and which PUBLISHED template each active level uses.
+ * SCHOOL_ADMIN edits; BRANCH_ADMIN sees the same screen read-only - see
+ * `auth/permissions.ts`'s `manageReportSettings`/`viewReportSettings`.
  */
 export function ReportSettingsPage() {
   const role = useAuthStore((state) => state.user?.role);
@@ -56,9 +53,6 @@ export function ReportSettingsPage() {
       .then((settings) =>
         setBranding({
           logoFileId: settings.logoFileId,
-          primaryColor: settings.primaryColor ?? "",
-          secondaryColor: settings.secondaryColor ?? "",
-          fontFamily: settings.fontFamily ?? "",
           principalName: settings.principalName ?? "",
           principalSignatureFileId: settings.principalSignatureFileId,
         }),
@@ -75,9 +69,6 @@ export function ReportSettingsPage() {
     try {
       await saveReportSettings({
         logoFileId: branding.logoFileId ?? null,
-        primaryColor: branding.primaryColor || null,
-        secondaryColor: branding.secondaryColor || null,
-        fontFamily: branding.fontFamily || null,
         principalName: branding.principalName || null,
         principalSignatureFileId: branding.principalSignatureFileId ?? null,
       });
@@ -103,7 +94,7 @@ export function ReportSettingsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Report Settings"
-        description="Personalize your school's result reports with your own logo, colors, and signatures."
+        description="Personalize your school's result reports with your own logo and signatures."
       />
 
       {loadError && <Alert variant="error">{loadError}</Alert>}

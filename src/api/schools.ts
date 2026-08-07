@@ -11,9 +11,6 @@ export interface SchoolView {
   email?: string;
   phone?: string;
   address?: string;
-  primaryColor?: string;
-  secondaryColor?: string;
-  fontFamily?: string;
   status: SchoolStatus;
 }
 
@@ -31,9 +28,6 @@ export interface UpdateSchoolRequest {
   email?: string;
   phone?: string;
   address?: string;
-  primaryColor?: string;
-  secondaryColor?: string;
-  fontFamily?: string;
 }
 
 const ADMIN_BASE = "/api/v1/admin/schools";

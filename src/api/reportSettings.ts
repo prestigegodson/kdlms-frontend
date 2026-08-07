@@ -7,18 +7,12 @@ const BASE = "/api/v1/report-settings";
 export interface SchoolReportSettingsView {
   schoolId: string;
   logoFileId?: string;
-  primaryColor?: string;
-  secondaryColor?: string;
-  fontFamily?: string;
   principalName?: string;
   principalSignatureFileId?: string;
 }
 
 export interface SaveSettingsRequest {
   logoFileId?: string | null;
-  primaryColor?: string | null;
-  secondaryColor?: string | null;
-  fontFamily?: string | null;
   principalName?: string | null;
   principalSignatureFileId?: string | null;
 }

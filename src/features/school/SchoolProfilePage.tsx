@@ -12,7 +12,7 @@ import { Spinner } from "@/components/ui/Spinner";
 type LoadState =
   { kind: "loading" } | { kind: "loaded"; school: SchoolView } | { kind: "error"; message: string };
 
-/** School-admin self-service profile: name, contact details, and branding used later for result-template personalization. */
+/** School-admin self-service profile: name and contact details. */
 export function SchoolProfilePage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [saving, setSaving] = useState(false);
@@ -69,7 +69,7 @@ export function SchoolProfilePage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <PageHeader title="School profile" description="Contact details and branding for your school." />
+      <PageHeader title="School profile" description="Contact details for your school." />
 
       <Card>
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -109,32 +109,6 @@ export function SchoolProfilePage() {
               onChange={(event) => updateField("address", event.target.value)}
             />
           </FormField>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField label="Primary color" htmlFor="profile-primary-color">
-              <Input
-                id="profile-primary-color"
-                type="color"
-                value={school.primaryColor ?? "#3B4FD9"}
-                onChange={(event) => updateField("primaryColor", event.target.value)}
-              />
-            </FormField>
-            <FormField label="Secondary color" htmlFor="profile-secondary-color">
-              <Input
-                id="profile-secondary-color"
-                type="color"
-                value={school.secondaryColor ?? "#182057"}
-                onChange={(event) => updateField("secondaryColor", event.target.value)}
-              />
-            </FormField>
-          </div>
-          <FormField label="Font family" htmlFor="profile-font">
-            <Input
-              id="profile-font"
-              value={school.fontFamily ?? ""}
-              onChange={(event) => updateField("fontFamily", event.target.value)}
-            />
-          </FormField>
-
           <Button type="submit" disabled={saving}>
             {saving ? "Saving…" : "Save changes"}
           </Button>
