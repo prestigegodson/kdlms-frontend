@@ -24,6 +24,7 @@ import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useAcademicContextStore } from "@/stores/academicContextStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
+import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 import { useUnreadMessagesStore } from "@/stores/unreadMessagesStore";
@@ -172,6 +173,9 @@ export function SchoolLayout() {
   // Every role this layout admits needs the entitlement flag for the
   // Messages nav item's visible() check above.
   const fetchFeatures = useFeatureStore((state) => state.fetchIfNeeded);
+  // Readable by every role this layout admits, same as school settings above -
+  // PortalShell's sidebar reads this to swap the wordmark for the school's logo.
+  const fetchSchoolBranding = useSchoolBrandingStore((state) => state.fetchIfNeeded);
   const fetchUnreadMessages = useUnreadMessagesStore((state) => state.fetchIfNeeded);
   // Subscribed (return value intentionally discarded) only to force a
   // re-render - so the Messages `visible()`/`badge()` closures above
@@ -190,7 +194,16 @@ export function SchoolLayout() {
     }
     fetchSchoolSettings();
     fetchFeatures();
-  }, [role, fetchTeacherScope, fetchAcademicContext, fetchSchoolSettings, fetchFeatures, fetchUnreadMessages]);
+    fetchSchoolBranding();
+  }, [
+    role,
+    fetchTeacherScope,
+    fetchAcademicContext,
+    fetchSchoolSettings,
+    fetchFeatures,
+    fetchSchoolBranding,
+    fetchUnreadMessages,
+  ]);
 
   const contextLabel =
     role === "TEACHER"

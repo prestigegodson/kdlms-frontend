@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { can } from "@/auth/permissions";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useFeatureStore } from "@/stores/featureStore";
+import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 import { useUnreadMessagesStore } from "@/stores/unreadMessagesStore";
 
 const NAV_ITEMS: NavItem[] = [
@@ -22,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export function GuardianLayout() {
   const fetchFeatures = useFeatureStore((state) => state.fetchIfNeeded);
+  const fetchSchoolBranding = useSchoolBrandingStore((state) => state.fetchIfNeeded);
   const fetchUnreadMessages = useUnreadMessagesStore((state) => state.fetchIfNeeded);
   // Subscribed (return value intentionally discarded) only to force a
   // re-render, so the Messages `visible()`/`badge()` closures above
@@ -31,8 +33,9 @@ export function GuardianLayout() {
 
   useEffect(() => {
     fetchFeatures();
+    fetchSchoolBranding();
     fetchUnreadMessages("GUARDIAN");
-  }, [fetchFeatures, fetchUnreadMessages]);
+  }, [fetchFeatures, fetchSchoolBranding, fetchUnreadMessages]);
 
   return <PortalShell portalName="Guardian" navItems={NAV_ITEMS} />;
 }

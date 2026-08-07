@@ -1,10 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { NavItem } from "@/layouts/PortalShell";
 import { PortalShell } from "@/layouts/PortalShell";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import type { AuthenticatedUser } from "@/stores/authStore";
+import { resetSchoolBrandingStore, useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 
 const USER: AuthenticatedUser = {
   id: "1",
@@ -79,5 +80,38 @@ describe("PortalShell nav active state", () => {
   it("does not mark Dashboard current on other pages", () => {
     renderShellAt("/school/students");
     expect(currentLinkNames()).toEqual(["Students"]);
+  });
+});
+
+describe("PortalShell brand mark", () => {
+  beforeEach(() => {
+    resetAuthStore();
+    useAuthStore.setState({ user: USER, accessToken: "t", refreshToken: "r" });
+    resetSchoolBrandingStore();
+  });
+
+  afterEach(() => {
+    resetSchoolBrandingStore();
+  });
+
+  it("falls back to the KDLMS wordmark when the school has no logo", () => {
+    renderShellAt("/school");
+
+    expect(screen.getAllByText("KDLMS").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("img", { name: /logo/i })).not.toBeInTheDocument();
+  });
+
+  it("renders the school's logo instead of the wordmark once branding loads", () => {
+    useSchoolBrandingStore.setState({
+      schoolName: "Bright Star Academy",
+      logoDataUri: "data:image/png;base64,AAAA",
+      status: "loaded",
+    });
+
+    renderShellAt("/school");
+
+    const logos = screen.getAllByRole("img", { name: "Bright Star Academy" });
+    expect(logos.length).toBeGreaterThan(0);
+    expect(screen.queryByText("KDLMS")).not.toBeInTheDocument();
   });
 });

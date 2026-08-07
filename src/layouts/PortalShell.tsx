@@ -5,6 +5,7 @@ import { Link, Outlet, useLocation } from "react-router";
 import type { Role } from "@/api/types";
 import { UserMenu } from "@/layouts/UserMenu";
 import { useAuthStore } from "@/stores/authStore";
+import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 
 export interface NavItem {
   label: string;
@@ -54,6 +55,36 @@ interface PortalShellProps {
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * The sidebar's brand mark - the "KDLMS" platform wordmark, replaced by the
+ * school's own logo wherever `schoolBrandingStore` has one (School and
+ * Guardian portals only; System Admin never fetches it, so this always
+ * falls back to the wordmark there). `compact` matches the smaller size the
+ * mobile topbar site already used for the text. The image is constrained to
+ * the shared `h-16` brand bar rather than growing it, so the sidebar's
+ * bottom border keeps lining up with the main topbar's across every portal.
+ */
+function BrandMark({ compact }: { compact?: boolean }) {
+  const logoDataUri = useSchoolBrandingStore((state) => state.logoDataUri);
+  const schoolName = useSchoolBrandingStore((state) => state.schoolName);
+
+  if (!logoDataUri) {
+    return (
+      <span className={`font-display font-medium text-brand-800 ${compact ? "text-base" : "text-lg"}`}>
+        KDLMS
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={logoDataUri}
+      alt={schoolName ?? "School logo"}
+      className={`min-w-0 w-auto max-w-full object-contain ${compact ? "max-h-8" : "max-h-10"}`}
+    />
+  );
+}
 
 /**
  * Shared sidebar + header chrome for a portal. The three portal layouts
@@ -204,8 +235,8 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
     <div className="flex min-h-screen">
       {/* Desktop rail */}
       <aside className="hidden lg:flex lg:w-64 lg:shrink-0 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white">
-        <div className="flex h-16 items-center border-b border-slate-200 px-6">
-          <span className="font-display text-lg font-medium text-brand-800">KDLMS</span>
+        <div className="flex h-16 min-w-0 items-center border-b border-slate-200 px-6">
+          <BrandMark />
         </div>
         <p className="px-6 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
           {portalName}
@@ -230,8 +261,8 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
             onKeyDown={handleDrawerKeyDown}
             className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl outline-none"
           >
-            <div className="flex h-16 items-center justify-between border-b border-slate-200 px-4">
-              <span className="font-display text-lg font-medium text-brand-800">KDLMS</span>
+            <div className="flex h-16 min-w-0 items-center justify-between border-b border-slate-200 px-4">
+              <BrandMark />
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
@@ -265,7 +296,9 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
-          <span className="font-display text-base font-medium text-brand-800 lg:hidden">KDLMS</span>
+          <div className="min-w-0 shrink lg:hidden">
+            <BrandMark compact />
+          </div>
           <div className="flex min-w-0 flex-1 items-center justify-end gap-3 sm:justify-between">
             {contextLabel ? (
               <span className="hidden truncate rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-800 sm:inline-flex">
