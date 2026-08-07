@@ -1,14 +1,5 @@
-import { type FormEvent, useEffect, useState } from "react";
-import {
-  createGuardian,
-  disableGuardian,
-  enableGuardian,
-  type GuardianCreateResult,
-  type GuardianView,
-  listGuardians,
-  listGuardianWards,
-  type WardView,
-} from "@/api/guardians";
+import { useEffect, useState } from "react";
+import { disableGuardian, enableGuardian, type GuardianView, listGuardians } from "@/api/guardians";
 import { ApiError } from "@/api/client";
 import type { Page } from "@/api/types";
 import { can } from "@/auth/permissions";
@@ -17,18 +8,15 @@ import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { CredentialsReveal } from "@/components/ui/CredentialsReveal";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FormField } from "@/components/ui/FormField";
-import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Pagination } from "@/components/ui/Pagination";
 import { SearchInput } from "@/components/ui/SearchInput";
-import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { TableSkeleton } from "@/components/ui/TableSkeleton";
 import { useAuthStore } from "@/stores/authStore";
+import { GuardianFormModal } from "@/features/guardians/components/GuardianFormModal";
+import { WardsModal } from "@/features/guardians/components/WardsModal";
 
 const PAGE_SIZE = 20;
 
@@ -46,6 +34,7 @@ export function GuardiansPage() {
   const [pageIndex, setPageIndex] = useState(0);
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<GuardianView | null>(null);
   const [viewingWardsOf, setViewingWardsOf] = useState<GuardianView | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -141,7 +130,7 @@ export function GuardiansPage() {
                       </Badge>
                     </TableCell>
                     <TableCell label="Actions">
-                      <div className="flex gap-3">
+                      <div className="flex flex-wrap gap-3">
                         <button
                           type="button"
                           className="text-brand-500 hover:text-brand-600"
@@ -149,6 +138,15 @@ export function GuardiansPage() {
                         >
                           View wards
                         </button>
+                        {canManage && (
+                          <button
+                            type="button"
+                            className="text-slate-500 hover:text-slate-700"
+                            onClick={() => setEditing(guardian)}
+                          >
+                            Edit
+                          </button>
+                        )}
                         {canManage && (
                           <button
                             type="button"
@@ -170,11 +168,18 @@ export function GuardiansPage() {
       )}
 
       {createOpen && (
-        <CreateGuardianModal
+        <GuardianFormModal
           onClose={() => setCreateOpen(false)}
           onSaved={() => {
             load();
           }}
+        />
+      )}
+      {editing && (
+        <GuardianFormModal
+          guardian={editing}
+          onClose={() => setEditing(null)}
+          onSaved={load}
         />
       )}
       {viewingWardsOf && <WardsModal guardian={viewingWardsOf} onClose={() => setViewingWardsOf(null)} />}
@@ -182,134 +187,3 @@ export function GuardiansPage() {
   );
 }
 
-function CreateGuardianModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [occupation, setOccupation] = useState("");
-  const [address, setAddress] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [created, setCreated] = useState<GuardianCreateResult | null>(null);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSubmitting(true);
-    setError(null);
-    try {
-      const result = await createGuardian({
-        email,
-        firstName,
-        lastName,
-        phone: phone || undefined,
-        occupation: occupation || undefined,
-        address: address || undefined,
-      });
-      onSaved();
-      setCreated(result);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to create guardian");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  if (created) {
-    return (
-      <Modal open onClose={onClose} title="Guardian created">
-        <div className="space-y-4">
-          <Alert variant="success">
-            {created.guardian.fullName} can now sign in with {created.guardian.email}. An invitation email has been
-            sent to them. Link them to a student from that student's profile, or come back here later.
-          </Alert>
-          <CredentialsReveal email={created.guardian.email} temporaryPassword={created.temporaryPassword} />
-          <div className="flex justify-end">
-            <Button type="button" onClick={onClose}>
-              Done
-            </Button>
-          </div>
-        </div>
-      </Modal>
-    );
-  }
-
-  return (
-    <Modal open onClose={onClose} title="Add guardian">
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        {error && <Alert variant="error">{error}</Alert>}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField label="First name" htmlFor="guardian-first-name">
-            <Input id="guardian-first-name" required value={firstName} onChange={(event) => setFirstName(event.target.value)} />
-          </FormField>
-          <FormField label="Last name" htmlFor="guardian-last-name">
-            <Input id="guardian-last-name" required value={lastName} onChange={(event) => setLastName(event.target.value)} />
-          </FormField>
-        </div>
-        <FormField label="Email" htmlFor="guardian-email">
-          <Input id="guardian-email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
-        </FormField>
-        <FormField label="Phone" htmlFor="guardian-phone">
-          <Input id="guardian-phone" value={phone} onChange={(event) => setPhone(event.target.value)} />
-        </FormField>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField label="Occupation" htmlFor="guardian-occupation">
-            <Input id="guardian-occupation" value={occupation} onChange={(event) => setOccupation(event.target.value)} />
-          </FormField>
-          <FormField label="Address" htmlFor="guardian-address">
-            <Input id="guardian-address" value={address} onChange={(event) => setAddress(event.target.value)} />
-          </FormField>
-        </div>
-        <p className="text-xs text-slate-500">
-          Link this guardian to a student afterward from the student's profile page.
-        </p>
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting ? "Creating…" : "Create guardian"}
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-function WardsModal({ guardian, onClose }: { guardian: GuardianView; onClose: () => void }) {
-  const [wards, setWards] = useState<WardView[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    listGuardianWards(guardian.id)
-      .then(setWards)
-      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Failed to load wards"));
-  }, [guardian.id]);
-
-  return (
-    <Modal open onClose={onClose} title={`${guardian.fullName}'s wards`}>
-      {error && <Alert variant="error">{error}</Alert>}
-      {wards === null && !error && (
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading…
-        </div>
-      )}
-      {wards !== null && wards.length === 0 && (
-        <EmptyState title="No wards linked" description="Link a student from their profile page." />
-      )}
-      {wards !== null && wards.length > 0 && (
-        <ul className="divide-y divide-slate-100">
-          {wards.map((ward) => (
-            <li key={ward.studentId} className="flex items-center justify-between py-2 text-sm">
-              <div>
-                <p className="font-medium text-slate-900">{ward.studentName}</p>
-                <p className="text-slate-500">{ward.admissionNumber}</p>
-              </div>
-              <Badge variant="neutral">{ward.relationship}</Badge>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Modal>
-  );
-}

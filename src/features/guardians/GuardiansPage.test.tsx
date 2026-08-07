@@ -13,6 +13,7 @@ vi.mock("@/api/guardians", async () => {
     ...actual,
     listGuardians: vi.fn(),
     createGuardian: vi.fn(),
+    updateGuardian: vi.fn(),
     enableGuardian: vi.fn(),
     disableGuardian: vi.fn(),
     listGuardianWards: vi.fn(),
@@ -26,6 +27,7 @@ const GUARDIAN_VIEW: GuardianView = {
   lastName: "Obi",
   fullName: "Chidi Obi",
   email: "chidi@example.com",
+  phone: "08012345678",
   active: true,
 };
 
@@ -105,7 +107,7 @@ describe("GuardiansPage", () => {
     expect(guardiansApi.disableGuardian).toHaveBeenCalledWith("guardian-1");
   });
 
-  it("shows a guardian's wards", async () => {
+  it("shows a guardian's wards, linked to their student profile", async () => {
     mockGuardians([GUARDIAN_VIEW]);
     vi.mocked(guardiansApi.listGuardianWards).mockResolvedValue([
       { studentId: "student-1", studentName: "Ada Obi", admissionNumber: "BFA/2026/0001", relationship: "FATHER" },
@@ -119,5 +121,33 @@ describe("GuardiansPage", () => {
 
     expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
     expect(screen.getByText("BFA/2026/0001")).toBeInTheDocument();
+    const wardLink = screen.getByRole("link", { name: /Ada Obi/ });
+    expect(wardLink).toHaveAttribute("href", "/school/students/student-1");
+  });
+
+  it("edits a guardian's details", async () => {
+    mockGuardians([GUARDIAN_VIEW]);
+    vi.mocked(guardiansApi.updateGuardian).mockResolvedValue({ ...GUARDIAN_VIEW, phone: "08099999999" });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Chidi Obi");
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit guardian" });
+
+    expect(within(dialog).getByLabelText("First name")).toHaveValue("Chidi");
+    expect(within(dialog).getByLabelText("Email")).toHaveValue("chidi@example.com");
+    expect(within(dialog).getByText(/also the guardian's sign-in email/)).toBeInTheDocument();
+
+    const phoneInput = within(dialog).getByLabelText("Phone");
+    await user.clear(phoneInput);
+    await user.type(phoneInput, "08099999999");
+    await user.click(within(dialog).getByRole("button", { name: "Save changes" }));
+
+    expect(guardiansApi.updateGuardian).toHaveBeenCalledWith(
+      "guardian-1",
+      expect.objectContaining({ email: "chidi@example.com", firstName: "Chidi", lastName: "Obi", phone: "08099999999" }),
+    );
   });
 });
