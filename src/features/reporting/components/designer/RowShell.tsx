@@ -49,7 +49,7 @@ export function RowShell({ row, index, rowCount, editor }: RowShellProps) {
   return (
     <div
       onClick={() => editor.setSelection({ type: "row", rowId: row.id })}
-      className={`group rounded-panel border p-2 transition-colors ${
+      className={`group cursor-pointer rounded-panel border p-2 transition-colors ${
         selected ? "border-brand-500 bg-brand-50/40" : "border-slate-200 hover:border-slate-300"
       }`}
       style={{

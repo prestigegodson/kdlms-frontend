@@ -42,7 +42,7 @@ export function ElementCard({ element, index, siblingCount, editor }: ElementCar
         event.stopPropagation();
         editor.setSelection({ type: "element", elementId: element.id });
       }}
-      className={`group relative rounded-control border p-1.5 transition-colors ${
+      className={`group relative cursor-grab rounded-control border p-1.5 transition-colors active:cursor-grabbing ${
         selected ? "border-brand-500 ring-1 ring-brand-500" : "border-transparent hover:border-slate-300"
       }`}
     >

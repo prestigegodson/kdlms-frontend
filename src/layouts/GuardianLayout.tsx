@@ -1,4 +1,4 @@
-import { ClipboardCheck, ClipboardList, MessageSquare, Users } from "lucide-react";
+import { Bell, ClipboardCheck, ClipboardList, MessageSquare, Users } from "lucide-react";
 import { useEffect } from "react";
 import { can } from "@/auth/permissions";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
@@ -18,6 +18,14 @@ const NAV_ITEMS: NavItem[] = [
     // viewMessages, the single source of truth nav/route/in-page controls read from.
     visible: () => can.viewMessages("GUARDIAN", null, useFeatureStore.getState().communication),
     badge: () => useUnreadMessagesStore.getState().count,
+  },
+  {
+    label: "Notifications",
+    href: "/guardian/settings",
+    icon: Bell,
+    // Only relevant while the school's communication entitlement is on - see
+    // auth/permissions.ts's manageMyNotifications.
+    visible: () => can.manageMyNotifications("GUARDIAN", useFeatureStore.getState().communication),
   },
 ];
 

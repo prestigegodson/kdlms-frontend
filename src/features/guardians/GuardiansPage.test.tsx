@@ -29,6 +29,7 @@ const GUARDIAN_VIEW: GuardianView = {
   email: "chidi@example.com",
   phone: "08012345678",
   active: true,
+  communicationEmailsEnabled: true,
 };
 
 function mockGuardians(guardians: GuardianView[]) {
@@ -148,6 +149,28 @@ describe("GuardiansPage", () => {
     expect(guardiansApi.updateGuardian).toHaveBeenCalledWith(
       "guardian-1",
       expect.objectContaining({ email: "chidi@example.com", firstName: "Chidi", lastName: "Obi", phone: "08099999999" }),
+    );
+  });
+
+  it("mutes a guardian's communication email from the edit form", async () => {
+    mockGuardians([GUARDIAN_VIEW]);
+    vi.mocked(guardiansApi.updateGuardian).mockResolvedValue({ ...GUARDIAN_VIEW, communicationEmailsEnabled: false });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Chidi Obi");
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit guardian" });
+
+    const emailToggle = within(dialog).getByRole("checkbox", { name: "Send email notifications for new messages" });
+    expect(emailToggle).toBeChecked();
+    await user.click(emailToggle);
+    await user.click(within(dialog).getByRole("button", { name: "Save changes" }));
+
+    expect(guardiansApi.updateGuardian).toHaveBeenCalledWith(
+      "guardian-1",
+      expect.objectContaining({ communicationEmailsEnabled: false }),
     );
   });
 });

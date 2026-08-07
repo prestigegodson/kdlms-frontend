@@ -60,6 +60,22 @@ h4 {
   outline-offset: 2px;
 }
 
+/*
+ * Tailwind v4's Preflight dropped v3's `button { cursor: pointer }`, so every
+ * button in the app fell back to the arrow cursor. Restored globally here
+ * rather than per-component, matching the `:focus-visible` treatment above.
+ * MUST stay inside `@layer base`: the other element rules in this file are
+ * unlayered, and unlayered CSS outranks `@layer utilities` regardless of
+ * specificity — a bare `button {}` rule here would stomp the designer's
+ * `cursor-grab` utilities and `DateInput`'s `disabled:cursor-not-allowed`.
+ */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

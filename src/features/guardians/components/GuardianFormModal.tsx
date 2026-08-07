@@ -8,6 +8,7 @@ import {
 import { ApiError } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { CredentialsReveal } from "@/components/ui/CredentialsReveal";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
@@ -29,6 +30,9 @@ export function GuardianFormModal({ guardian, onClose, onSaved }: GuardianFormMo
   const [phone, setPhone] = useState(guardian?.phone ?? "");
   const [occupation, setOccupation] = useState(guardian?.occupation ?? "");
   const [address, setAddress] = useState(guardian?.address ?? "");
+  const [communicationEmailsEnabled, setCommunicationEmailsEnabled] = useState(
+    guardian?.communicationEmailsEnabled ?? true,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<GuardianCreateResult | null>(null);
@@ -46,6 +50,7 @@ export function GuardianFormModal({ guardian, onClose, onSaved }: GuardianFormMo
           phone: phone || undefined,
           occupation: occupation || undefined,
           address: address || undefined,
+          communicationEmailsEnabled,
         });
         onSaved();
         onClose();
@@ -123,6 +128,15 @@ export function GuardianFormModal({ guardian, onClose, onSaved }: GuardianFormMo
           <p className="text-xs text-slate-500">
             Link this guardian to a student afterward from the student's profile page.
           </p>
+        )}
+        {isEdit && (
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <Checkbox
+              checked={communicationEmailsEnabled}
+              onChange={(event) => setCommunicationEmailsEnabled(event.target.checked)}
+            />
+            Send email notifications for new messages
+          </label>
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

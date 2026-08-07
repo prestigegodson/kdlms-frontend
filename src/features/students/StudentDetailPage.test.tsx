@@ -93,6 +93,7 @@ const GUARDIAN_SEARCH_RESULT: GuardianView = {
   fullName: "Ngozi Eze",
   email: "ngozi@example.com",
   active: true,
+  communicationEmailsEnabled: true,
 };
 
 function renderAsSchoolAdmin() {

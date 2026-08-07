@@ -18,6 +18,7 @@ import { MessagesPage } from "@/features/communication/MessagesPage";
 import { LandingPage } from "@/features/connectivity/LandingPage";
 import { AdminDashboardPage } from "@/features/dashboard/AdminDashboardPage";
 import { SchoolDashboardPage } from "@/features/dashboard/SchoolDashboardPage";
+import { NotificationSettingsPage } from "@/features/guardian/NotificationSettingsPage";
 import { WardAttendancePage } from "@/features/guardian/WardAttendancePage";
 import { WardMessagesPage } from "@/features/guardian/WardMessagesPage";
 import { WardResultsPage } from "@/features/guardian/WardResultsPage";
@@ -218,6 +219,7 @@ export const routes: RouteObject[] = [
           { path: "results", element: <WardResultsPage /> },
           { path: "attendance", element: <WardAttendancePage /> },
           { path: "messages", element: <WardMessagesPage /> },
+          { path: "settings", element: <NotificationSettingsPage /> },
         ],
       },
       { path: "*", element: <NotFoundPage /> },

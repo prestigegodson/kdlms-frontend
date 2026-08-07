@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { TableSkeleton } from "@/components/ui/TableSkeleton";
+import { formatMoney } from "@/utils/currency";
 
 type ListState =
   | { kind: "loading" }
@@ -119,7 +120,7 @@ export function PackagesPage() {
                   </TableCell>
                   <TableCell label="Billing">{pkg.billingCycle}</TableCell>
                   <TableCell label="Price" numeric>
-                    {pkg.currency} {pkg.price.toFixed(2)}
+                    {formatMoney(pkg.price, pkg.currency)}
                   </TableCell>
                   <TableCell label="Branch limit">
                     {pkg.multiBranch ? pkg.branchLimit : "1 (single branch)"}

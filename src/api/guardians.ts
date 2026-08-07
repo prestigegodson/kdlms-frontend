@@ -13,6 +13,8 @@ export interface GuardianView {
   occupation?: string;
   address?: string;
   active: boolean;
+  /** Whether this guardian receives communication-thread-started email - see CLAUDE.md's communication Domain Rules. */
+  communicationEmailsEnabled: boolean;
 }
 
 export interface InitialWardLink {
@@ -37,6 +39,7 @@ export interface UpdateGuardianRequest {
   phone?: string;
   occupation?: string;
   address?: string;
+  communicationEmailsEnabled: boolean;
 }
 
 /** {@code temporaryPassword} is generated server-side and returned exactly once. */

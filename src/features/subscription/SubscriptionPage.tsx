@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { StatTile } from "@/components/ui/StatTile";
+import { formatMoney } from "@/utils/currency";
 import { formatDateRange } from "@/utils/date";
 
 type LoadState =
@@ -95,7 +96,7 @@ export function SubscriptionPage() {
             <StatTile
               icon={Sparkles}
               label="Price"
-              value={`${state.summary.currency} ${state.summary.price?.toFixed(2)}`}
+              value={formatMoney(state.summary.price, state.summary.currency)}
             />
             <StatTile
               icon={Building2}

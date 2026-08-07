@@ -173,4 +173,16 @@ export const can = {
   composeMessages(role: Role | undefined, scope: TeacherScope | null, entitled: boolean): boolean {
     return entitled && role === "TEACHER" && (scope?.isClassTeacher ?? false);
   },
+
+  /**
+   * A guardian's own communication-thread-started email opt-out - GUARDIAN
+   * only, and only relevant while the school's communication entitlement is
+   * on (the page controls email for a feature the guardian can otherwise see
+   * nothing of). A SCHOOL_ADMIN/BRANCH_ADMIN sets the same flag on a
+   * guardian's behalf from the guardian edit form instead - see
+   * `manageGuardians`.
+   */
+  manageMyNotifications(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && role === "GUARDIAN";
+  },
 };
