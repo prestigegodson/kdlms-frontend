@@ -4,7 +4,10 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as attendanceApi from "@/api/attendance";
 import type { AttendanceRegisterView } from "@/api/attendance";
-import { AttendanceRegisterGrid } from "@/features/attendance/components/AttendanceRegisterGrid";
+import {
+  AttendanceOutcomeList,
+  AttendanceRegisterGrid,
+} from "@/features/attendance/components/AttendanceRegisterGrid";
 
 vi.mock("@/api/attendance", async () => {
   const actual = await vi.importActual<typeof import("@/api/attendance")>("@/api/attendance");
@@ -98,5 +101,45 @@ describe("AttendanceRegisterGrid", () => {
     expect(screen.getByText("PRESENT")).toBeInTheDocument();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Mark register" })).not.toBeInTheDocument();
+  });
+});
+
+describe("AttendanceOutcomeList", () => {
+  const nameOf = (studentId: string) =>
+    ({ "student-1": "Ada Obi", "student-2": "Bola Eze" })[studentId] ?? studentId;
+
+  it("shows only the summary count, no student list, when every row succeeds", () => {
+    render(
+      <AttendanceOutcomeList
+        outcomes={[
+          { studentId: "student-1", success: true },
+          { studentId: "student-2", success: true },
+        ]}
+        nameOf={nameOf}
+      />,
+    );
+
+    expect(screen.getByText("Register saved")).toBeInTheDocument();
+    expect(screen.getByText("2 of 2 saved successfully.")).toBeInTheDocument();
+    expect(screen.queryByText("Ada Obi")).not.toBeInTheDocument();
+    expect(screen.queryByText("Bola Eze")).not.toBeInTheDocument();
+  });
+
+  it("lists only the failed student, with their reason, when some rows fail", () => {
+    render(
+      <AttendanceOutcomeList
+        outcomes={[
+          { studentId: "student-1", success: true },
+          { studentId: "student-2", success: false, message: "Not on this class roster" },
+        ]}
+        nameOf={nameOf}
+      />,
+    );
+
+    expect(screen.getByText("Register saved with 1 problem")).toBeInTheDocument();
+    expect(screen.getByText("1 of 2 saved successfully.")).toBeInTheDocument();
+    expect(screen.queryByText("Ada Obi")).not.toBeInTheDocument();
+    expect(screen.getByText("Bola Eze")).toBeInTheDocument();
+    expect(screen.getByText(/Not on this class roster/)).toBeInTheDocument();
   });
 });

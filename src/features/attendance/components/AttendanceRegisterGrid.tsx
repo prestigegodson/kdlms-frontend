@@ -22,7 +22,7 @@ import {
 import { statusBadgeVariant, statusRailClass } from "@/features/attendance/attendanceStatus";
 import { RegisterProgress } from "@/features/attendance/components/RegisterProgress";
 import { StatusSegments } from "@/features/attendance/components/StatusSegments";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { XCircle } from "lucide-react";
 
 function draftsFromRegister(
   register: AttendanceRegisterView,
@@ -241,33 +241,41 @@ interface AttendanceOutcomeListProps {
   nameOf: (studentId: string) => string;
 }
 
-/** Per-row save results, same "N of M succeeded" shape as assessments' SaveOutcomeList. */
+/**
+ * Per-row save results, same "N of M succeeded" shape as assessments' SaveOutcomeList.
+ * Successful rows collapse into the summary count only - for a full class that's dozens
+ * of redundant ticks - and only failed rows (with their reason) are listed, since that's
+ * the one thing a teacher can't already see from the register they just filled in.
+ */
 export function AttendanceOutcomeList({ outcomes, nameOf }: AttendanceOutcomeListProps) {
   const successCount = outcomes.filter((outcome) => outcome.success).length;
+  const failures = outcomes.filter((outcome) => !outcome.success);
 
   return (
-    <div className="rounded-card border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-sm font-semibold text-slate-900">Save result</h2>
-      <p className="mt-1 text-sm text-slate-500">
+    <Alert
+      variant={failures.length === 0 ? "success" : "warning"}
+      title={
+        failures.length === 0
+          ? "Register saved"
+          : `Register saved with ${failures.length} problem${failures.length === 1 ? "" : "s"}`
+      }
+    >
+      <p>
         {successCount} of {outcomes.length} saved successfully.
       </p>
-      <ul className="mt-3 space-y-2">
-        {outcomes.map((outcome) => (
-          <li key={outcome.studentId} className="flex items-start gap-2 text-sm">
-            {outcome.success ? (
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" aria-hidden="true" />
-            ) : (
-              <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" aria-hidden="true" />
-            )}
-            <span>
-              <span className="font-medium text-slate-900">{nameOf(outcome.studentId)}</span>
-              {!outcome.success && outcome.message && (
-                <span className="text-slate-500"> &mdash; {outcome.message}</span>
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
+      {failures.length > 0 && (
+        <ul className="mt-2 space-y-1.5">
+          {failures.map((outcome) => (
+            <li key={outcome.studentId} className="flex items-start gap-2">
+              <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>
+                <span className="font-medium">{nameOf(outcome.studentId)}</span>
+                {outcome.message && <span> &mdash; {outcome.message}</span>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Alert>
   );
 }
