@@ -4,8 +4,10 @@ import * as authApi from "@/api/auth";
 import { setAccessTokenProvider, setRefreshHandler, setUnauthorizedHandler } from "@/api/client";
 import type { Role } from "@/api/types";
 import { useAcademicContextStore } from "@/stores/academicContextStore";
+import { useFeatureStore } from "@/stores/featureStore";
 import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
+import { useUnreadMessagesStore } from "@/stores/unreadMessagesStore";
 import { useWardStore } from "@/stores/wardStore";
 
 export interface AuthenticatedUser {
@@ -71,11 +73,14 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, accessToken: null, refreshToken: null });
         // So a different user signing in next in this tab never inherits
         // the previous one's cached class/subject-teacher capabilities,
-        // current-session/term label, linked wards, or school settings.
+        // current-session/term label, linked wards, school settings, gated
+        // feature flags, or unread-messages count.
         useTeacherScopeStore.getState().reset();
         useAcademicContextStore.getState().reset();
         useWardStore.getState().reset();
         useSchoolSettingsStore.getState().reset();
+        useFeatureStore.getState().reset();
+        useUnreadMessagesStore.getState().reset();
         if (token) {
           // Best-effort: the local session is already cleared either way.
           authApi.logout(token).catch(() => undefined);

@@ -14,10 +14,12 @@ import { ForgotPasswordPage } from "@/features/auth/ForgotPasswordPage";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
 import { BranchesPage } from "@/features/branches/BranchesPage";
+import { MessagesPage } from "@/features/communication/MessagesPage";
 import { LandingPage } from "@/features/connectivity/LandingPage";
 import { AdminDashboardPage } from "@/features/dashboard/AdminDashboardPage";
 import { SchoolDashboardPage } from "@/features/dashboard/SchoolDashboardPage";
 import { WardAttendancePage } from "@/features/guardian/WardAttendancePage";
+import { WardMessagesPage } from "@/features/guardian/WardMessagesPage";
 import { WardResultsPage } from "@/features/guardian/WardResultsPage";
 import { WardsPage } from "@/features/guardian/WardsPage";
 import { GuardiansPage } from "@/features/guardians/GuardiansPage";
@@ -192,6 +194,7 @@ export const routes: RouteObject[] = [
             ),
           },
           { path: "attendance", element: <AttendancePage /> },
+          { path: "messages", element: <MessagesPage /> },
           { path: "reports", element: <ReportsPage /> },
           {
             path: "reports/settings",
@@ -214,6 +217,7 @@ export const routes: RouteObject[] = [
           { index: true, element: <WardsPage /> },
           { path: "results", element: <WardResultsPage /> },
           { path: "attendance", element: <WardAttendancePage /> },
+          { path: "messages", element: <WardMessagesPage /> },
         ],
       },
       { path: "*", element: <NotFoundPage /> },

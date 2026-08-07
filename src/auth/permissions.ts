@@ -144,4 +144,33 @@ export const can = {
   viewWards(role: Role | undefined): boolean {
     return role === "GUARDIAN";
   },
+
+  /**
+   * The home-school communication log - gated on the school's subscription
+   * entitlement (see stores/featureStore.ts) on top of role, since this is
+   * the one feature that's actually turned off for an unentitled school
+   * rather than merely dormant. SCHOOL_ADMIN/BRANCH_ADMIN always see it
+   * read-only; a TEACHER only when they class-teach at least one class
+   * (mirrors `viewAttendance`'s scoping - a subject-teacher-only account has
+   * no communication log either); a GUARDIAN always sees their own wards'.
+   */
+  viewMessages(role: Role | undefined, scope: TeacherScope | null, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    if (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "GUARDIAN") {
+      return true;
+    }
+    return role === "TEACHER" && (scope?.isClassTeacher ?? false);
+  },
+
+  /**
+   * Starting a new thread (single-student note or whole-class broadcast) -
+   * the class teacher only, mirrors `markAttendance`. A GUARDIAN may reply
+   * to an existing thread (server-derived per-thread via `ThreadView.canReply`,
+   * not a blanket permission here) but never starts one.
+   */
+  composeMessages(role: Role | undefined, scope: TeacherScope | null, entitled: boolean): boolean {
+    return entitled && role === "TEACHER" && (scope?.isClassTeacher ?? false);
+  },
 };

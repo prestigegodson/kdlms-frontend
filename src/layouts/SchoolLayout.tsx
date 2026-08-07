@@ -11,6 +11,7 @@ import {
   Layers,
   Library,
   BookOpen,
+  MessageSquare,
   Scale,
   School,
   Settings,
@@ -22,8 +23,10 @@ import { SubscriptionBanner } from "@/features/subscription/SubscriptionBanner";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useAcademicContextStore } from "@/stores/academicContextStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useFeatureStore } from "@/stores/featureStore";
 import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
+import { useUnreadMessagesStore } from "@/stores/unreadMessagesStore";
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/school", icon: LayoutDashboard },
@@ -77,6 +80,21 @@ const NAV_ITEMS: NavItem[] = [
     group: "Academics",
     // Same visibility as Assessments/broadsheets - admins (branch-scoped for
     // BRANCH_ADMIN), a teacher's own classes - see auth/permissions.ts's viewReports.
+  },
+  {
+    label: "Messages",
+    href: "/school/messages",
+    icon: MessageSquare,
+    group: "Academics",
+    // Gated on the school's communication entitlement on top of role/scope -
+    // see auth/permissions.ts's viewMessages, the single source of truth.
+    visible: () => {
+      const role = useAuthStore.getState().user?.role;
+      const isClassTeacher = useTeacherScopeStore.getState().capabilities?.isClassTeacher ?? false;
+      const entitled = useFeatureStore.getState().communication;
+      return can.viewMessages(role, { isClassTeacher }, entitled);
+    },
+    badge: () => useUnreadMessagesStore.getState().count,
   },
   {
     label: "Teachers",
@@ -151,14 +169,28 @@ export function SchoolLayout() {
   // date picker just as much as the admin roles need it for School Settings.
   const fetchSchoolSettings = useSchoolSettingsStore((state) => state.fetchIfNeeded);
 
+  // Every role this layout admits needs the entitlement flag for the
+  // Messages nav item's visible() check above.
+  const fetchFeatures = useFeatureStore((state) => state.fetchIfNeeded);
+  const fetchUnreadMessages = useUnreadMessagesStore((state) => state.fetchIfNeeded);
+  // Subscribed (return value intentionally discarded) only to force a
+  // re-render - so the Messages `visible()`/`badge()` closures above
+  // re-evaluate once these async fetches resolve, the same reason
+  // teacherCapabilities is subscribed below. The values themselves are read
+  // fresh from getState() inside those closures.
+  useFeatureStore((state) => state.communication);
+  useUnreadMessagesStore((state) => state.count);
+
   useEffect(() => {
     if (role === "TEACHER") {
       fetchTeacherScope();
+      fetchUnreadMessages("TEACHER");
     } else if (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN") {
       fetchAcademicContext();
     }
     fetchSchoolSettings();
-  }, [role, fetchTeacherScope, fetchAcademicContext, fetchSchoolSettings]);
+    fetchFeatures();
+  }, [role, fetchTeacherScope, fetchAcademicContext, fetchSchoolSettings, fetchFeatures, fetchUnreadMessages]);
 
   const contextLabel =
     role === "TEACHER"

@@ -29,6 +29,7 @@ const STARTER_PACKAGE: PackageView = {
   activeStudentLimit: 50,
   takeHomeQuiz: false,
   onDemandLearning: false,
+  communication: false,
   status: "ACTIVE",
 };
 

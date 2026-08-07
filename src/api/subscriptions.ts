@@ -44,6 +44,7 @@ export interface SubscriptionSummaryView {
   activeStudentsUsed: number;
   takeHomeQuiz: boolean;
   onDemandLearning: boolean;
+  communication: boolean;
 }
 
 function adminBase(schoolId: string): string {

@@ -129,6 +129,7 @@ export function PackagesPage() {
                     <div className="flex flex-wrap justify-end gap-1 sm:justify-start">
                       {pkg.takeHomeQuiz && <Badge variant="neutral">Take-home quizzes</Badge>}
                       {pkg.onDemandLearning && <Badge variant="neutral">Learning</Badge>}
+                      {pkg.communication && <Badge variant="brand">Messaging</Badge>}
                     </div>
                   </TableCell>
                   <TableCell label="Status">
@@ -214,6 +215,7 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
   );
   const [takeHomeQuiz, setTakeHomeQuiz] = useState(initial?.takeHomeQuiz ?? false);
   const [onDemandLearning, setOnDemandLearning] = useState(initial?.onDemandLearning ?? false);
+  const [communication, setCommunication] = useState(initial?.communication ?? false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -233,6 +235,7 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
         activeStudentLimit: Number(activeStudentLimit),
         takeHomeQuiz,
         onDemandLearning,
+        communication,
       });
       onSaved();
     } catch (err) {
@@ -333,6 +336,18 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
           />
           On-demand learning
         </label>
+
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <Checkbox
+            checked={communication}
+            onChange={(event) => setCommunication(event.target.checked)}
+          />
+          Home-school messaging
+        </label>
+        <p className="-mt-2 text-xs text-slate-500">
+          Unlike the flags above, this one actually gates the feature - a school without it loses
+          the Messages screen entirely, for both staff and guardians.
+        </p>
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

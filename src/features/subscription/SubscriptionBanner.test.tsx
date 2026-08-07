@@ -29,6 +29,7 @@ const ACTIVE_SUMMARY: SubscriptionSummaryView = {
   activeStudentsUsed: 10,
   takeHomeQuiz: true,
   onDemandLearning: false,
+  communication: false,
 };
 
 describe("SubscriptionBanner", () => {

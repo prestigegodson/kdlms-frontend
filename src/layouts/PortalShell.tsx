@@ -26,6 +26,13 @@ export interface NavItem {
    * auth/permissions.ts). Omit when `roles` is sufficient on its own.
    */
   visible?: () => boolean;
+  /**
+   * An unread-count badge rendered as a small pill after the label - e.g.
+   * Messages' unread thread count. Return `null`/`0` to render nothing.
+   * Evaluated on every render like `visible`, so the caller's own store
+   * subscription (not this function) is what triggers the re-render.
+   */
+  badge?: () => number | null | undefined;
 }
 
 interface PortalShellProps {
@@ -163,6 +170,7 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
             <ul className={group.name ? "mt-2 space-y-1" : "space-y-1"}>
               {group.items.map((item) => {
                 const isActive = item.href === activeHref;
+                const badgeCount = item.badge?.();
                 return (
                   <li key={item.href}>
                     <Link
@@ -175,7 +183,12 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
                       }`}
                     >
                       {item.icon && <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />}
-                      {item.label}
+                      <span className="flex-1">{item.label}</span>
+                      {!!badgeCount && (
+                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 text-xs font-medium text-white">
+                          {badgeCount > 99 ? "99+" : badgeCount}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 );
