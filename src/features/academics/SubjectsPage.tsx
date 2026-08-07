@@ -12,6 +12,7 @@ import {
   activateSubject,
   createSubject,
   deactivateSubject,
+  deleteSubject,
   listSubjects,
   type SubjectView,
   updateSubject,
@@ -23,6 +24,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
@@ -155,6 +157,7 @@ function MySubjects() {
 function AdminSubjects() {
   const role = useAuthStore((state) => state.user?.role);
   const canManage = can.manageAcademics(role);
+  const canDelete = can.deleteSubjects(role);
 
   const levels = useLevelStore((storeState) => storeState.levels);
   const levelsStatus = useLevelStore((storeState) => storeState.status);
@@ -167,6 +170,7 @@ function AdminSubjects() {
   const [groups, setGroups] = useState<SubjectGroupView[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<SubjectView | null>(null);
+  const [deleting, setDeleting] = useState<SubjectView | null>(null);
   const [managingGroups, setManagingGroups] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -312,6 +316,15 @@ function AdminSubjects() {
                             >
                               {subject.status === "ACTIVE" ? "Deactivate" : "Activate"}
                             </button>
+                            {canDelete && (
+                              <button
+                                type="button"
+                                className="text-red-600 hover:text-red-700"
+                                onClick={() => setDeleting(subject)}
+                              >
+                                Delete
+                              </button>
+                            )}
                           </div>
                         </TableCell>
                       )}
@@ -371,6 +384,25 @@ function AdminSubjects() {
           groups={groups}
           onClose={() => setManagingGroups(false)}
           onChanged={load}
+        />
+      )}
+      {deleting && (
+        <ConfirmDialog
+          title="Delete this subject?"
+          message={
+            <>
+              <strong>{deleting.name}</strong> will be removed, along with any teacher assigned to it in a class.
+              This can't be undone.
+            </>
+          }
+          confirmLabel="Delete"
+          variant="danger"
+          onConfirm={async () => {
+            await deleteSubject(deleting.id);
+            setDeleting(null);
+            load();
+          }}
+          onClose={() => setDeleting(null)}
         />
       )}
     </div>

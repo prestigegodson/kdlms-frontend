@@ -62,3 +62,8 @@ export function activateSubject(subjectId: string): Promise<void> {
 export function deactivateSubject(subjectId: string): Promise<void> {
   return apiFetch<void>(`${BASE}/${subjectId}/deactivate`, { method: "PATCH" });
 }
+
+/** Rejected server-side (422) once any score or rating has been recorded for the subject. */
+export function deleteSubject(subjectId: string): Promise<void> {
+  return apiFetch<void>(`${BASE}/${subjectId}`, { method: "DELETE" });
+}

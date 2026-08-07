@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "@/api/client";
 import * as levelsApi from "@/api/levels";
 import type { LevelView } from "@/api/levels";
 import * as meApi from "@/api/me";
@@ -24,6 +25,7 @@ vi.mock("@/api/subjects", async () => {
     updateSubject: vi.fn(),
     activateSubject: vi.fn(),
     deactivateSubject: vi.fn(),
+    deleteSubject: vi.fn(),
   };
 });
 
@@ -112,6 +114,25 @@ function renderAsSchoolAdmin() {
       lastName: "Obi",
       role: "SCHOOL_ADMIN",
       schoolId: "school-1",
+    },
+    accessToken: "access",
+    refreshToken: "refresh",
+  });
+  const router = createMemoryRouter([{ path: "/", element: <SubjectsPage /> }], { initialEntries: ["/"] });
+  render(<RouterProvider router={router} />);
+}
+
+function renderAsBranchAdmin() {
+  resetAuthStore();
+  useAuthStore.setState({
+    user: {
+      id: "user-2",
+      email: "branch@school.example",
+      firstName: "Bola",
+      lastName: "Ade",
+      role: "BRANCH_ADMIN",
+      schoolId: "school-1",
+      branchId: "branch-1",
     },
     accessToken: "access",
     refreshToken: "refresh",
@@ -258,6 +279,54 @@ describe("SubjectsPage", () => {
     await user.click(screen.getByRole("button", { name: "Deactivate" }));
 
     expect(subjectsApi.deactivateSubject).toHaveBeenCalledWith("subject-2");
+  });
+
+  it("deletes a subject after confirming in the dialog, then reloads the list", async () => {
+    mockSubjects([UNGROUPED_SUBJECT]);
+    vi.mocked(subjectsApi.deleteSubject).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Mathematics");
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    expect(subjectsApi.deleteSubject).toHaveBeenCalledWith("subject-2");
+    expect(subjectsApi.listSubjects).toHaveBeenCalledTimes(2);
+  });
+
+  it("renders the server's 422 message inside the dialog when the delete is rejected", async () => {
+    mockSubjects([UNGROUPED_SUBJECT]);
+    vi.mocked(subjectsApi.deleteSubject).mockRejectedValue(
+      new ApiError(422, "'Mathematics' has recorded assessments and can no longer be deleted - deactivate it instead."),
+    );
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Mathematics");
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    expect(
+      await within(dialog).findByText(
+        "'Mathematics' has recorded assessments and can no longer be deleted - deactivate it instead.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no Delete button for a BRANCH_ADMIN, unlike Edit and Deactivate", async () => {
+    mockSubjects([UNGROUPED_SUBJECT]);
+
+    renderAsBranchAdmin();
+    await screen.findByText("Mathematics");
+
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Deactivate" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
   });
 
   it("creates a subject group from the manage-groups dialog", async () => {

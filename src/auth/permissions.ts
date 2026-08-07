@@ -44,6 +44,15 @@ export const can = {
   },
 
   /**
+   * Permanently deleting a subject - SCHOOL_ADMIN only, unlike the rest of
+   * the catalogue's writes (`manageAcademics` covers create/edit/activate/
+   * deactivate for SCHOOL_ADMIN and BRANCH_ADMIN alike). Mirrors `manageLevels`.
+   */
+  deleteSubjects(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN";
+  },
+
+  /**
    * Both admin roles always see attendance (read-only for them); a TEACHER
    * only when they class-teach at least one class - a subject-teacher-only
    * account has no attendance to view.
