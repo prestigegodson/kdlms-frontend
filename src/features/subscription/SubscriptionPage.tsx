@@ -46,7 +46,7 @@ export function SubscriptionPage() {
   }, []);
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-5xl space-y-6">
       <PageHeader title="Subscription" description="Your school's current plan, limits, and usage." />
 
       {state.kind === "loading" && (
@@ -91,7 +91,7 @@ export function SubscriptionPage() {
             </div>
           </Card>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatTile icon={Layers} label="Billing cycle" value={state.summary.billingCycle} />
             <StatTile
               icon={Sparkles}
