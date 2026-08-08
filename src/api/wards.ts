@@ -2,6 +2,7 @@ import { apiFetch, apiFetchBlob, apiFetchText } from "@/api/client";
 import type { GradingSystemView } from "@/api/gradingSystems";
 import type { StudentTermResultView } from "@/api/assessments";
 import type { StudentAttendanceSummaryView } from "@/api/attendance";
+import type { StudentMedicalView } from "@/api/students";
 
 /**
  * Self-service views for the currently authenticated GUARDIAN - ward
@@ -66,6 +67,11 @@ export function getWardResult(studentId: string, termId: string): Promise<WardTe
 /** Not publication-gated - attendance is live operational information. */
 export function getWardAttendance(studentId: string, termId: string): Promise<StudentAttendanceSummaryView> {
   return apiFetch<StudentAttendanceSummaryView>(`${BASE}/${studentId}/attendance?termId=${termId}`);
+}
+
+/** A ward's medical & emergency details, read-only - also not publication-gated. */
+export function getWardMedical(studentId: string): Promise<StudentMedicalView> {
+  return apiFetch<StudentMedicalView>(`${BASE}/${studentId}/medical`);
 }
 
 /** Final rendered HTML for a ward's term report - the report-preview screen's `iframe srcDoc` source. */

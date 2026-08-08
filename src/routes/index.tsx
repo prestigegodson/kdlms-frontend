@@ -13,6 +13,7 @@ import { AttendancePage } from "@/features/attendance/AttendancePage";
 import { ForgotPasswordPage } from "@/features/auth/ForgotPasswordPage";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
+import { SetInitialPasswordPage } from "@/features/auth/SetInitialPasswordPage";
 import { BranchesPage } from "@/features/branches/BranchesPage";
 import { MessagesPage } from "@/features/communication/MessagesPage";
 import { LandingPage } from "@/features/connectivity/LandingPage";
@@ -61,6 +62,7 @@ export const routes: RouteObject[] = [
       { path: "login", element: <LoginPage /> },
       { path: "forgot-password", element: <ForgotPasswordPage /> },
       { path: "reset-password", element: <ResetPasswordPage /> },
+      { path: "set-password", element: <SetInitialPasswordPage /> },
       {
         path: "admin",
         element: (

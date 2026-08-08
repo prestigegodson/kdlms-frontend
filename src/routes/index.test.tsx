@@ -80,6 +80,25 @@ describe("router", () => {
     expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
   });
 
+  it("sends a signed-in but still-flagged system admin from / to /set-password, not their portal home", async () => {
+    useAuthStore.setState({
+      user: {
+        id: "1",
+        email: "admin@kdlms.com",
+        firstName: "Sys",
+        lastName: "Admin",
+        role: "SYSTEM_ADMIN",
+        mustChangePassword: true,
+      },
+      accessToken: "access",
+      refreshToken: "refresh",
+    });
+
+    renderAt("/");
+
+    expect(await screen.findByRole("heading", { name: "Set your password" })).toBeInTheDocument();
+  });
+
   it("renders a 404 page for an unknown route", async () => {
     renderAt("/this-page-does-not-exist");
 

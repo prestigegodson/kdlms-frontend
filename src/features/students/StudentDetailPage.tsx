@@ -13,11 +13,13 @@ import { listSessions, type AcademicSessionView } from "@/api/sessions";
 import {
   type EnrollmentView,
   getStudent,
+  getStudentMedical,
   graduateStudent,
   listStudentEnrollments,
   listStudentGuardians,
   reinstateStudent,
   type StudentGuardianView,
+  type StudentMedicalView,
   transferStudentClass,
   updateStudent,
   withdrawStudent,
@@ -25,6 +27,8 @@ import {
 } from "@/api/students";
 import { can } from "@/auth/permissions";
 import { StudentAttendanceCard } from "@/features/attendance/components/StudentAttendanceCard";
+import { EditStudentMedicalModal } from "@/features/students/components/EditStudentMedicalModal";
+import { StudentMedicalPanel } from "@/features/students/components/StudentMedicalPanel";
 import { UserPlus } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
@@ -218,6 +222,8 @@ export function StudentDetailPage() {
         onTransferred={load}
         onActionError={setActionError}
       />
+
+      <MedicalCard studentId={student.id} canManage={canManage} onActionError={setActionError} />
 
       <StudentAttendanceCard studentId={student.id} />
 
@@ -550,6 +556,65 @@ function TransferClassModal({ student, onClose, onSaved }: TransferClassModalPro
         </div>
       </form>
     </Modal>
+  );
+}
+
+interface MedicalCardProps {
+  studentId: string;
+  canManage: boolean;
+  onActionError: (message: string) => void;
+}
+
+function MedicalCard({ studentId, canManage, onActionError }: MedicalCardProps) {
+  const [medical, setMedical] = useState<StudentMedicalView | null>(null);
+  const [editing, setEditing] = useState(false);
+
+  function fetchMedical() {
+    getStudentMedical(studentId)
+      .then(setMedical)
+      .catch((error: unknown) =>
+        onActionError(error instanceof ApiError ? error.message : "Failed to load medical information"),
+      );
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- onActionError is a stable setState setter
+  useEffect(fetchMedical, [studentId]);
+
+  return (
+    <Card className="p-0">
+      <div className="flex items-center justify-between p-6 pb-0">
+        <h2 className="text-sm font-semibold text-slate-900">Medical &amp; emergency</h2>
+        {canManage && medical && (
+          <button
+            type="button"
+            className="text-sm font-medium text-brand-500 hover:text-brand-600"
+            onClick={() => setEditing(true)}
+          >
+            Edit medical
+          </button>
+        )}
+      </div>
+      <div className="p-6">
+        {medical === null && (
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <Spinner /> Loading…
+          </div>
+        )}
+        {medical !== null && <StudentMedicalPanel medical={medical} />}
+      </div>
+
+      {editing && medical && (
+        <EditStudentMedicalModal
+          studentId={studentId}
+          medical={medical}
+          onClose={() => setEditing(false)}
+          onSaved={(updated) => {
+            setMedical(updated);
+            setEditing(false);
+          }}
+        />
+      )}
+    </Card>
   );
 }
 

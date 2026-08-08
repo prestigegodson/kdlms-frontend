@@ -9,7 +9,7 @@ import type { SchoolClassView } from "@/api/classes";
 import * as meApi from "@/api/me";
 import type { RosterStudentView, TeacherClassView } from "@/api/me";
 import * as studentsApi from "@/api/students";
-import type { StudentView } from "@/api/students";
+import type { StudentMedicalView, StudentView } from "@/api/students";
 import { StudentsPage } from "@/features/students/StudentsPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 
@@ -30,7 +30,7 @@ vi.mock("@/api/classes", async () => {
 
 vi.mock("@/api/me", async () => {
   const actual = await vi.importActual<typeof import("@/api/me")>("@/api/me");
-  return { ...actual, listMyClasses: vi.fn(), listClassRoster: vi.fn() };
+  return { ...actual, listMyClasses: vi.fn(), listClassRoster: vi.fn(), getStudentMedical: vi.fn() };
 });
 
 const MAIN_BRANCH: BranchView = { id: "branch-1", schoolId: "school-1", name: "Main Branch", main: true, status: "ACTIVE" };
@@ -172,5 +172,43 @@ describe("StudentsPage", () => {
 
     expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Register student" })).not.toBeInTheDocument();
+  });
+
+  it("opens a read-only medical panel for a roster student", async () => {
+    const myClass: TeacherClassView = {
+      classId: "class-1",
+      branchId: "branch-1",
+      levelId: "level-1",
+      className: "Primary 1",
+      isClassTeacher: true,
+      subjectIds: [],
+    };
+    const rosterStudent: RosterStudentView = {
+      studentId: "student-1",
+      firstName: "Ada",
+      lastName: "Obi",
+      fullName: "Ada Obi",
+      admissionNumber: "BFA/2026/0001",
+      gender: "FEMALE",
+    };
+    const medical: StudentMedicalView = {
+      studentId: "student-1",
+      studentName: "Ada Obi",
+      bloodGroup: "O_POSITIVE",
+      allergies: "Peanuts",
+    };
+    vi.mocked(meApi.listMyClasses).mockResolvedValue([myClass]);
+    vi.mocked(meApi.listClassRoster).mockResolvedValue([rosterStudent]);
+    vi.mocked(meApi.getStudentMedical).mockResolvedValue(medical);
+    const user = userEvent.setup();
+
+    renderAsTeacher();
+    await screen.findByText("Ada Obi");
+
+    await user.click(screen.getByRole("button", { name: /Medical/ }));
+
+    expect(meApi.getStudentMedical).toHaveBeenCalledWith("student-1");
+    expect(await screen.findByText("O+")).toBeInTheDocument();
+    expect(screen.getByText("Peanuts")).toBeInTheDocument();
   });
 });

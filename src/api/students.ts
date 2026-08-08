@@ -46,6 +46,53 @@ export interface UpdateStudentRequest {
   dateOfBirth?: string;
 }
 
+export type BloodGroup =
+  | "A_POSITIVE"
+  | "A_NEGATIVE"
+  | "B_POSITIVE"
+  | "B_NEGATIVE"
+  | "AB_POSITIVE"
+  | "AB_NEGATIVE"
+  | "O_POSITIVE"
+  | "O_NEGATIVE";
+
+export type Genotype = "AA" | "AS" | "SS" | "AC" | "SC";
+
+/**
+ * Mirrors backend student.application.port.in.StudentMedicalView - its own
+ * resource, separate from StudentView, edited via GET/PUT .../medical.
+ */
+export interface StudentMedicalView {
+  studentId: string;
+  studentName: string;
+  bloodGroup?: BloodGroup;
+  genotype?: Genotype;
+  allergies?: string;
+  medicalConditions?: string;
+  medications?: string;
+  disabilityNotes?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelationship?: string;
+  clinicName?: string;
+  doctorPhone?: string;
+}
+
+/** Full-replace - every field optional, an omitted field clears it. */
+export interface UpdateStudentMedicalRequest {
+  bloodGroup?: BloodGroup;
+  genotype?: Genotype;
+  allergies?: string;
+  medicalConditions?: string;
+  medications?: string;
+  disabilityNotes?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelationship?: string;
+  clinicName?: string;
+  doctorPhone?: string;
+}
+
 /** Mirrors backend student.application.port.in.EnrollmentView. */
 export interface EnrollmentView {
   id: string;
@@ -103,6 +150,20 @@ export function getStudent(studentId: string): Promise<StudentView> {
 
 export function updateStudent(studentId: string, request: UpdateStudentRequest): Promise<StudentView> {
   return apiFetch<StudentView>(`${BASE}/${studentId}`, { method: "PUT", body: JSON.stringify(request) });
+}
+
+export function getStudentMedical(studentId: string): Promise<StudentMedicalView> {
+  return apiFetch<StudentMedicalView>(`${BASE}/${studentId}/medical`);
+}
+
+export function updateStudentMedical(
+  studentId: string,
+  request: UpdateStudentMedicalRequest,
+): Promise<StudentMedicalView> {
+  return apiFetch<StudentMedicalView>(`${BASE}/${studentId}/medical`, {
+    method: "PUT",
+    body: JSON.stringify(request),
+  });
 }
 
 export interface ListStudentsFilter {

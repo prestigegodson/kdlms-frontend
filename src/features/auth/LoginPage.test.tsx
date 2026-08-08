@@ -52,6 +52,31 @@ describe("LoginPage", () => {
     expect(authApi.login).toHaveBeenCalledWith("admin@kdlms.com", "ChangeMe123!");
   });
 
+  it("redirects to /set-password instead of the role home when the account still must change a temporary password", async () => {
+    vi.mocked(authApi.login).mockResolvedValue({
+      accessToken: "access",
+      refreshToken: "refresh",
+      user: {
+        id: "1",
+        email: "new-admin@kdlms.com",
+        firstName: "New",
+        lastName: "Admin",
+        role: "SYSTEM_ADMIN",
+        mustChangePassword: true,
+      },
+    });
+
+    const router = createMemoryRouter(routes, { initialEntries: ["/login"] });
+    render(<RouterProvider router={router} />);
+    const user = userEvent.setup();
+
+    await user.type(screen.getByLabelText("Email"), "new-admin@kdlms.com");
+    await user.type(screen.getByLabelText("Password"), "TempPass123");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    expect(await screen.findByRole("heading", { name: "Set your password" })).toBeInTheDocument();
+  });
+
   it("shows an error message on failed login and stays on the login page", async () => {
     vi.mocked(authApi.login).mockRejectedValue(new ApiError(401, "Invalid email or password."));
 

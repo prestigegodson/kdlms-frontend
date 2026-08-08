@@ -9,7 +9,7 @@ import type { GuardianView } from "@/api/guardians";
 import * as sessionsApi from "@/api/sessions";
 import type { AcademicSessionView } from "@/api/sessions";
 import * as studentsApi from "@/api/students";
-import type { EnrollmentView, StudentGuardianView, StudentView } from "@/api/students";
+import type { EnrollmentView, StudentGuardianView, StudentMedicalView, StudentView } from "@/api/students";
 import { StudentDetailPage } from "@/features/students/StudentDetailPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 
@@ -22,6 +22,8 @@ vi.mock("@/api/students", async () => {
     listStudentGuardians: vi.fn(),
     graduateStudent: vi.fn(),
     transferStudentClass: vi.fn(),
+    getStudentMedical: vi.fn(),
+    updateStudentMedical: vi.fn(),
   };
 });
 
@@ -78,6 +80,22 @@ const ENROLLMENT_VIEW: EnrollmentView = {
   status: "ACTIVE",
 };
 
+const EMPTY_MEDICAL_VIEW: StudentMedicalView = {
+  studentId: "student-1",
+  studentName: "Ada Obi",
+};
+
+const MEDICAL_VIEW: StudentMedicalView = {
+  studentId: "student-1",
+  studentName: "Ada Obi",
+  bloodGroup: "O_POSITIVE",
+  genotype: "AA",
+  allergies: "Peanuts",
+  emergencyContactName: "Chidi Obi",
+  emergencyContactPhone: "+2348020000000",
+  emergencyContactRelationship: "Father",
+};
+
 const GUARDIAN_VIEW: StudentGuardianView = {
   guardianId: "guardian-1",
   guardianName: "Chidi Obi",
@@ -129,12 +147,15 @@ describe("StudentDetailPage", () => {
     });
     // Fetched by the new StudentAttendanceCard section - not under test here.
     vi.mocked(sessionsApi.listTerms).mockResolvedValue([]);
+    // Fetched by the MedicalCard section - not under test in most cases here.
+    vi.mocked(studentsApi.getStudentMedical).mockResolvedValue(EMPTY_MEDICAL_VIEW);
   });
 
-  it("shows bio, enrollment history, and linked guardians", async () => {
+  it("shows bio, enrollment history, linked guardians, and medical info", async () => {
     vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
     vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([ENROLLMENT_VIEW]);
     vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([GUARDIAN_VIEW]);
+    vi.mocked(studentsApi.getStudentMedical).mockResolvedValue(MEDICAL_VIEW);
 
     renderAsSchoolAdmin();
 
@@ -142,6 +163,31 @@ describe("StudentDetailPage", () => {
     expect(screen.getByText("Main Branch")).toBeInTheDocument();
     expect(await screen.findByText("2026/2027")).toBeInTheDocument();
     expect(screen.getByText("Chidi Obi")).toBeInTheDocument();
+    expect(await screen.findByText("O+")).toBeInTheDocument();
+    expect(screen.getByText("Peanuts")).toBeInTheDocument();
+  });
+
+  it("shows an empty state and edits medical information", async () => {
+    vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+    vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+    vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+    vi.mocked(studentsApi.updateStudentMedical).mockResolvedValue(MEDICAL_VIEW);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByRole("heading", { name: "Ada Obi" });
+    expect(await screen.findByText("No medical information on file")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Edit medical" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.selectOptions(within(dialog).getByLabelText("Blood group"), "O_POSITIVE");
+    await user.click(within(dialog).getByRole("button", { name: "Save changes" }));
+
+    expect(studentsApi.updateStudentMedical).toHaveBeenCalledWith(
+      "student-1",
+      expect.objectContaining({ bloodGroup: "O_POSITIVE" }),
+    );
+    expect(await screen.findByText("O+")).toBeInTheDocument();
   });
 
   it("graduates the student after confirming", async () => {

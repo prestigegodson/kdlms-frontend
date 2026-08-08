@@ -9,10 +9,12 @@ interface AuthLayoutProps {
 }
 
 /**
- * Shared chrome for the three public auth screens (sign in, forgot/reset
- * password) - the first thing anyone sees before reaching a portal. The
- * faint ruled ground echoes the register grammar used by tables throughout
- * the app (see components/ui/Table.tsx), at zero image weight.
+ * Shared chrome for the auth screens outside any portal - the three public
+ * ones (sign in, forgot/reset password) plus SetInitialPasswordPage, which
+ * is authenticated but deliberately chromeless (no PortalShell nav) since
+ * it's a forced stop before the user reaches a portal at all. The faint
+ * ruled ground echoes the register grammar used by tables throughout the
+ * app (see components/ui/Table.tsx), at zero image weight.
  */
 export function AuthLayout({ title, description, children }: AuthLayoutProps) {
   return (

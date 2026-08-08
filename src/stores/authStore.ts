@@ -19,6 +19,12 @@ export interface AuthenticatedUser {
   role: Role;
   schoolId?: string;
   branchId?: string;
+  /**
+   * See api/auth.ts's UserSummary#mustChangePassword - optional for the
+   * same reason (test fixtures), undefined behaves as false. RequireRole
+   * reads this to redirect to /set-password.
+   */
+  mustChangePassword?: boolean;
 }
 
 type AuthStatus = "idle" | "authenticating";

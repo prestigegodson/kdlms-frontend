@@ -11,6 +11,7 @@ function renderGuarded(roles: Role[]) {
       { path: "/login", element: <div>Login page</div> },
       { path: "/admin", element: <div>Admin home</div> },
       { path: "/school", element: <div>School home</div> },
+      { path: "/set-password", element: <div>Set password page</div> },
       {
         path: "/protected",
         element: (
@@ -59,6 +60,26 @@ describe("RequireRole", () => {
     renderGuarded(["SYSTEM_ADMIN"]);
 
     expect(await screen.findByText("Protected content")).toBeInTheDocument();
+  });
+
+  it("redirects to /set-password when the user still must change a temporary password, even though their role matches", async () => {
+    useAuthStore.setState({
+      user: {
+        id: "1",
+        email: "a@b.com",
+        firstName: "A",
+        lastName: "B",
+        role: "SYSTEM_ADMIN",
+        mustChangePassword: true,
+      },
+      accessToken: "t",
+      refreshToken: "r",
+    });
+
+    renderGuarded(["SYSTEM_ADMIN"]);
+
+    expect(await screen.findByText("Set password page")).toBeInTheDocument();
+    expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
   });
 
   it("renders nothing until the persisted session has hydrated", () => {

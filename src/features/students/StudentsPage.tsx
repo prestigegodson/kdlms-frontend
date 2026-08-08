@@ -3,11 +3,12 @@ import { Link, useNavigate } from "react-router";
 import { listBranches, type BranchView } from "@/api/branches";
 import { listClasses, type SchoolClassView } from "@/api/classes";
 import { ApiError } from "@/api/client";
-import { listClassRoster, listMyClasses, type RosterStudentView, type TeacherClassView } from "@/api/me";
-import { listStudents, registerStudent, type StudentStatus, type StudentView } from "@/api/students";
+import { getStudentMedical as getMyStudentMedical, listClassRoster, listMyClasses, type RosterStudentView, type TeacherClassView } from "@/api/me";
+import { listStudents, registerStudent, type StudentMedicalView, type StudentStatus, type StudentView } from "@/api/students";
 import type { Page } from "@/api/types";
 import { can } from "@/auth/permissions";
-import { ArrowLeftRight, GraduationCap, Users } from "lucide-react";
+import { ArrowLeftRight, GraduationCap, HeartPulse, Users } from "lucide-react";
+import { StudentMedicalPanel } from "@/features/students/components/StudentMedicalPanel";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -404,6 +405,7 @@ function TeacherRoster() {
   const [myClasses, setMyClasses] = useState<TeacherClassView[] | null>(null);
   const [classId, setClassId] = useState("");
   const [state, setState] = useState<TeacherRosterState>({ kind: "loading" });
+  const [medicalStudent, setMedicalStudent] = useState<RosterStudentView | null>(null);
 
   useEffect(() => {
     listMyClasses()
@@ -471,6 +473,7 @@ function TeacherRoster() {
                 <TableHeaderCell>Name</TableHeaderCell>
                 <TableHeaderCell>Admission no.</TableHeaderCell>
                 <TableHeaderCell>Gender</TableHeaderCell>
+                <TableHeaderCell></TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -481,12 +484,61 @@ function TeacherRoster() {
                   </TableCell>
                   <TableCell label="Admission no.">{student.admissionNumber}</TableCell>
                   <TableCell label="Gender">{student.gender === "FEMALE" ? "Female" : "Male"}</TableCell>
+                  <TableCell label="">
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 text-sm font-medium text-brand-500 hover:text-brand-600"
+                      onClick={() => setMedicalStudent(student)}
+                    >
+                      <HeartPulse className="h-4 w-4" aria-hidden="true" />
+                      Medical
+                    </button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </Card>
       )}
+
+      {medicalStudent && (
+        <StudentMedicalModal student={medicalStudent} onClose={() => setMedicalStudent(null)} />
+      )}
     </div>
+  );
+}
+
+interface StudentMedicalModalProps {
+  student: RosterStudentView;
+  onClose: () => void;
+}
+
+/** Read-only medical & emergency info for a student on one of the caller's own classes. */
+function StudentMedicalModal({ student, onClose }: StudentMedicalModalProps) {
+  const [state, setState] = useState<
+    { kind: "loading" } | { kind: "loaded"; medical: StudentMedicalView } | { kind: "error"; message: string }
+  >({ kind: "loading" });
+
+  useEffect(() => {
+    getMyStudentMedical(student.studentId)
+      .then((medical) => setState({ kind: "loaded", medical }))
+      .catch((error: unknown) =>
+        setState({
+          kind: "error",
+          message: error instanceof ApiError ? error.message : "Failed to load medical information",
+        }),
+      );
+  }, [student.studentId]);
+
+  return (
+    <Modal open onClose={onClose} title={`${student.fullName} — Medical & emergency`} size="lg">
+      {state.kind === "loading" && (
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <Spinner /> Loading…
+        </div>
+      )}
+      {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
+      {state.kind === "loaded" && <StudentMedicalPanel medical={state.medical} />}
+    </Modal>
   );
 }

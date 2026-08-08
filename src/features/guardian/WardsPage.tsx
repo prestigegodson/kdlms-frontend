@@ -1,15 +1,20 @@
 import { Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { getWardAttendance, listWardTerms, type MyWardView } from "@/api/wards";
+import { getWardAttendance, getWardMedical, listWardTerms, type MyWardView } from "@/api/wards";
+import { ApiError } from "@/api/client";
+import type { StudentMedicalView } from "@/api/students";
+import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { StatTile } from "@/components/ui/StatTile";
+import { StudentMedicalPanel } from "@/features/students/components/StudentMedicalPanel";
 import { useWardStore } from "@/stores/wardStore";
 
 interface WardCardProps {
@@ -26,6 +31,7 @@ function WardCard({ ward }: WardCardProps) {
   const navigate = useNavigate();
   const select = useWardStore((state) => state.select);
   const [attendanceRate, setAttendanceRate] = useState<number | null>(null);
+  const [showMedical, setShowMedical] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,8 +77,48 @@ function WardCard({ ward }: WardCardProps) {
         <Button variant="secondary" size="sm" onClick={() => goTo("/guardian/attendance")}>
           View attendance
         </Button>
+        <Button variant="secondary" size="sm" onClick={() => setShowMedical(true)}>
+          Medical &amp; emergency
+        </Button>
       </div>
+
+      {showMedical && <WardMedicalModal ward={ward} onClose={() => setShowMedical(false)} />}
     </Card>
+  );
+}
+
+interface WardMedicalModalProps {
+  ward: MyWardView;
+  onClose: () => void;
+}
+
+/** Read-only medical & emergency info for a linked ward - not publication-gated, like attendance. */
+function WardMedicalModal({ ward, onClose }: WardMedicalModalProps) {
+  const [state, setState] = useState<
+    { kind: "loading" } | { kind: "loaded"; medical: StudentMedicalView } | { kind: "error"; message: string }
+  >({ kind: "loading" });
+
+  useEffect(() => {
+    getWardMedical(ward.studentId)
+      .then((medical) => setState({ kind: "loaded", medical }))
+      .catch((error: unknown) =>
+        setState({
+          kind: "error",
+          message: error instanceof ApiError ? error.message : "Failed to load medical information",
+        }),
+      );
+  }, [ward.studentId]);
+
+  return (
+    <Modal open onClose={onClose} title={`${ward.fullName} — Medical & emergency`} size="lg">
+      {state.kind === "loading" && (
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <Spinner /> Loading…
+        </div>
+      )}
+      {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
+      {state.kind === "loaded" && <StudentMedicalPanel medical={state.medical} />}
+    </Modal>
   );
 }
 

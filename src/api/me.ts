@@ -1,4 +1,5 @@
 import { apiFetch } from "@/api/client";
+import type { StudentMedicalView } from "@/api/students";
 import type { SubjectView } from "@/api/subjects";
 
 /**
@@ -86,4 +87,12 @@ export interface RosterStudentView {
  */
 export function listClassRoster(classId: string): Promise<RosterStudentView[]> {
   return apiFetch<RosterStudentView[]>(`${BASE}/classes/${classId}/students`);
+}
+
+/**
+ * Read-only medical & emergency details for a student on one of the caller's
+ * own classes - 404s (not 403) for a student not on an assigned class.
+ */
+export function getStudentMedical(studentId: string): Promise<StudentMedicalView> {
+  return apiFetch<StudentMedicalView>(`${BASE}/students/${studentId}/medical`);
 }
