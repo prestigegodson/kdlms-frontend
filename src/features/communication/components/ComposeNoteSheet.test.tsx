@@ -62,6 +62,14 @@ describe("ComposeNoteSheet", () => {
     expect(screen.getByRole("button", { name: "Log note" })).toBeDisabled();
   });
 
+  it("docks the Log note action to the sheet's own scroll body on mobile", () => {
+    render(<ComposeNoteSheet classId="class-1" roster={ROSTER} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    const footer = screen.getByRole("button", { name: "Log note" }).closest("[data-sheet-dock]");
+    expect(footer).toHaveAttribute("data-sheet-dock");
+    expect(footer).toHaveClass("mobile:sticky", "mobile:bottom-0");
+  });
+
   it("pre-selects a single student when opened from a roster row's quick action", () => {
     render(
       <ComposeNoteSheet

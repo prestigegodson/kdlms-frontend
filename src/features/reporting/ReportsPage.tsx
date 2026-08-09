@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
 import { ReportPreviewFrame } from "@/features/reporting/components/ReportPreviewFrame";
 import { type ReportStudentRow, StudentReportList } from "@/features/reporting/components/StudentReportList";
@@ -112,13 +113,15 @@ export function ReportsPage() {
         </div>
       )}
       {classes !== null && classes.length > 0 && (
-        <ClassTermPicker
-          classes={classOptions}
-          classId={classId}
-          onClassChange={setClassId}
-          termId={termId}
-          onTermChange={setTermId}
-        />
+        <StickySubHeader>
+          <ClassTermPicker
+            classes={classOptions}
+            classId={classId}
+            onClassChange={setClassId}
+            termId={termId}
+            onTermChange={setTermId}
+          />
+        </StickySubHeader>
       )}
 
       {loadError && <Alert variant="error">{loadError}</Alert>}

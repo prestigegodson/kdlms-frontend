@@ -38,7 +38,7 @@ export function Pagination({ page, onPageChange, className = "" }: PaginationPro
           disabled={isFirstPage}
           onClick={() => onPageChange(page.number - 1)}
           aria-label="Previous page"
-          className="flex h-8 w-8 items-center justify-center rounded-control text-slate-600 hover:bg-slate-100 disabled:pointer-events-none disabled:opacity-40"
+          className="flex h-9 w-9 items-center justify-center rounded-control text-slate-600 hover:bg-slate-100 disabled:pointer-events-none disabled:opacity-40 mobile:h-11 mobile:w-11"
         >
           <ChevronLeft className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -50,7 +50,7 @@ export function Pagination({ page, onPageChange, className = "" }: PaginationPro
           disabled={isLastPage}
           onClick={() => onPageChange(page.number + 1)}
           aria-label="Next page"
-          className="flex h-8 w-8 items-center justify-center rounded-control text-slate-600 hover:bg-slate-100 disabled:pointer-events-none disabled:opacity-40"
+          className="flex h-9 w-9 items-center justify-center rounded-control text-slate-600 hover:bg-slate-100 disabled:pointer-events-none disabled:opacity-40 mobile:h-11 mobile:w-11"
         >
           <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </button>

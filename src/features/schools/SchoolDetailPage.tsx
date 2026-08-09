@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { ApiError } from "@/api/client";
 import { listPackages, type PackageView } from "@/api/packages";
 import {
@@ -36,6 +36,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
@@ -106,26 +107,29 @@ export function SchoolDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/admin/schools" className="text-sm text-brand-500 hover:text-brand-600">
-        &larr; All schools
-      </Link>
-
       {state.kind === "loading" && (
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading…
-        </div>
+        <>
+          <PageHeader title="School" backTo="/admin/schools" />
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <Spinner /> Loading…
+          </div>
+        </>
       )}
-      {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
+      {state.kind === "error" && (
+        <>
+          <PageHeader title="School" backTo="/admin/schools" />
+          <Alert variant="error">{state.message}</Alert>
+        </>
+      )}
 
       {state.kind === "loaded" && (
         <>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="font-display text-3xl font-medium text-slate-900">{state.school.name}</h1>
-              <p className="text-sm text-slate-500">Code: {state.school.code}</p>
-            </div>
-            <Badge variant={STATUS_VARIANT[state.school.status]}>{state.school.status}</Badge>
-          </div>
+          <PageHeader
+            title={state.school.name}
+            description={`Code: ${state.school.code}`}
+            backTo="/admin/schools"
+            actions={<Badge variant={STATUS_VARIANT[state.school.status]}>{state.school.status}</Badge>}
+          />
 
           {actionError && <Alert variant="error">{actionError}</Alert>}
 
@@ -391,7 +395,7 @@ function SchoolAdminsCard({ schoolId, refreshKey }: { schoolId: string; refreshK
                 <TableHeaderCell>Role</TableHeaderCell>
                 <TableHeaderCell>Branch</TableHeaderCell>
                 <TableHeaderCell>Status</TableHeaderCell>
-                <TableHeaderCell />
+                <TableHeaderCell>Actions</TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -406,7 +410,7 @@ function SchoolAdminsCard({ schoolId, refreshKey }: { schoolId: string; refreshK
                   <TableCell label="Status">
                     <Badge variant={USER_STATUS_VARIANT[admin.status]}>{admin.status}</Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell label="Actions">
                     <Button variant="secondary" onClick={() => setPendingReset(admin)}>
                       Reset password
                     </Button>
@@ -547,7 +551,7 @@ function SubscriptionCard({ schoolId }: { schoolId: string }) {
 
       {state.kind === "loaded" && (
         <>
-          <div className="mt-3 flex items-center justify-between">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-medium text-slate-900">{state.subscription.packageName}</p>
               <p className="text-sm text-slate-500">

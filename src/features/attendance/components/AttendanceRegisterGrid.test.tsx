@@ -58,6 +58,17 @@ describe("AttendanceRegisterGrid", () => {
     expect(screen.getByText("Mark 1 more student to save")).toBeInTheDocument();
   });
 
+  it("offsets the save bar by the safe-area-aware tabbar token, not the bare one", async () => {
+    const user = userEvent.setup();
+    renderGrid();
+
+    await user.click(screen.getAllByRole("radio", { name: /Present/ })[0]);
+
+    const saveBar = screen.getByRole("button", { name: "Mark register" }).closest("div.sticky");
+    expect(saveBar).toHaveClass("bottom-tabbar-safe");
+    expect(saveBar).not.toHaveClass("bottom-tabbar");
+  });
+
   it("enables Mark register once every student has a status, and saves the full set", async () => {
     const user = userEvent.setup();
     vi.mocked(attendanceApi.saveRegister).mockResolvedValue({

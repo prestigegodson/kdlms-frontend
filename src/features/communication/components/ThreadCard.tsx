@@ -156,7 +156,10 @@ function ReplyComposer({ onReply }: { onReply: (body: string) => Promise<void> }
   }
 
   return (
-    <div className="mt-5 border-t border-slate-100 pt-4">
+    <div
+      data-sheet-dock
+      className="mt-5 border-t border-slate-100 pt-4 mobile:sticky mobile:bottom-0 mobile:-mx-5 mobile:-mb-5 mobile:bg-white/95 mobile:px-5 mobile:pb-5 mobile:backdrop-blur"
+    >
       <Textarea
         value={body}
         onChange={(event) => setBody(event.target.value)}

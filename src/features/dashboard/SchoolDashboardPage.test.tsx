@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as attendanceApi from "@/api/attendance";
@@ -17,7 +18,16 @@ vi.mock("@/api/attendance", async () => {
 });
 
 function renderPage() {
-  const router = createMemoryRouter([{ path: "/", element: <SchoolDashboardPage /> }], { initialEntries: ["/"] });
+  const router = createMemoryRouter(
+    [
+      { path: "/", element: <SchoolDashboardPage /> },
+      { path: "/school/students", element: <div>Students page</div> },
+      { path: "/school/academics/classes", element: <div>Classes page</div> },
+      { path: "/school/attendance", element: <div>Attendance page</div> },
+      { path: "/school/academics/classes/:classId", element: <div>Class detail page</div> },
+    ],
+    { initialEntries: ["/"] },
+  );
   render(<RouterProvider router={router} />);
 }
 
@@ -50,6 +60,15 @@ describe("SchoolDashboardPage", () => {
     expect(screen.getByText("120")).toBeInTheDocument();
     expect(screen.getByText("5 / 8")).toBeInTheDocument();
     expect(screen.getByText("This term’s results published")).toBeInTheDocument();
+
+    // Each admin stat tile is a tap target into its source screen (mobile-plan.md Phase D).
+    expect(screen.getByText("Active students").closest("a")).toHaveAttribute("href", "/school/students");
+    expect(screen.getByText("Active classes").closest("a")).toHaveAttribute(
+      "href",
+      "/school/academics/classes",
+    );
+    expect(screen.getByText("Present today").closest("a")).toHaveAttribute("href", "/school/attendance");
+    expect(screen.getByText("Registers marked").closest("a")).toHaveAttribute("href", "/school/attendance");
   });
 
   it("renders the teacher section's classes with today's marked status", async () => {
@@ -68,6 +87,20 @@ describe("SchoolDashboardPage", () => {
     expect(screen.getByText("Register marked today")).toBeInTheDocument();
     expect(screen.getByText("Primary 4")).toBeInTheDocument();
     expect(screen.getByText("Register not marked yet")).toBeInTheDocument();
+  });
+
+  it("navigates to a class's detail route when its whole row is tapped, not just the class name", async () => {
+    vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
+      teacher: { classes: [{ classId: "c1", className: "Primary 3", registerMarkedToday: true }] },
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText("Primary 3");
+
+    await user.click(screen.getByRole("button", { name: /Primary 3/ }));
+
+    expect(await screen.findByText("Class detail page")).toBeInTheDocument();
   });
 
   it("shows an empty state for a teacher with no assigned classes", async () => {

@@ -20,14 +20,14 @@ export function BroadsheetTable({ broadsheet }: BroadsheetTableProps) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-slate-500 sm:hidden">Scroll sideways to see every subject &rarr;</p>
+      <p className="text-xs text-slate-500 lg:hidden">Scroll sideways to see every subject &rarr;</p>
       <div className="overflow-x-auto rounded-card border border-slate-200">
         <table className="min-w-full border-collapse text-sm">
           <thead className="border-b border-slate-200 bg-slate-50">
             <tr>
               <th
                 scope="col"
-                className="sticky left-0 z-10 bg-slate-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"
+                className="sticky left-0 z-10 bg-slate-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 after:absolute after:inset-y-0 after:-right-2 after:w-2 after:bg-gradient-to-r after:from-slate-900/10 after:to-transparent"
               >
                 Student
               </th>
@@ -70,7 +70,7 @@ export function BroadsheetTable({ broadsheet }: BroadsheetTableProps) {
               const resultBySubject = new Map(row.subjectResults.map((result) => [result.subjectId, result]));
               return (
                 <tr key={row.enrollmentId} className="hover:bg-slate-50">
-                  <td className="sticky left-0 z-10 bg-white px-4 py-3 font-medium text-slate-900">
+                  <td className="sticky left-0 z-10 bg-white px-4 py-3 font-medium text-slate-900 after:absolute after:inset-y-0 after:-right-2 after:w-2 after:bg-gradient-to-r after:from-slate-900/10 after:to-transparent">
                     {row.studentName}
                     <span className="block text-xs font-normal text-slate-500">{row.admissionNumber}</span>
                   </td>

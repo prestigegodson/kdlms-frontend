@@ -1,4 +1,6 @@
-import type { HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from "react";
+import { ChevronRight } from "lucide-react";
+import type { HTMLAttributes, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, TdHTMLAttributes, ThHTMLAttributes } from "react";
+import { useNavigate } from "react-router";
 
 /**
  * A register-style table: hairline row rules (no vertical rules), a calm
@@ -23,8 +25,87 @@ export function TableBody({ className = "", ...props }: HTMLAttributes<HTMLTable
   return <tbody className={`divide-y divide-slate-100 bg-white ${className}`} {...props} />;
 }
 
-export function TableRow({ className = "", ...props }: HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={`transition-colors hover:bg-slate-50 ${className}`} {...props} />;
+interface TableRowProps extends HTMLAttributes<HTMLTableRowElement> {
+  /**
+   * Makes the whole row a tap target - navigates here via react-router on
+   * click or Enter/Space. Combine with a plain `onClick` for a
+   * non-navigating action (both fire, `onClick` first); either one alone is
+   * enough to render a trailing `ChevronRight` and `cursor-pointer` per
+   * CLAUDE.md's "every clickable thing shows a pointer" rule. Opt-in - a
+   * bare `<TableRow>` (the common case today) is unaffected, ready for a
+   * later phase to wire real routes in (mobile-plan.md Phases B-E).
+   */
+  to?: string;
+}
+
+/**
+ * Shared rendering for both variants below - kept as a plain function
+ * (not a hook) so `NavigableTableRow` can be the *only* place that calls
+ * `useNavigate`, letting a `to`-less `<TableRow>` (still the overwhelming
+ * majority of call sites) render with no Router in the tree at all, exactly
+ * like it did before this prop existed. `useNavigate` can't be called
+ * conditionally inside one component without breaking the rules of hooks,
+ * so the condition lives in *which component renders* instead.
+ */
+function renderRow(
+  interactive: boolean,
+  handleClick: ((event: ReactMouseEvent<HTMLTableRowElement>) => void) | undefined,
+  className: string,
+  children: TableRowProps["children"],
+  props: Omit<TableRowProps, "to" | "onClick" | "className" | "children">,
+) {
+  function handleKeyDown(event: ReactKeyboardEvent<HTMLTableRowElement>) {
+    if (!interactive || !handleClick || (event.key !== "Enter" && event.key !== " ")) {
+      return;
+    }
+    event.preventDefault();
+    handleClick(event as unknown as ReactMouseEvent<HTMLTableRowElement>);
+  }
+
+  return (
+    <tr
+      onClick={interactive ? handleClick : undefined}
+      onKeyDown={interactive ? handleKeyDown : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      className={`transition-colors hover:bg-slate-50 ${interactive ? "cursor-pointer" : ""} ${className}`}
+      {...props}
+    >
+      {children}
+      {interactive && (
+        <td className="w-8 px-2 text-right text-slate-400" aria-hidden="true">
+          <ChevronRight className="ml-auto h-4 w-4" aria-hidden="true" />
+        </td>
+      )}
+    </tr>
+  );
+}
+
+function NavigableTableRow({
+  to,
+  onClick,
+  className = "",
+  children,
+  ...props
+}: TableRowProps & { to: string }) {
+  const navigate = useNavigate();
+
+  function handleClick(event: ReactMouseEvent<HTMLTableRowElement>) {
+    onClick?.(event);
+    navigate(to);
+  }
+
+  return renderRow(true, handleClick, className, children, props);
+}
+
+export function TableRow({ to, onClick, className = "", children, ...props }: TableRowProps) {
+  if (to !== undefined) {
+    return (
+      <NavigableTableRow to={to} onClick={onClick} className={className} {...props}>
+        {children}
+      </NavigableTableRow>
+    );
+  }
+  return renderRow(onClick !== undefined, onClick, className, children, props);
 }
 
 interface TableHeaderCellProps extends ThHTMLAttributes<HTMLTableCellElement> {

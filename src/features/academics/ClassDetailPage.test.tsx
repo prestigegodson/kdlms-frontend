@@ -92,6 +92,14 @@ describe("ClassDetailPage - class teacher assignment", () => {
     vi.mocked(classesApi.listSubjectTeachers).mockResolvedValue([]);
   });
 
+  it("renders a PageHeader with the back link while the class is still loading", async () => {
+    vi.mocked(classesApi.getClass).mockReturnValue(new Promise(() => undefined));
+
+    renderAsSchoolAdmin();
+
+    expect(await screen.findByText("Class details")).toBeInTheDocument();
+  });
+
   it("shows the assign dropdown when the class has no teacher yet", async () => {
     vi.mocked(classesApi.getClass).mockResolvedValue(BASE_CLASS);
 

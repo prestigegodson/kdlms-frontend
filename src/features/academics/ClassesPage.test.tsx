@@ -88,7 +88,13 @@ function renderAsSchoolAdmin() {
     accessToken: "access",
     refreshToken: "refresh",
   });
-  const router = createMemoryRouter([{ path: "/", element: <ClassesPage /> }], { initialEntries: ["/"] });
+  const router = createMemoryRouter(
+    [
+      { path: "/", element: <ClassesPage /> },
+      { path: "/school/academics/classes/:classId", element: <div>Class detail page</div> },
+    ],
+    { initialEntries: ["/"] },
+  );
   render(<RouterProvider router={router} />);
 }
 
@@ -149,5 +155,24 @@ describe("ClassesPage", () => {
     await user.click(screen.getByRole("button", { name: "Deactivate" }));
 
     expect(classesApi.deactivateClass).toHaveBeenCalledWith("class-1");
+    // The row itself is also a nav target (TableRow's `to`) - clicking the
+    // inline action must stop propagation rather than also navigating away.
+    expect(screen.getByText("Little Star 1")).toBeInTheDocument();
+    expect(screen.queryByText("Class detail page")).not.toBeInTheDocument();
+  });
+
+  it("navigates to the class detail route when a row is tapped", async () => {
+    mockClasses([CLASS_VIEW]);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Little Star 1");
+
+    const row = screen.getByText("Little Star 1").closest("tr")!;
+    expect(row).toHaveAttribute("tabindex", "0");
+
+    await user.click(row);
+
+    expect(await screen.findByText("Class detail page")).toBeInTheDocument();
   });
 });

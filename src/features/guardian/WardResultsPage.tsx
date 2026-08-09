@@ -15,6 +15,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { GradeKey } from "@/features/assessments/components/GradeKey";
 import { StudentTermResultCard } from "@/features/assessments/components/StudentTermResultCard";
 import { WardSelector } from "@/features/guardian/components/WardSelector";
@@ -119,7 +120,7 @@ export function WardResultsPage() {
       )}
 
       {hasWards && (
-        <div className="flex flex-wrap gap-4">
+        <StickySubHeader>
           <WardSelector />
           {selectedWardId && (
             <WardTermSelect
@@ -130,7 +131,7 @@ export function WardResultsPage() {
               emptyMessage="No published results yet for this ward."
             />
           )}
-        </div>
+        </StickySubHeader>
       )}
 
       {downloadError && <Alert variant="error">{downloadError}</Alert>}

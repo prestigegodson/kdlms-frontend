@@ -29,8 +29,19 @@ import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 import { useUnreadMessagesStore } from "@/stores/unreadMessagesStore";
 
+// Tab-bar order below `lg` follows this array, capped at 4 per role
+// (NavItem.primary): both admin roles get Dashboard, Assessments, Messages,
+// Students; TEACHER gets Dashboard, Assessments, Attendance, Messages.
+// Attendance is deliberately not an admin primary - it's read-only for
+// admins (CLAUDE.md's class-teacher-write rule), so it isn't one of their
+// everyday destinations.
 const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/school", icon: LayoutDashboard },
+  {
+    label: "Dashboard",
+    href: "/school",
+    icon: LayoutDashboard,
+    primary: ["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER"],
+  },
   {
     label: "Sessions & Terms",
     href: "/school/academics/sessions",
@@ -58,12 +69,20 @@ const NAV_ITEMS: NavItem[] = [
     // School-wide, not branch-scoped - see auth/permissions.ts's manageGradingSystems.
     roles: ["SCHOOL_ADMIN"],
   },
-  { label: "Assessments", href: "/school/assessments", icon: ClipboardCheck, group: "Academics" },
+  {
+    label: "Assessments",
+    href: "/school/assessments",
+    icon: ClipboardCheck,
+    group: "Academics",
+    primary: ["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER"],
+  },
   {
     label: "Attendance",
     href: "/school/attendance",
     icon: ClipboardList,
     group: "Academics",
+    // TEACHER-primary only - see the file-level comment above.
+    primary: ["TEACHER"],
     // Both admin roles always see it (read-only for them); a TEACHER only
     // when they class-teach at least one class - see auth/permissions.ts's
     // viewAttendance, the single source of truth nav/route/in-page controls
@@ -87,6 +106,7 @@ const NAV_ITEMS: NavItem[] = [
     href: "/school/messages",
     icon: MessageSquare,
     group: "Academics",
+    primary: ["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER"],
     // Gated on the school's communication entitlement on top of role/scope -
     // see auth/permissions.ts's viewMessages, the single source of truth.
     visible: () => {
@@ -104,7 +124,13 @@ const NAV_ITEMS: NavItem[] = [
     group: "People",
     roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"],
   },
-  { label: "Students", href: "/school/students", icon: GraduationCap, group: "People" },
+  {
+    label: "Students",
+    href: "/school/students",
+    icon: GraduationCap,
+    group: "People",
+    primary: ["SCHOOL_ADMIN", "BRANCH_ADMIN"],
+  },
   {
     label: "Guardians",
     href: "/school/guardians",

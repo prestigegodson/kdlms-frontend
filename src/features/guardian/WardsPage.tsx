@@ -1,4 +1,4 @@
-import { Users } from "lucide-react";
+import { ChevronRight, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { getWardAttendance, getWardMedical, listWardTerms, type MyWardView } from "@/api/wards";
@@ -56,24 +56,32 @@ function WardCard({ ward }: WardCardProps) {
 
   return (
     <Card>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="font-display text-lg font-medium text-slate-900">{ward.fullName}</h2>
-          <p className="text-sm text-slate-500">{ward.admissionNumber}</p>
+      <button
+        type="button"
+        onClick={() => goTo("/guardian/results")}
+        aria-label={`${ward.fullName} — view results`}
+        className="flex w-full items-start gap-3 rounded-panel text-left transition-colors hover:bg-slate-50"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-medium text-slate-900">{ward.fullName}</h2>
+              <p className="text-sm text-slate-500">{ward.admissionNumber}</p>
+            </div>
+            <Badge variant="brand">{ward.relationship}</Badge>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <StatTile label="Class" value={ward.currentClassName ?? "—"} />
+            <StatTile label="Level" value={ward.levelName ?? "—"} />
+            {attendanceRate != null && (
+              <StatTile label="Attendance (this term)" value={`${attendanceRate.toFixed(1)}%`} />
+            )}
+          </div>
         </div>
-        <Badge variant="brand">{ward.relationship}</Badge>
-      </div>
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatTile label="Class" value={ward.currentClassName ?? "—"} />
-        <StatTile label="Level" value={ward.levelName ?? "—"} />
-        {attendanceRate != null && (
-          <StatTile label="Attendance (this term)" value={`${attendanceRate.toFixed(1)}%`} />
-        )}
-      </div>
+        <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
+      </button>
+
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant="secondary" size="sm" onClick={() => goTo("/guardian/results")}>
-          View results
-        </Button>
         <Button variant="secondary" size="sm" onClick={() => goTo("/guardian/attendance")}>
           View attendance
         </Button>

@@ -51,7 +51,7 @@ export function WardTermSelect({ studentId, termId, onTermChange, filter, emptyM
   }
 
   return (
-    <FormField label="Term" htmlFor="ward-term-selector" className="max-w-xs">
+    <FormField label="Term" htmlFor="ward-term-selector" className="min-w-0 flex-1 lg:max-w-xs lg:flex-initial">
       <Select
         id="ward-term-selector"
         value={termId}

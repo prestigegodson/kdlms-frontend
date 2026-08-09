@@ -162,11 +162,11 @@ export function LevelsPage() {
                 </div>
 
                 {canManage && (
-                  <div className="flex shrink-0 items-center gap-1">
+                  <div className="flex shrink-0 flex-wrap items-center gap-1">
                     <button
                       type="button"
                       aria-label={`Move ${level.displayName} up`}
-                      className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-30"
+                      className="flex items-center justify-center rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-30 mobile:h-11 mobile:w-11"
                       disabled={index === 0 || reordering}
                       onClick={() => move(index, -1)}
                     >
@@ -175,7 +175,7 @@ export function LevelsPage() {
                     <button
                       type="button"
                       aria-label={`Move ${level.displayName} down`}
-                      className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-30"
+                      className="flex items-center justify-center rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-30 mobile:h-11 mobile:w-11"
                       disabled={index === levels.length - 1 || reordering}
                       onClick={() => move(index, 1)}
                     >
@@ -186,21 +186,21 @@ export function LevelsPage() {
 
                     <button
                       type="button"
-                      className="px-2 py-1 text-sm text-brand-500 hover:text-brand-600"
+                      className="inline-flex items-center px-2 py-1 text-sm text-brand-500 hover:text-brand-600 mobile:min-h-11"
                       onClick={() => setEditing(level)}
                     >
                       Rename
                     </button>
                     <button
                       type="button"
-                      className="px-2 py-1 text-sm text-slate-500 hover:text-slate-700"
+                      className="inline-flex items-center px-2 py-1 text-sm text-slate-500 hover:text-slate-700 mobile:min-h-11"
                       onClick={() => toggleActive(level)}
                     >
                       {level.status === "ACTIVE" ? "Archive" : "Restore"}
                     </button>
                     <button
                       type="button"
-                      className="px-2 py-1 text-sm text-red-600 hover:text-red-700 disabled:pointer-events-none disabled:opacity-40"
+                      className="inline-flex items-center px-2 py-1 text-sm text-red-600 hover:text-red-700 disabled:pointer-events-none disabled:opacity-40 mobile:min-h-11"
                       disabled={level.subjectCount + level.classCount + level.subjectGroupCount > 0}
                       title={
                         level.subjectCount + level.classCount + level.subjectGroupCount > 0

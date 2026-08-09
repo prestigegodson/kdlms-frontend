@@ -67,8 +67,14 @@ export function ConfirmDialog({
           </FormField>
         )}
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={submitting}
+            className="w-full sm:w-auto"
+          >
             Cancel
           </Button>
           <Button
@@ -76,6 +82,7 @@ export function ConfirmDialog({
             variant={variant === "danger" ? "danger" : "primary"}
             onClick={handleConfirm}
             disabled={submitting || !canConfirm}
+            className="w-full sm:w-auto"
           >
             {submitting ? "Working…" : confirmLabel}
           </Button>

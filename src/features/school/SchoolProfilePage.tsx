@@ -55,14 +55,22 @@ export function SchoolProfilePage() {
 
   if (state.kind === "loading") {
     return (
-      <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Spinner /> Loading profile…
+      <div className="max-w-2xl space-y-6">
+        <PageHeader title="School profile" description="Contact details for your school." />
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <Spinner /> Loading profile…
+        </div>
       </div>
     );
   }
 
   if (state.kind === "error") {
-    return <Alert variant="error">{state.message}</Alert>;
+    return (
+      <div className="max-w-2xl space-y-6">
+        <PageHeader title="School profile" description="Contact details for your school." />
+        <Alert variant="error">{state.message}</Alert>
+      </div>
+    );
   }
 
   const { school } = state;

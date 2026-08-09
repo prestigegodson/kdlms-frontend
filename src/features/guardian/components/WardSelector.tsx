@@ -22,7 +22,7 @@ export function WardSelector() {
   }
 
   return (
-    <FormField label="Ward" htmlFor="ward-selector" className="max-w-xs">
+    <FormField label="Ward" htmlFor="ward-selector" className="min-w-0 flex-1 lg:max-w-xs lg:flex-initial">
       <Select
         id="ward-selector"
         value={selectedWardId ?? ""}

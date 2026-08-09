@@ -47,7 +47,7 @@ export function StatusSegments({
       role="radiogroup"
       aria-label={`Attendance status for ${studentName}`}
       onKeyDown={handleKeyDown}
-      className="grid grid-cols-2 gap-1.5 sm:inline-flex sm:gap-1"
+      className="inline-flex gap-1 mobile:grid mobile:min-w-0 mobile:flex-1 mobile:grid-cols-4 mobile:gap-1.5"
     >
       {ATTENDANCE_STATUSES.map((status) => {
         const selected = value === status.value;
@@ -64,7 +64,7 @@ export function StatusSegments({
               onChange(status.value);
               onAdvance?.();
             }}
-            className={`rounded-control px-3 py-1.5 text-xs font-semibold transition-colors ${
+            className={`rounded-control px-3 py-1.5 text-xs font-semibold transition-colors mobile:min-h-11 ${
               selected
                 ? SELECTED_CLASSES[status.value]
                 : "bg-white text-slate-500 ring-1 ring-inset ring-slate-200 hover:bg-slate-50"

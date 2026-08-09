@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { listClasses, type SchoolClassView } from "@/api/classes";
 import { ApiError } from "@/api/client";
 import {
@@ -30,16 +30,17 @@ import { StudentAttendanceCard } from "@/features/attendance/components/StudentA
 import { EditStudentMedicalModal } from "@/features/students/components/EditStudentMedicalModal";
 import { StudentMedicalPanel } from "@/features/students/components/StudentMedicalPanel";
 import { UserPlus } from "lucide-react";
+import { Accordion } from "@/components/ui/Accordion";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DateInput } from "@/components/ui/DateInput";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
@@ -120,69 +121,73 @@ export function StudentDetailPage() {
 
   if (state.kind === "loading") {
     return (
-      <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Spinner /> Loading…
+      <div className="space-y-6">
+        <PageHeader title="Student" backTo="/school/students" />
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <Spinner /> Loading…
+        </div>
       </div>
     );
   }
   if (state.kind === "error") {
-    return <Alert variant="error">{state.message}</Alert>;
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Student" backTo="/school/students" />
+        <Alert variant="error">{state.message}</Alert>
+      </div>
+    );
   }
 
   const { student } = state;
 
   return (
     <div className="space-y-6">
-      <Link to="/school/students" className="text-sm text-brand-500 hover:text-brand-600">
-        &larr; All students
-      </Link>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl font-medium text-slate-900">{student.fullName}</h1>
-          <p className="mt-1 text-sm text-slate-500">{student.admissionNumber}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge
-            variant={
-              student.status === "ACTIVE"
-                ? "success"
-                : student.status === "WITHDRAWN"
-                  ? "danger"
-                  : "neutral"
-            }
-          >
-            {student.status}
-          </Badge>
-          {canManage && (
-            <Button variant="secondary" onClick={() => setEditing(true)}>
-              Edit
-            </Button>
-          )}
-          {canManage && student.status === "ACTIVE" && (
-            <>
-              <Button variant="secondary" onClick={() => setConfirmingWithdraw(true)}>
-                Withdraw
+      <PageHeader
+        title={student.fullName}
+        description={student.admissionNumber}
+        backTo="/school/students"
+        actions={
+          <>
+            <Badge
+              variant={
+                student.status === "ACTIVE"
+                  ? "success"
+                  : student.status === "WITHDRAWN"
+                    ? "danger"
+                    : "neutral"
+              }
+            >
+              {student.status}
+            </Badge>
+            {canManage && (
+              <Button variant="secondary" onClick={() => setEditing(true)}>
+                Edit
               </Button>
-              <Button variant="secondary" onClick={() => setConfirmingGraduate(true)}>
-                Graduate
+            )}
+            {canManage && student.status === "ACTIVE" && (
+              <>
+                <Button variant="secondary" onClick={() => setConfirmingWithdraw(true)}>
+                  Withdraw
+                </Button>
+                <Button variant="secondary" onClick={() => setConfirmingGraduate(true)}>
+                  Graduate
+                </Button>
+              </>
+            )}
+            {canManage && student.status === "WITHDRAWN" && (
+              <Button variant="secondary" onClick={handleReinstate}>
+                Reinstate
               </Button>
-            </>
-          )}
-          {canManage && student.status === "WITHDRAWN" && (
-            <Button variant="secondary" onClick={handleReinstate}>
-              Reinstate
-            </Button>
-          )}
-        </div>
-      </div>
+            )}
+          </>
+        }
+      />
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
-          <h2 className="text-sm font-semibold text-slate-900">Bio</h2>
-          <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-3 text-sm sm:grid-cols-2">
+        <Accordion title="Bio" defaultOpen>
+          <dl className="grid grid-cols-1 gap-x-4 gap-y-3 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-slate-500">Branch</dt>
               <dd className="text-slate-900">{student.branchName ?? "—"}</dd>
@@ -206,7 +211,7 @@ export function StudentDetailPage() {
               </div>
             )}
           </dl>
-        </Card>
+        </Accordion>
 
         <GuardiansCard
           studentId={student.id}
@@ -225,7 +230,7 @@ export function StudentDetailPage() {
 
       <MedicalCard studentId={student.id} canManage={canManage} onActionError={setActionError} />
 
-      <StudentAttendanceCard studentId={student.id} />
+      <StudentAttendanceCard studentId={student.id} variant="accordion" />
 
       {editing && (
         <EditStudentModal
@@ -400,20 +405,21 @@ function EnrollmentHistoryCard({
   }
 
   return (
-    <Card className="p-0">
-      <div className="flex items-center justify-between p-6 pb-0">
-        <h2 className="text-sm font-semibold text-slate-900">Enrollment history</h2>
-        {canManage && student.status === "ACTIVE" && (
-          <button
-            type="button"
-            className="text-sm font-medium text-brand-500 hover:text-brand-600"
-            onClick={() => setTransferring(true)}
-          >
-            Transfer class
-          </button>
-        )}
-      </div>
-      <div className="p-6">
+    <>
+      <Accordion
+        title="Enrollment history"
+        actions={
+          canManage && student.status === "ACTIVE" && (
+            <button
+              type="button"
+              className="text-sm font-medium text-brand-500 hover:text-brand-600"
+              onClick={() => setTransferring(true)}
+            >
+              Transfer class
+            </button>
+          )
+        }
+      >
         {history === null && (
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <Spinner /> Loading…
@@ -453,7 +459,7 @@ function EnrollmentHistoryCard({
             </TableBody>
           </Table>
         )}
-      </div>
+      </Accordion>
 
       {transferring && (
         <TransferClassModal
@@ -465,7 +471,7 @@ function EnrollmentHistoryCard({
           }}
         />
       )}
-    </Card>
+    </>
   );
 }
 
@@ -581,27 +587,28 @@ function MedicalCard({ studentId, canManage, onActionError }: MedicalCardProps) 
   useEffect(fetchMedical, [studentId]);
 
   return (
-    <Card className="p-0">
-      <div className="flex items-center justify-between p-6 pb-0">
-        <h2 className="text-sm font-semibold text-slate-900">Medical &amp; emergency</h2>
-        {canManage && medical && (
-          <button
-            type="button"
-            className="text-sm font-medium text-brand-500 hover:text-brand-600"
-            onClick={() => setEditing(true)}
-          >
-            Edit medical
-          </button>
-        )}
-      </div>
-      <div className="p-6">
+    <>
+      <Accordion
+        title="Medical & emergency"
+        actions={
+          canManage && medical && (
+            <button
+              type="button"
+              className="text-sm font-medium text-brand-500 hover:text-brand-600"
+              onClick={() => setEditing(true)}
+            >
+              Edit medical
+            </button>
+          )
+        }
+      >
         {medical === null && (
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <Spinner /> Loading…
           </div>
         )}
         {medical !== null && <StudentMedicalPanel medical={medical} />}
-      </div>
+      </Accordion>
 
       {editing && medical && (
         <EditStudentMedicalModal
@@ -614,7 +621,7 @@ function MedicalCard({ studentId, canManage, onActionError }: MedicalCardProps) 
           }}
         />
       )}
-    </Card>
+    </>
   );
 }
 
@@ -648,21 +655,22 @@ function GuardiansCard({ studentId, canManage, onActionError }: GuardiansCardPro
   }
 
   return (
-    <Card className="p-0">
-      <div className="flex items-center justify-between p-6 pb-0">
-        <h2 className="text-sm font-semibold text-slate-900">Guardians</h2>
-        {canManage && (
-          <button
-            type="button"
-            className="flex items-center gap-1 text-sm font-medium text-brand-500 hover:text-brand-600"
-            onClick={() => setLinking(true)}
-          >
-            <UserPlus className="h-4 w-4" aria-hidden="true" />
-            Link guardian
-          </button>
-        )}
-      </div>
-      <div className="p-6">
+    <>
+      <Accordion
+        title="Guardians"
+        actions={
+          canManage && (
+            <button
+              type="button"
+              className="flex items-center gap-1 text-sm font-medium text-brand-500 hover:text-brand-600"
+              onClick={() => setLinking(true)}
+            >
+              <UserPlus className="h-4 w-4" aria-hidden="true" />
+              Link guardian
+            </button>
+          )
+        }
+      >
         {guardians === null && (
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <Spinner /> Loading…
@@ -679,7 +687,7 @@ function GuardiansCard({ studentId, canManage, onActionError }: GuardiansCardPro
             {guardians.map((guardian) => (
               <li
                 key={guardian.guardianId}
-                className="flex items-center justify-between gap-3 text-sm"
+                className="flex min-h-14 items-center justify-between gap-3 text-sm"
               >
                 <div>
                   <p className="font-medium text-slate-900">{guardian.guardianName}</p>
@@ -690,7 +698,7 @@ function GuardiansCard({ studentId, canManage, onActionError }: GuardiansCardPro
                 {canManage && (
                   <button
                     type="button"
-                    className="text-slate-500 hover:text-slate-700"
+                    className="mobile:min-h-11 px-2 text-slate-500 hover:text-slate-700"
                     onClick={() => setUnlinking(guardian)}
                   >
                     Unlink
@@ -700,7 +708,7 @@ function GuardiansCard({ studentId, canManage, onActionError }: GuardiansCardPro
             ))}
           </ul>
         )}
-      </div>
+      </Accordion>
 
       {linking && (
         <LinkGuardianModal
@@ -727,7 +735,7 @@ function GuardiansCard({ studentId, canManage, onActionError }: GuardiansCardPro
           onClose={() => setUnlinking(null)}
         />
       )}
-    </Card>
+    </>
   );
 }
 

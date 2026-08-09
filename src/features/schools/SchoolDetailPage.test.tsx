@@ -77,6 +77,14 @@ describe("SchoolDetailPage", () => {
     vi.clearAllMocks();
   });
 
+  it("shows a School heading while loading, so the mobile app bar keeps a title and back chevron", () => {
+    renderDetailPage(ACTIVE_SCHOOL);
+
+    // Asserted synchronously, before the mocked getSchool() promise resolves -
+    // this is the "loading" branch's PageHeader, not the loaded one.
+    expect(screen.getByText("School")).toBeInTheDocument();
+  });
+
   it("shows Restore, not Activate, for an archived school", async () => {
     renderDetailPage(ARCHIVED_SCHOOL);
 

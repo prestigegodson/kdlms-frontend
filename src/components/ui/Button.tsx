@@ -27,10 +27,12 @@ const VARIANT_CLASSES: Record<Variant, string> = {
   destructive: "bg-red-600 text-white hover:bg-red-700",
 };
 
+// md/lg (not sm - it stays compact for dense inline rows) get a 44px touch
+// floor below `md`; above that, height is padding-driven exactly as today.
 const SIZE_CLASSES: Record<Size, string> = {
   sm: "gap-1.5 px-3 py-1.5 text-sm",
-  md: "gap-2 px-4 py-2 text-sm",
-  lg: "gap-2 px-5 py-2.5 text-base",
+  md: "gap-2 px-4 py-2 text-sm mobile:min-h-11",
+  lg: "gap-2 px-5 py-2.5 text-base mobile:min-h-11",
 };
 
 export function Button({

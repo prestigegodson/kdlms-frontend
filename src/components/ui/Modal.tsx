@@ -28,6 +28,15 @@ const FOCUSABLE_SELECTOR =
  * focus to whatever triggered it on close. The panel caps at 90dvh with its
  * own internal scroll so a tall form (e.g. Sessions' repeating term rows)
  * never pushes its submit button off a short viewport.
+ *
+ * Below `md` this presents as a bottom sheet instead - docked to the
+ * viewport bottom, full width, top-rounded only, capped at 92dvh, with a
+ * grab handle and a slide-up entrance. The `mobile:` utility classes below
+ * handle everything Tailwind can express (layout/sizing/rounding); the
+ * `sheet-panel` class hooks the slide-in keyframe and grab-handle
+ * pseudo-element that live in index.css, the same "one CSS mechanism, zero
+ * call-site churn" split `.responsive-table` already uses - none of this
+ * component's ~28 call sites need to change.
  */
 export function Modal({ open, onClose, title, size = "lg", children }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -80,8 +89,8 @@ export function Modal({ open, onClose, title, size = "lg", children }: ModalProp
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-slate-900/50" onClick={onClose} aria-hidden="true" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 mobile:items-end mobile:justify-center mobile:p-0">
+      <div className="overlay-fade fixed inset-0 bg-slate-900/50" onClick={onClose} aria-hidden="true" />
       <div
         ref={dialogRef}
         role="dialog"
@@ -90,7 +99,7 @@ export function Modal({ open, onClose, title, size = "lg", children }: ModalProp
         aria-label={title ? undefined : "Dialog"}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
-        className={`relative flex max-h-[90dvh] w-full flex-col rounded-card bg-white shadow-xl outline-none ${SIZE_CLASSES[size]}`}
+        className={`sheet-panel relative flex max-h-[90dvh] w-full flex-col rounded-card bg-white shadow-xl outline-none mobile:w-full mobile:max-w-none mobile:max-h-[92dvh] mobile:rounded-t-card mobile:rounded-b-none mobile:pb-[env(safe-area-inset-bottom)] ${SIZE_CLASSES[size]}`}
       >
         <div className="flex items-start justify-end gap-4 px-6 pt-6">
           {title && (
@@ -102,12 +111,12 @@ export function Modal({ open, onClose, title, size = "lg", children }: ModalProp
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-slate-400 hover:bg-slate-100 hover:text-slate-600 mobile:h-11 mobile:w-11"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
-        <div className="overflow-y-auto px-6 pb-6 pt-4">{children}</div>
+        <div className="overflow-y-auto px-6 pb-6 pt-4 mobile:has-[[data-sheet-dock]]:pb-0">{children}</div>
       </div>
     </div>
   );

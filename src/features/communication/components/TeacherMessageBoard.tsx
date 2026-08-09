@@ -17,6 +17,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { ClassDatePicker } from "@/features/attendance/components/ClassDatePicker";
 import { ComposeNoteSheet, type RosterOption } from "@/features/communication/components/ComposeNoteSheet";
 import { MessageBoard } from "@/features/communication/components/MessageBoard";
@@ -115,13 +116,15 @@ export function TeacherMessageBoard() {
       )}
 
       {classes !== null && classes.length > 0 && (
-        <ClassDatePicker
-          classes={classOptions}
-          classId={effectiveClassId}
-          onClassChange={setClassId}
-          date={date}
-          onDateChange={setDate}
-        />
+        <StickySubHeader>
+          <ClassDatePicker
+            classes={classOptions}
+            classId={effectiveClassId}
+            onClassChange={setClassId}
+            date={date}
+            onDateChange={setDate}
+          />
+        </StickySubHeader>
       )}
 
       {loadError && <Alert variant="error">{loadError}</Alert>}

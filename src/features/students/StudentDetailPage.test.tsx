@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,6 +11,7 @@ import type { AcademicSessionView } from "@/api/sessions";
 import * as studentsApi from "@/api/students";
 import type { EnrollmentView, StudentGuardianView, StudentMedicalView, StudentView } from "@/api/students";
 import { StudentDetailPage } from "@/features/students/StudentDetailPage";
+import { resetAppBarStore, useAppBarStore } from "@/stores/appBarStore";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 
 vi.mock("@/api/students", async () => {
@@ -138,6 +139,7 @@ function renderAsSchoolAdmin() {
 describe("StudentDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetAppBarStore();
     vi.mocked(sessionsApi.listSessions).mockResolvedValue({
       content: [SESSION_VIEW],
       totalElements: 1,
@@ -242,6 +244,16 @@ describe("StudentDetailPage", () => {
     await user.click(within(dialog).getByRole("button", { name: "Transfer" }));
 
     expect(studentsApi.transferStudentClass).toHaveBeenCalledWith("student-1", "class-2");
+  });
+
+  it("registers the app bar's back link to the student registry even while still loading", async () => {
+    vi.mocked(studentsApi.getStudent).mockReturnValue(new Promise(() => undefined));
+
+    renderAsSchoolAdmin();
+
+    await waitFor(() => {
+      expect(useAppBarStore.getState()).toMatchObject({ title: "Student", backTo: "/school/students" });
+    });
   });
 
   it("shows an empty state when no guardians are linked", async () => {

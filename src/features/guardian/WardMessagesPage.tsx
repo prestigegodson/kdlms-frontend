@@ -1,4 +1,4 @@
-import { MessageSquare } from "lucide-react";
+import { ChevronRight, MessageSquare } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   editWardMessage,
@@ -17,6 +17,7 @@ import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Pagination } from "@/components/ui/Pagination";
 import { Spinner } from "@/components/ui/Spinner";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { CategoryBadge } from "@/features/communication/components/CategoryBadge";
 import { ThreadCard } from "@/features/communication/components/ThreadCard";
 import { categoryRailClass } from "@/features/communication/messageCategory";
@@ -81,7 +82,11 @@ export function WardMessagesPage() {
         <EmptyState title="No wards linked yet" description="Contact your school if you believe this is a mistake." />
       )}
 
-      {hasWards && <WardSelector />}
+      {hasWards && (
+        <StickySubHeader>
+          <WardSelector />
+        </StickySubHeader>
+      )}
 
       {loadError && <Alert variant="error">{loadError}</Alert>}
 
@@ -101,23 +106,26 @@ export function WardMessagesPage() {
                 <button
                   type="button"
                   onClick={() => setOpenThreadId(thread.threadId ?? null)}
-                  className={`w-full rounded-card border border-slate-200 border-l-4 bg-white p-4 text-left transition-colors hover:bg-slate-50 ${categoryRailClass(thread.category)}`}
+                  className={`flex min-h-14 w-full items-center gap-3 rounded-card border border-slate-200 border-l-4 bg-white p-4 text-left transition-colors hover:bg-slate-50 ${categoryRailClass(thread.category)}`}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      {thread.unread && (
-                        <span className="h-2 w-2 shrink-0 rounded-full bg-brand-500" aria-label="Unread" />
-                      )}
-                      {thread.category && <CategoryBadge category={thread.category} />}
-                      <span className={`text-sm ${thread.unread ? "font-semibold text-slate-900" : "text-slate-500"}`}>
-                        {formatLongDate(thread.logDate)}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {thread.unread && (
+                          <span className="h-2 w-2 shrink-0 rounded-full bg-brand-500" aria-label="Unread" />
+                        )}
+                        {thread.category && <CategoryBadge category={thread.category} />}
+                        <span className={`text-sm ${thread.unread ? "font-semibold text-slate-900" : "text-slate-500"}`}>
+                          {formatLongDate(thread.logDate)}
+                        </span>
+                      </div>
+                      <span className="text-sm text-slate-500">
+                        {thread.startedByName}
+                        {thread.replyCount > 0 ? ` · ${thread.replyCount} repl${thread.replyCount === 1 ? "y" : "ies"}` : ""}
                       </span>
                     </div>
-                    <span className="text-sm text-slate-500">
-                      {thread.startedByName}
-                      {thread.replyCount > 0 ? ` · ${thread.replyCount} repl${thread.replyCount === 1 ? "y" : "ies"}` : ""}
-                    </span>
                   </div>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
                 </button>
               </li>
             ))}

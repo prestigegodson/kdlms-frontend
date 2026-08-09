@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { AttendanceSummaryPanel } from "@/features/attendance/components/AttendanceSummaryPanel";
 import { WardSelector } from "@/features/guardian/components/WardSelector";
 import { WardTermSelect } from "@/features/guardian/components/WardTermSelect";
@@ -63,7 +64,7 @@ export function WardAttendancePage() {
       )}
 
       {hasWards && (
-        <div className="flex flex-wrap gap-4">
+        <StickySubHeader>
           <WardSelector />
           {selectedWardId && (
             <WardTermSelect
@@ -73,7 +74,7 @@ export function WardAttendancePage() {
               emptyMessage="This ward hasn't been enrolled for any term yet."
             />
           )}
-        </div>
+        </StickySubHeader>
       )}
 
       {loadError && <Alert variant="error">{loadError}</Alert>}

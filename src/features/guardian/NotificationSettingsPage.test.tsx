@@ -45,4 +45,15 @@ describe("NotificationSettingsPage", () => {
 
     expect(await screen.findByText("Failed to load notification preferences")).toBeInTheDocument();
   });
+
+  it("keeps the page heading mounted through loading and error states, not just once loaded", async () => {
+    vi.mocked(notificationPreferencesApi.getMyNotificationPreferences).mockRejectedValue(new Error("boom"));
+    render(<NotificationSettingsPage />);
+
+    // Present immediately (loading state) and still present once the load fails -
+    // PageHeader (and the mobile app bar title it feeds) must never go missing.
+    expect(screen.getByRole("heading", { name: "Notifications" })).toBeInTheDocument();
+    await screen.findByText("Failed to load notification preferences");
+    expect(screen.getByRole("heading", { name: "Notifications" })).toBeInTheDocument();
+  });
 });

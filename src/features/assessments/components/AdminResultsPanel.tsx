@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { BroadsheetTable } from "@/features/assessments/components/BroadsheetTable";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
 import { GradeKey } from "@/features/assessments/components/GradeKey";
@@ -116,7 +117,9 @@ export function AdminResultsPanel() {
       )}
 
       {classes !== null && classes.length > 0 && (
-        <ClassTermPicker classes={classOptions} classId={classId} onClassChange={setClassId} termId={termId} onTermChange={setTermId} />
+        <StickySubHeader>
+          <ClassTermPicker classes={classOptions} classId={classId} onClassChange={setClassId} termId={termId} onTermChange={setTermId} />
+        </StickySubHeader>
       )}
 
       {loadError && <Alert variant="error">{loadError}</Alert>}

@@ -87,6 +87,24 @@ describe("ScoreEntryGrid", () => {
     expect(await screen.findByText("1 unsaved change")).toBeInTheDocument();
   });
 
+  it("hints a numeric keypad with a Next action on the quiz and exam inputs", () => {
+    renderGrid();
+
+    expect(screen.getByLabelText(/Quiz/)).toHaveAttribute("enterKeyHint", "next");
+    expect(screen.getByLabelText(/Exam/)).toHaveAttribute("enterKeyHint", "next");
+  });
+
+  it("offsets the save bar by the safe-area-aware tabbar token, not the bare one", async () => {
+    const user = userEvent.setup();
+    renderGrid();
+
+    await user.type(screen.getByLabelText(/Quiz/), "15");
+    const saveBar = (await screen.findByText("1 unsaved change")).closest("div.sticky");
+
+    expect(saveBar).toHaveClass("bottom-tabbar-safe");
+    expect(saveBar).not.toHaveClass("bottom-tabbar");
+  });
+
   it("saves only the dirty rows and reports the outcome", async () => {
     const user = userEvent.setup();
     vi.mocked(assessmentsApi.saveScores).mockResolvedValue({

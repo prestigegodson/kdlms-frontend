@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { ApiError } from "@/api/client";
 import {
   getResultTemplate,
@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { BlockPalette } from "@/features/reporting/components/designer/BlockPalette";
 import { DesignerCanvas } from "@/features/reporting/components/designer/DesignerCanvas";
@@ -68,13 +69,21 @@ export default function TemplateDesignerPage() {
 
   if (state.kind === "loading") {
     return (
-      <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Spinner /> Loading template…
-      </div>
+      <>
+        <PageHeader title="Template designer" backTo="/admin/templates" />
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <Spinner /> Loading template…
+        </div>
+      </>
     );
   }
   if (state.kind === "error") {
-    return <Alert variant="error">{state.message}</Alert>;
+    return (
+      <>
+        <PageHeader title="Template designer" backTo="/admin/templates" />
+        <Alert variant="error">{state.message}</Alert>
+      </>
+    );
   }
 
   // Keyed by template id so switching templates (a route-param change that
@@ -160,6 +169,15 @@ function TemplateDesignerBody({ initialTemplate }: { initialTemplate: ResultTemp
 
   return (
     <div className="flex h-full flex-col gap-4">
+      <PageHeader title={template.name} backTo="/admin/templates" />
+
+      <div className="lg:hidden">
+        <Alert variant="info" title="Design on a wider screen">
+          The template designer needs a wider viewport to work well. Open this page on a landscape tablet or desktop
+          to edit the canvas.
+        </Alert>
+      </div>
+
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-4">
         <div className="flex flex-1 flex-wrap items-end gap-3">
           <FormField label="Name" htmlFor="designer-name" className="min-w-[220px]">
@@ -181,9 +199,6 @@ function TemplateDesignerBody({ initialTemplate }: { initialTemplate: ResultTemp
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Link to="/admin/templates" className="text-sm text-slate-500 hover:text-slate-700">
-            Back to templates
-          </Link>
           <Button variant="secondary" size="sm" onClick={editor.undo} disabled={!editor.canUndo}>
             Undo
           </Button>
@@ -228,12 +243,6 @@ function TemplateDesignerBody({ initialTemplate }: { initialTemplate: ResultTemp
             <TokenPanel editor={editor} />
           </Card>
         </div>
-      </div>
-      <div className="lg:hidden">
-        <Alert variant="info" title="Design on a larger screen">
-          The template designer needs a wider viewport to work well. Open this page on a tablet or desktop to edit
-          the canvas.
-        </Alert>
       </div>
 
       {previewHtml && (

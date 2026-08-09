@@ -1,5 +1,4 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { Link } from "react-router";
 import { ApiError } from "@/api/client";
 import { createSchool, listSchools, type SchoolView } from "@/api/schools";
 import { Building2 } from "lucide-react";
@@ -68,7 +67,7 @@ export function SchoolsPage() {
 
       {state.kind === "loading" && (
         <Card className="p-0">
-          <TableSkeleton columns={3} />
+          <TableSkeleton columns={4} />
         </Card>
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
@@ -87,18 +86,14 @@ export function SchoolsPage() {
                 <TableHeaderCell>Name</TableHeaderCell>
                 <TableHeaderCell>Code</TableHeaderCell>
                 <TableHeaderCell>Status</TableHeaderCell>
+                <TableHeaderCell></TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {state.schools.map((school) => (
-                <TableRow key={school.id}>
-                  <TableCell label="Name">
-                    <Link
-                      to={`/admin/schools/${school.id}`}
-                      className="font-medium text-brand-500 hover:text-brand-600"
-                    >
-                      {school.name}
-                    </Link>
+                <TableRow key={school.id} to={`/admin/schools/${school.id}`}>
+                  <TableCell label="Name" className="font-medium text-slate-900">
+                    {school.name}
                   </TableCell>
                   <TableCell label="Code">{school.code}</TableCell>
                   <TableCell label="Status">

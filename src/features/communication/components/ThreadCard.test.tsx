@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { ThreadView } from "@/api/communication";
 import { ThreadCard } from "@/features/communication/components/ThreadCard";
@@ -76,5 +77,16 @@ describe("ThreadCard", () => {
     render(<ThreadCard thread={{ ...THREAD, canReply: false }} onReply={vi.fn()} onEditMessage={vi.fn()} />);
 
     expect(screen.queryByPlaceholderText("Write a reply…")).not.toBeInTheDocument();
+  });
+
+  it("still submits a reply once docked to the sheet bottom below `md` (mobile-plan.md Phase B)", async () => {
+    const onReply = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<ThreadCard thread={THREAD} onReply={onReply} onEditMessage={vi.fn()} />);
+
+    await user.type(screen.getByPlaceholderText("Write a reply…"), "Noted, thank you.");
+    await user.click(screen.getByRole("button", { name: "Reply" }));
+
+    expect(onReply).toHaveBeenCalledWith("Noted, thank you.");
   });
 });

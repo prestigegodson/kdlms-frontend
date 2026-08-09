@@ -433,7 +433,7 @@ export function DateInput({
             aria-label="Choose date"
             tabIndex={-1}
             onKeyDown={handlePopupKeyDown}
-            className="fixed z-[60] w-72 rounded-panel border border-slate-200 bg-white shadow-lg outline-none"
+            className="fixed z-[60] w-72 max-w-[calc(100vw-1rem)] rounded-panel border border-slate-200 bg-white shadow-lg outline-none mobile:w-[21rem]"
             style={{
               top: position?.top ?? -9999,
               left: position?.left ?? -9999,
@@ -533,7 +533,7 @@ export function DateInput({
                     disabled={dayDisabled}
                     onClick={() => selectDay(day)}
                     onFocus={() => setFocusedDate(day)}
-                    className={`flex h-8 w-8 items-center justify-center rounded-control text-sm transition-colors ${toneClasses}`}
+                    className={`flex h-8 w-8 items-center justify-center rounded-control text-sm transition-colors mobile:h-10 mobile:w-10 ${toneClasses}`}
                   >
                     {day.getDate()}
                   </button>

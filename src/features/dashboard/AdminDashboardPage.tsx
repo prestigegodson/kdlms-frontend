@@ -63,10 +63,10 @@ export function AdminDashboardPage() {
           <section className="space-y-3">
             <h2 className="text-sm font-semibold text-slate-900">Schools</h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <StatTile icon={Building2} label="Total schools" value={state.view.totalSchools} />
-              <StatTile icon={CheckCircle2} label="Active" value={state.view.activeSchools} />
-              <StatTile icon={PauseCircle} label="Suspended" value={state.view.suspendedSchools} />
-              <StatTile icon={Archive} label="Archived" value={state.view.archivedSchools} />
+              <StatTile icon={Building2} label="Total schools" value={state.view.totalSchools} to="/admin/schools" />
+              <StatTile icon={CheckCircle2} label="Active" value={state.view.activeSchools} to="/admin/schools" />
+              <StatTile icon={PauseCircle} label="Suspended" value={state.view.suspendedSchools} to="/admin/schools" />
+              <StatTile icon={Archive} label="Archived" value={state.view.archivedSchools} to="/admin/schools" />
             </div>
           </section>
 

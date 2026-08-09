@@ -67,7 +67,7 @@ export function StudentTermResultCard({ result }: StudentTermResultCardProps) {
         </Table>
 
         {isNumeric && (
-          <div className="mt-4 flex gap-6 text-sm text-slate-600">
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
             <span>
               Total: <span className="font-medium text-slate-900">{result.total ?? "—"}</span>
             </span>

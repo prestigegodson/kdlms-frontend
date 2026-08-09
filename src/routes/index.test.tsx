@@ -153,7 +153,10 @@ describe("router", () => {
 
       renderAt("/school");
 
-      expect(await screen.findByText("Attendance")).toBeInTheDocument();
+      // Two occurrences once loaded: the sidebar link and MobileTabBar's own
+      // copy (Attendance is TEACHER-primary - see SchoolLayout.tsx). Both are
+      // always in the DOM; only CSS (untested here) picks one per viewport.
+      expect(await screen.findAllByText("Attendance")).toHaveLength(2);
     });
 
     it("never shows Attendance for a subject-teacher-only account", async () => {
@@ -219,8 +222,10 @@ describe("router", () => {
       renderAt("/guardian");
 
       expect(await screen.findByRole("heading", { name: "My Wards" })).toBeInTheDocument();
-      expect(screen.getByText("Results")).toBeInTheDocument();
-      expect(screen.getByText("Attendance")).toBeInTheDocument();
+      // Two occurrences each: the sidebar/drawer link and MobileTabBar's own
+      // copy - every guardian nav item is tab-primary (see GuardianLayout.tsx).
+      expect(screen.getAllByText("Results")).toHaveLength(2);
+      expect(screen.getAllByText("Attendance")).toHaveLength(2);
     });
 
     it("is redirected away from /school to its own portal home", async () => {

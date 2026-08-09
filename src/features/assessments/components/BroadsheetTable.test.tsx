@@ -56,4 +56,17 @@ describe("BroadsheetTable", () => {
     expect(screen.queryByText("Position")).not.toBeInTheDocument();
     expect(screen.getByText("Meets Expectation")).toBeInTheDocument();
   });
+
+  it("keeps the scroll hint visible through the tablet width, hiding only from lg up", () => {
+    render(<BroadsheetTable broadsheet={NUMERIC_BROADSHEET} />);
+
+    expect(screen.getByText(/Scroll sideways/)).toHaveClass("lg:hidden");
+  });
+
+  it("gives the sticky student column a right-edge shadow, not a text-only affordance", () => {
+    render(<BroadsheetTable broadsheet={NUMERIC_BROADSHEET} />);
+
+    const studentHeader = screen.getByRole("columnheader", { name: "Student" });
+    expect(studentHeader).toHaveClass("after:absolute", "after:bg-gradient-to-r");
+  });
 });

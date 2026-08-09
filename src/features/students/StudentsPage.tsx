@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { listBranches, type BranchView } from "@/api/branches";
 import { listClasses, type SchoolClassView } from "@/api/classes";
 import { ApiError } from "@/api/client";
@@ -7,7 +7,7 @@ import { getStudentMedical as getMyStudentMedical, listClassRoster, listMyClasse
 import { listStudents, registerStudent, type StudentMedicalView, type StudentStatus, type StudentView } from "@/api/students";
 import type { Page } from "@/api/types";
 import { can } from "@/auth/permissions";
-import { ArrowLeftRight, GraduationCap, HeartPulse, Users } from "lucide-react";
+import { ArrowLeftRight, GraduationCap, SlidersHorizontal, Users } from "lucide-react";
 import { StudentMedicalPanel } from "@/features/students/components/StudentMedicalPanel";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
@@ -24,6 +24,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { useAuthStore } from "@/stores/authStore";
 import { todayIso } from "@/utils/date";
@@ -65,6 +66,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   const [pageIndex, setPageIndex] = useState(0);
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [createOpen, setCreateOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     if (!isBranchScoped) {
@@ -107,6 +109,13 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   }
 
   const classOptions = (isBranchScoped ? classes?.filter((c) => c.branchId) : classes) ?? [];
+  const activeFilterCount = [branchId, classId, status].filter(Boolean).length;
+
+  function clearFilters() {
+    resetToFirstPage(setBranchId)("");
+    resetToFirstPage(setClassId)("");
+    resetToFirstPage(setStatus)("");
+  }
 
   return (
     <div className="space-y-6">
@@ -126,8 +135,13 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <FormField label="Search" htmlFor="student-search" className="sm:col-span-2 lg:col-span-1">
+      <StickySubHeader>
+        <FormField
+          label="Search"
+          htmlFor="student-search"
+          className="min-w-0 flex-1 lg:max-w-xs"
+          labelClassName="sr-only lg:not-sr-only"
+        >
           <SearchInput
             id="student-search"
             value={query}
@@ -135,49 +149,66 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
             placeholder="Search name or admission no."
           />
         </FormField>
-        {!isBranchScoped && (
-          <FormField label="Branch" htmlFor="student-branch-filter">
-            <Select
-              id="student-branch-filter"
-              value={branchId}
-              onChange={(event) => resetToFirstPage(setBranchId)(event.target.value)}
-            >
-              <option value="">All branches</option>
-              {branches?.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-        )}
-        <FormField label="Class" htmlFor="student-class-filter">
-          <Select
-            id="student-class-filter"
-            value={classId}
-            onChange={(event) => resetToFirstPage(setClassId)(event.target.value)}
-          >
-            <option value="">All classes</option>
-            {classOptions.map((schoolClass) => (
-              <option key={schoolClass.id} value={schoolClass.id}>
-                {schoolClass.name}
-              </option>
-            ))}
-          </Select>
-        </FormField>
-        <FormField label="Status" htmlFor="student-status-filter">
-          <Select
-            id="student-status-filter"
-            value={status}
-            onChange={(event) => resetToFirstPage(setStatus)(event.target.value as StudentStatus | "")}
-          >
-            <option value="">All statuses</option>
-            <option value="ACTIVE">Active</option>
-            <option value="GRADUATED">Graduated</option>
-            <option value="WITHDRAWN">Withdrawn</option>
-          </Select>
-        </FormField>
+        <Button
+          type="button"
+          variant="secondary"
+          className="relative shrink-0 lg:hidden"
+          onClick={() => setFiltersOpen(true)}
+        >
+          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+          Filters
+          {activeFilterCount > 0 && (
+            <Badge variant="brand" className="absolute -right-2 -top-2">
+              {activeFilterCount}
+            </Badge>
+          )}
+        </Button>
+      </StickySubHeader>
+
+      <div className="hidden gap-4 lg:grid lg:grid-cols-3">
+        <StudentFilterFields
+          idPrefix="student-filter"
+          isBranchScoped={isBranchScoped}
+          branches={branches}
+          classOptions={classOptions}
+          branchId={branchId}
+          onBranchChange={resetToFirstPage(setBranchId)}
+          classId={classId}
+          onClassChange={resetToFirstPage(setClassId)}
+          status={status}
+          onStatusChange={resetToFirstPage(setStatus)}
+        />
       </div>
+
+      {filtersOpen && (
+        <Modal open onClose={() => setFiltersOpen(false)} title="Filters" size="md">
+          <div className="space-y-4">
+            <StudentFilterFields
+              idPrefix="student-filter-sheet"
+              isBranchScoped={isBranchScoped}
+              branches={branches}
+              classOptions={classOptions}
+              branchId={branchId}
+              onBranchChange={resetToFirstPage(setBranchId)}
+              classId={classId}
+              onClassChange={resetToFirstPage(setClassId)}
+              status={status}
+              onStatusChange={resetToFirstPage(setStatus)}
+            />
+          </div>
+          <div
+            data-sheet-dock
+            className="mt-6 flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end mobile:sticky mobile:bottom-0 mobile:-mx-6 mobile:bg-white/95 mobile:px-6 mobile:pb-4 mobile:backdrop-blur"
+          >
+            <Button type="button" variant="secondary" onClick={clearFilters}>
+              Clear all
+            </Button>
+            <Button type="button" onClick={() => setFiltersOpen(false)}>
+              Done
+            </Button>
+          </div>
+        </Modal>
+      )}
 
       {state.kind === "loading" && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -202,15 +233,14 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
                   <TableHeaderCell>Admission no.</TableHeaderCell>
                   <TableHeaderCell>Class</TableHeaderCell>
                   <TableHeaderCell>Status</TableHeaderCell>
+                  <TableHeaderCell></TableHeaderCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {state.page.content.map((student) => (
-                  <TableRow key={student.id}>
+                  <TableRow key={student.id} to={`/school/students/${student.id}`}>
                     <TableCell label="Name" className="font-medium text-slate-900">
-                      <Link to={`/school/students/${student.id}`} className="hover:underline">
-                        {student.fullName}
-                      </Link>
+                      {student.fullName}
                     </TableCell>
                     <TableCell label="Admission no.">{student.admissionNumber}</TableCell>
                     <TableCell label="Class">{student.currentClassName ?? "—"}</TableCell>
@@ -249,6 +279,77 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
         />
       )}
     </div>
+  );
+}
+
+interface StudentFilterFieldsProps {
+  /** Distinguishes the desktop inline grid's ids from the mobile filter sheet's - both render at once. */
+  idPrefix: string;
+  isBranchScoped: boolean;
+  branches: BranchView[] | null;
+  classOptions: SchoolClassView[];
+  branchId: string;
+  onBranchChange: (value: string) => void;
+  classId: string;
+  onClassChange: (value: string) => void;
+  status: StudentStatus | "";
+  onStatusChange: (value: StudentStatus | "") => void;
+}
+
+/** Branch/Class/Status filters - rendered once inline at `lg` and up, once inside the mobile Filters sheet. */
+function StudentFilterFields({
+  idPrefix,
+  isBranchScoped,
+  branches,
+  classOptions,
+  branchId,
+  onBranchChange,
+  classId,
+  onClassChange,
+  status,
+  onStatusChange,
+}: StudentFilterFieldsProps) {
+  return (
+    <>
+      {!isBranchScoped && (
+        <FormField label="Branch" htmlFor={`${idPrefix}-branch`}>
+          <Select
+            id={`${idPrefix}-branch`}
+            value={branchId}
+            onChange={(event) => onBranchChange(event.target.value)}
+          >
+            <option value="">All branches</option>
+            {branches?.map((branch) => (
+              <option key={branch.id} value={branch.id}>
+                {branch.name}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+      )}
+      <FormField label="Class" htmlFor={`${idPrefix}-class`}>
+        <Select id={`${idPrefix}-class`} value={classId} onChange={(event) => onClassChange(event.target.value)}>
+          <option value="">All classes</option>
+          {classOptions.map((schoolClass) => (
+            <option key={schoolClass.id} value={schoolClass.id}>
+              {schoolClass.name}
+            </option>
+          ))}
+        </Select>
+      </FormField>
+      <FormField label="Status" htmlFor={`${idPrefix}-status`}>
+        <Select
+          id={`${idPrefix}-status`}
+          value={status}
+          onChange={(event) => onStatusChange(event.target.value as StudentStatus | "")}
+        >
+          <option value="">All statuses</option>
+          <option value="ACTIVE">Active</option>
+          <option value="GRADUATED">Graduated</option>
+          <option value="WITHDRAWN">Withdrawn</option>
+        </Select>
+      </FormField>
+    </>
   );
 }
 
@@ -443,8 +544,13 @@ function TeacherRoster() {
       )}
 
       {myClasses !== null && myClasses.length > 0 && (
-        <div className="max-w-xs">
-          <FormField label="Class" htmlFor="roster-class">
+        <StickySubHeader>
+          <FormField
+            label="Class"
+            htmlFor="roster-class"
+            className="min-w-0 flex-1 lg:max-w-xs"
+            labelClassName="sr-only lg:not-sr-only"
+          >
             <Select id="roster-class" value={classId} onChange={(event) => setClassId(event.target.value)}>
               {myClasses.map((schoolClass) => (
                 <option key={schoolClass.classId} value={schoolClass.classId}>
@@ -453,7 +559,7 @@ function TeacherRoster() {
               ))}
             </Select>
           </FormField>
-        </div>
+        </StickySubHeader>
       )}
 
       {classId && state.kind === "loading" && (
@@ -478,22 +584,12 @@ function TeacherRoster() {
             </TableHead>
             <TableBody>
               {state.roster.map((student) => (
-                <TableRow key={student.studentId}>
+                <TableRow key={student.studentId} onClick={() => setMedicalStudent(student)}>
                   <TableCell label="Name" className="font-medium text-slate-900">
                     {student.fullName}
                   </TableCell>
                   <TableCell label="Admission no.">{student.admissionNumber}</TableCell>
                   <TableCell label="Gender">{student.gender === "FEMALE" ? "Female" : "Male"}</TableCell>
-                  <TableCell label="">
-                    <button
-                      type="button"
-                      className="flex items-center gap-1 text-sm font-medium text-brand-500 hover:text-brand-600"
-                      onClick={() => setMedicalStudent(student)}
-                    >
-                      <HeartPulse className="h-4 w-4" aria-hidden="true" />
-                      Medical
-                    </button>
-                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -170,6 +170,7 @@ export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
                     id={`score-${index}-quiz`}
                     type="number"
                     inputMode="decimal"
+                    enterKeyHint="next"
                     step="any"
                     aria-label={`Quiz score for ${row.studentName}`}
                     className={`text-right tabular-nums ${isDirty ? "border-brand-400" : ""}`}
@@ -185,6 +186,7 @@ export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
                     id={`score-${index}-exam`}
                     type="number"
                     inputMode="decimal"
+                    enterKeyHint="next"
                     step="any"
                     aria-label={`Exam score for ${row.studentName}`}
                     className={`text-right tabular-nums ${isDirty ? "border-brand-400" : ""}`}

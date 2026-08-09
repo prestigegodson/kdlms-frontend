@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import type { UserSummary } from "@/api/auth";
 import {
   assignClassTeacher,
@@ -24,6 +24,7 @@ import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
@@ -102,13 +103,21 @@ export function ClassDetailPage() {
 
   if (state.kind === "loading") {
     return (
-      <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Spinner /> Loading…
+      <div className="space-y-6">
+        <PageHeader title="Class details" backTo="/school/academics/classes" />
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <Spinner /> Loading…
+        </div>
       </div>
     );
   }
   if (state.kind === "error") {
-    return <Alert variant="error">{state.message}</Alert>;
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Class details" backTo="/school/academics/classes" />
+        <Alert variant="error">{state.message}</Alert>
+      </div>
+    );
   }
 
   const { schoolClass } = state;
@@ -116,14 +125,15 @@ export function ClassDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/school/academics/classes" className="text-sm text-brand-500 hover:text-brand-600">
-        &larr; All classes
-      </Link>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-3xl font-medium text-slate-900">{schoolClass.name}</h1>
-        <Badge variant={schoolClass.status === "ACTIVE" ? "success" : "neutral"}>{schoolClass.status}</Badge>
-      </div>
+      <PageHeader
+        title={schoolClass.name}
+        backTo="/school/academics/classes"
+        actions={
+          <Badge variant={schoolClass.status === "ACTIVE" ? "success" : "neutral"}>
+            {schoolClass.status}
+          </Badge>
+        }
+      />
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
 

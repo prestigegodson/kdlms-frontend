@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,6 +10,7 @@ import type { AcademicSessionView } from "@/api/sessions";
 import * as studentsApi from "@/api/students";
 import type { StudentView } from "@/api/students";
 import { PromotionPage } from "@/features/students/PromotionPage";
+import { resetAppBarStore, useAppBarStore } from "@/stores/appBarStore";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 
 vi.mock("@/api/students", async () => {
@@ -87,6 +88,7 @@ function renderPage() {
 describe("PromotionPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetAppBarStore();
     vi.mocked(branchesApi.listBranches).mockResolvedValue({
       content: [],
       totalElements: 0,
@@ -107,6 +109,25 @@ describe("PromotionPage", () => {
       totalPages: 1,
       number: 0,
       size: 50,
+    });
+  });
+
+  it("registers the app bar's back link to the student registry, the only route it's reachable from", async () => {
+    vi.mocked(studentsApi.listStudents).mockResolvedValue({
+      content: [],
+      totalElements: 0,
+      totalPages: 0,
+      number: 0,
+      size: 200,
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(useAppBarStore.getState()).toMatchObject({
+        title: "Promote or place students",
+        backTo: "/school/students",
+      });
     });
   });
 

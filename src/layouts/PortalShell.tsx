@@ -1,9 +1,11 @@
 import type { LucideIcon } from "lucide-react";
-import { Menu, X } from "lucide-react";
+import { ChevronLeft, X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 import type { Role } from "@/api/types";
+import { MobileTabBar } from "@/layouts/MobileTabBar";
 import { UserMenu } from "@/layouts/UserMenu";
+import { useAppBarStore } from "@/stores/appBarStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 
@@ -34,6 +36,15 @@ export interface NavItem {
    * subscription (not this function) is what triggers the re-render.
    */
   badge?: () => number | null | undefined;
+  /**
+   * Roles for which this item is a bottom-tab destination below `lg`
+   * (mobile-plan.md's MobileTabBar) - composes with, never replaces,
+   * `roles`/`visible`. Omit for items that should only ever live in the
+   * drawer. At most 4 items per role end up as tabs, in nav-array order;
+   * anything past that (and anything without `primary` at all) is reachable
+   * via the tab bar's "More" tab, which opens the same drawer.
+   */
+  primary?: Role[];
 }
 
 interface PortalShellProps {
@@ -87,6 +98,53 @@ function BrandMark({ compact }: { compact?: boolean }) {
 }
 
 /**
+ * The mobile app bar's left-hand content (below `lg` only): a back chevron
+ * to whatever `PageHeader` on the current page passed as `backTo`, plus its
+ * title - or, on a page with no `PageHeader` (or none carrying a title),
+ * the same `BrandMark` the header shows today. Reads `appBarStore`, which
+ * `PageHeader` publishes into, so this is the only part of the shell that
+ * re-renders on a title change rather than the whole page tree.
+ *
+ * The title here is deliberately `aria-hidden`: `PageHeader`'s own `<h1>`
+ * (visually hidden below `lg` via `sr-only`, see PageHeader.tsx) stays the
+ * one accessible heading for the page at every width, so a screen reader
+ * never hears the title twice.
+ */
+function MobileAppBar() {
+  const title = useAppBarStore((state) => state.title);
+  const backTo = useAppBarStore((state) => state.backTo);
+
+  if (!title) {
+    // flex-1 (not just shrink) so this still absorbs the header's leftover
+    // width and pushes the right-hand cluster (context chip + UserMenu) to
+    // the far edge, the same job the old hamburger+brandmark pair relied on
+    // the right cluster's own flex-1 to do.
+    return (
+      <div className="min-w-0 flex-1 lg:hidden">
+        <BrandMark compact />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-1 lg:hidden">
+      {backTo && (
+        <Link
+          to={backTo}
+          aria-label="Back"
+          className="-ml-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-slate-600 hover:bg-slate-100"
+        >
+          <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+        </Link>
+      )}
+      <p aria-hidden="true" className="min-w-0 flex-1 truncate font-display text-lg font-medium text-slate-900">
+        {title}
+      </p>
+    </div>
+  );
+}
+
+/**
  * Shared sidebar + header chrome for a portal. The three portal layouts
  * (system admin, school, guardian) each pass their own name and nav items;
  * routed content renders via <Outlet /> unless children are supplied.
@@ -94,10 +152,12 @@ function BrandMark({ compact }: { compact?: boolean }) {
  * "navigation by role") and grouped into sections, and the header shows
  * who's signed in via the account menu (see UserMenu).
  *
- * Below the `lg` breakpoint the sidebar becomes an off-canvas drawer opened
- * by a hamburger button, reusing components/ui/Modal.tsx's focus-trap and
- * Escape-to-close pattern since it is functionally the same kind of modal
- * overlay.
+ * Below the `lg` breakpoint the sidebar becomes an off-canvas drawer, opened
+ * either by MobileTabBar's "More" tab or by a nav item that doesn't fit in
+ * the tab bar, reusing components/ui/Modal.tsx's focus-trap, Escape-to-close
+ * and body-scroll-lock pattern since it is functionally the same kind of
+ * modal overlay. The tab bar itself renders up to 4 role-primary
+ * destinations (`NavItem.primary`) plus that "More" tab.
  */
 export function PortalShell({ portalName, navItems, contextLabel, banner, children }: PortalShellProps) {
   const user = useAuthStore((state) => state.user);
@@ -105,7 +165,7 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerPathname, setDrawerPathname] = useState(location.pathname);
   const drawerRef = useRef<HTMLDivElement>(null);
-  const hamburgerRef = useRef<HTMLButtonElement>(null);
+  const moreRef = useRef<HTMLButtonElement>(null);
 
   const visibleNavItems = navItems.filter(
     (item) =>
@@ -161,8 +221,16 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
       return;
     }
     drawerRef.current?.focus();
-    const hamburger = hamburgerRef.current;
-    return () => hamburger?.focus();
+    const more = moreRef.current;
+    // Body scroll lock while the drawer is open, copied from
+    // components/ui/Modal.tsx's identical treatment - the drawer is
+    // functionally the same overlay, it just didn't have this before.
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      more?.focus();
+    };
   }, [drawerOpen]);
 
   function handleDrawerKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -188,9 +256,13 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
     }
   }
 
-  function renderNav() {
+  // Labelled once, on the sidebar's copy - the drawer's own dialog already
+  // carries `${portalName} navigation` as its aria-label, so leaving this
+  // one unlabelled keeps that an unambiguous query even while the drawer
+  // (and its own copy of this nav) is open.
+  function renderNav(label?: string) {
     return (
-      <nav className="flex-1 overflow-y-auto p-4">
+      <nav aria-label={label} className="flex-1 overflow-y-auto overscroll-contain p-4">
         {groups.map((group, index) => (
           <div key={group.name ?? `ungrouped-${index}`} className={index > 0 ? "mt-6" : ""}>
             {group.name && (
@@ -241,14 +313,14 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
         <p className="px-6 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
           {portalName}
         </p>
-        {renderNav()}
+        {renderNav(`${portalName} navigation`)}
       </aside>
 
       {/* Mobile drawer */}
       {drawerOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div
-            className="fixed inset-0 bg-slate-900/50"
+            className="overlay-fade fixed inset-0 bg-slate-900/50"
             onClick={() => setDrawerOpen(false)}
             aria-hidden="true"
           />
@@ -259,7 +331,7 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
             aria-label={`${portalName} navigation`}
             tabIndex={-1}
             onKeyDown={handleDrawerKeyDown}
-            className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl outline-none"
+            className="drawer-panel fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col overscroll-contain bg-white shadow-xl outline-none"
           >
             <div className="flex h-16 min-w-0 items-center justify-between border-b border-slate-200 px-4">
               <BrandMark />
@@ -287,19 +359,8 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
-          <button
-            ref={hamburgerRef}
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            aria-label="Open menu"
-            className="-ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-slate-600 hover:bg-slate-100 lg:hidden"
-          >
-            <Menu className="h-5 w-5" aria-hidden="true" />
-          </button>
-          <div className="min-w-0 shrink lg:hidden">
-            <BrandMark compact />
-          </div>
-          <div className="flex min-w-0 flex-1 items-center justify-end gap-3 sm:justify-between">
+          <MobileAppBar />
+          <div className="flex shrink-0 items-center gap-3 lg:min-w-0 lg:flex-1 lg:justify-between">
             {contextLabel ? (
               <span className="hidden truncate rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-800 sm:inline-flex">
                 {contextLabel}
@@ -310,12 +371,21 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
             {user ? <UserMenu user={user} /> : <span className="text-sm text-slate-500">Not signed in</span>}
           </div>
         </header>
-        <main className="flex-1">
+        <main className="flex-1 pb-tabbar-safe lg:pb-0">
           <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
             {banner}
             {children ?? <Outlet />}
           </div>
         </main>
+        <MobileTabBar
+          items={visibleNavItems}
+          role={user?.role}
+          activeHref={activeHref}
+          onMore={() => setDrawerOpen(true)}
+          moreRef={moreRef}
+          drawerOpen={drawerOpen}
+          portalName={portalName}
+        />
       </div>
     </div>
   );

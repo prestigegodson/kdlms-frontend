@@ -1,4 +1,4 @@
-import { ClipboardCheck, GraduationCap, Library, UserCheck } from "lucide-react";
+import { ChevronRight, ClipboardCheck, GraduationCap, Library, UserCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { ApiError } from "@/api/client";
@@ -81,13 +81,29 @@ function AdminDashboard({ admin }: { admin: NonNullable<SchoolDashboardView["adm
   return (
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile icon={GraduationCap} label="Active students" value={admin.activeStudents} />
-        <StatTile icon={Library} label="Active classes" value={admin.activeClasses} />
-        <StatTile icon={UserCheck} label="Present today" value={admin.attendanceToday.present} />
+        <StatTile
+          icon={GraduationCap}
+          label="Active students"
+          value={admin.activeStudents}
+          to="/school/students"
+        />
+        <StatTile
+          icon={Library}
+          label="Active classes"
+          value={admin.activeClasses}
+          to="/school/academics/classes"
+        />
+        <StatTile
+          icon={UserCheck}
+          label="Present today"
+          value={admin.attendanceToday.present}
+          to="/school/attendance"
+        />
         <StatTile
           icon={ClipboardCheck}
           label="Registers marked"
           value={`${admin.attendanceToday.classesMarked} / ${admin.attendanceToday.totalClasses}`}
+          to="/school/attendance"
         />
       </div>
 
@@ -123,21 +139,24 @@ function TeacherDashboard({ teacher }: { teacher: NonNullable<SchoolDashboardVie
   }
 
   return (
-    <Card>
-      <h2 className="text-sm font-semibold text-slate-900">Your classes</h2>
-      <ul className="mt-4 divide-y divide-slate-100">
+    <Card className="p-0">
+      <h2 className="p-6 pb-0 text-sm font-semibold text-slate-900">Your classes</h2>
+      <ul className="mt-4 divide-y divide-slate-100 pb-2">
         {teacher.classes.map((row) => (
-          <li key={row.classId} className="flex items-center justify-between gap-3 py-3">
+          <li key={row.classId}>
             <button
               type="button"
-              className="text-left text-sm font-medium text-slate-900 hover:text-brand-600"
+              className="flex min-h-14 w-full items-center justify-between gap-3 px-6 py-3 text-left hover:bg-slate-50"
               onClick={() => navigate(`/school/academics/classes/${row.classId}`)}
             >
-              {row.className}
+              <span className="text-sm font-medium text-slate-900">{row.className}</span>
+              <span className="flex shrink-0 items-center gap-2">
+                <Badge variant={row.registerMarkedToday ? "success" : "warning"}>
+                  {row.registerMarkedToday ? "Register marked today" : "Register not marked yet"}
+                </Badge>
+                <ChevronRight className="h-4 w-4 text-slate-400" aria-hidden="true" />
+              </span>
             </button>
-            <Badge variant={row.registerMarkedToday ? "success" : "warning"}>
-              {row.registerMarkedToday ? "Register marked today" : "Register not marked yet"}
-            </Badge>
           </li>
         ))}
       </ul>

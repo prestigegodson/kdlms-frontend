@@ -42,8 +42,8 @@ export function ClassDatePicker({
   disableWeekends,
 }: ClassDatePickerProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <FormField label="Class" htmlFor="attendance-class">
+    <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 lg:gap-4">
+      <FormField label="Class" htmlFor="attendance-class" labelClassName="sr-only lg:not-sr-only">
         <Select
           id="attendance-class"
           value={classId}
@@ -57,7 +57,7 @@ export function ClassDatePicker({
           ))}
         </Select>
       </FormField>
-      <FormField label="Date" htmlFor="attendance-date">
+      <FormField label="Date" htmlFor="attendance-date" labelClassName="sr-only lg:not-sr-only">
         <DateInput
           id="attendance-date"
           max={todayIso()}

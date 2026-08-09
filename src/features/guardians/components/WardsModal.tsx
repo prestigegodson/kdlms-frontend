@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { type GuardianView, listGuardianWards, type WardView } from "@/api/guardians";
@@ -37,12 +38,21 @@ export function WardsModal({ guardian, onClose }: WardsModalProps) {
       {wards !== null && wards.length > 0 && (
         <ul className="divide-y divide-slate-100">
           {wards.map((ward) => (
-            <li key={ward.studentId} className="flex items-center justify-between py-2 text-sm">
-              <Link to={`/school/students/${ward.studentId}`} onClick={onClose} className="hover:underline">
-                <p className="font-medium text-slate-900">{ward.studentName}</p>
-                <p className="text-slate-500">{ward.admissionNumber}</p>
+            <li key={ward.studentId}>
+              <Link
+                to={`/school/students/${ward.studentId}`}
+                onClick={onClose}
+                className="flex min-h-14 items-center justify-between gap-3 py-2 text-sm hover:bg-slate-50"
+              >
+                <div>
+                  <p className="font-medium text-slate-900">{ward.studentName}</p>
+                  <p className="text-slate-500">{ward.admissionNumber}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Badge variant="neutral">{ward.relationship}</Badge>
+                  <ChevronRight className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                </div>
               </Link>
-              <Badge variant="neutral">{ward.relationship}</Badge>
             </li>
           ))}
         </ul>

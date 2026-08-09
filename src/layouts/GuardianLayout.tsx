@@ -7,13 +7,14 @@ import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 import { useUnreadMessagesStore } from "@/stores/unreadMessagesStore";
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "My Wards", href: "/guardian", icon: Users },
-  { label: "Results", href: "/guardian/results", icon: ClipboardCheck },
-  { label: "Attendance", href: "/guardian/attendance", icon: ClipboardList },
+  { label: "My Wards", href: "/guardian", icon: Users, primary: ["GUARDIAN"] },
+  { label: "Results", href: "/guardian/results", icon: ClipboardCheck, primary: ["GUARDIAN"] },
+  { label: "Attendance", href: "/guardian/attendance", icon: ClipboardList, primary: ["GUARDIAN"] },
   {
     label: "Messages",
     href: "/guardian/messages",
     icon: MessageSquare,
+    primary: ["GUARDIAN"],
     // Gated on the school's communication entitlement - see auth/permissions.ts's
     // viewMessages, the single source of truth nav/route/in-page controls read from.
     visible: () => can.viewMessages("GUARDIAN", null, useFeatureStore.getState().communication),
@@ -23,6 +24,8 @@ const NAV_ITEMS: NavItem[] = [
     label: "Notifications",
     href: "/guardian/settings",
     icon: Bell,
+    // Overflow-only (drawer via the tab bar's More tab), not primary - the
+    // four tabs above are the guardian's everyday destinations.
     // Only relevant while the school's communication entitlement is on - see
     // auth/permissions.ts's manageMyNotifications.
     visible: () => can.manageMyNotifications("GUARDIAN", useFeatureStore.getState().communication),

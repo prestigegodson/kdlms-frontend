@@ -9,9 +9,11 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FormField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Pagination } from "@/components/ui/Pagination";
 import { SearchInput } from "@/components/ui/SearchInput";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { TableSkeleton } from "@/components/ui/TableSkeleton";
 import { useAuthStore } from "@/stores/authStore";
@@ -78,15 +80,24 @@ export function GuardiansPage() {
         actions={canManage && <Button onClick={() => setCreateOpen(true)}>Add guardian</Button>}
       />
 
-      <SearchInput
-        value={query}
-        onChange={(value) => {
-          setQuery(value);
-          setPageIndex(0);
-        }}
-        placeholder="Search name or email"
-        className="max-w-sm"
-      />
+      <StickySubHeader>
+        <FormField
+          label="Search"
+          htmlFor="guardian-search"
+          className="min-w-0 flex-1 lg:max-w-xs"
+          labelClassName="sr-only lg:not-sr-only"
+        >
+          <SearchInput
+            id="guardian-search"
+            value={query}
+            onChange={(value) => {
+              setQuery(value);
+              setPageIndex(0);
+            }}
+            placeholder="Search name or email"
+          />
+        </FormField>
+      </StickySubHeader>
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
 

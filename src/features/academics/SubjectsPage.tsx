@@ -32,6 +32,7 @@ import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { LevelSelect } from "@/features/academics/components/LevelSelect";
 import { useAuthStore } from "@/stores/authStore";
@@ -247,9 +248,16 @@ function AdminSubjects() {
         </div>
       )}
       {levelsStatus === "loaded" && levels.length > 0 && (
-        <FormField label="Level" htmlFor="subject-level-filter" className="max-w-xs">
-          <LevelSelect id="subject-level-filter" levels={levels} value={levelId} onChange={setSelectedLevelId} />
-        </FormField>
+        <StickySubHeader>
+          <FormField
+            label="Level"
+            htmlFor="subject-level-filter"
+            className="min-w-0 flex-1 lg:max-w-xs"
+            labelClassName="sr-only lg:not-sr-only"
+          >
+            <LevelSelect id="subject-level-filter" levels={levels} value={levelId} onChange={setSelectedLevelId} />
+          </FormField>
+        </StickySubHeader>
       )}
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
@@ -631,7 +639,7 @@ function SubjectGroupsModal({ levelId, groups, onClose, onChanged }: SubjectGrou
                     />
                     <button
                       type="button"
-                      className="text-brand-500 hover:text-brand-600"
+                      className="inline-flex mobile:min-h-11 items-center px-1 text-brand-500 hover:text-brand-600"
                       disabled={busyId === group.id}
                       onClick={() => saveRename(group.id)}
                     >
@@ -639,7 +647,7 @@ function SubjectGroupsModal({ levelId, groups, onClose, onChanged }: SubjectGrou
                     </button>
                     <button
                       type="button"
-                      className="text-slate-500 hover:text-slate-700"
+                      className="inline-flex mobile:min-h-11 items-center px-1 text-slate-500 hover:text-slate-700"
                       onClick={() => setEditingId(null)}
                     >
                       Cancel
@@ -651,7 +659,7 @@ function SubjectGroupsModal({ levelId, groups, onClose, onChanged }: SubjectGrou
                     <div className="flex shrink-0 gap-3">
                       <button
                         type="button"
-                        className="text-red-600 hover:text-red-700"
+                        className="inline-flex mobile:min-h-11 items-center px-1 text-red-600 hover:text-red-700"
                         disabled={busyId === group.id}
                         onClick={() => confirmDelete(group.id)}
                       >
@@ -659,7 +667,7 @@ function SubjectGroupsModal({ levelId, groups, onClose, onChanged }: SubjectGrou
                       </button>
                       <button
                         type="button"
-                        className="text-slate-500 hover:text-slate-700"
+                        className="inline-flex mobile:min-h-11 items-center px-1 text-slate-500 hover:text-slate-700"
                         onClick={() => setConfirmingDeleteId(null)}
                       >
                         Cancel
@@ -672,14 +680,14 @@ function SubjectGroupsModal({ levelId, groups, onClose, onChanged }: SubjectGrou
                     <div className="flex gap-3">
                       <button
                         type="button"
-                        className="text-brand-500 hover:text-brand-600"
+                        className="inline-flex mobile:min-h-11 items-center px-1 text-brand-500 hover:text-brand-600"
                         onClick={() => startRename(group)}
                       >
                         Rename
                       </button>
                       <button
                         type="button"
-                        className="text-red-600 hover:text-red-700"
+                        className="inline-flex mobile:min-h-11 items-center px-1 text-red-600 hover:text-red-700"
                         onClick={() => {
                           setConfirmingDeleteId(group.id);
                           setEditingId(null);

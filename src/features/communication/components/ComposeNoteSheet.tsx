@@ -104,12 +104,15 @@ export function ComposeNoteSheet({ classId, roster, initialStudentIds, onClose, 
         <div className="space-y-4">
           <FormField label={`Recipients (${selected.size} selected)`}>
             <div className="max-h-56 space-y-1 overflow-y-auto rounded-control border border-slate-200 p-2">
-              <label className="flex items-center gap-2 border-b border-slate-100 px-1 py-1.5 text-sm font-medium">
+              <label className="flex min-h-11 cursor-pointer items-center gap-2 border-b border-slate-100 px-1 text-sm font-medium">
                 <Checkbox checked={allSelected} onChange={toggleAll} />
                 Select all {roster.length}
               </label>
               {roster.map((student) => (
-                <label key={student.studentId} className="flex items-center gap-2 px-1 py-1.5 text-sm">
+                <label
+                  key={student.studentId}
+                  className="flex min-h-11 cursor-pointer items-center gap-2 px-1 text-sm"
+                >
                   <Checkbox
                     checked={selected.has(student.studentId)}
                     onChange={() => toggle(student.studentId)}
@@ -158,7 +161,10 @@ export function ComposeNoteSheet({ classId, roster, initialStudentIds, onClose, 
 
           {error && <Alert variant="error">{error}</Alert>}
 
-          <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+          <div
+            data-sheet-dock
+            className="flex justify-end gap-2 border-t border-slate-100 pt-4 mobile:sticky mobile:bottom-0 mobile:-mx-6 mobile:bg-white/95 mobile:px-6 mobile:pb-4 mobile:backdrop-blur"
+          >
             <Button variant="secondary" onClick={onClose}>
               Cancel
             </Button>

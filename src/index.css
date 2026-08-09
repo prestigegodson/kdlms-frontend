@@ -1,6 +1,15 @@
 @import "tailwindcss";
 
 /*
+ * Mobile chrome boundary (mobile-plan.md "Two boundaries"): below `lg`
+ * (1024px) the sidebar becomes a bottom tab bar + app bar. The density
+ * boundary is `md` (767.98px, just below Tailwind's `md`), named here as a
+ * custom variant so feature code never repeats the literal — matches
+ * `.responsive-table`'s query below.
+ */
+@custom-variant mobile (@media (max-width: 767.98px));
+
+/*
  * Design tokens follow /style_guide.md — the source of record for all
  * frontend styling (see CLAUDE.md's Frontend Design System section).
  * Tailwind v4 is CSS-first: theme customization happens here via @theme,
@@ -41,6 +50,18 @@
   --radius-control: 6px;
   --radius-panel: 8px;
   --radius-card: 12px;
+
+  /*
+   * MobileTabBar's touch-row height, below `lg` only. Registered under the
+   * --spacing-* namespace so `h-tabbar`/`bottom-tabbar`/`pb-tabbar-safe`
+   * generate as first-class utilities rather than fragile arbitrary values
+   * (CSS calc() needs whitespace around `+`, which arbitrary-value syntax
+   * makes easy to get wrong with a nested env()). `-safe` bakes in the
+   * bottom safe-area inset for consumers that sit above the bar itself
+   * (PortalShell's <main>); the bar's own padding uses the inset directly.
+   */
+  --spacing-tabbar: 3.5rem;
+  --spacing-tabbar-safe: calc(3.5rem + env(safe-area-inset-bottom));
 }
 
 body {
@@ -88,13 +109,51 @@ h4 {
 }
 
 /*
+ * PortalShell's mobile drawer is conditionally mounted ({drawerOpen && ...}),
+ * so a CSS transition would need a two-pass rAF flip; a mount-triggered
+ * keyframe animation runs for free instead. Enter-only - the drawer has no
+ * exit animation, since animating that would require keeping the (nav-
+ * duplicating) panel mounted through the transition. Already neutralised by
+ * the prefers-reduced-motion block above.
+ */
+@keyframes drawer-slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
+/*
+ * Generic full-screen-scrim fade-in, shared by every overlay backdrop in the
+ * app (PortalShell's drawer, Modal's bottom sheet below `md` - see the
+ * .sheet-panel rules further down) rather than one near-identical keyframe
+ * per overlay.
+ */
+@keyframes overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.drawer-panel {
+  animation: drawer-slide-in 240ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.overlay-fade {
+  animation: overlay-fade-in 200ms ease-out;
+}
+
+/*
  * Below `md`, list tables (components/ui/Table.tsx) collapse into stacked
  * record cards instead of scrolling horizontally. A cell carrying a
  * `label` prop (rendered as data-label) becomes a label/value row; a cell
  * without one (e.g. a colSpan detail panel) renders as a plain full-width
  * block, so nested content isn't forced into the label/value layout.
+ * 767.98px matches the `mobile` custom variant above.
  */
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
   .responsive-table thead {
     display: none;
   }
@@ -135,5 +194,36 @@ h4 {
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: #64748b;
+  }
+
+  /*
+   * Modal's bottom-sheet slide-in (see components/ui/Modal.tsx's `mobile:`
+   * utility classes for the sheet's layout/sizing/rounding - this is only
+   * the part Tailwind utilities can't express). Scoped inside this query,
+   * unlike .drawer-panel above: the drawer is already `lg:hidden` so an
+   * always-on animation is harmless, but Modal renders at every width, and
+   * the desktop centered dialog must never slide.
+   */
+  @keyframes sheet-slide-in {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: none;
+    }
+  }
+  .sheet-panel {
+    animation: sheet-slide-in 240ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .sheet-panel::before {
+    content: "";
+    position: absolute;
+    top: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2.5rem;
+    height: 0.25rem;
+    border-radius: 9999px;
+    background-color: #e2e8f0;
   }
 }

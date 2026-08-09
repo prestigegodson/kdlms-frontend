@@ -59,14 +59,22 @@ export function SchoolSettingsPage() {
 
   if (state.kind === "loading") {
     return (
-      <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Spinner /> Loading settings…
+      <div className="max-w-2xl space-y-6">
+        <PageHeader title="School settings" description="School-wide operational policy for your school." />
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <Spinner /> Loading settings…
+        </div>
       </div>
     );
   }
 
   if (state.kind === "error") {
-    return <Alert variant="error">{state.message}</Alert>;
+    return (
+      <div className="max-w-2xl space-y-6">
+        <PageHeader title="School settings" description="School-wide operational policy for your school." />
+        <Alert variant="error">{state.message}</Alert>
+      </div>
+    );
   }
 
   const { settings } = state;

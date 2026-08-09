@@ -1,5 +1,4 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router";
 import { listBranches, type BranchView } from "@/api/branches";
 import {
   activateClass,
@@ -26,6 +25,7 @@ import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { LevelSelect } from "@/features/academics/components/LevelSelect";
 import { useAuthStore } from "@/stores/authStore";
@@ -120,29 +120,31 @@ function AdminClasses({ role }: { role: Role | undefined }) {
         actions={canManage && <Button onClick={() => setCreateOpen(true)}>Add class</Button>}
       />
 
-      <div className="grid max-w-xl grid-cols-1 gap-4 sm:grid-cols-2">
-        {!isBranchScoped && (
-          <FormField label="Branch" htmlFor="class-branch-filter">
-            <Select id="class-branch-filter" value={branchId} onChange={(event) => setBranchId(event.target.value)}>
-              <option value="">All branches</option>
-              {branches?.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name}
-                </option>
-              ))}
-            </Select>
+      <StickySubHeader>
+        <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none lg:gap-4 lg:max-w-xl">
+          {!isBranchScoped && (
+            <FormField label="Branch" htmlFor="class-branch-filter" labelClassName="sr-only lg:not-sr-only">
+              <Select id="class-branch-filter" value={branchId} onChange={(event) => setBranchId(event.target.value)}>
+                <option value="">All branches</option>
+                {branches?.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          )}
+          <FormField label="Level" htmlFor="class-level-filter" labelClassName="sr-only lg:not-sr-only">
+            <LevelSelect
+              id="class-level-filter"
+              levels={levels}
+              value={levelId}
+              onChange={setLevelId}
+              allOptionLabel="All levels"
+            />
           </FormField>
-        )}
-        <FormField label="Level" htmlFor="class-level-filter">
-          <LevelSelect
-            id="class-level-filter"
-            levels={levels}
-            value={levelId}
-            onChange={setLevelId}
-            allOptionLabel="All levels"
-          />
-        </FormField>
-      </div>
+        </div>
+      </StickySubHeader>
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
@@ -165,15 +167,14 @@ function AdminClasses({ role }: { role: Role | undefined }) {
                 <TableHeaderCell>Class teacher</TableHeaderCell>
                 <TableHeaderCell>Status</TableHeaderCell>
                 {canManage && <TableHeaderCell>Actions</TableHeaderCell>}
+                <TableHeaderCell></TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {state.classes.map((schoolClass) => (
-                <TableRow key={schoolClass.id}>
+                <TableRow key={schoolClass.id} to={`/school/academics/classes/${schoolClass.id}`}>
                   <TableCell label="Name" className="font-medium text-slate-900">
-                    <Link to={`/school/academics/classes/${schoolClass.id}`} className="hover:underline">
-                      {schoolClass.name}
-                    </Link>
+                    {schoolClass.name}
                   </TableCell>
                   <TableCell label="Level">{levelNames.get(schoolClass.levelId) ?? "—"}</TableCell>
                   <TableCell label="Class teacher">{schoolClass.classTeacherName ?? "—"}</TableCell>
@@ -184,7 +185,14 @@ function AdminClasses({ role }: { role: Role | undefined }) {
                   </TableCell>
                   {canManage && (
                     <TableCell label="Actions">
-                      <div className="flex gap-3">
+                      {/* The row itself now navigates to the class detail route (TableRow's `to`) -
+                          stop propagation here so a click - or an Enter/Space press while one of
+                          these buttons has focus - doesn't also navigate the row. */}
+                      <div
+                        className="flex gap-3"
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
                         <button
                           type="button"
                           className="text-brand-500 hover:text-brand-600"
@@ -285,15 +293,14 @@ function TeacherClasses() {
                 <TableHeaderCell>Name</TableHeaderCell>
                 <TableHeaderCell>Level</TableHeaderCell>
                 <TableHeaderCell>Your role</TableHeaderCell>
+                <TableHeaderCell></TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {state.classes.map((schoolClass) => (
-                <TableRow key={schoolClass.classId}>
+                <TableRow key={schoolClass.classId} to={`/school/academics/classes/${schoolClass.classId}`}>
                   <TableCell label="Name" className="font-medium text-slate-900">
-                    <Link to={`/school/academics/classes/${schoolClass.classId}`} className="hover:underline">
-                      {schoolClass.className}
-                    </Link>
+                    {schoolClass.className}
                   </TableCell>
                   <TableCell label="Level">{schoolClass.levelName ?? "—"}</TableCell>
                   <TableCell label="Your role">

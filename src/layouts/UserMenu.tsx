@@ -68,7 +68,7 @@ export function UserMenu({ user }: UserMenuProps) {
         aria-label="Account menu"
         onClick={() => setOpen((value) => !value)}
         className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-sm font-semibold
-          text-brand-800 transition-colors hover:bg-brand-100"
+          text-brand-800 transition-colors hover:bg-brand-100 mobile:h-11 mobile:w-11"
       >
         {initialsOf(user)}
       </button>

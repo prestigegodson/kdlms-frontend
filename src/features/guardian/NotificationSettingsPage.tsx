@@ -61,51 +61,51 @@ export function NotificationSettingsPage() {
     }
   }
 
-  if (state.kind === "loading") {
-    return (
-      <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Spinner /> Loading notification preferences…
-      </div>
-    );
-  }
-
-  if (state.kind === "error") {
-    return <Alert variant="error">{state.message}</Alert>;
-  }
-
-  const { preferences } = state;
-
   return (
     <div className="max-w-2xl space-y-6">
-      <PageHeader title="Notifications" description="Choose which emails you'd like to receive." />
+      <PageHeader
+        title="Notifications"
+        description="Choose which emails you'd like to receive."
+        backTo="/guardian"
+      />
 
-      <Card>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          {saveError && <Alert variant="error">{saveError}</Alert>}
-          {saved && <Alert variant="success">Notification preferences updated.</Alert>}
+      {state.kind === "loading" && (
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <Spinner /> Loading notification preferences…
+        </div>
+      )}
 
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <Checkbox
-              checked={preferences.communicationEmailsEnabled}
-              onChange={(event) =>
-                setState({
-                  kind: "loaded",
-                  preferences: { ...preferences, communicationEmailsEnabled: event.target.checked },
-                })
-              }
-            />
-            Send email notifications for new messages
-          </label>
-          <p className="text-sm text-slate-500">
-            Turning this off only stops the email - you'll still see every message from your child's teacher in
-            Messages, with the usual unread badge.
-          </p>
+      {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
 
-          <Button type="submit" disabled={saving}>
-            {saving ? "Saving…" : "Save changes"}
-          </Button>
-        </form>
-      </Card>
+      {state.kind === "loaded" && (
+        <Card>
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            {saveError && <Alert variant="error">{saveError}</Alert>}
+            {saved && <Alert variant="success">Notification preferences updated.</Alert>}
+
+            <label className="flex min-h-14 cursor-pointer items-center gap-3 text-sm text-slate-700">
+              <Checkbox
+                checked={state.preferences.communicationEmailsEnabled}
+                onChange={(event) =>
+                  setState({
+                    kind: "loaded",
+                    preferences: { ...state.preferences, communicationEmailsEnabled: event.target.checked },
+                  })
+                }
+              />
+              Send email notifications for new messages
+            </label>
+            <p className="text-sm text-slate-500">
+              Turning this off only stops the email - you'll still see every message from your child's teacher in
+              Messages, with the usual unread badge.
+            </p>
+
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </form>
+        </Card>
+      )}
     </div>
   );
 }

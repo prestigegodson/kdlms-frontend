@@ -23,8 +23,9 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
-import { Spinner } from "@/components/ui/Spinner";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
+import { TableSkeleton } from "@/components/ui/TableSkeleton";
 import { starterLayoutsForMode } from "@/features/reporting/components/designer/starterLayouts";
 import { TemplateAvailabilityModal } from "@/features/reporting/components/TemplateAvailabilityModal";
 import { TemplateStatusBadge } from "@/features/reporting/components/TemplateStatusBadge";
@@ -117,9 +118,9 @@ export function ResultTemplatesPage() {
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
       {state.kind === "loading" && (
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading templates…
-        </div>
+        <Card className="p-0">
+          <TableSkeleton columns={7} />
+        </Card>
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {state.kind === "loaded" && state.templates.length === 0 && (
@@ -130,8 +131,13 @@ export function ResultTemplatesPage() {
         />
       )}
       {state.kind === "loaded" && state.templates.length > 0 && hasAnyBoundTemplate && (
-        <div className="flex flex-wrap items-end gap-3">
-          <FormField label="Availability" htmlFor="template-school-filter" className="w-full sm:w-64">
+        <StickySubHeader>
+          <FormField
+            label="Availability"
+            htmlFor="template-school-filter"
+            className="min-w-0 flex-1 lg:max-w-xs"
+            labelClassName="sr-only lg:not-sr-only"
+          >
             <Select
               id="template-school-filter"
               value={schoolFilter}
@@ -146,7 +152,7 @@ export function ResultTemplatesPage() {
               ))}
             </Select>
           </FormField>
-        </div>
+        </StickySubHeader>
       )}
       {state.kind === "loaded" && state.templates.length > 0 && (
         <Card className="p-0">
@@ -159,11 +165,12 @@ export function ResultTemplatesPage() {
                 <TableHeaderCell>Availability</TableHeaderCell>
                 <TableHeaderCell>Status</TableHeaderCell>
                 <TableHeaderCell>Actions</TableHeaderCell>
+                <TableHeaderCell></TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {visibleTemplates.map((template) => (
-                <TableRow key={template.id}>
+                <TableRow key={template.id} to={`/admin/templates/${template.id}`}>
                   <TableCell label="Name" className="font-medium text-slate-900">
                     {template.name}
                   </TableCell>
@@ -180,17 +187,17 @@ export function ResultTemplatesPage() {
                     <TemplateStatusBadge status={template.status} />
                   </TableCell>
                   <TableCell label="Actions">
-                    <div className="flex flex-wrap justify-end gap-3 sm:justify-start">
+                    {/* The row itself now navigates to the designer (TableRow's `to`) - stop
+                        propagation here so a click - or an Enter/Space press while one of these
+                        buttons has focus - doesn't also navigate the row. */}
+                    <div
+                      className="flex flex-wrap justify-end gap-3 sm:justify-start"
+                      onClick={(event) => event.stopPropagation()}
+                      onKeyDown={(event) => event.stopPropagation()}
+                    >
                       <button
                         type="button"
-                        className="text-brand-500 hover:text-brand-600"
-                        onClick={() => navigate(`/admin/templates/${template.id}`)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="text-brand-500 hover:text-brand-600"
+                        className="inline-flex mobile:min-h-11 items-center px-1 text-brand-500 hover:text-brand-600"
                         onClick={() => setChangingAvailability(template)}
                       >
                         Change school
@@ -198,7 +205,7 @@ export function ResultTemplatesPage() {
                       {template.status !== "PUBLISHED" && (
                         <button
                           type="button"
-                          className="text-green-700 hover:text-green-800"
+                          className="inline-flex mobile:min-h-11 items-center px-1 text-green-700 hover:text-green-800"
                           onClick={() => handlePublish(template)}
                         >
                           Publish
@@ -207,7 +214,7 @@ export function ResultTemplatesPage() {
                       {template.status === "PUBLISHED" && (
                         <button
                           type="button"
-                          className="text-slate-500 hover:text-slate-700"
+                          className="inline-flex mobile:min-h-11 items-center px-1 text-slate-500 hover:text-slate-700"
                           onClick={() => setRetiring(template)}
                         >
                           Retire
@@ -215,7 +222,7 @@ export function ResultTemplatesPage() {
                       )}
                       <button
                         type="button"
-                        className="text-red-600 hover:text-red-700"
+                        className="inline-flex mobile:min-h-11 items-center px-1 text-red-600 hover:text-red-700"
                         onClick={() => setDeleting(template)}
                       >
                         Delete

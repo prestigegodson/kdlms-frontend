@@ -140,14 +140,14 @@ export function PackagesPage() {
                     <div className="flex justify-end gap-3 sm:justify-start">
                       <button
                         type="button"
-                        className="text-brand-500 hover:text-brand-600"
+                        className="inline-flex mobile:min-h-11 items-center px-1 text-brand-500 hover:text-brand-600"
                         onClick={() => setEditing(pkg)}
                       >
                         Edit
                       </button>
                       <button
                         type="button"
-                        className="text-slate-500 hover:text-slate-700"
+                        className="inline-flex mobile:min-h-11 items-center px-1 text-slate-500 hover:text-slate-700"
                         onClick={() => toggleStatus(pkg)}
                       >
                         {pkg.status === "ACTIVE" ? "Retire" : "Reactivate"}

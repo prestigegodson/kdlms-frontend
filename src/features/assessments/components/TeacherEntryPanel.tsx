@@ -9,6 +9,7 @@ import { FormField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
 import { RatingEntryGrid } from "@/features/assessments/components/RatingEntryGrid";
 import { SaveOutcomeList } from "@/features/assessments/components/SaveOutcomeList";
@@ -95,22 +96,22 @@ export function TeacherEntryPanel() {
       )}
 
       {classes !== null && classes.length > 0 && (
-        <div className="space-y-4">
-          <ClassTermPicker classes={classOptions} classId={classId} onClassChange={setClassId} termId={termId} onTermChange={setTermId} />
-
-          {classId && (
-            <FormField label="Subject" htmlFor="entry-subject">
-              <Select id="entry-subject" value={subjectId} onChange={(event) => setSubjectId(event.target.value)}>
-                <option value="">Select a subject…</option>
-                {(subjects ?? []).map((subject) => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.name}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-          )}
-        </div>
+        <StickySubHeader>
+          <ClassTermPicker classes={classOptions} classId={classId} onClassChange={setClassId} termId={termId} onTermChange={setTermId}>
+            {classId && (
+              <FormField label="Subject" htmlFor="entry-subject" labelClassName="sr-only lg:not-sr-only">
+                <Select id="entry-subject" value={subjectId} onChange={(event) => setSubjectId(event.target.value)}>
+                  <option value="">Select a subject…</option>
+                  {(subjects ?? []).map((subject) => (
+                    <option key={subject.id} value={subject.id}>
+                      {subject.name}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            )}
+          </ClassTermPicker>
+        </StickySubHeader>
       )}
 
       {loadError && <Alert variant="error">{loadError}</Alert>}

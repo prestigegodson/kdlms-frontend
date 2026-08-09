@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router";
 import { listBranches, type BranchView } from "@/api/branches";
 import { listClasses, type SchoolClassView } from "@/api/classes";
 import { ApiError } from "@/api/client";
@@ -22,8 +21,12 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { useAuthStore } from "@/stores/authStore";
+
+/** The `sr-only lg:not-sr-only` sub-header grid idiom `ClassTermPicker`/`ClassDatePicker` established - 2-up below `lg`, one equal-width row from `lg` up. */
+const PICKER_GRID_CLASS = "grid min-w-0 flex-1 grid-cols-2 gap-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none lg:gap-4";
 
 type Mode = "promote" | "place";
 
@@ -55,13 +58,10 @@ export function PromotionPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/school/students" className="text-sm text-brand-500 hover:text-brand-600">
-        &larr; All students
-      </Link>
-
       <PageHeader
         title="Promote or place students"
         description="Move a whole class into a new session, or search for and place individual students."
+        backTo="/school/students"
       />
 
       <div className="flex flex-wrap gap-2">
@@ -151,9 +151,9 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
 
   return (
     <div className="space-y-6">
-      <Card>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <FormField label="Source class" htmlFor="promote-source-class">
+      <StickySubHeader>
+        <div className={PICKER_GRID_CLASS}>
+          <FormField label="Source class" htmlFor="promote-source-class" labelClassName="sr-only lg:not-sr-only">
             <Select
               id="promote-source-class"
               value={sourceClassId}
@@ -170,7 +170,7 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
               ))}
             </Select>
           </FormField>
-          <FormField label="Target session" htmlFor="promote-target-session">
+          <FormField label="Target session" htmlFor="promote-target-session" labelClassName="sr-only lg:not-sr-only">
             <Select
               id="promote-target-session"
               value={targetSessionId}
@@ -184,7 +184,7 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
               ))}
             </Select>
           </FormField>
-          <FormField label="Target class" htmlFor="promote-target-class">
+          <FormField label="Target class" htmlFor="promote-target-class" labelClassName="sr-only lg:not-sr-only">
             <Select
               id="promote-target-class"
               value={targetClassId}
@@ -199,7 +199,7 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
             </Select>
           </FormField>
         </div>
-      </Card>
+      </StickySubHeader>
 
       {error && <Alert variant="error">{error}</Alert>}
 
@@ -283,22 +283,20 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
 
   return (
     <div className="space-y-6">
-      <Card>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="sm:col-span-1">
-            <FormField label="Search students" htmlFor="place-search">
-              <SearchInput
-                id="place-search"
-                value={query}
-                onChange={(value) => {
-                  setQuery(value);
-                  setResult(null);
-                }}
-                placeholder="Name or admission no."
-              />
-            </FormField>
-          </div>
-          <FormField label="Target session" htmlFor="place-target-session">
+      <StickySubHeader>
+        <div className={PICKER_GRID_CLASS}>
+          <FormField label="Search students" htmlFor="place-search" labelClassName="sr-only lg:not-sr-only">
+            <SearchInput
+              id="place-search"
+              value={query}
+              onChange={(value) => {
+                setQuery(value);
+                setResult(null);
+              }}
+              placeholder="Name or admission no."
+            />
+          </FormField>
+          <FormField label="Target session" htmlFor="place-target-session" labelClassName="sr-only lg:not-sr-only">
             <Select id="place-target-session" value={sessionId} onChange={(event) => setSessionId(event.target.value)}>
               <option value="">Select a session…</option>
               {sessions.map((session) => (
@@ -308,7 +306,7 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
               ))}
             </Select>
           </FormField>
-          <FormField label="Target class" htmlFor="place-target-class">
+          <FormField label="Target class" htmlFor="place-target-class" labelClassName="sr-only lg:not-sr-only">
             <Select id="place-target-class" value={targetClassId} onChange={(event) => setTargetClassId(event.target.value)}>
               <option value="">Select a class…</option>
               {classes.map((schoolClass) => (
@@ -319,7 +317,7 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
             </Select>
           </FormField>
         </div>
-      </Card>
+      </StickySubHeader>
 
       {error && <Alert variant="error">{error}</Alert>}
 

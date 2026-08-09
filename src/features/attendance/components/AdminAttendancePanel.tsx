@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { AttendanceRegisterGrid } from "@/features/attendance/components/AttendanceRegisterGrid";
 import { AttendanceTodayCard } from "@/features/attendance/components/AttendanceTodayCard";
 import { ClassAttendanceSummaryTable } from "@/features/attendance/components/ClassAttendanceSummaryTable";
@@ -53,7 +54,7 @@ export function AdminAttendancePanel() {
 
       <AttendanceTodayCard />
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <TabButton active={tab === "day"} onClick={() => setTab("day")}>
           Day register
         </TabButton>
@@ -130,13 +131,15 @@ function DayRegisterTab({ classOptions }: { classOptions: ClassOption[] }) {
 
   return (
     <div className="space-y-4">
-      <ClassDatePicker
-        classes={classOptions}
-        classId={classId}
-        onClassChange={setClassId}
-        date={date}
-        onDateChange={setDate}
-      />
+      <StickySubHeader>
+        <ClassDatePicker
+          classes={classOptions}
+          classId={classId}
+          onClassChange={setClassId}
+          date={date}
+          onDateChange={setDate}
+        />
+      </StickySubHeader>
 
       {loadError && <Alert variant="error">{loadError}</Alert>}
 
@@ -182,13 +185,15 @@ function TermSummaryTab({ classOptions }: { classOptions: ClassOption[] }) {
 
   return (
     <div className="space-y-4">
-      <ClassTermPicker
-        classes={classOptions}
-        classId={classId}
-        onClassChange={setClassId}
-        termId={termId}
-        onTermChange={setTermId}
-      />
+      <StickySubHeader>
+        <ClassTermPicker
+          classes={classOptions}
+          classId={classId}
+          onClassChange={setClassId}
+          termId={termId}
+          onTermChange={setTermId}
+        />
+      </StickySubHeader>
 
       {loadError && <Alert variant="error">{loadError}</Alert>}
 

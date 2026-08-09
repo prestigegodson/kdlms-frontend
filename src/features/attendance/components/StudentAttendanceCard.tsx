@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { type StudentAttendanceSummaryView, getStudentTermSummary } from "@/api/attendance";
 import { ApiError } from "@/api/client";
 import { listSessions, listTerms, type TermView } from "@/api/sessions";
+import { Accordion } from "@/components/ui/Accordion";
 import { Alert } from "@/components/ui/Alert";
 import { Card } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
@@ -10,6 +11,14 @@ import { AttendanceSummaryPanel } from "@/features/attendance/components/Attenda
 
 interface StudentAttendanceCardProps {
   studentId: string;
+  /**
+   * "card" (default) is the shared shape used by `AdminAttendancePanel`'s
+   * class-term-summary drill-down modal - already inside a dialog, so it
+   * shouldn't itself collapse. "accordion" is for a stacked detail page
+   * (`StudentDetailPage`), where mobile-plan.md Phase D wants this section
+   * collapsed by default below `md`.
+   */
+  variant?: "card" | "accordion";
 }
 
 /**
@@ -19,7 +28,7 @@ interface StudentAttendanceCardProps {
  * profile page, and the drill-down modal from a class term summary - need
  * the same cascade) and defaults to the current term.
  */
-export function StudentAttendanceCard({ studentId }: StudentAttendanceCardProps) {
+export function StudentAttendanceCard({ studentId, variant = "card" }: StudentAttendanceCardProps) {
   const [sessionId, setSessionId] = useState("");
   const [terms, setTerms] = useState<TermView[]>([]);
   const [termId, setTermId] = useState("");
@@ -61,34 +70,48 @@ export function StudentAttendanceCard({ studentId }: StudentAttendanceCardProps)
       );
   }, [studentId, termId]);
 
+  const termSelect = terms.length > 0 && (
+    <Select
+      aria-label="Term"
+      className="w-auto"
+      value={termId}
+      onChange={(event) => setTermId(event.target.value)}
+    >
+      {terms.map((term) => (
+        <option key={term.id} value={term.id}>
+          {term.name}
+        </option>
+      ))}
+    </Select>
+  );
+
+  const body = (
+    <>
+      {loadError && <Alert variant="error">{loadError}</Alert>}
+      {!loadError && !summary && (
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <Spinner /> Loading…
+        </div>
+      )}
+      {summary && <AttendanceSummaryPanel summary={summary} />}
+    </>
+  );
+
+  if (variant === "accordion") {
+    return (
+      <Accordion title="Attendance" actions={termSelect}>
+        {body}
+      </Accordion>
+    );
+  }
+
   return (
     <Card className="p-0">
       <div className="flex flex-wrap items-center justify-between gap-3 p-6 pb-0">
         <h2 className="text-sm font-semibold text-slate-900">Attendance</h2>
-        {terms.length > 0 && (
-          <Select
-            aria-label="Term"
-            className="w-auto"
-            value={termId}
-            onChange={(event) => setTermId(event.target.value)}
-          >
-            {terms.map((term) => (
-              <option key={term.id} value={term.id}>
-                {term.name}
-              </option>
-            ))}
-          </Select>
-        )}
+        {termSelect}
       </div>
-      <div className="p-6">
-        {loadError && <Alert variant="error">{loadError}</Alert>}
-        {!loadError && !summary && (
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <Spinner /> Loading…
-          </div>
-        )}
-        {summary && <AttendanceSummaryPanel summary={summary} />}
-      </div>
+      <div className="p-6">{body}</div>
     </Card>
   );
 }

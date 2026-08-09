@@ -6,6 +6,7 @@ import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import {
   AttendanceOutcomeList,
   AttendanceRegisterGrid,
@@ -101,14 +102,16 @@ export function TeacherRegisterPanel() {
       )}
 
       {classes !== null && classes.length > 0 && (
-        <ClassDatePicker
-          classes={classOptions}
-          classId={effectiveClassId}
-          onClassChange={setClassId}
-          date={date}
-          onDateChange={setDate}
-          disableWeekends={!allowWeekendAttendance}
-        />
+        <StickySubHeader>
+          <ClassDatePicker
+            classes={classOptions}
+            classId={effectiveClassId}
+            onClassChange={setClassId}
+            date={date}
+            onDateChange={setDate}
+            disableWeekends={!allowWeekendAttendance}
+          />
+        </StickySubHeader>
       )}
 
       {loadError && <Alert variant="error">{loadError}</Alert>}

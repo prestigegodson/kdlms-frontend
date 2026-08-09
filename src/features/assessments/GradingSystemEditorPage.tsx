@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { ApiError } from "@/api/client";
 import {
   type AssessmentMode,
@@ -13,6 +13,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { GradeBoundaryRows } from "@/features/assessments/components/GradeBoundaryRows";
 import { type RatingScaleRow, RatingScaleRows } from "@/features/assessments/components/RatingScaleRows";
@@ -156,16 +157,13 @@ export function GradingSystemEditorPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/school/assessments/grading" className="text-sm text-brand-500 hover:text-brand-600">
-        &larr; All grading systems
-      </Link>
-
-      <div>
-        <h1 className="font-display text-3xl font-medium text-slate-900">{system.levelName}</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {system.configured ? "Editing this level's saved grading system." : "Starting from the school default."}
-        </p>
-      </div>
+      <PageHeader
+        title={system.levelName}
+        description={
+          system.configured ? "Editing this level's saved grading system." : "Starting from the school default."
+        }
+        backTo="/school/assessments/grading"
+      />
 
       <form className="space-y-6" onSubmit={handleSubmit}>
         {error && <Alert variant="error">{error}</Alert>}

@@ -76,7 +76,13 @@ function renderAsSchoolAdmin() {
     accessToken: "access",
     refreshToken: "refresh",
   });
-  const router = createMemoryRouter([{ path: "/", element: <StudentsPage /> }], { initialEntries: ["/"] });
+  const router = createMemoryRouter(
+    [
+      { path: "/", element: <StudentsPage /> },
+      { path: "/school/students/:studentId", element: <div>Student detail page</div> },
+    ],
+    { initialEntries: ["/"] },
+  );
   render(<RouterProvider router={router} />);
 }
 
@@ -126,6 +132,44 @@ describe("StudentsPage", () => {
     expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
     expect(screen.getByText("BFA/2026/0001")).toBeInTheDocument();
     expect(screen.getByText("ACTIVE")).toBeInTheDocument();
+  });
+
+  it("navigates to the student detail route when a row is tapped", async () => {
+    mockStudents([STUDENT_VIEW]);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Ada Obi");
+
+    const row = screen.getByText("Ada Obi").closest("tr")!;
+    expect(row).toHaveAttribute("tabindex", "0");
+
+    await user.click(row);
+
+    expect(await screen.findByText("Student detail page")).toBeInTheDocument();
+  });
+
+  it("filters through the mobile Filters sheet and reflects the active count on its trigger", async () => {
+    mockStudents([STUDENT_VIEW]);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Ada Obi");
+
+    await user.click(screen.getByRole("button", { name: /Filters/ }));
+    const sheet = await screen.findByRole("dialog", { name: "Filters" });
+
+    await user.selectOptions(within(sheet).getByLabelText("Status"), "WITHDRAWN");
+
+    expect(studentsApi.listStudents).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "WITHDRAWN" }),
+      0,
+      expect.any(Number),
+    );
+
+    await user.click(within(sheet).getByRole("button", { name: "Done" }));
+
+    expect(screen.getByRole("button", { name: /Filters/ })).toHaveTextContent("1");
   });
 
   it("registers a student into the selected class", async () => {
@@ -205,7 +249,10 @@ describe("StudentsPage", () => {
     renderAsTeacher();
     await screen.findByText("Ada Obi");
 
-    await user.click(screen.getByRole("button", { name: /Medical/ }));
+    const row = screen.getByText("Ada Obi").closest("tr")!;
+    expect(row).toHaveAttribute("tabindex", "0");
+
+    await user.click(row);
 
     expect(meApi.getStudentMedical).toHaveBeenCalledWith("student-1");
     expect(await screen.findByText("O+")).toBeInTheDocument();

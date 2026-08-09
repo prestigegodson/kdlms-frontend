@@ -13,6 +13,13 @@ describe("StatusSegments", () => {
     expect(screen.getByRole("radio", { name: /Excused/ })).toHaveAttribute("aria-checked", "false");
   });
 
+  it("renders a 44px-tall segment on mobile, four across", () => {
+    render(<StatusSegments id="att-0" studentName="Ada Obi" onChange={vi.fn()} />);
+
+    expect(screen.getByRole("radiogroup")).toHaveClass("mobile:grid-cols-4");
+    expect(screen.getByRole("radio", { name: /Present/ })).toHaveClass("mobile:min-h-11");
+  });
+
   it("marks the matching segment checked once a value is set", () => {
     render(<StatusSegments id="att-0" value="ABSENT" studentName="Ada Obi" onChange={vi.fn()} />);
 
