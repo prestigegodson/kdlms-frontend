@@ -42,10 +42,20 @@ export interface UpdateGuardianRequest {
   communicationEmailsEnabled: boolean;
 }
 
-/** {@code temporaryPassword} is generated server-side and returned exactly once. */
+export type GuardianAccountOutcome = "CREATED" | "ATTACHED";
+
+/**
+ * `outcome === "CREATED"`: a brand-new account, `temporaryPassword` is a
+ * server-generated password returned exactly once. `outcome === "ATTACHED"`:
+ * this email already had a KDLMS account (e.g. at another school) - the
+ * existing account was reused as-is, `temporaryPassword` is null, and the
+ * `guardian` fields reflect the EXISTING account, not the request's typed
+ * values (CLAUDE.md's cross-school guardian rule).
+ */
 export interface GuardianCreateResult {
   guardian: GuardianView;
-  temporaryPassword: string;
+  temporaryPassword: string | null;
+  outcome: GuardianAccountOutcome;
 }
 
 /** Mirrors backend student.application.port.in.WardView. */

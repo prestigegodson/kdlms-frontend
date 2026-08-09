@@ -15,7 +15,13 @@ import type { StudentMedicalView } from "@/api/students";
  */
 const BASE = "/api/v1/me/wards";
 
-/** Mirrors backend student.application.port.in.MyWardView. */
+/**
+ * Mirrors backend student.application.port.in.MyWardView. `schoolId`/
+ * `schoolName` are here because the guardian's own token carries no
+ * `schoolId` - one login may hold wards at several schools (CLAUDE.md's
+ * cross-school guardian rule) - so this is the only place the frontend
+ * learns which school each ward belongs to.
+ */
 export interface MyWardView {
   studentId: string;
   fullName: string;
@@ -28,6 +34,8 @@ export interface MyWardView {
   currentClassName?: string;
   levelName?: string;
   status: string;
+  schoolId: string;
+  schoolName: string;
 }
 
 /** Mirrors backend student.application.port.in.WardTermView. */

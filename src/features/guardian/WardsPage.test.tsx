@@ -63,6 +63,8 @@ describe("WardsPage", () => {
         currentClassName: "Primary 3",
         levelName: "Primary",
         status: "ACTIVE",
+        schoolId: "school-1",
+        schoolName: "Bright Star Academy",
       },
     ]);
 
@@ -84,6 +86,8 @@ describe("WardsPage", () => {
         currentClassName: "Primary 3",
         levelName: "Primary",
         status: "ACTIVE",
+        schoolId: "school-1",
+        schoolName: "Bright Star Academy",
       },
     ]);
 
@@ -106,6 +110,8 @@ describe("WardsPage", () => {
         currentClassName: "Primary 3",
         levelName: "Primary",
         status: "ACTIVE",
+        schoolId: "school-1",
+        schoolName: "Bright Star Academy",
       },
     ]);
     const user = userEvent.setup();
@@ -117,5 +123,37 @@ describe("WardsPage", () => {
 
     expect(useWardStore.getState().selectedWardId).toBe("s1");
     expect(await screen.findByText("Results page")).toBeInTheDocument();
+  });
+
+  it("groups wards under a school heading when the guardian has wards at more than one school", async () => {
+    vi.mocked(wardsApi.listMyWards).mockResolvedValue([
+      {
+        studentId: "s1",
+        fullName: "Ada Obi",
+        admissionNumber: "SCH/2026/0001",
+        relationship: "MOTHER",
+        gender: "FEMALE",
+        status: "ACTIVE",
+        schoolId: "school-1",
+        schoolName: "Bright Star Academy",
+      },
+      {
+        studentId: "s2",
+        fullName: "Bode Obi",
+        admissionNumber: "SUN/2026/0007",
+        relationship: "FATHER",
+        gender: "MALE",
+        status: "ACTIVE",
+        schoolId: "school-2",
+        schoolName: "Sunrise Academy",
+      },
+    ]);
+
+    renderPage();
+
+    expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
+    expect(screen.getByText("Bode Obi")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Bright Star Academy" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sunrise Academy" })).toBeInTheDocument();
   });
 });

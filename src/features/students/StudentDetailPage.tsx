@@ -4,6 +4,7 @@ import { listClasses, type SchoolClassView } from "@/api/classes";
 import { ApiError } from "@/api/client";
 import {
   createGuardian,
+  type GuardianCreateResult,
   type GuardianView,
   linkGuardianToStudent,
   listGuardians,
@@ -35,6 +36,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { CredentialsReveal } from "@/components/ui/CredentialsReveal";
 import { DateInput } from "@/components/ui/DateInput";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
@@ -745,7 +747,16 @@ interface LinkGuardianModalProps {
   onSaved: () => void;
 }
 
-/** Two ways to add a guardian: search for and link an existing one, or provision a brand-new account. */
+/**
+ * Two ways to add a guardian: search for and link an existing guardian AT
+ * THIS SCHOOL, or add by email - which now doubles as the cross-school path
+ * (CLAUDE.md's cross-school guardian rule): if the typed email already has a
+ * KDLMS account (e.g. because they're also a guardian at another school), the
+ * backend attaches that existing account here rather than creating a new one.
+ * The "existing guardian" search stays school-scoped deliberately - a
+ * cross-school search would let this school enumerate another school's
+ * guardian names/emails by typing letters.
+ */
 function LinkGuardianModal({ studentId, onClose, onSaved }: LinkGuardianModalProps) {
   const [mode, setMode] = useState<"existing" | "new">("existing");
 
@@ -764,7 +775,7 @@ function LinkGuardianModal({ studentId, onClose, onSaved }: LinkGuardianModalPro
           onClick={() => setMode("new")}
           className={`rounded-control px-3 py-1.5 text-sm font-medium ${mode === "new" ? "bg-brand-50 text-brand-800" : "text-slate-500 hover:bg-slate-100"}`}
         >
-          New guardian
+          Add by email
         </button>
       </div>
       {mode === "existing" ? (
@@ -883,25 +894,55 @@ function LinkNewGuardianForm({
   const [relationship, setRelationship] = useState<(typeof RELATIONSHIPS)[number]>("MOTHER");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [created, setCreated] = useState<GuardianCreateResult | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
     setError(null);
     try {
-      await createGuardian({
+      const result = await createGuardian({
         email,
         firstName,
         lastName,
         phone: phone || undefined,
         wards: [{ studentId, relationship }],
       });
-      onSaved();
+      // Show a confirmation before closing - on ATTACHED there's no temporary
+      // password to reveal, and silently closing would look like nothing happened.
+      setCreated(result);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to create guardian");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (created) {
+    const attached = created.outcome === "ATTACHED";
+    return (
+      <div className="space-y-4">
+        {attached ? (
+          <Alert variant="success">
+            {created.guardian.fullName} already has a KDLMS account ({created.guardian.email}) at another school.
+            We've linked that account here and emailed them — they sign in with their existing password.
+          </Alert>
+        ) : (
+          <Alert variant="success">
+            {created.guardian.fullName} can now sign in with {created.guardian.email}. An invitation email has been
+            sent to them.
+          </Alert>
+        )}
+        {!attached && created.temporaryPassword && (
+          <CredentialsReveal email={created.guardian.email} temporaryPassword={created.temporaryPassword} />
+        )}
+        <div className="flex justify-end">
+          <Button type="button" onClick={onSaved}>
+            Done
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -934,6 +975,9 @@ function LinkNewGuardianForm({
           onChange={(event) => setEmail(event.target.value)}
         />
       </FormField>
+      <p className="text-xs text-slate-500">
+        Already have their email? We'll link their existing account if they have one.
+      </p>
       <FormField label="Phone" htmlFor="new-guardian-phone">
         <Input
           id="new-guardian-phone"

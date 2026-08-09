@@ -69,3 +69,15 @@ export const useWardStore = create<WardState>((set, get) => ({
 export function resetWardStore(): void {
   useWardStore.setState({ wards: [], selectedWardId: null, status: "idle", errorMessage: null });
 }
+
+/**
+ * The currently-selected ward's full record (not just its id) - derived
+ * rather than stored separately, so it can never drift from `wards`/
+ * `selectedWardId`. Lets a docked picker (e.g. `ClassTermPicker`'s guardian
+ * analogue) label itself "Ada Obi — Sunrise Academy" once a guardian has
+ * wards at more than one school, without re-deriving the lookup at every
+ * call site.
+ */
+export function useSelectedWard(): MyWardView | null {
+  return useWardStore((state) => state.wards.find((ward) => ward.studentId === state.selectedWardId) ?? null);
+}

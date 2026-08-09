@@ -1,7 +1,8 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   getMyNotificationPreferences,
   type NotificationPreferencesView,
+  type SchoolPreference,
   updateMyNotificationPreferences,
 } from "@/api/notificationPreferences";
 import { ApiError } from "@/api/client";
@@ -24,12 +25,13 @@ type LoadState =
  * unread badge. Results-published, guardian-invitation, and password-reset
  * emails are unaffected and always send. A SCHOOL_ADMIN/BRANCH_ADMIN can set
  * this same preference on a guardian's behalf from the guardian edit form.
+ * <p>
+ * One toggle per school the guardian holds a profile at (CLAUDE.md's
+ * cross-school guardian rule) - identical to today's single checkbox when
+ * there's only one.
  */
 export function NotificationSettingsPage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     getMyNotificationPreferences()
@@ -42,23 +44,8 @@ export function NotificationSettingsPage() {
       );
   }, []);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (state.kind !== "loaded") return;
-    setSaving(true);
-    setSaveError(null);
-    setSaved(false);
-    try {
-      const updated = await updateMyNotificationPreferences({
-        communicationEmailsEnabled: state.preferences.communicationEmailsEnabled,
-      });
-      setState({ kind: "loaded", preferences: updated });
-      setSaved(true);
-    } catch (error) {
-      setSaveError(error instanceof ApiError ? error.message : "Failed to save notification preferences");
-    } finally {
-      setSaving(false);
-    }
+  function handleUpdated(updated: NotificationPreferencesView) {
+    setState({ kind: "loaded", preferences: updated });
   }
 
   return (
@@ -78,34 +65,75 @@ export function NotificationSettingsPage() {
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
 
       {state.kind === "loaded" && (
-        <Card>
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            {saveError && <Alert variant="error">{saveError}</Alert>}
-            {saved && <Alert variant="success">Notification preferences updated.</Alert>}
-
-            <label className="flex min-h-14 cursor-pointer items-center gap-3 text-sm text-slate-700">
-              <Checkbox
-                checked={state.preferences.communicationEmailsEnabled}
-                onChange={(event) =>
-                  setState({
-                    kind: "loaded",
-                    preferences: { ...state.preferences, communicationEmailsEnabled: event.target.checked },
-                  })
-                }
-              />
-              Send email notifications for new messages
-            </label>
-            <p className="text-sm text-slate-500">
-              Turning this off only stops the email - you'll still see every message from your child's teacher in
-              Messages, with the usual unread badge.
-            </p>
-
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
-            </Button>
-          </form>
-        </Card>
+        <div className="space-y-4">
+          {state.preferences.schools.map((school) => (
+            <SchoolPreferenceCard key={school.schoolId} school={school} onUpdated={handleUpdated} />
+          ))}
+        </div>
       )}
     </div>
+  );
+}
+
+interface SchoolPreferenceCardProps {
+  school: SchoolPreference;
+  onUpdated: (preferences: NotificationPreferencesView) => void;
+}
+
+/** One school's preference row/card - each school saves independently, since it's a separate `guardians` row server-side. */
+function SchoolPreferenceCard({ school, onUpdated }: SchoolPreferenceCardProps) {
+  const [enabled, setEnabled] = useState(school.communicationEmailsEnabled);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSubmit() {
+    setSaving(true);
+    setSaveError(null);
+    setSaved(false);
+    try {
+      const updated = await updateMyNotificationPreferences({ schoolId: school.schoolId, communicationEmailsEnabled: enabled });
+      onUpdated(updated);
+      setSaved(true);
+    } catch (error) {
+      setSaveError(error instanceof ApiError ? error.message : "Failed to save notification preferences");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <form
+        className="space-y-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          handleSubmit();
+        }}
+      >
+        <h2 className="font-display text-sm font-semibold text-slate-900">{school.schoolName}</h2>
+        {saveError && <Alert variant="error">{saveError}</Alert>}
+        {saved && <Alert variant="success">Notification preferences updated.</Alert>}
+
+        <label className="flex min-h-14 cursor-pointer items-center gap-3 text-sm text-slate-700">
+          <Checkbox
+            checked={enabled}
+            onChange={(event) => {
+              setEnabled(event.target.checked);
+              setSaved(false);
+            }}
+          />
+          Send email notifications for new messages
+        </label>
+        <p className="text-sm text-slate-500">
+          Turning this off only stops the email - you'll still see every message from your child's teacher in
+          Messages, with the usual unread badge.
+        </p>
+
+        <Button type="submit" disabled={saving}>
+          {saving ? "Saving…" : "Save changes"}
+        </Button>
+      </form>
+    </Card>
   );
 }

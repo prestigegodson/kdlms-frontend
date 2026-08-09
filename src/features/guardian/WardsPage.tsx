@@ -19,6 +19,8 @@ import { useWardStore } from "@/stores/wardStore";
 
 interface WardCardProps {
   ward: MyWardView;
+  /** Shown as a neutral badge next to the relationship badge once a guardian has wards at more than one school. */
+  showSchool: boolean;
 }
 
 /**
@@ -27,7 +29,7 @@ interface WardCardProps {
  * Selecting either action switches `wardStore`'s selection before
  * navigating, so Results/Attendance land already scoped to this ward.
  */
-function WardCard({ ward }: WardCardProps) {
+function WardCard({ ward, showSchool }: WardCardProps) {
   const navigate = useNavigate();
   const select = useWardStore((state) => state.select);
   const [attendanceRate, setAttendanceRate] = useState<number | null>(null);
@@ -68,7 +70,10 @@ function WardCard({ ward }: WardCardProps) {
               <h2 className="font-display text-lg font-medium text-slate-900">{ward.fullName}</h2>
               <p className="text-sm text-slate-500">{ward.admissionNumber}</p>
             </div>
-            <Badge variant="brand">{ward.relationship}</Badge>
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <Badge variant="brand">{ward.relationship}</Badge>
+              {showSchool && <Badge variant="neutral">{ward.schoolName}</Badge>}
+            </div>
           </div>
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <StatTile label="Class" value={ward.currentClassName ?? "—"} />
@@ -130,13 +135,22 @@ function WardMedicalModal({ ward, onClose }: WardMedicalModalProps) {
   );
 }
 
-/** Guardian portal index - one card per linked ward. */
+/**
+ * Guardian portal index - one card per linked ward. A guardian whose wards
+ * are all at one school (the overwhelmingly common case) sees exactly the
+ * flat grid this page has always rendered; a guardian with wards at more
+ * than one school (CLAUDE.md's cross-school guardian rule) instead sees the
+ * cards grouped under a heading per school, since `wards` already arrives
+ * sorted by name across schools rather than grouped.
+ */
 export function WardsPage() {
   const { wards, status, errorMessage, fetchIfNeeded, retry } = useWardStore();
 
   useEffect(() => {
     fetchIfNeeded();
   }, [fetchIfNeeded]);
+
+  const multiSchool = new Set(wards.map((ward) => ward.schoolId)).size > 1;
 
   return (
     <div className="space-y-6">
@@ -155,13 +169,43 @@ export function WardsPage() {
           description="Contact your school if you believe this is a mistake."
         />
       )}
-      {status === "loaded" && wards.length > 0 && (
+      {status === "loaded" && wards.length > 0 && !multiSchool && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {wards.map((ward) => (
-            <WardCard key={ward.studentId} ward={ward} />
+            <WardCard key={ward.studentId} ward={ward} showSchool={false} />
+          ))}
+        </div>
+      )}
+      {status === "loaded" && wards.length > 0 && multiSchool && (
+        <div className="space-y-6">
+          {groupBySchool(wards).map(([schoolName, schoolWards]) => (
+            <div key={schoolName}>
+              <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-slate-500">
+                {schoolName}
+              </h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {schoolWards.map((ward) => (
+                  <WardCard key={ward.studentId} ward={ward} showSchool />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
     </div>
   );
+}
+
+/** Groups wards by school, preserving each ward's original (name-sorted) relative order within its group. */
+function groupBySchool(wards: MyWardView[]): [string, MyWardView[]][] {
+  const groups = new Map<string, MyWardView[]>();
+  for (const ward of wards) {
+    const group = groups.get(ward.schoolName);
+    if (group) {
+      group.push(ward);
+    } else {
+      groups.set(ward.schoolName, [ward]);
+    }
+  }
+  return [...groups.entries()];
 }

@@ -21,6 +21,10 @@ export function WardSelector() {
     return null;
   }
 
+  // Only label with the school name once it's actually disambiguating - the
+  // common case (every ward at one school) stays exactly as it was.
+  const multiSchool = new Set(wards.map((ward) => ward.schoolId)).size > 1;
+
   return (
     <FormField label="Ward" htmlFor="ward-selector" className="min-w-0 flex-1 lg:max-w-xs lg:flex-initial">
       <Select
@@ -30,7 +34,7 @@ export function WardSelector() {
       >
         {wards.map((ward) => (
           <option key={ward.studentId} value={ward.studentId}>
-            {ward.fullName}
+            {multiSchool ? `${ward.fullName} — ${ward.schoolName}` : ward.fullName}
           </option>
         ))}
       </Select>

@@ -18,6 +18,8 @@ const WARD = {
   relationship: "MOTHER",
   gender: "FEMALE" as const,
   status: "ACTIVE",
+  schoolId: "school-1",
+  schoolName: "Bright Star Academy",
 };
 
 function renderPage() {

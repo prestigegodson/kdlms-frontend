@@ -74,14 +74,24 @@ export function GuardianFormModal({ guardian, onClose, onSaved }: GuardianFormMo
   }
 
   if (created) {
+    const attached = created.outcome === "ATTACHED";
     return (
-      <Modal open onClose={onClose} title="Guardian created">
+      <Modal open onClose={onClose} title={attached ? "Guardian added" : "Guardian created"}>
         <div className="space-y-4">
-          <Alert variant="success">
-            {created.guardian.fullName} can now sign in with {created.guardian.email}. An invitation email has been
-            sent to them. Link them to a student from that student's profile, or come back here later.
-          </Alert>
-          <CredentialsReveal email={created.guardian.email} temporaryPassword={created.temporaryPassword} />
+          {attached ? (
+            <Alert variant="success">
+              {created.guardian.fullName} already has a KDLMS account ({created.guardian.email}) at another school.
+              We've added them here and emailed them — they sign in with their existing password.
+            </Alert>
+          ) : (
+            <Alert variant="success">
+              {created.guardian.fullName} can now sign in with {created.guardian.email}. An invitation email has been
+              sent to them. Link them to a student from that student's profile, or come back here later.
+            </Alert>
+          )}
+          {!attached && created.temporaryPassword && (
+            <CredentialsReveal email={created.guardian.email} temporaryPassword={created.temporaryPassword} />
+          )}
           <div className="flex justify-end">
             <Button type="button" onClick={onClose}>
               Done
@@ -111,6 +121,11 @@ export function GuardianFormModal({ guardian, onClose, onSaved }: GuardianFormMo
           <p className="text-xs text-slate-500">
             This is also the guardian's sign-in email — if you change it, they'll need to sign in with the new
             address.
+          </p>
+        )}
+        {!isEdit && (
+          <p className="text-xs text-slate-500">
+            If this email already has a KDLMS account, we'll link that account instead of creating a new one.
           </p>
         )}
         <FormField label="Phone" htmlFor="guardian-phone">

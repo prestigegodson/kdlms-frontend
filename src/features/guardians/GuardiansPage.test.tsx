@@ -73,6 +73,7 @@ describe("GuardiansPage", () => {
     vi.mocked(guardiansApi.createGuardian).mockResolvedValue({
       guardian: GUARDIAN_VIEW,
       temporaryPassword: "temp-pass-123",
+      outcome: "CREATED",
     });
     const user = userEvent.setup();
 
@@ -93,6 +94,32 @@ describe("GuardiansPage", () => {
     expect(await screen.findByText("Guardian created")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Show credentials (if the welcome email didn't arrive)" }));
     expect(screen.getByText("temp-pass-123")).toBeInTheDocument();
+  });
+
+  it("attaches an existing guardian account and shows no temporary password", async () => {
+    mockGuardians([]);
+    vi.mocked(guardiansApi.createGuardian).mockResolvedValue({
+      guardian: { ...GUARDIAN_VIEW, fullName: "Existing Guardian", email: "existing@example.com" },
+      temporaryPassword: null,
+      outcome: "ATTACHED",
+    });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText(/No guardians found/);
+
+    await user.click(screen.getByRole("button", { name: "Add guardian" }));
+    const dialog = await screen.findByRole("dialog");
+
+    await user.type(within(dialog).getByLabelText("First name"), "Typed");
+    await user.type(within(dialog).getByLabelText("Last name"), "Name");
+    await user.type(within(dialog).getByLabelText("Email"), "existing@example.com");
+    await user.click(within(dialog).getByRole("button", { name: "Create guardian" }));
+
+    expect(await screen.findByText("Guardian added")).toBeInTheDocument();
+    // The EXISTING account's name is shown, never the typed one.
+    expect(screen.getByText(/Existing Guardian already has a KDLMS account/)).toBeInTheDocument();
+    expect(screen.queryByText("Show credentials (if the welcome email didn't arrive)")).not.toBeInTheDocument();
   });
 
   it("disables an active guardian", async () => {

@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import { can } from "@/auth/permissions";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useFeatureStore } from "@/stores/featureStore";
-import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 import { useUnreadMessagesStore } from "@/stores/unreadMessagesStore";
 
 const NAV_ITEMS: NavItem[] = [
@@ -34,7 +33,6 @@ const NAV_ITEMS: NavItem[] = [
 
 export function GuardianLayout() {
   const fetchFeatures = useFeatureStore((state) => state.fetchIfNeeded);
-  const fetchSchoolBranding = useSchoolBrandingStore((state) => state.fetchIfNeeded);
   const fetchUnreadMessages = useUnreadMessagesStore((state) => state.fetchIfNeeded);
   // Subscribed (return value intentionally discarded) only to force a
   // re-render, so the Messages `visible()`/`badge()` closures above
@@ -42,11 +40,16 @@ export function GuardianLayout() {
   useFeatureStore((state) => state.communication);
   useUnreadMessagesStore((state) => state.count);
 
+  // Deliberately no schoolBrandingStore fetch here, unlike SchoolLayout: a
+  // guardian's token carries no schoolId (CLAUDE.md's cross-school guardian
+  // rule - one login may hold wards at several schools), the backend returns
+  // an empty SchoolBrandingView for a GUARDIAN caller, and PortalShell already
+  // falls back to the platform wordmark when the store has no logo - so the
+  // fetch would be a wasted round-trip that leaves the store empty anyway.
   useEffect(() => {
     fetchFeatures();
-    fetchSchoolBranding();
     fetchUnreadMessages("GUARDIAN");
-  }, [fetchFeatures, fetchSchoolBranding, fetchUnreadMessages]);
+  }, [fetchFeatures, fetchUnreadMessages]);
 
   return <PortalShell portalName="Guardian" navItems={NAV_ITEMS} />;
 }
