@@ -91,9 +91,27 @@ h4 {
  * `cursor-grab` utilities and `DateInput`'s `disabled:cursor-not-allowed`.
  */
 @layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
+  }
+
+  /*
+   * Replaces the OS tap highlight suppressed above. Touch-only (`hover: none`)
+   * so a mouse never sees it - desktop already has `hover:` states. Instant,
+   * not transitioned: a native press dims on touch-down, and an instant state
+   * change is also why prefers-reduced-motion correctly leaves it alone.
+   */
+  @media (hover: none) {
+    button:not(:disabled):active,
+    [role="button"]:not(:disabled):active,
+    a:active {
+      opacity: 0.6;
+    }
   }
 }
 
@@ -143,6 +161,25 @@ h4 {
 }
 .overlay-fade {
   animation: overlay-fade-in 200ms ease-out;
+}
+
+/*
+ * MobileAppBar's title (PortalShell.tsx) is keyed on the title string, so
+ * React remounts the node on every navigation and this replays each time -
+ * a small crossfade instead of the hard swap it had before.
+ */
+@keyframes appbar-title-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.appbar-title {
+  animation: appbar-title-in 180ms ease-out;
 }
 
 /*

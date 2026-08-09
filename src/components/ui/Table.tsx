@@ -11,7 +11,7 @@ import { useNavigate } from "react-router";
  */
 export function Table({ className = "", ...props }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto overscroll-x-contain">
       <table className={`responsive-table min-w-full ${className}`} {...props} />
     </div>
   );
@@ -67,7 +67,7 @@ function renderRow(
       onClick={interactive ? handleClick : undefined}
       onKeyDown={interactive ? handleKeyDown : undefined}
       tabIndex={interactive ? 0 : undefined}
-      className={`transition-colors hover:bg-slate-50 ${interactive ? "cursor-pointer" : ""} ${className}`}
+      className={`transition-colors hover:bg-slate-50 ${interactive ? "cursor-pointer active:bg-slate-100" : ""} ${className}`}
       {...props}
     >
       {children}

@@ -49,6 +49,8 @@ export function LoginPage() {
             id="email"
             type="email"
             autoComplete="email"
+            autoCapitalize="none"
+            enterKeyHint="next"
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
@@ -59,6 +61,7 @@ export function LoginPage() {
             id="password"
             type="password"
             autoComplete="current-password"
+            enterKeyHint="go"
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}

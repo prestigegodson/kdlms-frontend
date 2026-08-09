@@ -112,4 +112,11 @@ describe("LoginPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
   });
+
+  it("gives the password field a Go mobile keyboard hint, as the form's terminal field", () => {
+    const router = createMemoryRouter(routes, { initialEntries: ["/login"] });
+    render(<RouterProvider router={router} />);
+
+    expect(screen.getByLabelText("Password")).toHaveAttribute("enterKeyHint", "go");
+  });
 });

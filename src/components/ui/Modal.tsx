@@ -116,7 +116,7 @@ export function Modal({ open, onClose, title, size = "lg", children }: ModalProp
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
-        <div className="overflow-y-auto px-6 pb-6 pt-4 mobile:has-[[data-sheet-dock]]:pb-0">{children}</div>
+        <div className="overflow-y-auto overscroll-contain px-6 pb-6 pt-4 mobile:has-[[data-sheet-dock]]:pb-0">{children}</div>
       </div>
     </div>
   );

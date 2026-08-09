@@ -91,6 +91,7 @@ export function SetInitialPasswordPage() {
             id="newPassword"
             type="password"
             autoComplete="new-password"
+            enterKeyHint="next"
             required
             minLength={8}
             value={newPassword}
@@ -102,6 +103,7 @@ export function SetInitialPasswordPage() {
             id="confirmPassword"
             type="password"
             autoComplete="new-password"
+            enterKeyHint="go"
             required
             minLength={8}
             value={confirmPassword}

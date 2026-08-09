@@ -103,7 +103,7 @@ export function ComposeNoteSheet({ classId, roster, initialStudentIds, onClose, 
       ) : (
         <div className="space-y-4">
           <FormField label={`Recipients (${selected.size} selected)`}>
-            <div className="max-h-56 space-y-1 overflow-y-auto rounded-control border border-slate-200 p-2">
+            <div className="max-h-56 space-y-1 overflow-y-auto overscroll-contain rounded-control border border-slate-200 p-2">
               <label className="flex min-h-11 cursor-pointer items-center gap-2 border-b border-slate-100 px-1 text-sm font-medium">
                 <Checkbox checked={allSelected} onChange={toggleAll} />
                 Select all {roster.length}

@@ -9,7 +9,7 @@
  */
 export function ReportPreviewFrame({ html }: { html: string }) {
   return (
-    <div className="flex justify-center overflow-x-auto rounded-panel bg-slate-100 p-4 sm:p-8">
+    <div className="flex justify-center overflow-x-auto overscroll-x-contain rounded-panel bg-slate-100 p-4 sm:p-8">
       <div
         className="w-full max-w-[794px] shrink-0 bg-white shadow-lg"
         style={{ aspectRatio: "210 / 297" }}

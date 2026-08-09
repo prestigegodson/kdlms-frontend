@@ -90,6 +90,7 @@ export function ChangePasswordDialog({ open, onClose }: ChangePasswordDialogProp
               id="currentPassword"
               type="password"
               autoComplete="current-password"
+              enterKeyHint="next"
               required
               value={currentPassword}
               onChange={(event) => setCurrentPassword(event.target.value)}
@@ -100,6 +101,7 @@ export function ChangePasswordDialog({ open, onClose }: ChangePasswordDialogProp
               id="newPassword"
               type="password"
               autoComplete="new-password"
+              enterKeyHint="next"
               required
               minLength={8}
               value={newPassword}
@@ -111,6 +113,7 @@ export function ChangePasswordDialog({ open, onClose }: ChangePasswordDialogProp
               id="confirmPassword"
               type="password"
               autoComplete="new-password"
+              enterKeyHint="go"
               required
               minLength={8}
               value={confirmPassword}

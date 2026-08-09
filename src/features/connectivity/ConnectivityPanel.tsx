@@ -34,7 +34,7 @@ export function ConnectivityPanel() {
   }, []);
 
   return (
-    <Card className="max-w-md">
+    <Card className="w-full max-w-md">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
         Backend connectivity
       </h2>

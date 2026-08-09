@@ -27,10 +27,14 @@ const VARIANT_CLASSES: Record<Variant, string> = {
   destructive: "bg-red-600 text-white hover:bg-red-700",
 };
 
-// md/lg (not sm - it stays compact for dense inline rows) get a 44px touch
-// floor below `md`; above that, height is padding-driven exactly as today.
+// All three sizes get a 44px touch floor below `md`, per style_guide.md
+// §5's touch-target minimum; above that, height is padding-driven exactly
+// as today. A handful of dense inline-action call sites (LevelsPage,
+// PackagesPage, ResultTemplatesPage, SubjectGroupsModal) already hand-apply
+// `mobile:min-h-11` to their own sm-size buttons from an earlier phase -
+// those are now redundant with this default but harmless, so left as-is.
 const SIZE_CLASSES: Record<Size, string> = {
-  sm: "gap-1.5 px-3 py-1.5 text-sm",
+  sm: "gap-1.5 px-3 py-1.5 text-sm mobile:min-h-11",
   md: "gap-2 px-4 py-2 text-sm mobile:min-h-11",
   lg: "gap-2 px-5 py-2.5 text-base mobile:min-h-11",
 };

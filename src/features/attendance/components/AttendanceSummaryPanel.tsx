@@ -37,7 +37,7 @@ export function AttendanceSummaryPanel({ summary }: AttendanceSummaryPanelProps)
         <StatTile label="Excused" value={summary.excused} />
         <StatTile label="Rate" value={`${summary.attendanceRate.toFixed(1)}%`} />
       </div>
-      <ul className="mt-4 max-h-64 space-y-1 overflow-y-auto text-sm">
+      <ul className="mt-4 max-h-64 space-y-1 overflow-y-auto overscroll-contain text-sm">
         {summary.days.map((day) => (
           <li key={day.date} className="flex items-center justify-between border-b border-slate-100 py-1.5 last:border-0">
             <span className="text-slate-600">{formatLongDate(day.date)}</span>

@@ -21,7 +21,7 @@ export function BroadsheetTable({ broadsheet }: BroadsheetTableProps) {
   return (
     <div className="space-y-2">
       <p className="text-xs text-slate-500 lg:hidden">Scroll sideways to see every subject &rarr;</p>
-      <div className="overflow-x-auto rounded-card border border-slate-200">
+      <div className="overflow-x-auto overscroll-x-contain rounded-card border border-slate-200">
         <table className="min-w-full border-collapse text-sm">
           <thead className="border-b border-slate-200 bg-slate-50">
             <tr>

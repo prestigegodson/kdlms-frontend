@@ -487,7 +487,7 @@ export function DateInput({
               </button>
             </div>
 
-            <div className="mt-2 grid grid-cols-7 gap-1 px-3 text-center text-xs font-medium text-slate-400">
+            <div className="mt-2 grid grid-cols-7 gap-1 px-3 text-center text-xs font-medium text-slate-400 mobile:gap-0.5">
               {WEEKDAY_LABELS.map((label) => (
                 <div key={label}>{label}</div>
               ))}
@@ -497,7 +497,7 @@ export function DateInput({
               role="grid"
               aria-label="Day"
               onKeyDown={handleGridKeyDown}
-              className="grid grid-cols-7 gap-1 px-3 pb-3 pt-1"
+              className="grid grid-cols-7 gap-1 px-3 pb-3 pt-1 mobile:gap-0.5"
             >
               {grid.map((day) => {
                 const inCurrentMonth = day.getMonth() === viewDate.getMonth();
@@ -533,7 +533,12 @@ export function DateInput({
                     disabled={dayDisabled}
                     onClick={() => selectDay(day)}
                     onFocus={() => setFocusedDate(day)}
-                    className={`flex h-8 w-8 items-center justify-center rounded-control text-sm transition-colors mobile:h-10 mobile:w-10 ${toneClasses}`}
+                    // mobile:w-full, not a fixed width: the popup is
+                    // mobile:w-[21rem] (336px) with px-3 (24px) and a
+                    // 7-column gap-0.5 grid (12px), leaving 300px / 7 ≈
+                    // 43px per column - a fixed w-11 (44px) would overflow
+                    // that. h-11 (44px) still clears the touch-target floor.
+                    className={`flex h-8 w-8 items-center justify-center rounded-control text-sm transition-colors mobile:h-11 mobile:w-full ${toneClasses}`}
                   >
                     {day.getDate()}
                   </button>

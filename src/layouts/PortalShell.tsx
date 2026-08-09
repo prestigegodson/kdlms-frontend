@@ -137,7 +137,11 @@ function MobileAppBar() {
           <ChevronLeft className="h-5 w-5" aria-hidden="true" />
         </Link>
       )}
-      <p aria-hidden="true" className="min-w-0 flex-1 truncate font-display text-lg font-medium text-slate-900">
+      <p
+        key={title}
+        aria-hidden="true"
+        className="appbar-title min-w-0 flex-1 truncate font-display text-lg font-medium text-slate-900"
+      >
         {title}
       </p>
     </div>
@@ -339,7 +343,7 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
                 type="button"
                 onClick={() => setDrawerOpen(false)}
                 aria-label="Close menu"
-                className="flex h-9 w-9 items-center justify-center rounded-control text-slate-500 hover:bg-slate-100"
+                className="flex h-9 w-9 items-center justify-center rounded-control text-slate-500 hover:bg-slate-100 mobile:h-11 mobile:w-11"
               >
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>

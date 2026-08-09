@@ -230,11 +230,11 @@ function TemplateDesignerBody({ initialTemplate }: { initialTemplate: ResultTemp
       )}
 
       <div className="hidden flex-1 gap-4 lg:grid lg:grid-cols-[220px_1fr_280px]">
-        <Card className="max-h-[calc(100vh-220px)] overflow-y-auto p-3">
+        <Card className="max-h-[calc(100vh-220px)] overflow-y-auto overscroll-contain p-3">
           <BlockPalette mode={template.assessmentMode} editor={editor} />
         </Card>
         <DesignerCanvas editor={editor} />
-        <div className="max-h-[calc(100vh-220px)] space-y-4 overflow-y-auto">
+        <div className="max-h-[calc(100vh-220px)] space-y-4 overflow-y-auto overscroll-contain">
           <Card className="p-3">
             <InspectorPanel editor={editor} />
           </Card>

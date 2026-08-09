@@ -53,7 +53,7 @@ export function MobileTabBar({
             key={item.href}
             to={item.href}
             aria-current={isActive ? "page" : undefined}
-            className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] ${
+            className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] transition-colors ${
               isActive ? "text-brand-600" : "text-slate-500"
             }`}
           >
@@ -78,7 +78,7 @@ export function MobileTabBar({
           aria-haspopup="dialog"
           aria-expanded={drawerOpen}
           aria-label={`More, ${portalName} navigation`}
-          className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] ${
+          className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] transition-colors ${
             moreActive ? "text-brand-600" : "text-slate-500"
           }`}
         >

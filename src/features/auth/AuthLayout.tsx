@@ -19,13 +19,13 @@ interface AuthLayoutProps {
 export function AuthLayout({ title, description, children }: AuthLayoutProps) {
   return (
     <div
-      className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12"
+      className="flex min-h-dvh justify-center bg-slate-50 px-4 py-8 sm:py-12"
       style={{
         backgroundImage:
           "repeating-linear-gradient(to bottom, transparent, transparent 39px, #E2E8F0 39px, #E2E8F0 40px)",
       }}
     >
-      <div className="w-full max-w-sm">
+      <div className="my-auto w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
           <span className="flex h-11 w-11 items-center justify-center rounded-card bg-brand-500 text-white">
             <GraduationCap className="h-6 w-6" aria-hidden="true" />

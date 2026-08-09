@@ -47,13 +47,24 @@ export function ResetPasswordPage() {
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           {status.kind === "error" && <Alert variant="error">{status.message}</Alert>}
           <FormField label="Reset token" htmlFor="token">
-            <Input id="token" required value={token} onChange={(event) => setToken(event.target.value)} />
+            <Input
+              id="token"
+              autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="next"
+              required
+              value={token}
+              onChange={(event) => setToken(event.target.value)}
+            />
           </FormField>
           <FormField label="New password" htmlFor="newPassword">
             <Input
               id="newPassword"
               type="password"
               autoComplete="new-password"
+              enterKeyHint="go"
               required
               minLength={8}
               value={newPassword}
