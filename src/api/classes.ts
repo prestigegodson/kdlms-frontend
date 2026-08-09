@@ -24,6 +24,7 @@ export interface CreateClassRequest {
 
 export interface UpdateClassRequest {
   name: string;
+  levelId: string;
 }
 
 /** Mirrors backend academics.application.port.in.SubjectTeacherView. */

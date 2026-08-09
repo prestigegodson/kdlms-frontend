@@ -237,6 +237,7 @@ function AdminClasses({ role }: { role: Role | undefined }) {
         <RenameClassModal
           key={editing.id}
           schoolClass={editing}
+          levels={levels}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
@@ -417,12 +418,14 @@ function ClassFormModal({
 
 interface RenameClassModalProps {
   schoolClass: SchoolClassView;
+  levels: LevelView[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-function RenameClassModal({ schoolClass, onClose, onSaved }: RenameClassModalProps) {
+function RenameClassModal({ schoolClass, levels, onClose, onSaved }: RenameClassModalProps) {
   const [name, setName] = useState(schoolClass.name);
+  const [levelId, setLevelId] = useState(schoolClass.levelId);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -431,7 +434,7 @@ function RenameClassModal({ schoolClass, onClose, onSaved }: RenameClassModalPro
     setSubmitting(true);
     setError(null);
     try {
-      await updateClass(schoolClass.id, { name });
+      await updateClass(schoolClass.id, { name, levelId });
       onSaved();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to save class");
@@ -446,6 +449,9 @@ function RenameClassModal({ schoolClass, onClose, onSaved }: RenameClassModalPro
         {error && <Alert variant="error">{error}</Alert>}
         <FormField label="Name" htmlFor="class-rename">
           <Input id="class-rename" required value={name} onChange={(event) => setName(event.target.value)} />
+        </FormField>
+        <FormField label="Level" htmlFor="class-level">
+          <LevelSelect id="class-level" levels={levels} value={levelId} onChange={setLevelId} activeOnly required />
         </FormField>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
