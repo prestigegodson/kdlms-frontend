@@ -35,6 +35,18 @@ export function formatLongDate(iso: string | null | undefined): string {
   return `${date.getDate()} ${MONTH_FORMATTER.format(date)}, ${date.getFullYear()}`;
 }
 
+/** "2026-06-29" -> "June". Returns "—" for missing/unparseable input. */
+export function formatMonthName(iso: string | null | undefined): string {
+  if (!iso) {
+    return "—";
+  }
+  const date = parseIsoDate(iso);
+  if (!date) {
+    return "—";
+  }
+  return MONTH_FORMATTER.format(date);
+}
+
 /** "2026-06-29", "2027-07-29" -> "29 June, 2026 - 29 July, 2027". */
 export function formatDateRange(
   start: string | null | undefined,

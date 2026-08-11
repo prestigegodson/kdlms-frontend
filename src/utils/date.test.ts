@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDateRange, formatLongDate } from "@/utils/date";
+import { formatDateRange, formatLongDate, formatMonthName } from "@/utils/date";
 
 describe("formatLongDate", () => {
   it("formats an ISO date as 'D Month, YYYY'", () => {
@@ -20,6 +20,19 @@ describe("formatLongDate", () => {
 
   it("returns an em dash for unparseable input", () => {
     expect(formatLongDate("not-a-date")).toBe("—");
+  });
+});
+
+describe("formatMonthName", () => {
+  it("formats an ISO date as the month name only", () => {
+    expect(formatMonthName("2026-09-14")).toBe("September");
+  });
+
+  it("returns an em dash for missing/unparseable input", () => {
+    expect(formatMonthName(undefined)).toBe("—");
+    expect(formatMonthName(null)).toBe("—");
+    expect(formatMonthName("")).toBe("—");
+    expect(formatMonthName("not-a-date")).toBe("—");
   });
 });
 
