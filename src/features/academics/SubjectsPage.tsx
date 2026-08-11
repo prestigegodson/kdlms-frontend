@@ -288,6 +288,7 @@ function AdminSubjects() {
                     <TableHeaderCell>Name</TableHeaderCell>
                     <TableHeaderCell>Code</TableHeaderCell>
                     <TableHeaderCell>Terms</TableHeaderCell>
+                    <TableHeaderCell>Selective</TableHeaderCell>
                     <TableHeaderCell>Status</TableHeaderCell>
                     {canManage && <TableHeaderCell>Actions</TableHeaderCell>}
                   </TableRow>
@@ -301,6 +302,9 @@ function AdminSubjects() {
                       <TableCell label="Code">{subject.code ?? "—"}</TableCell>
                       <TableCell label="Terms">
                         <Badge variant="neutral">{termNumbersLabel(subject.termNumbers)}</Badge>
+                      </TableCell>
+                      <TableCell label="Selective">
+                        {subject.selective ? <Badge variant="neutral">Selective</Badge> : "—"}
                       </TableCell>
                       <TableCell label="Status">
                         <Badge variant={subject.status === "ACTIVE" ? "success" : "neutral"}>
@@ -357,6 +361,7 @@ function AdminSubjects() {
               code: values.code,
               subjectGroupId: values.subjectGroupId,
               termNumbers: values.termNumbers,
+              selective: values.selective,
             });
           }}
           onSaved={() => {
@@ -378,6 +383,7 @@ function AdminSubjects() {
               code: values.code,
               subjectGroupId: values.subjectGroupId,
               termNumbers: values.termNumbers,
+              selective: values.selective,
             });
           }}
           onSaved={() => {
@@ -453,6 +459,7 @@ interface SubjectFormValues {
   code?: string;
   subjectGroupId?: string;
   termNumbers?: number[];
+  selective?: boolean;
 }
 
 interface SubjectFormModalProps {
@@ -469,6 +476,7 @@ function SubjectFormModal({ title, initial, groups, onClose, onSubmit, onSaved }
   const [code, setCode] = useState(initial?.code ?? "");
   const [subjectGroupId, setSubjectGroupId] = useState(initial?.subjectGroupId ?? "");
   const [termNumbers, setTermNumbers] = useState<number[]>(initial?.termNumbers ?? ALL_TERM_NUMBERS);
+  const [selective, setSelective] = useState(initial?.selective ?? false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -489,7 +497,13 @@ function SubjectFormModal({ title, initial, groups, onClose, onSubmit, onSaved }
     setSubmitting(true);
     setError(null);
     try {
-      await onSubmit({ name, code: code || undefined, subjectGroupId: subjectGroupId || undefined, termNumbers });
+      await onSubmit({
+        name,
+        code: code || undefined,
+        subjectGroupId: subjectGroupId || undefined,
+        termNumbers,
+        selective,
+      });
       onSaved();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to save subject");
@@ -535,6 +549,16 @@ function SubjectFormModal({ title, initial, groups, onClose, onSubmit, onSaved }
               </label>
             ))}
           </div>
+        </FormField>
+        <FormField label="Enrollment" htmlFor="subject-selective">
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <Checkbox id="subject-selective" checked={selective} onChange={() => setSelective((value) => !value)} />
+            Selective - only registered students take it
+          </label>
+          <p className="mt-1 text-xs text-slate-500">
+            Leave unchecked for a mandatory subject every student at this level takes. Once any score or rating has
+            been recorded, this can no longer be changed.
+          </p>
         </FormField>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

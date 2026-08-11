@@ -1,10 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserSummary } from "@/api/auth";
 import * as classesApi from "@/api/classes";
 import type { SchoolClassView } from "@/api/classes";
 import * as subjectsApi from "@/api/subjects";
+import type { SubjectView } from "@/api/subjects";
 import * as usersApi from "@/api/users";
 import { ClassDetailPage } from "@/features/academics/ClassDetailPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
@@ -17,6 +19,8 @@ vi.mock("@/api/classes", async () => {
     assignClassTeacher: vi.fn(),
     unassignClassTeacher: vi.fn(),
     listSubjectTeachers: vi.fn(),
+    getSubjectRegistrations: vi.fn(),
+    setSubjectRegistrations: vi.fn(),
   };
 });
 
@@ -122,5 +126,48 @@ describe("ClassDetailPage - class teacher assignment", () => {
     expect(await screen.findByText("Sonia B")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Unassign" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Assign a class teacher")).not.toBeInTheDocument();
+  });
+
+  it("badges a selective subject and lets an admin manage its registered students", async () => {
+    const SELECTIVE_SUBJECT: SubjectView = {
+      id: "subject-1",
+      schoolId: "school-1",
+      levelId: "level-1",
+      name: "Further Maths",
+      termNumbers: [1, 2, 3],
+      selective: true,
+      status: "ACTIVE",
+    };
+    vi.mocked(classesApi.getClass).mockResolvedValue(BASE_CLASS);
+    vi.mocked(subjectsApi.listSubjects).mockResolvedValue({
+      content: [SELECTIVE_SUBJECT],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 100,
+    });
+    vi.mocked(classesApi.getSubjectRegistrations).mockResolvedValue({
+      classId: "class-1",
+      subjectId: "subject-1",
+      subjectName: "Further Maths",
+      students: [
+        { studentId: "student-1", studentName: "Ada Obi", admissionNumber: "BFA/2026/0001", registered: false },
+      ],
+    });
+    vi.mocked(classesApi.setSubjectRegistrations).mockResolvedValue({
+      outcomes: [{ studentId: "student-1", success: true }],
+    });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    expect(await screen.findByText("Selective")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Manage" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByLabelText("Select Ada Obi"));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(classesApi.setSubjectRegistrations).toHaveBeenCalledWith("class-1", "subject-1", ["student-1"]);
+    expect(await within(dialog).findByText("1 of 1 succeeded.")).toBeInTheDocument();
   });
 });

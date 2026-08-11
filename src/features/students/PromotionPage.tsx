@@ -10,11 +10,8 @@ import {
   type MovementResult,
   type StudentView,
 } from "@/api/students";
-import { CheckCircle2, XCircle } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { Checkbox } from "@/components/ui/Checkbox";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -22,8 +19,18 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
-import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
+import { OutcomeList } from "@/features/students/components/OutcomeList";
+import { StudentPicker, type StudentPickerRow } from "@/features/students/components/StudentPicker";
 import { useAuthStore } from "@/stores/authStore";
+
+function toPickerRow(student: StudentView, showCurrentClass?: boolean): StudentPickerRow {
+  return {
+    id: student.id,
+    name: student.fullName,
+    admissionNumber: student.admissionNumber,
+    secondaryLabel: showCurrentClass ? (student.currentClassName ?? "—") : undefined,
+  };
+}
 
 /** The `sr-only lg:not-sr-only` sub-header grid idiom `ClassTermPicker`/`ClassDatePicker` established - 2-up below `lg`, one equal-width row from `lg` up. */
 const PICKER_GRID_CLASS = "grid min-w-0 flex-1 grid-cols-2 gap-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none lg:gap-4";
@@ -100,6 +107,7 @@ export function PromotionPage() {
 function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; sessions: AcademicSessionView[] }) {
   const [sourceClassId, setSourceClassId] = useState("");
   const [targetClassId, setTargetClassId] = useState("");
+  const [sourceSessionId, setSourceSessionId] = useState("");
   const [targetSessionId, setTargetSessionId] = useState("");
   const [roster, setRoster] = useState<StudentView[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -111,13 +119,13 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
     if (!sourceClassId) {
       return;
     }
-    listStudents({ classId: sourceClassId, status: "ACTIVE" }, 0, 200)
+    listStudents({ classId: sourceClassId, sessionId: sourceSessionId }, 0, 200)
       .then((page) => {
         setRoster(page.content);
         setSelected(new Set(page.content.map((student) => student.id)));
       })
       .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Failed to load the class roster"));
-  }, [sourceClassId]);
+  }, [sourceClassId, sourceSessionId]);
 
   function toggle(studentId: string) {
     setSelected((current) => {
@@ -153,7 +161,29 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
     <div className="space-y-6">
       <StickySubHeader>
         <div className={PICKER_GRID_CLASS}>
-          <FormField label="Source class" htmlFor="promote-source-class" labelClassName="sr-only lg:not-sr-only">
+          <FormField
+            label="Source session"
+            htmlFor="promote-source-session"
+            labelClassName="sr-only lg:not-sr-only"
+          >
+            <Select
+              id="promote-source-session"
+              value={sourceSessionId}
+              onChange={(event) => setSourceSessionId(event.target.value)}
+            >
+              <option value="">Select a session…</option>
+              {sessions.map((session) => (
+                <option key={session.id} value={session.id}>
+                  {session.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField
+            label="Source class"
+            htmlFor="promote-source-class"
+            labelClassName="sr-only lg:not-sr-only"
+          >
             <Select
               id="promote-source-class"
               value={sourceClassId}
@@ -170,7 +200,11 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
               ))}
             </Select>
           </FormField>
-          <FormField label="Target session" htmlFor="promote-target-session" labelClassName="sr-only lg:not-sr-only">
+          <FormField
+            label="Target session"
+            htmlFor="promote-target-session"
+            labelClassName="sr-only lg:not-sr-only"
+          >
             <Select
               id="promote-target-session"
               value={targetSessionId}
@@ -184,7 +218,11 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
               ))}
             </Select>
           </FormField>
-          <FormField label="Target class" htmlFor="promote-target-class" labelClassName="sr-only lg:not-sr-only">
+          <FormField
+            label="Target class"
+            htmlFor="promote-target-class"
+            labelClassName="sr-only lg:not-sr-only"
+          >
             <Select
               id="promote-target-class"
               value={targetClassId}
@@ -209,11 +247,14 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
         </div>
       )}
       {sourceClassId && roster !== null && roster.length === 0 && (
-        <EmptyState title="No active students in this class" description="Choose a different source class." />
+        <EmptyState
+          title="No active students in this class"
+          description="Choose a different source class."
+        />
       )}
       {sourceClassId && roster !== null && roster.length > 0 && (
         <StudentPicker
-          students={roster}
+          rows={roster.map((student) => toPickerRow(student))}
           selected={selected}
           onToggle={toggle}
           onSelectAll={() => setSelected(new Set(roster.map((student) => student.id)))}
@@ -227,12 +268,19 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
             disabled={submitting || selected.size === 0 || !targetClassId || !targetSessionId}
             onClick={handlePromote}
           >
-            {submitting ? "Promoting…" : `Promote ${selected.size} student${selected.size === 1 ? "" : "s"}`}
+            {submitting
+              ? "Promoting…"
+              : `Promote ${selected.size} student${selected.size === 1 ? "" : "s"}`}
           </Button>
         </div>
       )}
 
-      {result && <OutcomeList result={result} students={roster ?? []} />}
+      {result && (
+        <OutcomeList
+          result={result}
+          nameOf={(id) => (roster ?? []).find((student) => student.id === id)?.fullName ?? id}
+        />
+      )}
     </div>
   );
 }
@@ -334,12 +382,12 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
       )}
       {query && candidates !== null && candidates.length > 0 && (
         <StudentPicker
-          students={candidates}
+          rows={candidates.map((student) => toPickerRow(student, true))}
           selected={selected}
           onToggle={toggle}
           onSelectAll={() => setSelected(new Set(candidates.map((student) => student.id)))}
           onSelectNone={() => setSelected(new Set())}
-          showCurrentClass
+          secondaryColumnLabel="Current class"
         />
       )}
 
@@ -354,90 +402,12 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
         </div>
       )}
 
-      {result && <OutcomeList result={result} students={candidates ?? []} />}
+      {result && (
+        <OutcomeList
+          result={result}
+          nameOf={(id) => (candidates ?? []).find((student) => student.id === id)?.fullName ?? id}
+        />
+      )}
     </div>
-  );
-}
-
-interface StudentPickerProps {
-  students: StudentView[];
-  selected: Set<string>;
-  onToggle: (studentId: string) => void;
-  onSelectAll: () => void;
-  onSelectNone: () => void;
-  showCurrentClass?: boolean;
-}
-
-function StudentPicker({ students, selected, onToggle, onSelectAll, onSelectNone, showCurrentClass }: StudentPickerProps) {
-  const allSelected = students.length > 0 && students.every((student) => selected.has(student.id));
-
-  return (
-    <Card className="p-0">
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableHeaderCell>
-              <Checkbox
-                checked={allSelected}
-                onChange={() => (allSelected ? onSelectNone() : onSelectAll())}
-                aria-label="Select all"
-              />
-            </TableHeaderCell>
-            <TableHeaderCell>Name</TableHeaderCell>
-            <TableHeaderCell>Admission no.</TableHeaderCell>
-            {showCurrentClass && <TableHeaderCell>Current class</TableHeaderCell>}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {students.map((student) => (
-            <TableRow key={student.id}>
-              <TableCell label="Select">
-                <Checkbox
-                  checked={selected.has(student.id)}
-                  onChange={() => onToggle(student.id)}
-                  aria-label={`Select ${student.fullName}`}
-                />
-              </TableCell>
-              <TableCell label="Name" className="font-medium text-slate-900">
-                {student.fullName}
-              </TableCell>
-              <TableCell label="Admission no.">{student.admissionNumber}</TableCell>
-              {showCurrentClass && <TableCell label="Current class">{student.currentClassName ?? "—"}</TableCell>}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
-  );
-}
-
-function OutcomeList({ result, students }: { result: MovementResult; students: StudentView[] }) {
-  const nameOf = (studentId: string) => students.find((student) => student.id === studentId)?.fullName ?? studentId;
-  const successCount = result.outcomes.filter((outcome) => outcome.success).length;
-
-  return (
-    <Card>
-      <h2 className="text-sm font-semibold text-slate-900">Result</h2>
-      <p className="mt-1 text-sm text-slate-500">
-        {successCount} of {result.outcomes.length} moved successfully.
-      </p>
-      <ul className="mt-3 space-y-2">
-        {result.outcomes.map((outcome) => (
-          <li key={outcome.studentId} className="flex items-start gap-2 text-sm">
-            {outcome.success ? (
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" aria-hidden="true" />
-            ) : (
-              <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" aria-hidden="true" />
-            )}
-            <span>
-              <span className="font-medium text-slate-900">{nameOf(outcome.studentId)}</span>
-              {!outcome.success && outcome.message && (
-                <span className="text-slate-500"> &mdash; {outcome.message}</span>
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </Card>
   );
 }

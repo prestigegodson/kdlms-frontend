@@ -9,7 +9,13 @@ import type { GuardianView } from "@/api/guardians";
 import * as sessionsApi from "@/api/sessions";
 import type { AcademicSessionView } from "@/api/sessions";
 import * as studentsApi from "@/api/students";
-import type { EnrollmentView, StudentGuardianView, StudentMedicalView, StudentView } from "@/api/students";
+import type {
+  EnrollmentView,
+  StudentGuardianView,
+  StudentMedicalView,
+  StudentSubjectsView,
+  StudentView,
+} from "@/api/students";
 import { StudentDetailPage } from "@/features/students/StudentDetailPage";
 import { resetAppBarStore, useAppBarStore } from "@/stores/appBarStore";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
@@ -25,6 +31,8 @@ vi.mock("@/api/students", async () => {
     transferStudentClass: vi.fn(),
     getStudentMedical: vi.fn(),
     updateStudentMedical: vi.fn(),
+    getStudentSubjects: vi.fn(),
+    replaceStudentSubjects: vi.fn(),
   };
 });
 
@@ -97,6 +105,11 @@ const MEDICAL_VIEW: StudentMedicalView = {
   emergencyContactRelationship: "Father",
 };
 
+const EMPTY_SUBJECTS_VIEW: StudentSubjectsView = {
+  studentId: "student-1",
+  subjects: [],
+};
+
 const GUARDIAN_VIEW: StudentGuardianView = {
   guardianId: "guardian-1",
   guardianName: "Chidi Obi",
@@ -151,6 +164,8 @@ describe("StudentDetailPage", () => {
     vi.mocked(sessionsApi.listTerms).mockResolvedValue([]);
     // Fetched by the MedicalCard section - not under test in most cases here.
     vi.mocked(studentsApi.getStudentMedical).mockResolvedValue(EMPTY_MEDICAL_VIEW);
+    // Fetched by the new SubjectsCard section - not under test in most cases here.
+    vi.mocked(studentsApi.getStudentSubjects).mockResolvedValue(EMPTY_SUBJECTS_VIEW);
   });
 
   it("shows bio, enrollment history, linked guardians, and medical info", async () => {
@@ -190,6 +205,40 @@ describe("StudentDetailPage", () => {
       expect.objectContaining({ bloodGroup: "O_POSITIVE" }),
     );
     expect(await screen.findByText("O+")).toBeInTheDocument();
+  });
+
+  it("shows mandatory and selective subjects, and saves a changed registration", async () => {
+    vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+    vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+    vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+    const subjectsView: StudentSubjectsView = {
+      studentId: "student-1",
+      subjects: [
+        { subjectId: "subject-1", name: "Mathematics", selective: false, registered: true },
+        { subjectId: "subject-2", name: "Further Maths", selective: true, registered: false },
+      ],
+    };
+    vi.mocked(studentsApi.getStudentSubjects).mockResolvedValue(subjectsView);
+    vi.mocked(studentsApi.replaceStudentSubjects).mockResolvedValue({
+      ...subjectsView,
+      subjects: [
+        subjectsView.subjects[0],
+        { ...subjectsView.subjects[1], registered: true },
+      ],
+    });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByRole("heading", { name: "Ada Obi" });
+    expect(await screen.findByText("Mathematics")).toBeInTheDocument();
+    expect(screen.getByText("Further Maths")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Manage subjects" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByLabelText("Further Maths"));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(studentsApi.replaceStudentSubjects).toHaveBeenCalledWith("student-1", ["subject-2"]);
   });
 
   it("graduates the student after confirming", async () => {

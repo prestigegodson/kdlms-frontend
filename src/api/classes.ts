@@ -1,4 +1,5 @@
 import { apiFetch } from "@/api/client";
+import type { MovementResult } from "@/api/students";
 import type { Page } from "@/api/types";
 
 export type ClassStatus = "ACTIVE" | "INACTIVE";
@@ -101,4 +102,41 @@ export function assignSubjectTeacher(
 
 export function unassignSubjectTeacher(classId: string, subjectId: string): Promise<void> {
   return apiFetch<void>(`${BASE}/${classId}/subject-teachers/${subjectId}`, { method: "DELETE" });
+}
+
+/** Mirrors backend student.application.port.in.SubjectRegistrationView. */
+export interface SubjectRegistrationView {
+  classId: string;
+  subjectId: string;
+  subjectName: string;
+  students: StudentRegistrationRow[];
+}
+
+export interface StudentRegistrationRow {
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  registered: boolean;
+}
+
+/** One selective subject's registered/unregistered state across the class's current-session roster. */
+export function getSubjectRegistrations(classId: string, subjectId: string): Promise<SubjectRegistrationView> {
+  return apiFetch<SubjectRegistrationView>(`${BASE}/${classId}/subjects/${subjectId}/students`);
+}
+
+/**
+ * Bulk-sets the subject's registered roster to exactly `studentIds` - a
+ * student on the roster but omitted here is unregistered. Returns a
+ * per-student outcome (same shape as {@link MovementResult}), never fails
+ * the whole batch for one bad row.
+ */
+export function setSubjectRegistrations(
+  classId: string,
+  subjectId: string,
+  studentIds: string[],
+): Promise<MovementResult> {
+  return apiFetch<MovementResult>(`${BASE}/${classId}/subjects/${subjectId}/students`, {
+    method: "PUT",
+    body: JSON.stringify(studentIds),
+  });
 }

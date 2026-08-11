@@ -125,6 +125,25 @@ export interface MovementResult {
   outcomes: StudentOutcome[];
 }
 
+/**
+ * Mirrors backend student.application.port.in.StudentSubjectsView - every
+ * subject of the student's level for their current-session enrollment. A
+ * mandatory (non-selective) row is always `registered: true`; a selective
+ * row reflects whether the student is actually registered for it.
+ */
+export interface StudentSubjectsView {
+  studentId: string;
+  subjects: SubjectRegistrationRow[];
+}
+
+export interface SubjectRegistrationRow {
+  subjectId: string;
+  name: string;
+  code?: string;
+  selective: boolean;
+  registered: boolean;
+}
+
 export interface PlacementRequest {
   targetClassId: string;
   sessionId: string;
@@ -214,6 +233,37 @@ export function transferStudentClass(studentId: string, classId: string): Promis
 
 export function listStudentGuardians(studentId: string): Promise<StudentGuardianView[]> {
   return apiFetch<StudentGuardianView[]>(`${BASE}/${studentId}/guardians`);
+}
+
+/**
+ * Every subject of the student's level, mandatory ones always registered,
+ * selective ones flagged registered or not - for the current staff caller
+ * (admin path). A class teacher reads/writes the same data through
+ * `getMyStudentSubjects`/`replaceMyStudentSubjects` (`/api/v1/me/...`)
+ * instead - both resolve to the same backend use case and guard.
+ */
+export function getStudentSubjects(studentId: string): Promise<StudentSubjectsView> {
+  return apiFetch<StudentSubjectsView>(`${BASE}/${studentId}/subjects`);
+}
+
+/** Full replace - `subjectIds` is the complete desired set of selective subjects; mandatory ones are never submitted. */
+export function replaceStudentSubjects(studentId: string, subjectIds: string[]): Promise<StudentSubjectsView> {
+  return apiFetch<StudentSubjectsView>(`${BASE}/${studentId}/subjects`, {
+    method: "PUT",
+    body: JSON.stringify({ subjectIds }),
+  });
+}
+
+/** Same resource as {@link getStudentSubjects}, scoped to the calling TEACHER's own class-taught student. */
+export function getMyStudentSubjects(studentId: string): Promise<StudentSubjectsView> {
+  return apiFetch<StudentSubjectsView>(`/api/v1/me/students/${studentId}/subjects`);
+}
+
+export function replaceMyStudentSubjects(studentId: string, subjectIds: string[]): Promise<StudentSubjectsView> {
+  return apiFetch<StudentSubjectsView>(`/api/v1/me/students/${studentId}/subjects`, {
+    method: "PUT",
+    body: JSON.stringify({ subjectIds }),
+  });
 }
 
 /** Search-and-place: individually selected students (typically from a lower level/class) into a target class/session. */

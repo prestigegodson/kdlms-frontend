@@ -72,6 +72,7 @@ const GROUPED_SUBJECT: SubjectView = {
   subjectGroupId: "group-1",
   subjectGroupName: "Sciences",
   termNumbers: [1, 2, 3],
+  selective: false,
   status: "ACTIVE",
 };
 
@@ -82,6 +83,7 @@ const UNGROUPED_SUBJECT: SubjectView = {
   name: "Mathematics",
   code: "MTH",
   termNumbers: [1, 2, 3],
+  selective: false,
   status: "ACTIVE",
 };
 
@@ -91,6 +93,7 @@ const TERM_THREE_ONLY_SUBJECT: SubjectView = {
   levelId: "level-1",
   name: "Project Work",
   termNumbers: [3],
+  selective: false,
   status: "ACTIVE",
 };
 
@@ -210,6 +213,7 @@ describe("SubjectsPage", () => {
       code: undefined,
       subjectGroupId: "group-1",
       termNumbers: [1, 2, 3],
+      selective: false,
     });
   });
 
@@ -245,7 +249,43 @@ describe("SubjectsPage", () => {
       code: undefined,
       subjectGroupId: undefined,
       termNumbers: [3],
+      selective: false,
     });
+  });
+
+  it("creates a subject marked selective", async () => {
+    mockSubjects([]);
+    const selectiveSubject: SubjectView = { ...UNGROUPED_SUBJECT, id: "subject-4", selective: true };
+    vi.mocked(subjectsApi.createSubject).mockResolvedValue(selectiveSubject);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText(/No subjects yet/);
+
+    await user.click(screen.getByRole("button", { name: "Add subject" }));
+    const dialog = await screen.findByRole("dialog");
+
+    await user.type(within(dialog).getByLabelText("Name"), "Mathematics");
+    await user.click(within(dialog).getByLabelText(/Selective/));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(subjectsApi.createSubject).toHaveBeenCalledWith({
+      levelId: "level-1",
+      name: "Mathematics",
+      code: undefined,
+      subjectGroupId: undefined,
+      termNumbers: [1, 2, 3],
+      selective: true,
+    });
+  });
+
+  it("badges a selective subject in the list", async () => {
+    mockSubjects([{ ...UNGROUPED_SUBJECT, selective: true }]);
+
+    renderAsSchoolAdmin();
+
+    expect(await screen.findByText("Mathematics")).toBeInTheDocument();
+    expect(screen.getByText("Selective", { selector: "span" })).toBeInTheDocument();
   });
 
   it("refuses to save a subject with no terms selected", async () => {

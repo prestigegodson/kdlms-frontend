@@ -92,6 +92,20 @@ export const can = {
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
   },
 
+  /**
+   * Registering students for a selective subject - both admin roles plus a
+   * TEACHER who class-teaches at least one class (mirrors `markAttendance`'s
+   * scoping; a subject-teacher-only account gets nothing). The real
+   * per-student/per-class scoping is still enforced server-side - this only
+   * gates whether the UI offers the control at all.
+   */
+  manageStudentSubjects(role: Role | undefined, scope: TeacherScope | null): boolean {
+    if (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN") {
+      return true;
+    }
+    return role === "TEACHER" && (scope?.isClassTeacher ?? false);
+  },
+
   /** Per-level grading system configuration - SCHOOL_ADMIN only, school-wide like levels themselves. */
   manageGradingSystems(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN";

@@ -15,12 +15,15 @@ import {
   type EnrollmentView,
   getStudent,
   getStudentMedical,
+  getStudentSubjects,
   graduateStudent,
   listStudentEnrollments,
   listStudentGuardians,
   reinstateStudent,
+  replaceStudentSubjects,
   type StudentGuardianView,
   type StudentMedicalView,
+  type StudentSubjectsView,
   transferStudentClass,
   updateStudent,
   withdrawStudent,
@@ -35,6 +38,7 @@ import { Accordion } from "@/components/ui/Accordion";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CredentialsReveal } from "@/components/ui/CredentialsReveal";
 import { DateInput } from "@/components/ui/DateInput";
@@ -231,6 +235,8 @@ export function StudentDetailPage() {
       />
 
       <MedicalCard studentId={student.id} canManage={canManage} onActionError={setActionError} />
+
+      <SubjectsCard student={student} canManage={canManage} onActionError={setActionError} />
 
       <StudentAttendanceCard studentId={student.id} variant="accordion" />
 
@@ -624,6 +630,195 @@ function MedicalCard({ studentId, canManage, onActionError }: MedicalCardProps) 
         />
       )}
     </>
+  );
+}
+
+interface SubjectsCardProps {
+  student: StudentView;
+  canManage: boolean;
+  onActionError: (message: string) => void;
+}
+
+/**
+ * Every subject of the student's level - mandatory ones always taken,
+ * selective ones badged registered or not, per CLAUDE.md's Domain Rules. A
+ * student with no active enrollment (withdrawn/graduated) has nothing to
+ * show here, which the backend reports as a 404 - treated as an empty state
+ * rather than an error.
+ */
+function SubjectsCard({ student, canManage, onActionError }: SubjectsCardProps) {
+  const [subjects, setSubjects] = useState<StudentSubjectsView | null>(null);
+  const [noEnrollment, setNoEnrollment] = useState(false);
+  const [managing, setManaging] = useState(false);
+
+  function fetchSubjects() {
+    getStudentSubjects(student.id)
+      .then((view) => {
+        setSubjects(view);
+        setNoEnrollment(false);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof ApiError && error.status === 404) {
+          setSubjects(null);
+          setNoEnrollment(true);
+          return;
+        }
+        onActionError(error instanceof ApiError ? error.message : "Failed to load subjects");
+      });
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- onActionError is a stable setState setter
+  useEffect(fetchSubjects, [student.id]);
+
+  const mandatory = subjects?.subjects.filter((subject) => !subject.selective) ?? [];
+  const selective = subjects?.subjects.filter((subject) => subject.selective) ?? [];
+
+  return (
+    <>
+      <Accordion
+        title="Subjects"
+        actions={
+          canManage && subjects && (
+            <button
+              type="button"
+              className="text-sm font-medium text-brand-500 hover:text-brand-600"
+              onClick={() => setManaging(true)}
+            >
+              Manage subjects
+            </button>
+          )
+        }
+      >
+        {subjects === null && !noEnrollment && (
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <Spinner /> Loading…
+          </div>
+        )}
+        {noEnrollment && (
+          <EmptyState
+            title="No current enrollment"
+            description="This student has no active class enrollment to show subjects for."
+          />
+        )}
+        {subjects !== null && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Mandatory</h3>
+              {mandatory.length === 0 ? (
+                <p className="text-sm text-slate-500">None yet.</p>
+              ) : (
+                <ul className="flex flex-wrap gap-2">
+                  {mandatory.map((subject) => (
+                    <li key={subject.subjectId}>
+                      <Badge variant="neutral">{subject.name}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Selective</h3>
+              {selective.length === 0 ? (
+                <p className="text-sm text-slate-500">This level has no selective subjects.</p>
+              ) : (
+                <ul className="flex flex-wrap gap-2">
+                  {selective.map((subject) => (
+                    <li key={subject.subjectId}>
+                      <Badge variant={subject.registered ? "success" : "neutral"}>{subject.name}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </Accordion>
+
+      {managing && subjects && (
+        <ManageSubjectsModal
+          studentId={student.id}
+          subjects={subjects}
+          onClose={() => setManaging(false)}
+          onSaved={(updated) => {
+            setSubjects(updated);
+            setManaging(false);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+interface ManageSubjectsModalProps {
+  studentId: string;
+  subjects: StudentSubjectsView;
+  onClose: () => void;
+  onSaved: (updated: StudentSubjectsView) => void;
+}
+
+/** Full-replace: the checked set becomes the student's complete selective-subject registration. */
+function ManageSubjectsModal({ studentId, subjects, onClose, onSaved }: ManageSubjectsModalProps) {
+  const selectiveSubjects = subjects.subjects.filter((subject) => subject.selective);
+  const [selected, setSelected] = useState<Set<string>>(
+    new Set(selectiveSubjects.filter((subject) => subject.registered).map((subject) => subject.subjectId)),
+  );
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function toggle(subjectId: string) {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(subjectId)) {
+        next.delete(subjectId);
+      } else {
+        next.add(subjectId);
+      }
+      return next;
+    });
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    try {
+      const updated = await replaceStudentSubjects(studentId, [...selected]);
+      onSaved(updated);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to save subjects");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Manage selective subjects">
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        {error && <Alert variant="error">{error}</Alert>}
+        {selectiveSubjects.length === 0 ? (
+          <p className="text-sm text-slate-500">This level has no selective subjects.</p>
+        ) : (
+          <ul className="divide-y divide-slate-100 rounded-control border border-slate-200">
+            {selectiveSubjects.map((subject) => (
+              <li key={subject.subjectId} className="px-3 py-2">
+                <label className="flex min-h-11 items-center gap-2 text-sm text-slate-700">
+                  <Checkbox checked={selected.has(subject.subjectId)} onChange={() => toggle(subject.subjectId)} />
+                  {subject.name}
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={submitting}>
+            {submitting ? "Saving…" : "Save"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

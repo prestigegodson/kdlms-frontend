@@ -159,7 +159,7 @@ describe("PromotionPage", () => {
       targetSessionId: "session-2",
       studentIds: ["student-1"],
     });
-    expect(await screen.findByText("1 of 1 moved successfully.")).toBeInTheDocument();
+    expect(await screen.findByText("1 of 1 succeeded.")).toBeInTheDocument();
   });
 
   it("searches for and places individual students", async () => {

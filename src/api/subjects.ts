@@ -14,6 +14,14 @@ export interface SubjectView {
   subjectGroupName?: string;
   /** Which of terms 1-3 this subject is taught in, ascending - e.g. [1, 2, 3] or [3]. */
   termNumbers: number[];
+  /**
+   * When true, only students explicitly registered for it take it (via the
+   * student subjects panel / class registration screen) - default false
+   * means every student at the level takes it, unchanged from before this
+   * flag existed. Toggling it once any score/rating has been recorded is
+   * rejected by the backend (422), in either direction.
+   */
+  selective: boolean;
   status: SubjectStatus;
 }
 
@@ -25,6 +33,8 @@ export interface CreateSubjectRequest {
   subjectGroupId?: string;
   /** Optional; omit or leave empty to default to every term. */
   termNumbers?: number[];
+  /** Defaults to false (mandatory) when omitted. */
+  selective?: boolean;
 }
 
 export interface UpdateSubjectRequest {
@@ -37,6 +47,8 @@ export interface UpdateSubjectRequest {
    * term with recorded assessments is rejected by the backend.
    */
   termNumbers?: number[];
+  /** Changing this once any score/rating has been recorded is rejected (422). */
+  selective?: boolean;
 }
 
 const BASE = "/api/v1/subjects";
