@@ -79,3 +79,32 @@ export function deactivateSubject(subjectId: string): Promise<void> {
 export function deleteSubject(subjectId: string): Promise<void> {
   return apiFetch<void>(`${BASE}/${subjectId}`, { method: "DELETE" });
 }
+
+/** Mirrors backend academics ManageSubjectsUseCase.SubjectCopyOutcome. {@code createdSubjectId} is unset on a failed row. */
+export interface SubjectCopyOutcome {
+  sourceSubjectId: string;
+  createdSubjectId?: string;
+  success: boolean;
+  message?: string;
+}
+
+/** Mirrors backend academics ManageSubjectsUseCase.CopyResult. */
+export interface SubjectCopyResult {
+  outcomes: SubjectCopyOutcome[];
+}
+
+export interface CopySubjectsRequest {
+  sourceLevelId: string;
+  targetLevelId: string;
+  subjectIds: string[];
+}
+
+/**
+ * Bulk-creates copies of another level's subjects on the target level -
+ * name, code, terms taught, and the selective flag carry over. A row whose
+ * name already exists on the target level is skipped and reported as a
+ * failed outcome rather than failing the whole copy.
+ */
+export function copySubjects(request: CopySubjectsRequest): Promise<SubjectCopyResult> {
+  return apiFetch<SubjectCopyResult>(`${BASE}/copy`, { method: "POST", body: JSON.stringify(request) });
+}

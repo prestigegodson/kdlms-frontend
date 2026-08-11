@@ -26,6 +26,7 @@ vi.mock("@/api/subjects", async () => {
     activateSubject: vi.fn(),
     deactivateSubject: vi.fn(),
     deleteSubject: vi.fn(),
+    copySubjects: vi.fn(),
   };
 });
 
@@ -55,6 +56,17 @@ const PRIMARY_LEVEL: LevelView = {
   baseLevel: "PRIMARY",
   displayName: "Primary",
   rank: 4,
+  status: "ACTIVE",
+  subjectCount: 0,
+  classCount: 0,
+  subjectGroupCount: 0,
+};
+
+const SECONDARY_LEVEL: LevelView = {
+  id: "level-2",
+  baseLevel: "SECONDARY",
+  displayName: "Secondary",
+  rank: 5,
   status: "ACTIVE",
   subjectCount: 0,
   classCount: 0,
@@ -93,6 +105,28 @@ const TERM_THREE_ONLY_SUBJECT: SubjectView = {
   levelId: "level-1",
   name: "Project Work",
   termNumbers: [3],
+  selective: false,
+  status: "ACTIVE",
+};
+
+const SOURCE_PHYSICS: SubjectView = {
+  id: "subject-10",
+  schoolId: "school-1",
+  levelId: "level-2",
+  name: "Physics",
+  code: "PHY",
+  termNumbers: [1, 2, 3],
+  selective: false,
+  status: "ACTIVE",
+};
+
+const SOURCE_CHEMISTRY: SubjectView = {
+  id: "subject-11",
+  schoolId: "school-1",
+  levelId: "level-2",
+  name: "Chemistry",
+  code: "CHM",
+  termNumbers: [1, 2, 3],
   selective: false,
   status: "ACTIVE",
 };
@@ -177,7 +211,7 @@ describe("SubjectsPage", () => {
     vi.clearAllMocks();
     resetTeacherScopeStore();
     resetLevelStore();
-    vi.mocked(levelsApi.listLevels).mockResolvedValue([PRIMARY_LEVEL]);
+    vi.mocked(levelsApi.listLevels).mockResolvedValue([PRIMARY_LEVEL, SECONDARY_LEVEL]);
     vi.mocked(subjectGroupsApi.listSubjectGroups).mockResolvedValue([SCIENCES_GROUP]);
   });
 
@@ -436,5 +470,86 @@ describe("SubjectsPage", () => {
     expect(
       screen.getByText("Your school has not set a current term - showing all your subjects."),
     ).toBeInTheDocument();
+  });
+
+  describe("copying subjects from another level", () => {
+    function mockSubjectsByLevel() {
+      vi.mocked(subjectsApi.listSubjects).mockImplementation((levelId?: string) => {
+        const content = levelId === "level-2" ? [SOURCE_PHYSICS, SOURCE_CHEMISTRY] : [];
+        return Promise.resolve({ content, totalElements: content.length, totalPages: 1, number: 0, size: 200 });
+      });
+    }
+
+    it("pre-selects every active subject from the chosen source level, deselecting one omits it from the request", async () => {
+      mockSubjectsByLevel();
+      vi.mocked(subjectsApi.copySubjects).mockResolvedValue({
+        outcomes: [{ sourceSubjectId: "subject-10", createdSubjectId: "subject-20", success: true }],
+      });
+      const user = userEvent.setup();
+
+      renderAsSchoolAdmin();
+      await screen.findByText(/No subjects yet/);
+
+      await user.click(screen.getByRole("button", { name: "Copy from level…" }));
+      const dialog = await screen.findByRole("dialog", { name: "Copy subjects to Primary" });
+
+      await user.selectOptions(within(dialog).getByLabelText("Copy from level"), "Secondary");
+      await within(dialog).findByText("Physics");
+      expect(within(dialog).getByLabelText("Select all 2")).toBeChecked();
+
+      await user.click(within(dialog).getByLabelText(/Chemistry/));
+      await user.click(within(dialog).getByRole("button", { name: "Copy" }));
+
+      expect(subjectsApi.copySubjects).toHaveBeenCalledWith({
+        sourceLevelId: "level-2",
+        targetLevelId: "level-1",
+        subjectIds: ["subject-10"],
+      });
+      expect(await within(dialog).findByText("Copied")).toBeInTheDocument();
+    });
+
+    it("renders a mixed success/failure outcome list after copying", async () => {
+      mockSubjectsByLevel();
+      vi.mocked(subjectsApi.copySubjects).mockResolvedValue({
+        outcomes: [
+          { sourceSubjectId: "subject-10", createdSubjectId: "subject-20", success: true },
+          {
+            sourceSubjectId: "subject-11",
+            success: false,
+            message: "A subject named 'Chemistry' already exists for this level.",
+          },
+        ],
+      });
+      const user = userEvent.setup();
+
+      renderAsSchoolAdmin();
+      await screen.findByText(/No subjects yet/);
+
+      await user.click(screen.getByRole("button", { name: "Copy from level…" }));
+      const dialog = await screen.findByRole("dialog", { name: "Copy subjects to Primary" });
+
+      await user.selectOptions(within(dialog).getByLabelText("Copy from level"), "Secondary");
+      await within(dialog).findByText("Physics");
+      await user.click(within(dialog).getByRole("button", { name: "Copy" }));
+
+      expect(await within(dialog).findByText("Copied")).toBeInTheDocument();
+      expect(
+        within(dialog).getByText("A subject named 'Chemistry' already exists for this level."),
+      ).toBeInTheDocument();
+
+      await user.click(within(dialog).getByRole("button", { name: "Done" }));
+      // A successful row triggers a reload of the target level's own list.
+      expect(subjectsApi.listSubjects).toHaveBeenCalledWith("level-1");
+    });
+
+    it("hides the copy action when only one level exists", async () => {
+      vi.mocked(levelsApi.listLevels).mockResolvedValue([PRIMARY_LEVEL]);
+      mockSubjects([]);
+
+      renderAsSchoolAdmin();
+      await screen.findByText(/No subjects yet/);
+
+      expect(screen.getByRole("button", { name: "Copy from level…" })).toBeDisabled();
+    });
   });
 });

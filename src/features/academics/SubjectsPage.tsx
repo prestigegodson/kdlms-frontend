@@ -34,20 +34,12 @@ import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
+import { CopySubjectsModal } from "@/features/academics/components/CopySubjectsModal";
 import { LevelSelect } from "@/features/academics/components/LevelSelect";
+import { ALL_TERM_NUMBERS, termNumbersLabel } from "@/features/academics/subjectTerms";
 import { useAuthStore } from "@/stores/authStore";
 import { useLevelStore } from "@/stores/levelStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
-
-const ALL_TERM_NUMBERS = [1, 2, 3];
-
-/** "All terms" when every term is selected, otherwise e.g. "T1, T3". */
-function termNumbersLabel(termNumbers: number[]): string {
-  if (termNumbers.length === ALL_TERM_NUMBERS.length) {
-    return "All terms";
-  }
-  return termNumbers.map((termNumber) => `T${termNumber}`).join(", ");
-}
 
 type ListState =
   | { kind: "loading" }
@@ -163,6 +155,7 @@ function AdminSubjects() {
   const levels = useLevelStore((storeState) => storeState.levels);
   const levelsStatus = useLevelStore((storeState) => storeState.status);
   const fetchLevels = useLevelStore((storeState) => storeState.fetchIfNeeded);
+  const refreshLevels = useLevelStore((storeState) => storeState.refresh);
   // Derived rather than synced via an effect: nothing chosen yet falls back
   // to the first level once the store has loaded, with no setState-in-effect.
   const [selectedLevelId, setSelectedLevelId] = useState<string | null>(null);
@@ -173,6 +166,7 @@ function AdminSubjects() {
   const [editing, setEditing] = useState<SubjectView | null>(null);
   const [deleting, setDeleting] = useState<SubjectView | null>(null);
   const [managingGroups, setManagingGroups] = useState(false);
+  const [copying, setCopying] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -233,6 +227,9 @@ function AdminSubjects() {
             <>
               <Button variant="secondary" onClick={() => setManagingGroups(true)} disabled={!levelId}>
                 Manage groups
+              </Button>
+              <Button variant="secondary" onClick={() => setCopying(true)} disabled={!levelId || levels.length < 2}>
+                Copy from level…
               </Button>
               <Button onClick={() => setCreateOpen(true)} disabled={!levelId}>
                 Add subject
@@ -398,6 +395,18 @@ function AdminSubjects() {
           groups={groups}
           onClose={() => setManagingGroups(false)}
           onChanged={load}
+        />
+      )}
+      {copying && levelId && (
+        <CopySubjectsModal
+          targetLevelId={levelId}
+          targetLevelName={levels.find((level) => level.id === levelId)?.displayName ?? "this level"}
+          levels={levels}
+          onClose={() => setCopying(false)}
+          onCopied={() => {
+            load();
+            refreshLevels();
+          }}
         />
       )}
       {deleting && (
