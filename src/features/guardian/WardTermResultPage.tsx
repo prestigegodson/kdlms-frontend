@@ -16,7 +16,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { GradeKey } from "@/features/assessments/components/GradeKey";
 import { StudentTermResultCard } from "@/features/assessments/components/StudentTermResultCard";
-import { WardResultsBreadcrumb } from "@/features/guardian/components/WardResultsBreadcrumb";
+import { WardBreadcrumb } from "@/features/guardian/components/WardBreadcrumb";
 import { useWardResultsContext } from "@/features/guardian/WardResultsLayout";
 import { ReportPreviewFrame } from "@/features/reporting/components/ReportPreviewFrame";
 import { downloadBlob } from "@/utils/download";
@@ -43,8 +43,8 @@ export function WardTermResultPage() {
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
   // A term change resets the previous term's result during render (the
-  // pattern `WardResultsLayout`/`WardTermSelect` document) rather than
-  // inside the effect below, which only fetches.
+  // pattern `WardResultsLayout` documents) rather than inside the effect
+  // below, which only fetches.
   const [lastTermId, setLastTermId] = useState(termId);
   if (termId !== lastTermId) {
     setLastTermId(termId);
@@ -110,7 +110,7 @@ export function WardTermResultPage() {
         }
       />
       {term && (
-        <WardResultsBreadcrumb
+        <WardBreadcrumb
           steps={[
             { label: ward.schoolName, to: "/guardian/results" },
             { label: ward.fullName, to: `/guardian/results/${ward.studentId}` },

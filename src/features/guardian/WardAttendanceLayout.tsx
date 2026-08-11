@@ -7,14 +7,14 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Spinner } from "@/components/ui/Spinner";
 import { useWardStore } from "@/stores/wardStore";
 
-interface WardResultsContextValue {
+interface WardAttendanceContextValue {
   ward: MyWardView;
   terms: WardTermView[];
 }
 
-/** Read by `WardSessionsPage`/`WardSessionTermsPage`/`WardTermResultPage` - must only be called from inside `WardResultsLayout`'s route subtree. */
-export function useWardResultsContext(): WardResultsContextValue {
-  return useOutletContext<WardResultsContextValue>();
+/** Read by `WardAttendanceSessionsPage`/`WardAttendanceSessionTermsPage`/`WardTermAttendancePage` - must only be called from inside `WardAttendanceLayout`'s route subtree. */
+export function useWardAttendanceContext(): WardAttendanceContextValue {
+  return useOutletContext<WardAttendanceContextValue>();
 }
 
 type TermsState =
@@ -24,14 +24,16 @@ type TermsState =
   | { status: "error"; message: string };
 
 /**
- * Owns the one `listWardTerms` fetch shared by steps 2-4 of the results
- * drill-down (`/guardian/results/:studentId/**`), resolves `:studentId`
+ * Owns the one `listWardTerms` fetch shared by steps 2-4 of the attendance
+ * drill-down (`/guardian/attendance/:studentId/**`), resolves `:studentId`
  * against `wardStore`, and renders every loading/error/not-found state once
  * so the three leaf pages don't repeat them. Also keeps `wardStore`'s
- * selection in sync with the URL, so a guardian who switches to Attendance
- * or Messages mid-drill-down lands on the same ward they were just viewing.
+ * selection in sync with the URL, so a guardian who switches to Results or
+ * Messages mid-drill-down lands on the same ward they were just viewing.
+ * Mirrors `WardResultsLayout` - attendance isn't publication-gated, but the
+ * data shape and loading states are identical.
  */
-export function WardResultsLayout() {
+export function WardAttendanceLayout() {
   const { studentId } = useParams<{ studentId: string }>();
   const { wards, status: wardsStatus, errorMessage: wardsError, fetchIfNeeded, retry, select } = useWardStore();
   const [termsState, setTermsState] = useState<TermsState>({ status: "loading" });
@@ -45,7 +47,7 @@ export function WardResultsLayout() {
   }, [studentId, select]);
 
   // A studentId change (navigating between wards) resets the fetched terms
-  // during render (the pattern `ScoreEntryGrid` documents) rather than
+  // during render (the pattern `WardResultsLayout` documents) rather than
   // inside the effect below, which only fetches. `retryToken`
   // lets `ErrorState`'s Retry action re-run the same effect without a
   // studentId change.
@@ -67,7 +69,7 @@ export function WardResultsLayout() {
         }
         setTermsState({
           status: "error",
-          message: error instanceof ApiError ? error.message : "Failed to load this ward's results",
+          message: error instanceof ApiError ? error.message : "Failed to load this ward's attendance",
         });
       });
   }, [studentId, retryToken]);
@@ -78,7 +80,7 @@ export function WardResultsLayout() {
   }
 
   if (!studentId) {
-    return <EmptyState title="Ward not found" description="Choose a ward from your results list." />;
+    return <EmptyState title="Ward not found" description="Choose a ward from your attendance list." />;
   }
 
   if (wardsStatus === "idle" || wardsStatus === "loading" || termsState.status === "loading") {
@@ -95,12 +97,12 @@ export function WardResultsLayout() {
 
   const ward = wards.find((candidate) => candidate.studentId === studentId);
   if (!ward || termsState.status === "not-found") {
-    return <EmptyState title="Ward not found" description="Choose a ward from your results list." />;
+    return <EmptyState title="Ward not found" description="Choose a ward from your attendance list." />;
   }
 
   if (termsState.status === "error") {
     return <ErrorState message={termsState.message} onRetry={retryTerms} />;
   }
 
-  return <Outlet context={{ ward, terms: termsState.terms } satisfies WardResultsContextValue} />;
+  return <Outlet context={{ ward, terms: termsState.terms } satisfies WardAttendanceContextValue} />;
 }

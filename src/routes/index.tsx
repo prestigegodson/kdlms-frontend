@@ -20,12 +20,16 @@ import { LandingPage } from "@/features/connectivity/LandingPage";
 import { AdminDashboardPage } from "@/features/dashboard/AdminDashboardPage";
 import { SchoolDashboardPage } from "@/features/dashboard/SchoolDashboardPage";
 import { NotificationSettingsPage } from "@/features/guardian/NotificationSettingsPage";
+import { WardAttendanceLayout } from "@/features/guardian/WardAttendanceLayout";
 import { WardAttendancePage } from "@/features/guardian/WardAttendancePage";
+import { WardAttendanceSessionsPage } from "@/features/guardian/WardAttendanceSessionsPage";
+import { WardAttendanceSessionTermsPage } from "@/features/guardian/WardAttendanceSessionTermsPage";
 import { WardMessagesPage } from "@/features/guardian/WardMessagesPage";
 import { WardResultsLayout } from "@/features/guardian/WardResultsLayout";
 import { WardResultsPage } from "@/features/guardian/WardResultsPage";
 import { WardSessionsPage } from "@/features/guardian/WardSessionsPage";
 import { WardSessionTermsPage } from "@/features/guardian/WardSessionTermsPage";
+import { WardTermAttendancePage } from "@/features/guardian/WardTermAttendancePage";
 import { WardTermResultPage } from "@/features/guardian/WardTermResultPage";
 import { WardsPage } from "@/features/guardian/WardsPage";
 import { GuardiansPage } from "@/features/guardians/GuardiansPage";
@@ -237,7 +241,21 @@ export const routes: RouteObject[] = [
               },
             ],
           },
-          { path: "attendance", element: <WardAttendancePage /> },
+          {
+            path: "attendance",
+            children: [
+              { index: true, element: <WardAttendancePage /> },
+              {
+                path: ":studentId",
+                element: <WardAttendanceLayout />,
+                children: [
+                  { index: true, element: <WardAttendanceSessionsPage /> },
+                  { path: ":sessionId", element: <WardAttendanceSessionTermsPage /> },
+                  { path: ":sessionId/:termId", element: <WardTermAttendancePage /> },
+                ],
+              },
+            ],
+          },
           { path: "messages", element: <WardMessagesPage /> },
           { path: "settings", element: <NotificationSettingsPage /> },
         ],

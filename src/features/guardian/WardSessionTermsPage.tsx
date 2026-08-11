@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DrillRow } from "@/features/guardian/components/DrillRow";
-import { WardResultsBreadcrumb } from "@/features/guardian/components/WardResultsBreadcrumb";
+import { WardBreadcrumb } from "@/features/guardian/components/WardBreadcrumb";
 import { useWardResultsContext } from "@/features/guardian/WardResultsLayout";
 
 /**
@@ -41,7 +41,7 @@ export function WardSessionTermsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={sessionName} backTo={`/guardian/results/${ward.studentId}`} />
-      <WardResultsBreadcrumb
+      <WardBreadcrumb
         steps={[
           { label: ward.schoolName, to: "/guardian/results" },
           { label: ward.fullName, to: `/guardian/results/${ward.studentId}` },

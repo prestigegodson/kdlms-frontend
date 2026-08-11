@@ -53,8 +53,9 @@ export interface UpdateTermRequest {
 const SESSIONS_BASE = "/api/v1/sessions";
 const TERMS_BASE = "/api/v1/terms";
 
+/** Newest-first (`startDate` descending) so a previous session is easy to find in a picker, not DB-arbitrary order. */
 export function listSessions(page = 0, size = 20): Promise<Page<AcademicSessionView>> {
-  return apiFetch<Page<AcademicSessionView>>(`${SESSIONS_BASE}?page=${page}&size=${size}`);
+  return apiFetch<Page<AcademicSessionView>>(`${SESSIONS_BASE}?page=${page}&size=${size}&sort=startDate,desc`);
 }
 
 /** Creates the session and whichever of its terms are supplied (1-3, from term 1) in one backend transaction. */

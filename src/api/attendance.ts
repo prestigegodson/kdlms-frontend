@@ -88,6 +88,8 @@ export interface StudentAttendanceSummaryView {
 export interface ClassOverviewRow {
   classId: string;
   className: string;
+  levelId: string;
+  levelName?: string;
   marked: boolean;
   studentsMarked: number;
   present: number;

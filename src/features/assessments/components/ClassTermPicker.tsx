@@ -57,10 +57,13 @@ export function ClassTermPicker({
     if (!sessionId) return;
     listTerms(sessionId).then((fetchedTerms) => {
       setTerms(fetchedTerms);
-      const current = fetchedTerms.find((term) => term.current);
-      if (current) onTermChange(current.id, current.termNumber);
+      // A previous session has no term flagged current - fall back to its
+      // first term rather than leaving termId pointing at whatever the
+      // prior session had selected (a blank Term select that never refetches).
+      const preferred = fetchedTerms.find((term) => term.current) ?? fetchedTerms[0];
+      onTermChange(preferred?.id ?? "", preferred?.termNumber ?? 0);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs only when the session changes; onTermChange defaults to that session's current term
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs only when the session changes; onTermChange defaults to that session's current (or else first) term
   }, [sessionId]);
 
   return (

@@ -3,9 +3,11 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as attendanceApi from "@/api/attendance";
 import * as classesApi from "@/api/classes";
+import * as levelsApi from "@/api/levels";
 import * as meApi from "@/api/me";
 import { AttendancePage } from "@/features/attendance/AttendancePage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetLevelStore } from "@/stores/levelStore";
 
 vi.mock("@/api/me", async () => {
   const actual = await vi.importActual<typeof import("@/api/me")>("@/api/me");
@@ -15,6 +17,11 @@ vi.mock("@/api/me", async () => {
 vi.mock("@/api/classes", async () => {
   const actual = await vi.importActual<typeof import("@/api/classes")>("@/api/classes");
   return { ...actual, listClasses: vi.fn() };
+});
+
+vi.mock("@/api/levels", async () => {
+  const actual = await vi.importActual<typeof import("@/api/levels")>("@/api/levels");
+  return { ...actual, listLevels: vi.fn() };
 });
 
 vi.mock("@/api/attendance", async () => {
@@ -45,6 +52,7 @@ function renderAs(role: "TEACHER" | "SCHOOL_ADMIN") {
 describe("AttendancePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetLevelStore();
     vi.mocked(meApi.listMyClasses).mockResolvedValue([]);
     vi.mocked(classesApi.listClasses).mockResolvedValue({
       content: [],
@@ -53,6 +61,7 @@ describe("AttendancePage", () => {
       number: 0,
       size: 200,
     });
+    vi.mocked(levelsApi.listLevels).mockResolvedValue([]);
     vi.mocked(attendanceApi.getDailyOverview).mockResolvedValue({
       date: "2026-09-14",
       totalClasses: 0,

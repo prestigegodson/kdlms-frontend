@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DrillRow } from "@/features/guardian/components/DrillRow";
-import { WardResultsBreadcrumb } from "@/features/guardian/components/WardResultsBreadcrumb";
+import { WardBreadcrumb } from "@/features/guardian/components/WardBreadcrumb";
 import { useWardResultsContext } from "@/features/guardian/WardResultsLayout";
 
 interface SessionSummary {
@@ -50,7 +50,7 @@ export function WardSessionsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={ward.fullName} description={ward.schoolName} backTo="/guardian/results" />
-      <WardResultsBreadcrumb steps={[{ label: ward.schoolName, to: "/guardian/results" }, { label: ward.fullName }]} />
+      <WardBreadcrumb steps={[{ label: ward.schoolName, to: "/guardian/results" }, { label: ward.fullName }]} />
 
       {sessions.length === 0 && (
         <EmptyState title="No enrolment history yet" description="This ward hasn't been enrolled for any session." />

@@ -88,7 +88,7 @@ function WardCard({ ward, showSchool }: WardCardProps) {
       </button>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant="secondary" size="sm" onClick={() => goTo("/guardian/attendance")}>
+        <Button variant="secondary" size="sm" onClick={() => goTo(`/guardian/attendance/${ward.studentId}`)}>
           View attendance
         </Button>
         <Button variant="secondary" size="sm" onClick={() => setShowMedical(true)}>

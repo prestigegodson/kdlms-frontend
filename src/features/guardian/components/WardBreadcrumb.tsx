@@ -8,18 +8,19 @@ interface BreadcrumbStep {
   to?: string;
 }
 
-interface WardResultsBreadcrumbProps {
+interface WardBreadcrumbProps {
   steps: BreadcrumbStep[];
 }
 
 /**
- * The School › Ward › Session › Term trail shown above each drill-down
- * step, so a guardian always sees where they are in the hierarchy without
- * relying solely on the mobile app bar's single-level back chevron. Own
- * `overflow-x-auto overscroll-x-contain` wrapper so a long school + ward +
- * session name can never widen the page itself at 375px.
+ * The School › Ward › Session › Term trail shown above each step of a
+ * guardian ward drill-down (results or attendance), so a guardian always
+ * sees where they are in the hierarchy without relying solely on the mobile
+ * app bar's single-level back chevron. Own `overflow-x-auto
+ * overscroll-x-contain` wrapper so a long school + ward + session name can
+ * never widen the page itself at 375px.
  */
-export function WardResultsBreadcrumb({ steps }: WardResultsBreadcrumbProps) {
+export function WardBreadcrumb({ steps }: WardBreadcrumbProps) {
   return (
     <nav aria-label="Breadcrumb" className="overflow-x-auto overscroll-x-contain">
       <ol className="flex items-center gap-1.5 whitespace-nowrap text-sm text-slate-500">
