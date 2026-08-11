@@ -1,14 +1,15 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as wardsApi from "@/api/wards";
 import { WardResultsPage } from "@/features/guardian/WardResultsPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
-import { resetWardStore, useWardStore } from "@/stores/wardStore";
+import { resetWardStore } from "@/stores/wardStore";
 
 vi.mock("@/api/wards", async () => {
   const actual = await vi.importActual<typeof import("@/api/wards")>("@/api/wards");
-  return { ...actual, listMyWards: vi.fn(), listWardTerms: vi.fn(), getWardResult: vi.fn() };
+  return { ...actual, listMyWards: vi.fn() };
 });
 
 const WARD = {
@@ -17,9 +18,21 @@ const WARD = {
   admissionNumber: "SCH/2026/0001",
   relationship: "MOTHER",
   gender: "FEMALE" as const,
+  currentClassName: "Primary 3",
   status: "ACTIVE",
   schoolId: "school-1",
   schoolName: "Bright Star Academy",
+};
+
+const WARD_2 = {
+  studentId: "s2",
+  fullName: "Bode Obi",
+  admissionNumber: "SUN/2026/0007",
+  relationship: "FATHER",
+  gender: "MALE" as const,
+  status: "ACTIVE",
+  schoolId: "school-2",
+  schoolName: "Sunrise Academy",
 };
 
 function renderPage() {
@@ -36,15 +49,20 @@ function renderPage() {
     accessToken: "access",
     refreshToken: "refresh",
   });
-  const router = createMemoryRouter([{ path: "/", element: <WardResultsPage /> }], { initialEntries: ["/"] });
+  const router = createMemoryRouter(
+    [
+      { path: "/", element: <WardResultsPage /> },
+      { path: "/guardian/results/:studentId", element: <p>Ward sessions page</p> },
+    ],
+    { initialEntries: ["/"] },
+  );
   render(<RouterProvider router={router} />);
 }
 
-describe("WardResultsPage", () => {
+describe("WardResultsPage (step 1 - wards by school)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetWardStore();
-    vi.mocked(wardsApi.listMyWards).mockResolvedValue([WARD]);
   });
 
   it("shows an empty state when the guardian has no linked wards", async () => {
@@ -55,69 +73,46 @@ describe("WardResultsPage", () => {
     expect(await screen.findByText("No wards linked yet")).toBeInTheDocument();
   });
 
-  it("tells the guardian there are no published results yet when the ward's published-term list is empty", async () => {
-    vi.mocked(wardsApi.listWardTerms).mockResolvedValue([
-      {
-        sessionId: "sess-1",
-        sessionName: "2026/2027",
-        currentSession: true,
-        termId: "term-1",
-        termName: "First Term",
-        termNumber: 1,
-        classId: "class-1",
-        resultsPublished: false,
-      },
-    ]);
+  it("shows a retryable error state when the ward list fails to load", async () => {
+    vi.mocked(wardsApi.listMyWards).mockRejectedValueOnce(new Error("network down")).mockResolvedValue([WARD]);
+    const user = userEvent.setup();
 
     renderPage();
 
-    expect(await screen.findByText("No published results yet for this ward.")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Try again" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
   });
 
-  it("renders a published term result once a term is selected", async () => {
-    vi.mocked(wardsApi.listWardTerms).mockResolvedValue([
-      {
-        sessionId: "sess-1",
-        sessionName: "2026/2027",
-        currentSession: true,
-        termId: "term-1",
-        termName: "First Term",
-        termNumber: 1,
-        classId: "class-1",
-        resultsPublished: true,
-      },
-    ]);
-    vi.mocked(wardsApi.getWardResult).mockResolvedValue({
-      result: {
-        studentId: "s1",
-        enrollmentId: "enr-1",
-        studentName: "Ada Obi",
-        admissionNumber: "SCH/2026/0001",
-        classId: "class-1",
-        termId: "term-1",
-        assessmentMode: "NUMERIC",
-        subjects: [{ subjectId: "subj-1", name: "Mathematics" }],
-        subjectResults: [{ subjectId: "subj-1", finalScore: 88, grade: "A" }],
-        total: 176,
-        average: 88,
-        position: 1,
-      },
-      gradingSystem: {
-        levelId: "level-1",
-        levelName: "Primary",
-        baseLevel: "PRIMARY",
-        assessmentMode: "NUMERIC",
-        showPosition: true,
-        boundaries: [{ grade: "A", minScore: 70, maxScore: 100, remark: "Excellent" }],
-        ratingOptions: [],
-        configured: true,
-      },
-    });
+  it("groups wards under a school heading, even for a single-school guardian", async () => {
+    vi.mocked(wardsApi.listMyWards).mockResolvedValue([WARD]);
 
     renderPage();
-    useWardStore.setState({ selectedWardId: "s1" });
 
-    expect(await screen.findByText("Mathematics")).toBeInTheDocument();
-    expect(screen.getByText("176")).toBeInTheDocument();
+    expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Bright Star Academy" })).toBeInTheDocument();
+  });
+
+  it("groups wards under separate school headings when the guardian has wards at more than one school", async () => {
+    vi.mocked(wardsApi.listMyWards).mockResolvedValue([WARD, WARD_2]);
+
+    renderPage();
+
+    expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
+    expect(screen.getByText("Bode Obi")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Bright Star Academy" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sunrise Academy" })).toBeInTheDocument();
+  });
+
+  it("navigates to the ward's session list when a ward row is tapped", async () => {
+    vi.mocked(wardsApi.listMyWards).mockResolvedValue([WARD]);
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText("Ada Obi");
+    await user.click(screen.getByText("Ada Obi"));
+
+    expect(await screen.findByText("Ward sessions page")).toBeInTheDocument();
   });
 });

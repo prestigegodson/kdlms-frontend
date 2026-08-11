@@ -23,13 +23,18 @@ import { GradeKey } from "@/features/assessments/components/GradeKey";
 import { useAuthStore } from "@/stores/authStore";
 import { BarChart3 } from "lucide-react";
 
+interface AdminResultsPanelProps {
+  /** Seeds the initial class selection (e.g. from ClassDetailPage's "Results & broadsheet" quick link). */
+  initialClassId?: string;
+}
+
 /** An admin's read-only view: pick a class + term, see the broadsheet, and publish/unpublish results for guardians. */
-export function AdminResultsPanel() {
+export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {}) {
   const role = useAuthStore((state) => state.user?.role);
   const canPublish = can.publishResults(role);
 
   const [classes, setClasses] = useState<SchoolClassView[] | null>(null);
-  const [classId, setClassId] = useState("");
+  const [classId, setClassId] = useState(initialClassId ?? "");
   const [termId, setTermId] = useState("");
 
   const [broadsheet, setBroadsheet] = useState<BroadsheetView | null>(null);

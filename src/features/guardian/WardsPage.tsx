@@ -14,6 +14,7 @@ import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { StatTile } from "@/components/ui/StatTile";
+import { groupWardsBySchool } from "@/features/guardian/groupWardsBySchool";
 import { StudentMedicalPanel } from "@/features/students/components/StudentMedicalPanel";
 import { useWardStore } from "@/stores/wardStore";
 
@@ -60,7 +61,7 @@ function WardCard({ ward, showSchool }: WardCardProps) {
     <Card>
       <button
         type="button"
-        onClick={() => goTo("/guardian/results")}
+        onClick={() => goTo(`/guardian/results/${ward.studentId}`)}
         aria-label={`${ward.fullName} — view results`}
         className="flex w-full items-start gap-3 rounded-panel text-left transition-colors hover:bg-slate-50"
       >
@@ -178,7 +179,7 @@ export function WardsPage() {
       )}
       {status === "loaded" && wards.length > 0 && multiSchool && (
         <div className="space-y-6">
-          {groupBySchool(wards).map(([schoolName, schoolWards]) => (
+          {groupWardsBySchool(wards).map(([schoolName, schoolWards]) => (
             <div key={schoolName}>
               <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-slate-500">
                 {schoolName}
@@ -194,18 +195,4 @@ export function WardsPage() {
       )}
     </div>
   );
-}
-
-/** Groups wards by school, preserving each ward's original (name-sorted) relative order within its group. */
-function groupBySchool(wards: MyWardView[]): [string, MyWardView[]][] {
-  const groups = new Map<string, MyWardView[]>();
-  for (const ward of wards) {
-    const group = groups.get(ward.schoolName);
-    if (group) {
-      group.push(ward);
-    } else {
-      groups.set(ward.schoolName, [ward]);
-    }
-  }
-  return [...groups.entries()];
 }

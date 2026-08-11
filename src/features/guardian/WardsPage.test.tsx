@@ -29,7 +29,7 @@ function renderPage() {
   const router = createMemoryRouter(
     [
       { path: "/", element: <WardsPage /> },
-      { path: "/guardian/results", element: <p>Results page</p> },
+      { path: "/guardian/results/:studentId", element: <p>Results page</p> },
     ],
     { initialEntries: ["/"] },
   );

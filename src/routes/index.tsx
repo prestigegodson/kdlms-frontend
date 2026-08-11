@@ -22,7 +22,11 @@ import { SchoolDashboardPage } from "@/features/dashboard/SchoolDashboardPage";
 import { NotificationSettingsPage } from "@/features/guardian/NotificationSettingsPage";
 import { WardAttendancePage } from "@/features/guardian/WardAttendancePage";
 import { WardMessagesPage } from "@/features/guardian/WardMessagesPage";
+import { WardResultsLayout } from "@/features/guardian/WardResultsLayout";
 import { WardResultsPage } from "@/features/guardian/WardResultsPage";
+import { WardSessionsPage } from "@/features/guardian/WardSessionsPage";
+import { WardSessionTermsPage } from "@/features/guardian/WardSessionTermsPage";
+import { WardTermResultPage } from "@/features/guardian/WardTermResultPage";
 import { WardsPage } from "@/features/guardian/WardsPage";
 import { GuardiansPage } from "@/features/guardians/GuardiansPage";
 import { PackagesPage } from "@/features/packages/PackagesPage";
@@ -218,7 +222,21 @@ export const routes: RouteObject[] = [
         ),
         children: [
           { index: true, element: <WardsPage /> },
-          { path: "results", element: <WardResultsPage /> },
+          {
+            path: "results",
+            children: [
+              { index: true, element: <WardResultsPage /> },
+              {
+                path: ":studentId",
+                element: <WardResultsLayout />,
+                children: [
+                  { index: true, element: <WardSessionsPage /> },
+                  { path: ":sessionId", element: <WardSessionTermsPage /> },
+                  { path: ":sessionId/:termId", element: <WardTermResultPage /> },
+                ],
+              },
+            ],
+          },
           { path: "attendance", element: <WardAttendancePage /> },
           { path: "messages", element: <WardMessagesPage /> },
           { path: "settings", element: <NotificationSettingsPage /> },

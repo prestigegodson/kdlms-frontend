@@ -24,13 +24,18 @@ import { BarChart3 } from "lucide-react";
 
 type Tab = "day" | "term";
 
+interface AdminAttendancePanelProps {
+  /** Seeds the Day-register and Term-summary tabs' initial class selection (e.g. from ClassDetailPage's "Attendance register" quick link). */
+  initialClassId?: string;
+}
+
 /**
  * An admin's read-only view: today's marking-status rollup up top, then a
  * choice between one day's register (any class, any date) and one term's
  * per-student totals - never anything to mark, matching CLAUDE.md's
  * class-teacher-write/admin-read rule for attendance.
  */
-export function AdminAttendancePanel() {
+export function AdminAttendancePanel({ initialClassId }: AdminAttendancePanelProps = {}) {
   const [tab, setTab] = useState<Tab>("day");
   const [classes, setClasses] = useState<SchoolClassView[] | null>(null);
 
@@ -70,10 +75,10 @@ export function AdminAttendancePanel() {
       )}
 
       {classes !== null && classes.length > 0 && tab === "day" && (
-        <DayRegisterTab classOptions={classOptions} />
+        <DayRegisterTab classOptions={classOptions} initialClassId={initialClassId} />
       )}
       {classes !== null && classes.length > 0 && tab === "term" && (
-        <TermSummaryTab classOptions={classOptions} />
+        <TermSummaryTab classOptions={classOptions} initialClassId={initialClassId} />
       )}
     </div>
   );
@@ -104,8 +109,8 @@ interface ClassOption {
   name: string;
 }
 
-function DayRegisterTab({ classOptions }: { classOptions: ClassOption[] }) {
-  const [classId, setClassId] = useState(classOptions[0]?.id ?? "");
+function DayRegisterTab({ classOptions, initialClassId }: { classOptions: ClassOption[]; initialClassId?: string }) {
+  const [classId, setClassId] = useState(initialClassId ?? classOptions[0]?.id ?? "");
   const [date, setDate] = useState(todayIso());
   const [register, setRegister] = useState<AttendanceRegisterView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -159,8 +164,8 @@ function DayRegisterTab({ classOptions }: { classOptions: ClassOption[] }) {
   );
 }
 
-function TermSummaryTab({ classOptions }: { classOptions: ClassOption[] }) {
-  const [classId, setClassId] = useState("");
+function TermSummaryTab({ classOptions, initialClassId }: { classOptions: ClassOption[]; initialClassId?: string }) {
+  const [classId, setClassId] = useState(initialClassId ?? "");
   const [termId, setTermId] = useState("");
   const [summary, setSummary] = useState<ClassAttendanceSummaryView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);

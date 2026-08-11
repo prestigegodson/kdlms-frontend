@@ -16,10 +16,15 @@ import { SaveOutcomeList } from "@/features/assessments/components/SaveOutcomeLi
 import { ScoreEntryGrid } from "@/features/assessments/components/ScoreEntryGrid";
 import { ClipboardCheck } from "lucide-react";
 
+interface TeacherEntryPanelProps {
+  /** Seeds the initial class selection (e.g. from ClassDetailPage's "Results & broadsheet" quick link). */
+  initialClassId?: string;
+}
+
 /** A TEACHER's recording flow: pick a class, subject, and term, then fill in the sheet. */
-export function TeacherEntryPanel() {
+export function TeacherEntryPanel({ initialClassId }: TeacherEntryPanelProps = {}) {
   const [classes, setClasses] = useState<TeacherClassView[] | null>(null);
-  const [classId, setClassId] = useState("");
+  const [classId, setClassId] = useState(initialClassId ?? "");
   const [subjects, setSubjects] = useState<SubjectView[] | null>(null);
   const [subjectId, setSubjectId] = useState("");
   const [termId, setTermId] = useState("");

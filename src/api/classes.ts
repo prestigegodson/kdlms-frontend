@@ -1,6 +1,9 @@
 import { apiFetch } from "@/api/client";
+import type { RosterStudentView } from "@/api/me";
 import type { MovementResult } from "@/api/students";
 import type { Page } from "@/api/types";
+
+export type { RosterStudentView };
 
 export type ClassStatus = "ACTIVE" | "INACTIVE";
 
@@ -55,6 +58,15 @@ export function listClasses(
 
 export function getClass(classId: string): Promise<SchoolClassView> {
   return apiFetch<SchoolClassView>(`${BASE}/${classId}`);
+}
+
+/**
+ * The current session's roster for a class - SCHOOL_ADMIN, BRANCH_ADMIN
+ * (own branch), and an assigned TEACHER; 404s (not 403) for a class the
+ * caller can't see. Bounded to one class's roster, so no paging.
+ */
+export function listClassStudents(classId: string): Promise<RosterStudentView[]> {
+  return apiFetch<RosterStudentView[]>(`${BASE}/${classId}/students`);
 }
 
 export function createClass(request: CreateClassRequest): Promise<SchoolClassView> {
