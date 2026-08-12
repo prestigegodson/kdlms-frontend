@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { ChevronLeft, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 import type { Role } from "@/api/types";
@@ -7,6 +7,7 @@ import { MobileTabBar } from "@/layouts/MobileTabBar";
 import { UserMenu } from "@/layouts/UserMenu";
 import { useAppBarStore } from "@/stores/appBarStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useNavGroupsStore } from "@/stores/navGroupsStore";
 import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 
 export interface NavItem {
@@ -61,6 +62,15 @@ interface PortalShellProps {
   contextLabel?: ReactNode;
   /** Rendered above the routed content, e.g. the school portal's subscription plan/limits/expiry banner. */
   banner?: ReactNode;
+  /**
+   * Named groups (matching `NavItem.group`) that start expanded before any
+   * explicit per-user toggle - e.g. the school portal's "Academics", its
+   * everyday teaching/records surface, versus "People"/"Administration"'s
+   * setup screens. A group is also expanded regardless of this list once it
+   * contains the active route (see `renderNav`'s `openGroups` resolution) -
+   * this only shapes the very first, un-toggled, off-route render.
+   */
+  defaultOpenGroups?: string[];
   children?: ReactNode;
 }
 
@@ -163,8 +173,17 @@ function MobileAppBar() {
  * modal overlay. The tab bar itself renders up to 4 role-primary
  * destinations (`NavItem.primary`) plus that "More" tab.
  */
-export function PortalShell({ portalName, navItems, contextLabel, banner, children }: PortalShellProps) {
+export function PortalShell({
+  portalName,
+  navItems,
+  contextLabel,
+  banner,
+  defaultOpenGroups,
+  children,
+}: PortalShellProps) {
   const user = useAuthStore((state) => state.user);
+  const collapsedGroups = useNavGroupsStore((state) => state.collapsed);
+  const setGroupCollapsed = useNavGroupsStore((state) => state.setCollapsed);
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerPathname, setDrawerPathname] = useState(location.pathname);
@@ -260,64 +279,114 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
     }
   }
 
+  // A group's open/closed state, most-specific source first: an explicit
+  // per-user toggle always wins (even against the active route - a user who
+  // deliberately collapsed the group they're currently in stays collapsed);
+  // otherwise it's open if it holds the active route or is named in
+  // `defaultOpenGroups`, closed otherwise. `idPrefix` keeps the rail's and
+  // the drawer's `aria-controls` ids from colliding while the drawer is open
+  // and both copies of this nav are mounted at once.
+  function isGroupOpen(groupName: string) {
+    const key = `${portalName}:${groupName}`;
+    const toggled = collapsedGroups[key];
+    if (toggled !== undefined) {
+      return !toggled;
+    }
+    const containsActiveItem = groups
+      .find((group) => group.name === groupName)
+      ?.items.some((item) => item.href === activeHref);
+    return containsActiveItem || (defaultOpenGroups?.includes(groupName) ?? false);
+  }
+
   // Labelled once, on the sidebar's copy - the drawer's own dialog already
   // carries `${portalName} navigation` as its aria-label, so leaving this
   // one unlabelled keeps that an unambiguous query even while the drawer
   // (and its own copy of this nav) is open.
-  function renderNav(label?: string) {
+  function renderNav(label: string | undefined, idPrefix: string) {
     return (
       <nav aria-label={label} className="flex-1 overflow-y-auto overscroll-contain p-4">
-        {groups.map((group, index) => (
-          <div key={group.name ?? `ungrouped-${index}`} className={index > 0 ? "mt-6" : ""}>
-            {group.name && (
-              <p className="px-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                {group.name}
-              </p>
-            )}
-            <ul className={group.name ? "mt-2 space-y-1" : "space-y-1"}>
-              {group.items.map((item) => {
-                const isActive = item.href === activeHref;
-                const badgeCount = item.badge?.();
-                return (
-                  <li key={item.href}>
-                    <Link
-                      to={item.href}
-                      aria-current={isActive ? "page" : undefined}
-                      className={`flex items-center gap-2.5 rounded-control px-2.5 py-2 text-sm transition-colors ${
-                        isActive
-                          ? "bg-brand-50 font-medium text-brand-800"
-                          : "text-slate-700 hover:bg-slate-100"
-                      }`}
-                    >
-                      {item.icon && <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />}
-                      <span className="flex-1">{item.label}</span>
-                      {!!badgeCount && (
-                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 text-xs font-medium text-white">
-                          {badgeCount > 99 ? "99+" : badgeCount}
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+        {groups.map((group, index) => {
+          const groupName = group.name;
+          const open = groupName === null || isGroupOpen(groupName);
+          const bodyId = `${idPrefix}-nav-group-${index}`;
+          // Roll an unread/other badge up onto a collapsed group's own
+          // header, so e.g. a collapsed Academics doesn't silently hide the
+          // Messages unread count.
+          const groupBadge = group.items.some((item) => !!item.badge?.());
+          return (
+            <div key={groupName ?? `ungrouped-${index}`} className={index > 0 ? "mt-6" : ""}>
+              {groupName && (
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  aria-controls={bodyId}
+                  onClick={() => setGroupCollapsed(`${portalName}:${groupName}`, open)}
+                  className="flex w-full items-center justify-between gap-2 rounded-control px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 hover:text-slate-600 mobile:min-h-11"
+                >
+                  <span className="flex items-center gap-1.5">
+                    {groupName}
+                    {!open && groupBadge && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden="true" />
+                    )}
+                  </span>
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+                    aria-hidden="true"
+                  />
+                </button>
+              )}
+              {open && (
+                <ul id={bodyId} className={groupName ? "mt-2 space-y-1" : "space-y-1"}>
+                  {group.items.map((item) => {
+                    const isActive = item.href === activeHref;
+                    const badgeCount = item.badge?.();
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          to={item.href}
+                          aria-current={isActive ? "page" : undefined}
+                          className={`flex items-center gap-2.5 rounded-control px-2.5 py-2 text-sm transition-colors ${
+                            isActive
+                              ? "bg-brand-50 font-medium text-brand-800"
+                              : "text-slate-700 hover:bg-slate-100"
+                          }`}
+                        >
+                          {item.icon && <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />}
+                          <span className="flex-1">{item.label}</span>
+                          {!!badgeCount && (
+                            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 text-xs font-medium text-white">
+                              {badgeCount > 99 ? "99+" : badgeCount}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          );
+        })}
       </nav>
     );
   }
 
   return (
     <div className="flex min-h-screen">
-      {/* Desktop rail */}
-      <aside className="hidden lg:flex lg:w-64 lg:shrink-0 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white">
-        <div className="flex h-16 min-w-0 items-center border-b border-slate-200 px-6">
+      {/* Desktop rail - sticky + viewport-height so its own nav scrolls
+          independently of the page instead of the whole page needing to
+          scroll to reach items below the fold (see the file-level history:
+          without this, `renderNav`'s `overflow-y-auto` had no bounded box
+          to actually scroll, since `align-items: stretch` on the flex row
+          above stretched the aside to page height, not viewport height). */}
+      <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-64 lg:shrink-0 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white">
+        <div className="flex h-16 min-w-0 shrink-0 items-center border-b border-slate-200 px-6">
           <BrandMark />
         </div>
-        <p className="px-6 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <p className="shrink-0 px-6 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
           {portalName}
         </p>
-        {renderNav(`${portalName} navigation`)}
+        {renderNav(`${portalName} navigation`, "rail")}
       </aside>
 
       {/* Mobile drawer */}
@@ -356,7 +425,7 @@ export function PortalShell({ portalName, navItems, contextLabel, banner, childr
                 </span>
               )}
             </div>
-            {renderNav()}
+            {renderNav(undefined, "drawer")}
           </div>
         </div>
       )}

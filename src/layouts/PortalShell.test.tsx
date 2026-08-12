@@ -9,6 +9,7 @@ import { PortalShell } from "@/layouts/PortalShell";
 import { resetAppBarStore } from "@/stores/appBarStore";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import type { AuthenticatedUser } from "@/stores/authStore";
+import { resetNavGroupsStore, useNavGroupsStore } from "@/stores/navGroupsStore";
 import { resetSchoolBrandingStore, useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 
 const USER: AuthenticatedUser = {
@@ -38,13 +39,24 @@ function renderShell({
   pathname,
   items = NAV_ITEMS,
   children,
+  defaultOpenGroups,
 }: {
   pathname: string;
   items?: NavItem[];
   children?: ReactNode;
+  defaultOpenGroups?: string[];
 }) {
   const router = createMemoryRouter(
-    [{ path: "*", element: <PortalShell portalName="School" navItems={items}>{children}</PortalShell> }],
+    [
+      {
+        path: "*",
+        element: (
+          <PortalShell portalName="School" navItems={items} defaultOpenGroups={defaultOpenGroups}>
+            {children}
+          </PortalShell>
+        ),
+      },
+    ],
     { initialEntries: [pathname] },
   );
   render(<RouterProvider router={router} />);
@@ -65,6 +77,7 @@ describe("PortalShell nav active state", () => {
   beforeEach(() => {
     resetAuthStore();
     useAuthStore.setState({ user: USER, accessToken: "t", refreshToken: "r" });
+    resetNavGroupsStore();
   });
 
   it("marks only Grading systems current on its own route, not Assessments", () => {
@@ -107,6 +120,7 @@ describe("PortalShell brand mark", () => {
     resetAuthStore();
     useAuthStore.setState({ user: USER, accessToken: "t", refreshToken: "r" });
     resetSchoolBrandingStore();
+    resetNavGroupsStore();
   });
 
   afterEach(() => {
@@ -155,6 +169,7 @@ describe("PortalShell tab bar", () => {
   beforeEach(() => {
     resetAuthStore();
     useAuthStore.setState({ user: USER, accessToken: "t", refreshToken: "r" });
+    resetNavGroupsStore();
   });
 
   function tabBar() {
@@ -253,6 +268,7 @@ describe("PortalShell mobile app bar", () => {
     resetAuthStore();
     useAuthStore.setState({ user: USER, accessToken: "t", refreshToken: "r" });
     resetAppBarStore();
+    resetNavGroupsStore();
   });
 
   afterEach(() => {
@@ -304,5 +320,80 @@ describe("PortalShell mobile app bar", () => {
 
     expect(screen.queryByRole("link", { name: "Back" })).not.toBeInTheDocument();
     expect(screen.getAllByText("KDLMS").length).toBeGreaterThan(0);
+  });
+});
+
+// Exercises the collapsible sidebar groups: Academics carries a badge item
+// so a collapsed group's badge-dot rollup can be checked, People has no
+// badge so it stays plain when collapsed, and Dashboard is ungrouped so it
+// never gets a toggle button of its own.
+const GROUPED_NAV_ITEMS: NavItem[] = [
+  { label: "Dashboard", href: "/school" },
+  { label: "Classes", href: "/school/academics/classes", group: "Academics" },
+  { label: "Messages", href: "/school/messages", group: "Academics", badge: () => 3 },
+  { label: "Teachers", href: "/school/academics/teachers", group: "People" },
+  { label: "Guardians", href: "/school/guardians", group: "People" },
+];
+
+describe("PortalShell collapsible sidebar groups", () => {
+  beforeEach(() => {
+    resetAuthStore();
+    useAuthStore.setState({ user: USER, accessToken: "t", refreshToken: "r" });
+    resetNavGroupsStore();
+  });
+
+  function sidebar() {
+    return screen.getByRole("navigation", { name: "School navigation" });
+  }
+
+  it("expands only the groups named in defaultOpenGroups", () => {
+    renderShell({ pathname: "/school", items: GROUPED_NAV_ITEMS, defaultOpenGroups: ["Academics"] });
+
+    const academics = within(sidebar()).getByRole("button", { name: /Academics/ });
+    const people = within(sidebar()).getByRole("button", { name: /People/ });
+    expect(academics).toHaveAttribute("aria-expanded", "true");
+    expect(people).toHaveAttribute("aria-expanded", "false");
+    expect(within(sidebar()).getByText("Classes")).toBeInTheDocument();
+    expect(within(sidebar()).queryByText("Teachers")).not.toBeInTheDocument();
+  });
+
+  it("expands a group with no default that holds the active route", () => {
+    renderShell({ pathname: "/school/guardians", items: GROUPED_NAV_ITEMS, defaultOpenGroups: ["Academics"] });
+
+    const people = within(sidebar()).getByRole("button", { name: /People/ });
+    expect(people).toHaveAttribute("aria-expanded", "true");
+    expect(within(sidebar()).getByText("Guardians")).toBeInTheDocument();
+  });
+
+  it("toggles a group open on click and reveals its items", async () => {
+    const user = userEvent.setup();
+    renderShell({ pathname: "/school", items: GROUPED_NAV_ITEMS, defaultOpenGroups: ["Academics"] });
+
+    const people = within(sidebar()).getByRole("button", { name: /People/ });
+    expect(within(sidebar()).queryByText("Teachers")).not.toBeInTheDocument();
+
+    await user.click(people);
+
+    expect(people).toHaveAttribute("aria-expanded", "true");
+    expect(within(sidebar()).getByText("Teachers")).toBeInTheDocument();
+  });
+
+  it("shows a badge dot on a collapsed group holding a badged item, not on one without", () => {
+    renderShell({ pathname: "/school", items: GROUPED_NAV_ITEMS });
+
+    const academics = within(sidebar()).getByRole("button", { name: /Academics/ });
+    const people = within(sidebar()).getByRole("button", { name: /People/ });
+    expect(academics.querySelector(".bg-brand-500")).not.toBeNull();
+    expect(people.querySelector(".bg-brand-500")).toBeNull();
+  });
+
+  it("remembers an explicit toggle across a remount, overriding defaultOpenGroups", () => {
+    useNavGroupsStore.getState().setCollapsed("School:Academics", true);
+
+    renderShell({ pathname: "/school", items: GROUPED_NAV_ITEMS, defaultOpenGroups: ["Academics"] });
+
+    const academics = within(sidebar()).getByRole("button", { name: /Academics/ });
+    expect(academics).toHaveAttribute("aria-expanded", "false");
+    expect(within(sidebar()).queryByText("Classes")).not.toBeInTheDocument();
   });
 });

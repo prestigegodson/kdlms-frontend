@@ -245,6 +245,11 @@ export function SchoolLayout() {
       navItems={NAV_ITEMS}
       contextLabel={contextLabel ?? undefined}
       banner={<SubscriptionBanner />}
+      // Academics holds the everyday teaching/records screens (classes,
+      // assessments, attendance, messages); People and Administration are
+      // setup surfaces visited far less often, so they start collapsed -
+      // see PortalShell's collapsible sidebar groups.
+      defaultOpenGroups={["Academics"]}
     />
   );
 }

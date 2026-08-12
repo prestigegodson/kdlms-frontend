@@ -143,7 +143,10 @@ function renderAsSchoolAdmin() {
     refreshToken: "refresh",
   });
   const router = createMemoryRouter(
-    [{ path: "/school/students/:studentId", element: <StudentDetailPage /> }],
+    [
+      { path: "/school/students/:studentId", element: <StudentDetailPage /> },
+      { path: "/school/students/:studentId/results/:sessionId", element: <div>Result history page</div> },
+    ],
     { initialEntries: ["/school/students/student-1"] },
   );
   render(<RouterProvider router={router} />);
@@ -182,6 +185,22 @@ describe("StudentDetailPage", () => {
     expect(screen.getByText("Chidi Obi")).toBeInTheDocument();
     expect(await screen.findByText("O+")).toBeInTheDocument();
     expect(screen.getByText("Peanuts")).toBeInTheDocument();
+  });
+
+  it("navigates to the result history route when an enrollment row is tapped", async () => {
+    vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+    vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([ENROLLMENT_VIEW]);
+    vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+
+    const row = (await screen.findByText("2026/2027")).closest("tr")!;
+    expect(row).toHaveAttribute("tabindex", "0");
+
+    await user.click(row);
+
+    expect(await screen.findByText("Result history page")).toBeInTheDocument();
   });
 
   it("shows an empty state and edits medical information", async () => {

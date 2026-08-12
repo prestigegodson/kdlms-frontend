@@ -43,6 +43,7 @@ import { SchoolDetailPage } from "@/features/schools/SchoolDetailPage";
 import { SchoolsPage } from "@/features/schools/SchoolsPage";
 import { PromotionPage } from "@/features/students/PromotionPage";
 import { StudentDetailPage } from "@/features/students/StudentDetailPage";
+import { StudentResultHistoryPage } from "@/features/students/StudentResultHistoryPage";
 import { StudentsPage } from "@/features/students/StudentsPage";
 import { SubscriptionPage } from "@/features/subscription/SubscriptionPage";
 import { TeachersPage } from "@/features/teachers/TeachersPage";
@@ -176,6 +177,14 @@ export const routes: RouteObject[] = [
             element: (
               <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
                 <StudentDetailPage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "students/:studentId/results/:sessionId",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
+                <StudentResultHistoryPage />
               </RequireRole>
             ),
           },

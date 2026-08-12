@@ -105,6 +105,20 @@ export interface EnrollmentView {
   status: "ACTIVE" | "COMPLETED" | "WITHDRAWN";
 }
 
+/** Mirrors backend student.application.port.in.StudentTermView. */
+export interface StudentTermView {
+  sessionId: string;
+  sessionName: string;
+  currentSession: boolean;
+  termId: string;
+  termName: string;
+  termNumber: number;
+  classId: string;
+  className?: string;
+  levelId: string;
+  resultsPublished: boolean;
+}
+
 /** Mirrors backend student.application.port.in.StudentGuardianView. */
 export interface StudentGuardianView {
   guardianId: string;
@@ -221,6 +235,11 @@ export function reinstateStudent(studentId: string): Promise<void> {
 
 export function listStudentEnrollments(studentId: string): Promise<EnrollmentView[]> {
   return apiFetch<EnrollmentView[]>(`${BASE}/${studentId}/enrollments`);
+}
+
+/** Every term of every session the student has ever been enrolled for - backs the result-history drill-down. */
+export function listStudentTerms(studentId: string): Promise<StudentTermView[]> {
+  return apiFetch<StudentTermView[]>(`${BASE}/${studentId}/terms`);
 }
 
 /** Same-session transfer to a different class in the student's own branch. */

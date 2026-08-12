@@ -452,7 +452,10 @@ function EnrollmentHistoryCard({
             </TableHead>
             <TableBody>
               {history.map((enrollment) => (
-                <TableRow key={enrollment.id}>
+                <TableRow
+                  key={enrollment.id}
+                  to={`/school/students/${student.id}/results/${enrollment.sessionId}`}
+                >
                   <TableCell label="Session">{sessionName(enrollment.sessionId)}</TableCell>
                   <TableCell label="Class">{enrollment.className ?? "—"}</TableCell>
                   <TableCell label="Type">{enrollment.enrollmentType}</TableCell>
