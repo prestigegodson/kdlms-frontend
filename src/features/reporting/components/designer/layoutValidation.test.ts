@@ -83,6 +83,30 @@ describe("validateLayout", () => {
     expect(isLayoutValid(layout, "NUMERIC")).toBe(false);
   });
 
+  it("accepts a sized STUDENT_PHOTO on either mode", () => {
+    const photo: LayoutElement = { id: "el-1", type: "BLOCK", block: "STUDENT_PHOTO", maxWidthPx: 96, maxHeightPx: 120 };
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [photo] }] }]);
+
+    expect(isLayoutValid(layout, "NUMERIC")).toBe(true);
+    expect(isLayoutValid(layout, "QUALITATIVE")).toBe(true);
+  });
+
+  it("rejects a STUDENT_PHOTO size out of range", () => {
+    const photo: LayoutElement = { id: "el-1", type: "BLOCK", block: "STUDENT_PHOTO", maxWidthPx: 1200 };
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [photo] }] }]);
+
+    const errors = validateLayout(layout, "NUMERIC");
+    expect(errors.some((e) => e.includes("Block max width"))).toBe(true);
+  });
+
+  it("rejects a size on any block other than STUDENT_PHOTO", () => {
+    const header: LayoutElement = { id: "el-1", type: "BLOCK", block: "SCHOOL_HEADER", maxWidthPx: 96 };
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [header] }] }]);
+
+    const errors = validateLayout(layout, "NUMERIC");
+    expect(errors.some((e) => e.includes("may not specify a size"))).toBe(true);
+  });
+
   it("rejects an unsupported layout version", () => {
     const layout = { ...layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [] }] }]), version: 99 };
 

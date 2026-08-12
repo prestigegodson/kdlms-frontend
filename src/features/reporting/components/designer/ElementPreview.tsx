@@ -18,6 +18,19 @@ const BLOCK_DESCRIPTIONS = Object.fromEntries(REPORT_BLOCKS.map((block) => [bloc
 export function ElementPreview({ element }: { element: Exclude<LayoutElement, { type: "BOX" }> }) {
   switch (element.type) {
     case "BLOCK":
+      if (element.block === "STUDENT_PHOTO") {
+        return (
+          <div style={{ textAlign: element.style?.align ?? "left" }}>
+            <div
+              className="inline-flex flex-col items-center justify-center gap-0.5 rounded-control border border-dashed border-slate-400 bg-slate-50 text-[10px] text-slate-500"
+              style={{ width: `${element.maxWidthPx ?? 96}px`, height: `${element.maxHeightPx ?? 120}px` }}
+            >
+              <ImageIcon className="h-4 w-4 text-slate-300" aria-hidden="true" />
+              Photo
+            </div>
+          </div>
+        );
+      }
       return (
         <div className="rounded-control border border-dashed border-slate-400 bg-slate-50 px-3 py-3 text-center text-xs text-slate-600">
           <div className="font-medium text-slate-700">{BLOCK_LABELS[element.block]}</div>

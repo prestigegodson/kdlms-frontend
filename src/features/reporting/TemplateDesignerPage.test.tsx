@@ -5,7 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as templatesApi from "@/api/resultTemplates";
 import type { ResultTemplateView } from "@/api/resultTemplates";
 import TemplateDesignerPage from "@/features/reporting/TemplateDesignerPage";
-import { buildStandardResultSheetLayout } from "@/features/reporting/components/designer/starterLayouts";
+import {
+  buildEarlyYearsProgressReportLayout,
+  buildStandardResultSheetLayout,
+} from "@/features/reporting/components/designer/starterLayouts";
 
 vi.mock("@/api/resultTemplates", async () => {
   const actual = await vi.importActual<typeof import("@/api/resultTemplates")>("@/api/resultTemplates");
@@ -32,6 +35,12 @@ const NUMERIC_TEMPLATE: ResultTemplateView = {
   updatedAt: "2026-01-01T00:00:00Z",
 };
 
+const QUALITATIVE_TEMPLATE: ResultTemplateView = {
+  ...NUMERIC_TEMPLATE,
+  assessmentMode: "QUALITATIVE",
+  layout: buildEarlyYearsProgressReportLayout(),
+};
+
 function renderPage() {
   const router = createMemoryRouter(
     [{ path: "/admin/templates/:templateId", element: <TemplateDesignerPage /> }],
@@ -54,6 +63,19 @@ describe("TemplateDesignerPage", () => {
     // RATING_TABLE is QUALITATIVE-only - never offered on a NUMERIC template's palette,
     // the bug the old GrapesJS designer had (see BlockPalette's module comment).
     expect(screen.queryByRole("button", { name: /Rating table/ })).not.toBeInTheDocument();
+  });
+
+  it("offers the Student photo block on a NUMERIC template", async () => {
+    renderPage();
+    expect(await screen.findByDisplayValue("Standard result sheet")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Student photo/ })).toBeInTheDocument();
+  });
+
+  it("offers the Student photo block on a QUALITATIVE template too", async () => {
+    vi.mocked(templatesApi.getResultTemplate).mockResolvedValue(QUALITATIVE_TEMPLATE);
+    renderPage();
+    expect(await screen.findByDisplayValue("Standard result sheet")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Student photo/ })).toBeInTheDocument();
   });
 
   it("Save sends the current layout back to the API", async () => {

@@ -19,6 +19,11 @@ export interface ReportBlockDefinition {
 export const REPORT_BLOCKS: ReportBlockDefinition[] = [
   { id: "SCHOOL_HEADER", label: "School header", description: "Logo, name, address, contact details" },
   { id: "STUDENT_BIO", label: "Student bio", description: "Name, admission no., class, session and term" },
+  {
+    id: "STUDENT_PHOTO",
+    label: "Student photo",
+    description: "The student's profile picture, on its own - hidden entirely for a student with no photo on file",
+  },
   { id: "SCORE_TABLE", label: "Score table", mode: "NUMERIC", description: "Subjects, scores, grades, totals, position" },
   { id: "RATING_TABLE", label: "Rating table", mode: "QUALITATIVE", description: "Subjects, ratings, observations" },
   { id: "ATTENDANCE_SUMMARY", label: "Attendance summary", description: "Present/absent/days marked/rate" },

@@ -6,6 +6,7 @@ import { ClassesPage } from "@/features/academics/ClassesPage";
 import { LevelsPage } from "@/features/academics/LevelsPage";
 import { SessionsPage } from "@/features/academics/SessionsPage";
 import { SubjectsPage } from "@/features/academics/SubjectsPage";
+import { AdministratorsPage } from "@/features/administrators/AdministratorsPage";
 import { AssessmentsPage } from "@/features/assessments/AssessmentsPage";
 import { GradingSystemEditorPage } from "@/features/assessments/GradingSystemEditorPage";
 import { GradingSystemsPage } from "@/features/assessments/GradingSystemsPage";
@@ -102,6 +103,14 @@ export const routes: RouteObject[] = [
             element: (
               <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
                 <BranchesPage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "administrators",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN"]}>
+                <AdministratorsPage />
               </RequireRole>
             ),
           },

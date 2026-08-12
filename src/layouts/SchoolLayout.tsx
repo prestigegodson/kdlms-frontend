@@ -15,6 +15,7 @@ import {
   Scale,
   School,
   Settings,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 import { useEffect } from "react";
@@ -116,6 +117,14 @@ const NAV_ITEMS: NavItem[] = [
       return can.viewMessages(role, { isClassTeacher }, entitled);
     },
     badge: () => useUnreadMessagesStore.getState().count,
+  },
+  {
+    label: "Administrators",
+    href: "/school/administrators",
+    icon: ShieldCheck,
+    group: "People",
+    // Not BRANCH_ADMIN-visible - see auth/permissions.ts's manageBranchAdmins.
+    roles: ["SCHOOL_ADMIN"],
   },
   {
     label: "Teachers",

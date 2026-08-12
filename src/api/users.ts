@@ -76,8 +76,24 @@ export function createBranchAdmin(request: CreateBranchAdminRequest): Promise<Cr
   });
 }
 
-export function listUsers(page = 0, size = 20): Promise<Page<UserSummary>> {
-  return apiFetch<Page<UserSummary>>(`/api/v1/users?page=${page}&size=${size}`);
+/** The caller's own school's SCHOOL_ADMIN/BRANCH_ADMIN users (teachers/guardians excluded) - the school portal's own Administrators screen. */
+export function listAdmins(page = 0, size = 20): Promise<Page<SchoolUserView>> {
+  return apiFetch<Page<SchoolUserView>>(`/api/v1/users?page=${page}&size=${size}`);
+}
+
+/** {@code branchId} isn't here - a branch admin's branch isn't editable, see the backend's {@code User#updateDetails}. */
+export interface UpdateBranchAdminRequest {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+}
+
+export function updateBranchAdmin(userId: string, request: UpdateBranchAdminRequest): Promise<SchoolUserView> {
+  return apiFetch<SchoolUserView>(`/api/v1/users/${userId}`, {
+    method: "PUT",
+    body: JSON.stringify(request),
+  });
 }
 
 export interface CreateTeacherRequest {

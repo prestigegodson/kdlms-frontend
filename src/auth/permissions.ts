@@ -39,6 +39,15 @@ export const can = {
   },
 
   /**
+   * Provisioning and managing the school's BRANCH_ADMIN accounts - SCHOOL_ADMIN
+   * only, narrower than `manageTeachers`: a BRANCH_ADMIN can't mint a peer.
+   * Mirrors `manageBranches`.
+   */
+  manageBranchAdmins(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN";
+  },
+
+  /**
    * Whether this role picks a branch via a Branch filter (Assessments,
    * Attendance, Reports, Messages, Teachers) rather than having one derived
    * from their token - SCHOOL_ADMIN only. A BRANCH_ADMIN/TEACHER is always

@@ -22,6 +22,16 @@ describe("can.viewMessages", () => {
   });
 });
 
+describe("can.manageBranchAdmins", () => {
+  it("is true only for SCHOOL_ADMIN", () => {
+    expect(can.manageBranchAdmins("SCHOOL_ADMIN")).toBe(true);
+    expect(can.manageBranchAdmins("BRANCH_ADMIN")).toBe(false);
+    expect(can.manageBranchAdmins("TEACHER")).toBe(false);
+    expect(can.manageBranchAdmins("GUARDIAN")).toBe(false);
+    expect(can.manageBranchAdmins(undefined)).toBe(false);
+  });
+});
+
 describe("can.composeMessages", () => {
   it("is true only for an entitled class-teaching TEACHER", () => {
     expect(can.composeMessages("TEACHER", { isClassTeacher: true }, true)).toBe(true);

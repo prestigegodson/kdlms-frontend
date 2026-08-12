@@ -56,7 +56,7 @@ interface BlockPaletteProps {
 }
 
 /**
- * The draggable/click-to-append component palette - the nine semantic
+ * The draggable/click-to-append component palette - the ten semantic
  * `ReportBlock`s (filtered to the template's own assessment mode, fixing a
  * bug the old GrapesJS designer had where a QUALITATIVE template's palette
  * still offered `SCORE_TABLE`) plus five freeform elements. Each item is
@@ -66,6 +66,13 @@ interface BlockPaletteProps {
  */
 export function BlockPalette({ mode, editor }: BlockPaletteProps) {
   const blocks = REPORT_BLOCKS.filter((block) => !block.mode || block.mode === mode);
+
+  /** `STUDENT_PHOTO` is the one block the inspector lets a designer resize - seeded here so it opens at a size that already renders sensibly rather than 0x0. */
+  function blockElement(blockId: (typeof REPORT_BLOCKS)[number]["id"]): LayoutElement {
+    return blockId === "STUDENT_PHOTO"
+      ? { id: newElementId("el"), type: "BLOCK", block: blockId, maxWidthPx: 96, maxHeightPx: 120 }
+      : { id: newElementId("el"), type: "BLOCK", block: blockId };
+  }
 
   function handleDragStart(event: DragEvent<HTMLButtonElement>, label: string, elementType: LayoutElement["type"], factory: () => LayoutElement) {
     setCurrentDrag({ kind: "new-block", label, elementType, factory });
@@ -82,11 +89,9 @@ export function BlockPalette({ mode, editor }: BlockPaletteProps) {
               key={block.id}
               type="button"
               draggable
-              onDragStart={(event) =>
-                handleDragStart(event, block.label, "BLOCK", () => ({ id: newElementId("el"), type: "BLOCK", block: block.id }))
-              }
+              onDragStart={(event) => handleDragStart(event, block.label, "BLOCK", () => blockElement(block.id))}
               onDragEnd={() => setCurrentDrag(null)}
-              onClick={() => editor.appendElement({ id: newElementId("el"), type: "BLOCK", block: block.id })}
+              onClick={() => editor.appendElement(blockElement(block.id))}
               className="w-full cursor-grab rounded-control border border-slate-200 bg-white px-3 py-2 text-left text-sm hover:border-brand-400 hover:bg-brand-50/40 active:cursor-grabbing"
               title={block.description}
             >

@@ -298,6 +298,40 @@ function ElementInspector({ editor, elementId }: { editor: LayoutEditor; element
         </>
       )}
 
+      {element.type === "BLOCK" && element.block === "STUDENT_PHOTO" && (
+        <>
+          <FormField label="Alignment" htmlFor="photo-align">
+            <Select id="photo-align" value={style.align ?? "left"} onChange={(e) => setStyle({ align: e.target.value as ElementStyle["align"] })}>
+              <option value="left">Left</option>
+              <option value="center">Center</option>
+              <option value="right">Right</option>
+            </Select>
+          </FormField>
+          <div className="grid grid-cols-2 gap-2">
+            <FormField label="Max width (px)" htmlFor="photo-max-width">
+              <Input
+                id="photo-max-width"
+                type="number"
+                min={1}
+                max={1000}
+                value={element.maxWidthPx ?? ""}
+                onChange={(e) => editor.updateElement(elementId, { maxWidthPx: numberOrUndefined(e.target.value) } as Partial<LayoutElement>)}
+              />
+            </FormField>
+            <FormField label="Max height (px)" htmlFor="photo-max-height">
+              <Input
+                id="photo-max-height"
+                type="number"
+                min={1}
+                max={1000}
+                value={element.maxHeightPx ?? ""}
+                onChange={(e) => editor.updateElement(elementId, { maxHeightPx: numberOrUndefined(e.target.value) } as Partial<LayoutElement>)}
+              />
+            </FormField>
+          </div>
+        </>
+      )}
+
       {element.type === "BLOCK" && <p className="text-xs text-slate-500">Filled automatically at render time - only its position is yours to arrange.</p>}
 
       <div className="grid grid-cols-2 gap-2 border-t border-slate-100 pt-3">

@@ -122,6 +122,7 @@ function validateElement(element: LayoutElement, mode: AssessmentMode, insideBox
       } else if (!blockFitsMode(element.block, mode)) {
         errors.push(`${element.block} may only be used on a ${mode === "NUMERIC" ? "QUALITATIVE" : "NUMERIC"} template.`);
       }
+      validateBlockSizing(element, errors);
       break;
     }
     case "TEXT":
@@ -152,6 +153,20 @@ function validateElement(element: LayoutElement, mode: AssessmentMode, insideBox
         validateElements(element.elements, mode, true, errors);
       }
       break;
+  }
+}
+
+/** Only `STUDENT_PHOTO` may carry a size - mirrors backend `ReportLayoutValidator#validateBlockSizing`. */
+function validateBlockSizing(element: Extract<LayoutElement, { type: "BLOCK" }>, errors: string[]) {
+  const sizable = element.block === "STUDENT_PHOTO";
+  if (!sizable && (element.maxWidthPx !== undefined || element.maxHeightPx !== undefined)) {
+    errors.push(`${element.block} may not specify a size.`);
+  }
+  if (element.maxWidthPx !== undefined) {
+    requireRange(element.maxWidthPx, 1, MAX_IMAGE_DIMENSION_PX, "Block max width", errors);
+  }
+  if (element.maxHeightPx !== undefined) {
+    requireRange(element.maxHeightPx, 1, MAX_IMAGE_DIMENSION_PX, "Block max height", errors);
   }
 }
 

@@ -20,6 +20,7 @@ export const LAYOUT_VERSION = 1;
 export const REPORT_BLOCK_NAMES = [
   "SCHOOL_HEADER",
   "STUDENT_BIO",
+  "STUDENT_PHOTO",
   "SCORE_TABLE",
   "RATING_TABLE",
   "ATTENDANCE_SUMMARY",
@@ -63,6 +64,9 @@ interface BaseElement {
 export interface BlockElement extends BaseElement {
   type: "BLOCK";
   block: ReportBlockName;
+  /** Only meaningful (and only accepted server-side) for `STUDENT_PHOTO` - every other block's interior is entirely platform-owned. */
+  maxWidthPx?: number;
+  maxHeightPx?: number;
 }
 
 export interface TextElement extends BaseElement {
@@ -133,6 +137,7 @@ export interface ReportLayout {
 export const BLOCK_LABELS: Record<ReportBlockName, string> = {
   SCHOOL_HEADER: "School header",
   STUDENT_BIO: "Student bio",
+  STUDENT_PHOTO: "Student photo",
   SCORE_TABLE: "Score table",
   RATING_TABLE: "Rating table",
   ATTENDANCE_SUMMARY: "Attendance summary",

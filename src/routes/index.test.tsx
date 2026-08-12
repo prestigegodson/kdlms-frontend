@@ -186,6 +186,31 @@ describe("router", () => {
     });
   });
 
+  describe("as a BRANCH_ADMIN", () => {
+    beforeEach(() => {
+      useAuthStore.setState({
+        user: {
+          id: "branch-admin-1",
+          email: "branch-admin@school.example",
+          firstName: "Bea",
+          lastName: "Admin",
+          role: "BRANCH_ADMIN",
+          schoolId: "school-1",
+          branchId: "branch-1",
+        },
+        accessToken: "access",
+        refreshToken: "refresh",
+      });
+    });
+
+    it("hides Administrators from the sidebar, redirecting the administrators route to the dashboard", async () => {
+      renderAt("/school/administrators");
+
+      expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+      expect(screen.queryByText("Administrators")).not.toBeInTheDocument();
+    });
+  });
+
   describe("as a GUARDIAN", () => {
     beforeEach(() => {
       useAuthStore.setState({
