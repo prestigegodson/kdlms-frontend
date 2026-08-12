@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as assessmentsApi from "@/api/assessments";
 import { ApiError } from "@/api/client";
 import * as gradingSystemsApi from "@/api/gradingSystems";
-import * as reportsApi from "@/api/reports";
 import * as studentsApi from "@/api/students";
 import type { StudentTermView, StudentView } from "@/api/students";
 import { StudentResultHistoryPage } from "@/features/students/StudentResultHistoryPage";

@@ -1,10 +1,11 @@
 import { ImagePlus, X } from "lucide-react";
-import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useRef, useState } from "react";
 import { ApiError } from "@/api/client";
 import { downloadFile, uploadFile } from "@/api/files";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
+import { useObjectUrl } from "@/hooks/useObjectUrl";
 
 interface ImageUploadFieldProps {
   label: string;
@@ -13,43 +14,20 @@ interface ImageUploadFieldProps {
 }
 
 /**
- * Pick/upload an image (logo, principal/teacher signature) and preview it -
- * shared by the report-settings screen and the teacher directory's
- * signature control. The preview always goes through an authenticated blob
- * fetch and `URL.createObjectURL`, never a bare `<img src="/api/v1/files/...">`
- * - the files bucket is private and a plain `<img>` tag can't carry an
- * Authorization header.
+ * Pick/upload an image and preview it - shared by the report-settings
+ * screen's logo/signature fields, the teacher directory's signature
+ * control, and the student detail page's photo control. Uploads immediately
+ * to `POST /api/v1/files` and hands the resulting `fileId` up via
+ * `onChange`; the parent screen is responsible for persisting it. The
+ * preview always goes through `useObjectUrl` (an authenticated blob fetch)
+ * rather than a bare `<img src="/api/v1/files/...">` - the files bucket is
+ * private and a plain `<img>` tag can't carry an Authorization header.
  */
 export function ImageUploadField({ label, fileId, onChange }: ImageUploadFieldProps) {
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const previewUrl = useObjectUrl(fileId, downloadFile);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // `fileId` clearing to undefined (removed, or swapped to a different
-  // upload) resets the stale preview during render rather than as a
-  // synchronous setState in the effect below - the same pattern
-  // `AdminResultsPanel`'s selectionKey/lastSelectionKey documents.
-  const [lastFileId, setLastFileId] = useState(fileId);
-  if (fileId !== lastFileId) {
-    setLastFileId(fileId);
-    if (!fileId) setPreviewUrl(null);
-  }
-
-  useEffect(() => {
-    if (!fileId) return;
-    let cancelled = false;
-    let objectUrl: string | null = null;
-    downloadFile(fileId).then((blob) => {
-      if (cancelled) return;
-      objectUrl = URL.createObjectURL(blob);
-      setPreviewUrl(objectUrl);
-    });
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [fileId]);
 
   async function handleFileSelected(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];

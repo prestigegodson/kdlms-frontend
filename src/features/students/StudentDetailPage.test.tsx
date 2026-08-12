@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as classesApi from "@/api/classes";
 import type { SchoolClassView } from "@/api/classes";
+import * as filesApi from "@/api/files";
 import * as guardiansApi from "@/api/guardians";
 import type { GuardianView } from "@/api/guardians";
 import * as sessionsApi from "@/api/sessions";
@@ -33,7 +34,13 @@ vi.mock("@/api/students", async () => {
     updateStudentMedical: vi.fn(),
     getStudentSubjects: vi.fn(),
     replaceStudentSubjects: vi.fn(),
+    updateStudentPhoto: vi.fn(),
   };
+});
+
+vi.mock("@/api/files", async () => {
+  const actual = await vi.importActual<typeof import("@/api/files")>("@/api/files");
+  return { ...actual, uploadFile: vi.fn(), downloadFile: vi.fn() };
 });
 
 vi.mock("@/api/classes", async () => {
@@ -258,6 +265,36 @@ describe("StudentDetailPage", () => {
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
     expect(studentsApi.replaceStudentSubjects).toHaveBeenCalledWith("student-1", ["subject-2"]);
+  });
+
+  it("uploads a photo and saves the returned fileId", async () => {
+    vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+    vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+    vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+    vi.mocked(filesApi.uploadFile).mockResolvedValue({
+      fileId: "photo-1",
+      fileName: "ada.png",
+      contentType: "image/png",
+      sizeBytes: 1024,
+    });
+    vi.mocked(filesApi.downloadFile).mockResolvedValue(new Blob());
+    vi.mocked(studentsApi.updateStudentPhoto).mockResolvedValue({ ...STUDENT_VIEW, photoFileId: "photo-1" });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByRole("heading", { name: "Ada Obi" });
+
+    await user.click(screen.getByRole("button", { name: "Edit Ada Obi's photo" }));
+    const dialog = await screen.findByRole("dialog");
+
+    const fileInput = dialog.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(["fake-bytes"], "ada.png", { type: "image/png" });
+    await user.upload(fileInput, file);
+
+    expect(await within(dialog).findByRole("button", { name: "Replace" })).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(studentsApi.updateStudentPhoto).toHaveBeenCalledWith("student-1", "photo-1");
   });
 
   it("graduates the student after confirming", async () => {

@@ -1,8 +1,8 @@
 import { ImageIcon } from "lucide-react";
-import { useEffect, useState } from "react";
 import { downloadFile } from "@/api/files";
 import { BLOCK_LABELS, type LayoutElement } from "@/features/reporting/components/designer/layout";
 import { REPORT_BLOCKS } from "@/features/reporting/components/reportBlocks";
+import { useObjectUrl } from "@/hooks/useObjectUrl";
 
 const BLOCK_DESCRIPTIONS = Object.fromEntries(REPORT_BLOCKS.map((block) => [block.id, block.description]));
 
@@ -56,22 +56,7 @@ export function ElementPreview({ element }: { element: Exclude<LayoutElement, { 
 }
 
 function ImagePreview({ fileId }: { fileId: string }) {
-  const [url, setUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!fileId) return;
-    let cancelled = false;
-    let objectUrl: string | null = null;
-    downloadFile(fileId).then((blob) => {
-      if (cancelled) return;
-      objectUrl = URL.createObjectURL(blob);
-      setUrl(objectUrl);
-    });
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [fileId]);
+  const url = useObjectUrl(fileId || undefined, downloadFile);
 
   if (!fileId) {
     return (

@@ -1,6 +1,6 @@
 import { FormField } from "@/components/ui/FormField";
+import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import { Input } from "@/components/ui/Input";
-import { ImageUploadField } from "@/features/reporting/components/ImageUploadField";
 
 export interface BrandingValues {
   logoFileId?: string;

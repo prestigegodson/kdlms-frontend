@@ -82,6 +82,15 @@ export function getWardMedical(studentId: string): Promise<StudentMedicalView> {
   return apiFetch<StudentMedicalView>(`${BASE}/${studentId}/medical`);
 }
 
+/**
+ * A ward's photo bytes - a GUARDIAN has no access to `/api/v1/files/**` at
+ * all, so this is the only path to them. Also not publication-gated, like
+ * medical info and attendance.
+ */
+export function downloadWardPhoto(studentId: string): Promise<Blob> {
+  return apiFetchBlob(`${BASE}/${studentId}/photo`);
+}
+
 /** Final rendered HTML for a ward's term report - the report-preview screen's `iframe srcDoc` source. */
 export function previewWardReport(studentId: string, termId: string): Promise<string> {
   return apiFetchText(`${BASE}/${studentId}/report?termId=${termId}`);

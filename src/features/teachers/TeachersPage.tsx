@@ -11,13 +11,13 @@ import { Card } from "@/components/ui/Card";
 import { CredentialsReveal } from "@/components/ui/CredentialsReveal";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
+import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { TableSkeleton } from "@/components/ui/TableSkeleton";
-import { ImageUploadField } from "@/features/reporting/components/ImageUploadField";
 import { useAuthStore } from "@/stores/authStore";
 
 type ListState =

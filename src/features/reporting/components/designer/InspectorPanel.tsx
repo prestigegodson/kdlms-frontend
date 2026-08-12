@@ -1,9 +1,9 @@
 import { Checkbox } from "@/components/ui/Checkbox";
 import { FormField } from "@/components/ui/FormField";
+import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
-import { ImageUploadField } from "@/features/reporting/components/ImageUploadField";
 import { ALLOWED_FONT_FAMILIES, type ElementStyle, type LayoutElement } from "@/features/reporting/components/designer/layout";
 import { findElementLocation } from "@/features/reporting/components/designer/layoutOps";
 import type { LayoutEditor } from "@/features/reporting/components/designer/useLayoutEditor";

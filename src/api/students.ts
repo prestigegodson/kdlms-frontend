@@ -17,6 +17,7 @@ export interface StudentView {
   fullName: string;
   gender: Gender;
   dateOfBirth?: string;
+  photoFileId?: string;
   status: StudentStatus;
   currentClassId?: string;
   currentClassName?: string;
@@ -183,6 +184,14 @@ export function getStudent(studentId: string): Promise<StudentView> {
 
 export function updateStudent(studentId: string, request: UpdateStudentRequest): Promise<StudentView> {
   return apiFetch<StudentView>(`${BASE}/${studentId}`, { method: "PUT", body: JSON.stringify(request) });
+}
+
+/** {@code photoFileId} may be {@code null} to clear a previously-set photo. */
+export function updateStudentPhoto(studentId: string, photoFileId: string | null): Promise<StudentView> {
+  return apiFetch<StudentView>(`${BASE}/${studentId}/photo`, {
+    method: "PATCH",
+    body: JSON.stringify({ photoFileId }),
+  });
 }
 
 export function getStudentMedical(studentId: string): Promise<StudentMedicalView> {

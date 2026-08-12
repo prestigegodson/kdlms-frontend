@@ -1,10 +1,11 @@
 import { ChevronRight, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { getWardAttendance, getWardMedical, listWardTerms, type MyWardView } from "@/api/wards";
+import { downloadWardPhoto, getWardAttendance, getWardMedical, listWardTerms, type MyWardView } from "@/api/wards";
 import { ApiError } from "@/api/client";
 import type { StudentMedicalView } from "@/api/students";
 import { Alert } from "@/components/ui/Alert";
+import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -16,7 +17,9 @@ import { Spinner } from "@/components/ui/Spinner";
 import { StatTile } from "@/components/ui/StatTile";
 import { groupWardsBySchool } from "@/features/guardian/groupWardsBySchool";
 import { StudentMedicalPanel } from "@/features/students/components/StudentMedicalPanel";
+import { useObjectUrl } from "@/hooks/useObjectUrl";
 import { useWardStore } from "@/stores/wardStore";
+import { initialsOfFullName } from "@/utils/initials";
 
 interface WardCardProps {
   ward: MyWardView;
@@ -35,6 +38,9 @@ function WardCard({ ward, showSchool }: WardCardProps) {
   const select = useWardStore((state) => state.select);
   const [attendanceRate, setAttendanceRate] = useState<number | null>(null);
   const [showMedical, setShowMedical] = useState(false);
+  // Gated on photoFileId so a ward with no photo never fires a fetch that
+  // can only 404 - downloadWardPhoto itself only takes the studentId.
+  const photoUrl = useObjectUrl(ward.photoFileId ? ward.studentId : undefined, downloadWardPhoto);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,9 +73,12 @@ function WardCard({ ward, showSchool }: WardCardProps) {
       >
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="font-display text-lg font-medium text-slate-900">{ward.fullName}</h2>
-              <p className="text-sm text-slate-500">{ward.admissionNumber}</p>
+            <div className="flex items-center gap-3">
+              <Avatar initials={initialsOfFullName(ward.fullName)} url={photoUrl} />
+              <div>
+                <h2 className="font-display text-lg font-medium text-slate-900">{ward.fullName}</h2>
+                <p className="text-sm text-slate-500">{ward.admissionNumber}</p>
+              </div>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
               <Badge variant="brand">{ward.relationship}</Badge>
