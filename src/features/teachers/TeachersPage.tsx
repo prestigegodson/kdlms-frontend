@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import type { UserSummary } from "@/api/auth";
-import { listBranches, type BranchView } from "@/api/branches";
+import type { BranchView } from "@/api/branches";
 import { ApiError } from "@/api/client";
 import { createTeacher, listTeachers, updateTeacher, updateTeacherSignature, type CreateUserResult } from "@/api/users";
 import { can } from "@/auth/permissions";
@@ -16,9 +16,13 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { TableSkeleton } from "@/components/ui/TableSkeleton";
+import { BranchFilter } from "@/features/branches/components/BranchFilter";
+import { useBranchScope } from "@/features/branches/useBranchScope";
 import { useAuthStore } from "@/stores/authStore";
+import { useBranchStore } from "@/stores/branchStore";
 
 type ListState =
   | { kind: "loading" }
@@ -30,23 +34,18 @@ export function TeachersPage() {
   const role = useAuthStore((state) => state.user?.role);
   const canManage = can.manageTeachers(role);
   const isBranchScoped = role === "BRANCH_ADMIN";
+  const showsBranchFilter = can.selectBranch(role);
+  const { ready: branchReady, branchId } = useBranchScope();
+  const branches = useBranchStore((storeState) => storeState.branches);
 
-  const [branches, setBranches] = useState<BranchView[] | null>(null);
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<UserSummary | null>(null);
   const [signing, setSigning] = useState<UserSummary | null>(null);
 
-  useEffect(() => {
-    if (!isBranchScoped) {
-      listBranches()
-        .then((page) => setBranches(page.content))
-        .catch(() => setBranches([]));
-    }
-  }, [isBranchScoped]);
-
   function fetchTeachers() {
-    listTeachers()
+    if (!branchReady) return;
+    listTeachers(branchId)
       .then((page) => setState({ kind: "loaded", teachers: page.content }))
       .catch((error: unknown) =>
         setState({
@@ -56,15 +55,15 @@ export function TeachersPage() {
       );
   }
 
-  useEffect(fetchTeachers, []);
+  useEffect(fetchTeachers, [branchReady, branchId]);
 
   function load() {
     setState({ kind: "loading" });
     fetchTeachers();
   }
 
-  function branchName(branchId?: string) {
-    return branches?.find((branch) => branch.id === branchId)?.name ?? "—";
+  function branchName(teacherBranchId?: string) {
+    return branches.find((branch) => branch.id === teacherBranchId)?.name ?? "—";
   }
 
   return (
@@ -74,6 +73,12 @@ export function TeachersPage() {
         description="Every teacher account at your school."
         actions={canManage && <Button onClick={() => setCreateOpen(true)}>Add teacher</Button>}
       />
+
+      {showsBranchFilter && (
+        <StickySubHeader>
+          <BranchFilter id="teachers-branch" />
+        </StickySubHeader>
+      )}
 
       {state.kind === "loading" && (
         <Card className="p-0">
@@ -134,7 +139,7 @@ export function TeachersPage() {
 
       {createOpen && (
         <TeacherFormModal
-          branches={branches ?? []}
+          branches={branches}
           showBranchField={!isBranchScoped}
           onClose={() => setCreateOpen(false)}
           onSubmit={createTeacher}
@@ -145,7 +150,7 @@ export function TeachersPage() {
         <TeacherFormModal
           key={editing.id}
           initial={editing}
-          branches={branches ?? []}
+          branches={branches}
           showBranchField={!isBranchScoped}
           onClose={() => setEditing(null)}
           onSubmit={(values) => updateTeacher(editing.id, values)}

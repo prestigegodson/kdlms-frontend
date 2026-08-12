@@ -122,7 +122,7 @@ export function ClassDetailPage() {
     // teacher to assign anyway, so skip the call entirely rather than let
     // it 403 and silently fall back to an empty list.
     if (!canManage) return;
-    listTeachers(0, 200)
+    listTeachers(undefined, 0, 200)
       .then((page) => setTeachers(page.content))
       .catch(() => setTeachers([]));
   }, [canManage]);
@@ -360,7 +360,7 @@ export function ClassDetailPage() {
 
       {registerOpen && (
         <RegisterStudentModal
-          fixedClass={{ id: schoolClass.id, name: schoolClass.name }}
+          fixedClass={{ id: schoolClass.id, name: schoolClass.name, branchId: schoolClass.branchId }}
           onClose={() => setRegisterOpen(false)}
           onSaved={() => {
             setRegisterOpen(false);

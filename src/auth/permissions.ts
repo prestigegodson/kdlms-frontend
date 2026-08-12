@@ -38,6 +38,17 @@ export const can = {
     return role === "SCHOOL_ADMIN";
   },
 
+  /**
+   * Whether this role picks a branch via a Branch filter (Assessments,
+   * Attendance, Reports, Messages, Teachers) rather than having one derived
+   * from their token - SCHOOL_ADMIN only. A BRANCH_ADMIN/TEACHER is always
+   * confined to their own branch server-side, so no control renders for
+   * them - see features/branches/useBranchScope.ts.
+   */
+  selectBranch(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN";
+  },
+
   /** Level rename/reorder/add/archive/delete - SCHOOL_ADMIN only, since levels are school-wide, not branch-scoped. */
   manageLevels(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN";

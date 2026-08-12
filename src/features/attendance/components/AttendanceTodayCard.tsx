@@ -48,10 +48,12 @@ function groupByLevel(
 interface AttendanceTodayCardProps {
   /** Defaults to today; a standalone component (not just an AdminAttendancePanel section) so Phase 9's dashboard landing page can drop it in unchanged. */
   date?: string;
+  /** Narrows the rollup to one branch - AdminAttendancePanel's SCHOOL_ADMIN branch filter. Omitted (school-wide) for the dashboard's own usage and for a BRANCH_ADMIN, whose branch the server already derives. */
+  branchId?: string;
 }
 
 /** Which classes have taken today's register and which haven't - SCHOOL_ADMIN/BRANCH_ADMIN only. */
-export function AttendanceTodayCard({ date = todayIso() }: AttendanceTodayCardProps) {
+export function AttendanceTodayCard({ date = todayIso(), branchId }: AttendanceTodayCardProps) {
   const [overview, setOverview] = useState<AttendanceOverviewView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const levels = useLevelStore((state) => state.levels);
@@ -67,24 +69,25 @@ export function AttendanceTodayCard({ date = todayIso() }: AttendanceTodayCardPr
     [overview, levelRanks],
   );
 
-  // A date change resets downstream state during render (see ScoreEntryGrid's
+  // A date or branch change resets downstream state during render (see ScoreEntryGrid's
   // comment on this pattern) rather than in an effect; the effect below only fetches.
-  const [lastDate, setLastDate] = useState(date);
-  if (date !== lastDate) {
-    setLastDate(date);
+  const selectionKey = `${date}|${branchId ?? ""}`;
+  const [lastSelectionKey, setLastSelectionKey] = useState(selectionKey);
+  if (selectionKey !== lastSelectionKey) {
+    setLastSelectionKey(selectionKey);
     setOverview(null);
     setLoadError(null);
   }
 
   useEffect(() => {
-    getDailyOverview(date)
+    getDailyOverview(date, branchId)
       .then(setOverview)
       .catch((error: unknown) =>
         setLoadError(
           error instanceof ApiError ? error.message : "Failed to load today's attendance",
         ),
       );
-  }, [date]);
+  }, [date, branchId]);
 
   const allMarked =
     overview !== null &&

@@ -141,6 +141,8 @@ export function getStudentTermSummary(
   );
 }
 
-export function getDailyOverview(date: string): Promise<AttendanceOverviewView> {
-  return apiFetch<AttendanceOverviewView>(`${BASE}/overview?date=${date}`);
+export function getDailyOverview(date: string, branchId?: string): Promise<AttendanceOverviewView> {
+  const params = new URLSearchParams({ date });
+  if (branchId) params.set("branchId", branchId);
+  return apiFetch<AttendanceOverviewView>(`${BASE}/overview?${params.toString()}`);
 }

@@ -22,7 +22,7 @@ interface RegisterStudentModalProps {
    * class-detail page's "Register student" action already knows which
    * class, unlike the student registry's version of this same form.
    */
-  fixedClass?: { id: string; name: string };
+  fixedClass?: { id: string; name: string, branchId: string };
   onClose: () => void;
   onSaved: () => void;
 }
@@ -60,7 +60,7 @@ export function RegisterStudentModal({
     setError(null);
     try {
       await registerStudent({
-        branchId: showBranchField ? branchId : undefined,
+        branchId: showBranchField ? branchId : fixedClass?.branchId,
         classId,
         admissionNumber: manualAdmissionNumber ? admissionNumber : undefined,
         firstName,

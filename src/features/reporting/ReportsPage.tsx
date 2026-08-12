@@ -4,6 +4,7 @@ import { getBroadsheet } from "@/api/assessments";
 import { ApiError } from "@/api/client";
 import { listClasses, type SchoolClassView } from "@/api/classes";
 import { downloadClassReportsPdf, previewStudentReport } from "@/api/reports";
+import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -12,8 +13,11 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
+import { BranchFilter } from "@/features/branches/components/BranchFilter";
+import { useBranchScope } from "@/features/branches/useBranchScope";
 import { ReportPreviewFrame } from "@/features/reporting/components/ReportPreviewFrame";
 import { type ReportStudentRow, StudentReportList } from "@/features/reporting/components/StudentReportList";
+import { useAuthStore } from "@/stores/authStore";
 import { downloadBlob } from "@/utils/download";
 
 /**
@@ -23,6 +27,10 @@ import { downloadBlob } from "@/utils/download";
  * already has, rather than a new roster endpoint.
  */
 export function ReportsPage() {
+  const role = useAuthStore((state) => state.user?.role);
+  const showsBranchFilter = can.selectBranch(role);
+  const { ready: branchReady, branchId } = useBranchScope();
+
   const [classes, setClasses] = useState<SchoolClassView[] | null>(null);
   const [classId, setClassId] = useState("");
   const [termId, setTermId] = useState("");
@@ -35,10 +43,19 @@ export function ReportsPage() {
   const [classDownloadError, setClassDownloadError] = useState<string | null>(null);
 
   useEffect(() => {
-    listClasses(undefined, undefined, 0, 200)
+    if (!branchReady) return;
+    listClasses(branchId, undefined, 0, 200)
       .then((page) => setClasses(page.content))
       .catch(() => setClasses([]));
-  }, []);
+  }, [branchReady, branchId]);
+
+  // A branch change clears the class selection during render (same idiom as below) - a class
+  // from the previous branch would otherwise 404 once the class list has re-fetched.
+  const [lastBranchId, setLastBranchId] = useState(branchId);
+  if (branchId !== lastBranchId) {
+    setLastBranchId(branchId);
+    setClassId("");
+  }
 
   // Selection resets downstream state during render (the pattern `AdminResultsPanel`
   // documents) rather than in an effect; the effect below only fetches.
@@ -112,15 +129,18 @@ export function ReportsPage() {
           <Spinner /> Loading classes…
         </div>
       )}
-      {classes !== null && classes.length > 0 && (
+      {classes !== null && (classes.length > 0 || showsBranchFilter) && (
         <StickySubHeader>
-          <ClassTermPicker
-            classes={classOptions}
-            classId={classId}
-            onClassChange={setClassId}
-            termId={termId}
-            onTermChange={setTermId}
-          />
+          <BranchFilter id="reports-branch" />
+          {classes.length > 0 && (
+            <ClassTermPicker
+              classes={classOptions}
+              classId={classId}
+              onClassChange={setClassId}
+              termId={termId}
+              onTermChange={setTermId}
+            />
+          )}
         </StickySubHeader>
       )}
 

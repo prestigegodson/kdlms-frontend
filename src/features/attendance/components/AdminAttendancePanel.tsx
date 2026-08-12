@@ -7,6 +7,7 @@ import {
 } from "@/api/attendance";
 import { ApiError } from "@/api/client";
 import { listClasses, type SchoolClassView } from "@/api/classes";
+import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
@@ -18,7 +19,10 @@ import { AttendanceTodayCard } from "@/features/attendance/components/Attendance
 import { ClassAttendanceSummaryTable } from "@/features/attendance/components/ClassAttendanceSummaryTable";
 import { ClassDatePicker } from "@/features/attendance/components/ClassDatePicker";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
+import { BranchFilter } from "@/features/branches/components/BranchFilter";
+import { useBranchScope } from "@/features/branches/useBranchScope";
 import { StudentAttendanceCard } from "@/features/attendance/components/StudentAttendanceCard";
+import { useAuthStore } from "@/stores/authStore";
 import { todayIso } from "@/utils/date";
 import { BarChart3 } from "lucide-react";
 
@@ -36,14 +40,29 @@ interface AdminAttendancePanelProps {
  * class-teacher-write/admin-read rule for attendance.
  */
 export function AdminAttendancePanel({ initialClassId }: AdminAttendancePanelProps = {}) {
+  const role = useAuthStore((state) => state.user?.role);
+  const showsBranchFilter = can.selectBranch(role);
+  const { ready: branchReady, branchId } = useBranchScope();
+
   const [tab, setTab] = useState<Tab>("day");
   const [classes, setClasses] = useState<SchoolClassView[] | null>(null);
 
   useEffect(() => {
-    listClasses(undefined, undefined, 0, 200)
+    if (!branchReady) return;
+    listClasses(branchId, undefined, 0, 200)
       .then((page) => setClasses(page.content))
       .catch(() => setClasses([]));
-  }, []);
+  }, [branchReady, branchId]);
+
+  // A branch change resets the class list to null during render (see ScoreEntryGrid's
+  // comment on this pattern), so DayRegisterTab/TermSummaryTab - which default their own
+  // classId to classOptions[0] on mount - unmount and remount fresh once the branch-filtered
+  // list arrives, rather than keeping a class selection that belonged to the old branch.
+  const [lastBranchId, setLastBranchId] = useState(branchId);
+  if (branchId !== lastBranchId) {
+    setLastBranchId(branchId);
+    setClasses(null);
+  }
 
   const classOptions = (classes ?? []).map((schoolClass) => ({
     id: schoolClass.id,
@@ -57,7 +76,7 @@ export function AdminAttendancePanel({ initialClassId }: AdminAttendancePanelPro
         description="Review a class's daily register or its totals for a term."
       />
 
-      <AttendanceTodayCard />
+      {(!showsBranchFilter || branchReady) && <AttendanceTodayCard branchId={branchId} />}
 
       <div className="flex flex-wrap gap-2">
         <TabButton active={tab === "day"} onClick={() => setTab("day")}>
@@ -74,10 +93,10 @@ export function AdminAttendancePanel({ initialClassId }: AdminAttendancePanelPro
         </div>
       )}
 
-      {classes !== null && classes.length > 0 && tab === "day" && (
+      {classes !== null && (classes.length > 0 || showsBranchFilter) && tab === "day" && (
         <DayRegisterTab classOptions={classOptions} initialClassId={initialClassId} />
       )}
-      {classes !== null && classes.length > 0 && tab === "term" && (
+      {classes !== null && (classes.length > 0 || showsBranchFilter) && tab === "term" && (
         <TermSummaryTab classOptions={classOptions} initialClassId={initialClassId} />
       )}
     </div>
@@ -137,6 +156,7 @@ function DayRegisterTab({ classOptions, initialClassId }: { classOptions: ClassO
   return (
     <div className="space-y-4">
       <StickySubHeader>
+        <BranchFilter id="attendance-day-branch" />
         <ClassDatePicker
           classes={classOptions}
           classId={classId}
@@ -191,6 +211,7 @@ function TermSummaryTab({ classOptions, initialClassId }: { classOptions: ClassO
   return (
     <div className="space-y-4">
       <StickySubHeader>
+        <BranchFilter id="attendance-term-branch" />
         <ClassTermPicker
           classes={classOptions}
           classId={classId}

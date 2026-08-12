@@ -96,8 +96,10 @@ export function createTeacher(request: CreateTeacherRequest): Promise<CreateUser
   });
 }
 
-export function listTeachers(page = 0, size = 20): Promise<Page<UserSummary>> {
-  return apiFetch<Page<UserSummary>>(`/api/v1/users/teachers?page=${page}&size=${size}`);
+export function listTeachers(branchId?: string, page = 0, size = 20): Promise<Page<UserSummary>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (branchId) params.set("branchId", branchId);
+  return apiFetch<Page<UserSummary>>(`/api/v1/users/teachers?${params.toString()}`);
 }
 
 /** Branch isn't here - a teacher's branch isn't editable, see the backend's {@code User#updateDetails}. */

@@ -8,6 +8,7 @@ import * as usersApi from "@/api/users";
 import type { CreateUserResult } from "@/api/users";
 import { TeachersPage } from "@/features/teachers/TeachersPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetBranchStore } from "@/stores/branchStore";
 
 vi.mock("@/api/users", async () => {
   const actual = await vi.importActual<typeof import("@/api/users")>("@/api/users");
@@ -65,9 +66,28 @@ function renderAsSchoolAdmin() {
   render(<TeachersPage />);
 }
 
+function renderAsBranchAdmin() {
+  resetAuthStore();
+  useAuthStore.setState({
+    user: {
+      id: "user-2",
+      email: "branch-admin@school.example",
+      firstName: "Bea",
+      lastName: "Admin",
+      role: "BRANCH_ADMIN",
+      schoolId: "school-1",
+      branchId: "branch-1",
+    },
+    accessToken: "access",
+    refreshToken: "refresh",
+  });
+  render(<TeachersPage />);
+}
+
 describe("TeachersPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetBranchStore();
     vi.mocked(branchesApi.listBranches).mockResolvedValue({
       content: [MAIN_BRANCH],
       totalElements: 1,
@@ -83,7 +103,27 @@ describe("TeachersPage", () => {
     renderAsSchoolAdmin();
 
     expect(await screen.findByText("sonia@school.example")).toBeInTheDocument();
-    expect(await screen.findByText("Main Branch")).toBeInTheDocument();
+    const table = await screen.findByRole("table");
+    expect(within(table).getByText("Main Branch")).toBeInTheDocument();
+  });
+
+  it("shows a Branch filter for a SCHOOL_ADMIN, narrowing listTeachers to the selected branch", async () => {
+    mockTeachers([TEACHER]);
+
+    renderAsSchoolAdmin();
+
+    expect(await screen.findByLabelText("Branch")).toBeInTheDocument();
+    expect(usersApi.listTeachers).toHaveBeenCalledWith("branch-1");
+  });
+
+  it("shows no Branch filter for a BRANCH_ADMIN, and lists teachers unfiltered", async () => {
+    mockTeachers([TEACHER]);
+
+    renderAsBranchAdmin();
+
+    await screen.findByText("sonia@school.example");
+    expect(screen.queryByLabelText("Branch")).not.toBeInTheDocument();
+    expect(usersApi.listTeachers).toHaveBeenCalledWith(undefined);
   });
 
   it("creates a teacher and keeps the temporary password collapsed until revealed", async () => {

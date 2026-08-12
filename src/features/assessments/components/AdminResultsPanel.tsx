@@ -20,6 +20,8 @@ import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { BroadsheetTable } from "@/features/assessments/components/BroadsheetTable";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
 import { GradeKey } from "@/features/assessments/components/GradeKey";
+import { BranchFilter } from "@/features/branches/components/BranchFilter";
+import { useBranchScope } from "@/features/branches/useBranchScope";
 import { useAuthStore } from "@/stores/authStore";
 import { BarChart3 } from "lucide-react";
 
@@ -32,6 +34,7 @@ interface AdminResultsPanelProps {
 export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {}) {
   const role = useAuthStore((state) => state.user?.role);
   const canPublish = can.publishResults(role);
+  const { ready: branchReady, branchId } = useBranchScope();
 
   const [classes, setClasses] = useState<SchoolClassView[] | null>(null);
   const [classId, setClassId] = useState(initialClassId ?? "");
@@ -45,10 +48,19 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
   const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
-    listClasses(undefined, undefined, 0, 200)
+    if (!branchReady) return;
+    listClasses(branchId, undefined, 0, 200)
       .then((page) => setClasses(page.content))
       .catch(() => setClasses([]));
-  }, []);
+  }, [branchReady, branchId]);
+
+  // A branch change clears the class selection during render (same idiom as below) - a class
+  // from the previous branch would otherwise 404 once the class list has re-fetched.
+  const [lastBranchId, setLastBranchId] = useState(branchId);
+  if (branchId !== lastBranchId) {
+    setLastBranchId(branchId);
+    setClassId("");
+  }
 
   // Selection resets downstream state during render (see ScoreEntryGrid's comment on this
   // pattern) rather than in an effect; the effect below only fetches.
@@ -99,6 +111,7 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
   }
 
   const classOptions = (classes ?? []).map((c) => ({ id: c.id, name: c.name }));
+  const showsBranchFilter = can.selectBranch(role);
 
   return (
     <div className="space-y-6">
@@ -121,9 +134,12 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
         </div>
       )}
 
-      {classes !== null && classes.length > 0 && (
+      {classes !== null && (classes.length > 0 || showsBranchFilter) && (
         <StickySubHeader>
-          <ClassTermPicker classes={classOptions} classId={classId} onClassChange={setClassId} termId={termId} onTermChange={setTermId} />
+          <BranchFilter id="assessments-branch" />
+          {classes.length > 0 && (
+            <ClassTermPicker classes={classOptions} classId={classId} onClassChange={setClassId} termId={termId} onTermChange={setTermId} />
+          )}
         </StickySubHeader>
       )}
 
