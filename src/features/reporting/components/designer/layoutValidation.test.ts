@@ -113,4 +113,56 @@ describe("validateLayout", () => {
     const errors = validateLayout(layout, "NUMERIC");
     expect(errors.some((e) => e.includes("version"))).toBe(true);
   });
+
+  it("accepts a page with neither logo background field set", () => {
+    // The default, and every layout saved before this feature existed.
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [] }] }]);
+
+    expect(isLayoutValid(layout, "NUMERIC")).toBe(true);
+  });
+
+  it("rejects logoBackground enabled without an opacity", () => {
+    const layout: ReportLayout = {
+      version: 1,
+      page: { paddingPx: 24, fontFamily: "Helvetica, Arial, sans-serif", fontSizePx: 12, color: "#1a1a1a", logoBackground: true },
+      rows: [{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [] }] }],
+    };
+
+    const errors = validateLayout(layout, "NUMERIC");
+    expect(errors.some((e) => e.includes("opacity is required"))).toBe(true);
+  });
+
+  it("rejects a logo background opacity out of range", () => {
+    const layout: ReportLayout = {
+      version: 1,
+      page: {
+        paddingPx: 24,
+        fontFamily: "Helvetica, Arial, sans-serif",
+        fontSizePx: 12,
+        color: "#1a1a1a",
+        logoBackground: true,
+        logoBackgroundOpacity: 0,
+      },
+      rows: [{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [] }] }],
+    };
+
+    expect(isLayoutValid(layout, "NUMERIC")).toBe(false);
+  });
+
+  it("accepts logoBackground enabled with a valid opacity", () => {
+    const layout: ReportLayout = {
+      version: 1,
+      page: {
+        paddingPx: 24,
+        fontFamily: "Helvetica, Arial, sans-serif",
+        fontSizePx: 12,
+        color: "#1a1a1a",
+        logoBackground: true,
+        logoBackgroundOpacity: 10,
+      },
+      rows: [{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [] }] }],
+    };
+
+    expect(isLayoutValid(layout, "NUMERIC")).toBe(true);
+  });
 });

@@ -125,6 +125,16 @@ export interface PageStyle {
   fontFamily: AllowedFontFamily;
   fontSizePx: number;
   color: string;
+  /**
+   * Watermark the page with the rendering school's own logo - optional,
+   * unlike every field above, since a layout saved before this feature
+   * existed has neither field set. The *image* is never the designer's to
+   * supply (a template is shared across schools); a school with no logo on
+   * file simply renders with no background.
+   */
+  logoBackground?: boolean;
+  /** 1-100. Required when `logoBackground` is true - mirrors backend `ReportLayoutValidator`. */
+  logoBackgroundOpacity?: number;
 }
 
 export interface ReportLayout {

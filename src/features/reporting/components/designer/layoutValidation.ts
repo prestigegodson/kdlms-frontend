@@ -31,6 +31,8 @@ const MAX_FONT_SIZE_PX = 48;
 const MAX_MARGIN_PX = 64;
 const MAX_PADDING_PX = 64;
 const MAX_IMAGE_DIMENSION_PX = 1000;
+const MIN_BACKGROUND_OPACITY = 1;
+const MAX_BACKGROUND_OPACITY = 100;
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 const ALIGNMENTS = new Set(["left", "center", "right"]);
@@ -60,6 +62,12 @@ function validatePage(layout: ReportLayout, errors: string[]) {
   requireColor(page.color, "Page text color", errors);
   if (!ALLOWED_FONT_FAMILIES.includes(page.fontFamily)) {
     errors.push(`Page font family must be one of: ${ALLOWED_FONT_FAMILIES.join(", ")}.`);
+  }
+  // logoBackground/logoBackgroundOpacity are optional together, unlike every field above -
+  // a layout saved before this pair existed has neither set, and that must stay valid.
+  requireRange(page.logoBackgroundOpacity, MIN_BACKGROUND_OPACITY, MAX_BACKGROUND_OPACITY, "Page background opacity", errors);
+  if (page.logoBackground && page.logoBackgroundOpacity === undefined) {
+    errors.push("Page background opacity is required when the school logo background is enabled.");
   }
 }
 

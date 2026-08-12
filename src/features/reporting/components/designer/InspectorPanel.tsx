@@ -79,6 +79,34 @@ function PageInspector({ editor }: { editor: LayoutEditor }) {
       <FormField label="Text color" htmlFor="page-color">
         <Input id="page-color" type="color" value={page.color} onChange={(e) => editor.updatePage({ ...page, color: e.target.value })} />
       </FormField>
+      <div className="space-y-1">
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <Checkbox
+            checked={page.logoBackground ?? false}
+            onChange={(e) =>
+              editor.updatePage({
+                ...page,
+                logoBackground: e.target.checked,
+                logoBackgroundOpacity: page.logoBackgroundOpacity ?? 10,
+              })
+            }
+          />
+          Use school logo as background
+        </label>
+        <p className="text-xs text-slate-500">Schools without a logo on file render without a background.</p>
+      </div>
+      {page.logoBackground && (
+        <FormField label="Background opacity (%)" htmlFor="page-bg-opacity">
+          <Input
+            id="page-bg-opacity"
+            type="number"
+            min={1}
+            max={100}
+            value={page.logoBackgroundOpacity ?? 10}
+            onChange={(e) => editor.updatePage({ ...page, logoBackgroundOpacity: Number(e.target.value) })}
+          />
+        </FormField>
+      )}
     </div>
   );
 }

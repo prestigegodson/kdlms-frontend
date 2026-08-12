@@ -78,4 +78,20 @@ describe("useLayoutEditor", () => {
     expect(result.current.layout.rows).toHaveLength(2);
     expect(result.current.selection?.type).toBe("row");
   });
+
+  it("updatePage replaces the whole page style, including the logo background fields, and marks the layout dirty", () => {
+    const { result } = renderHook(() => useLayoutEditor(blankLayout()));
+
+    // Mirrors PageInspector's checkbox handler: enabling the flag seeds a default opacity
+    // in the same call, since PageStyle is a whole-object replace, not a patch.
+    act(() =>
+      result.current.updatePage({ ...result.current.layout.page, logoBackground: true, logoBackgroundOpacity: 10 }),
+    );
+
+    expect(result.current.layout.page.logoBackground).toBe(true);
+    expect(result.current.layout.page.logoBackgroundOpacity).toBe(10);
+    // Every other page field survives the spread untouched.
+    expect(result.current.layout.page.color).toBe("#1a1a1a");
+    expect(result.current.dirty).toBe(true);
+  });
 });
