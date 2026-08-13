@@ -165,24 +165,26 @@ export function StudentResultHistoryPage() {
       {terms !== null && terms.length > 0 && (
         <>
           <StickySubHeader>
-            {terms.map((term) => (
-              <Button
-                key={term.termId}
-                type="button"
-                size="sm"
-                variant={term.termId === termId ? "primary" : "secondary"}
-                className="flex-1 justify-center lg:flex-none"
-                onClick={() => setTermId(term.termId)}
-              >
-                {term.termName}
-                <Badge
-                  variant={term.resultsPublished ? "success" : "neutral"}
-                  className={term.termId === termId ? "bg-white/20 text-white" : undefined}
+            <div className="flex gap-3 lg:contents">
+              {terms.map((term) => (
+                <Button
+                  key={term.termId}
+                  type="button"
+                  size="sm"
+                  variant={term.termId === termId ? "primary" : "secondary"}
+                  className="flex-1 justify-center lg:flex-none"
+                  onClick={() => setTermId(term.termId)}
                 >
-                  {term.resultsPublished ? "Published" : "Unpublished"}
-                </Badge>
-              </Button>
-            ))}
+                  {term.termName}
+                  <Badge
+                    variant={term.resultsPublished ? "success" : "neutral"}
+                    className={term.termId === termId ? "bg-white/20 text-white" : undefined}
+                  >
+                    {term.resultsPublished ? "Published" : "Unpublished"}
+                  </Badge>
+                </Button>
+              ))}
+            </div>
           </StickySubHeader>
 
           {resultError && <Alert variant="error">{resultError}</Alert>}

@@ -130,7 +130,7 @@ export function ReportsPage() {
         </div>
       )}
       {classes !== null && (classes.length > 0 || showsBranchFilter) && (
-        <StickySubHeader>
+        <StickySubHeader collapsible>
           <BranchFilter id="reports-branch" />
           {classes.length > 0 && (
             <ClassTermPicker

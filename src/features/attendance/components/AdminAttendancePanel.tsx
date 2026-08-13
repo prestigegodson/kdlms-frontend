@@ -155,7 +155,7 @@ function DayRegisterTab({ classOptions, initialClassId }: { classOptions: ClassO
 
   return (
     <div className="space-y-4">
-      <StickySubHeader>
+      <StickySubHeader collapsible>
         <BranchFilter id="attendance-day-branch" />
         <ClassDatePicker
           classes={classOptions}
@@ -210,7 +210,7 @@ function TermSummaryTab({ classOptions, initialClassId }: { classOptions: ClassO
 
   return (
     <div className="space-y-4">
-      <StickySubHeader>
+      <StickySubHeader collapsible>
         <BranchFilter id="attendance-term-branch" />
         <ClassTermPicker
           classes={classOptions}

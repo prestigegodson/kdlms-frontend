@@ -86,7 +86,7 @@ export function AdminMessageOverview() {
       )}
 
       {classes !== null && (classes.length > 0 || showsBranchFilter) && (
-        <StickySubHeader>
+        <StickySubHeader collapsible>
           <BranchFilter id="messages-branch" />
           {classes.length > 0 && (
             <ClassDatePicker

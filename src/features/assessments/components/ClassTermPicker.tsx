@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { type AcademicSessionView, listSessions, listTerms, type TermView } from "@/api/sessions";
 import { FormField } from "@/components/ui/FormField";
 import { Select } from "@/components/ui/Select";
+import { useFilterChip } from "@/components/ui/StickySubHeader";
 
 export interface ClassOption {
   id: string;
@@ -66,19 +67,13 @@ export function ClassTermPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs only when the session changes; onTermChange defaults to that session's current (or else first) term
   }, [sessionId]);
 
+  useFilterChip("session", sessions.find((session) => session.id === sessionId)?.name);
+  useFilterChip("term", terms.find((term) => term.id === termId)?.name);
+  useFilterChip("class", classes.find((option) => option.id === classId)?.name);
+
   return (
-    <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none lg:gap-4">
-      <FormField label="Class" htmlFor="picker-class" labelClassName="sr-only lg:not-sr-only">
-        <Select id="picker-class" value={classId} onChange={(event) => onClassChange(event.target.value)}>
-          <option value="">Select a class…</option>
-          {classes.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.name}
-            </option>
-          ))}
-        </Select>
-      </FormField>
-      <FormField label="Session" htmlFor="picker-session" labelClassName="sr-only lg:not-sr-only">
+    <div className="grid min-w-0 flex-1 gap-2 lg:grid-flow-col lg:auto-cols-fr lg:gap-4">
+      <FormField label="Session" htmlFor="picker-session">
         <Select id="picker-session" value={sessionId} onChange={(event) => setSessionId(event.target.value)}>
           {sessions.map((session) => (
             <option key={session.id} value={session.id}>
@@ -87,7 +82,7 @@ export function ClassTermPicker({
           ))}
         </Select>
       </FormField>
-      <FormField label="Term" htmlFor="picker-term" labelClassName="sr-only lg:not-sr-only">
+      <FormField label="Term" htmlFor="picker-term">
         <Select
           id="picker-term"
           value={termId}
@@ -100,6 +95,16 @@ export function ClassTermPicker({
           {terms.map((term) => (
             <option key={term.id} value={term.id}>
               {term.name}
+            </option>
+          ))}
+        </Select>
+      </FormField>
+      <FormField label="Class" htmlFor="picker-class">
+        <Select id="picker-class" value={classId} onChange={(event) => onClassChange(event.target.value)}>
+          <option value="">Select a class…</option>
+          {classes.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.name}
             </option>
           ))}
         </Select>

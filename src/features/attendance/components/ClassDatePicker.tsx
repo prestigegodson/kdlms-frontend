@@ -1,7 +1,8 @@
 import { DateInput } from "@/components/ui/DateInput";
 import { FormField } from "@/components/ui/FormField";
 import { Select } from "@/components/ui/Select";
-import { isWeekend, todayIso } from "@/utils/date";
+import { useFilterChip } from "@/components/ui/StickySubHeader";
+import { formatLongDate, isWeekend, todayIso } from "@/utils/date";
 
 export interface ClassOption {
   id: string;
@@ -41,9 +42,12 @@ export function ClassDatePicker({
   onDateChange,
   disableWeekends,
 }: ClassDatePickerProps) {
+  useFilterChip("class", classes.find((option) => option.id === classId)?.name);
+  useFilterChip("date", date ? formatLongDate(date) : null);
+
   return (
-    <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 lg:gap-4">
-      <FormField label="Class" htmlFor="attendance-class" labelClassName="sr-only lg:not-sr-only">
+    <div className="grid min-w-0 flex-1 gap-2 lg:grid-cols-2 lg:gap-4">
+      <FormField label="Class" htmlFor="attendance-class">
         <Select
           id="attendance-class"
           value={classId}
@@ -57,7 +61,7 @@ export function ClassDatePicker({
           ))}
         </Select>
       </FormField>
-      <FormField label="Date" htmlFor="attendance-date" labelClassName="sr-only lg:not-sr-only">
+      <FormField label="Date" htmlFor="attendance-date">
         <DateInput
           id="attendance-date"
           max={todayIso()}

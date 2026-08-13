@@ -135,7 +135,7 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
       )}
 
       {classes !== null && (classes.length > 0 || showsBranchFilter) && (
-        <StickySubHeader>
+        <StickySubHeader collapsible>
           <BranchFilter id="assessments-branch" />
           {classes.length > 0 && (
             <ClassTermPicker classes={classOptions} classId={classId} onClassChange={setClassId} termId={termId} onTermChange={setTermId} />

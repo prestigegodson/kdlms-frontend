@@ -133,33 +133,35 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
       />
 
       <StickySubHeader>
-        <FormField
-          label="Search"
-          htmlFor="student-search"
-          className="min-w-0 flex-1 lg:max-w-xs"
-          labelClassName="sr-only lg:not-sr-only"
-        >
-          <SearchInput
-            id="student-search"
-            value={query}
-            onChange={resetToFirstPage(setQuery)}
-            placeholder="Search name or admission no."
-          />
-        </FormField>
-        <Button
-          type="button"
-          variant="secondary"
-          className="relative shrink-0 lg:hidden"
-          onClick={() => setFiltersOpen(true)}
-        >
-          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-          Filters
-          {activeFilterCount > 0 && (
-            <Badge variant="brand" className="absolute -right-2 -top-2">
-              {activeFilterCount}
-            </Badge>
-          )}
-        </Button>
+        <div className="flex min-w-0 gap-3 lg:contents">
+          <FormField
+            label="Search"
+            htmlFor="student-search"
+            className="min-w-0 flex-1 lg:max-w-xs"
+            labelClassName="sr-only lg:not-sr-only"
+          >
+            <SearchInput
+              id="student-search"
+              value={query}
+              onChange={resetToFirstPage(setQuery)}
+              placeholder="Search name or admission no."
+            />
+          </FormField>
+          <Button
+            type="button"
+            variant="secondary"
+            className="relative shrink-0 lg:hidden"
+            onClick={() => setFiltersOpen(true)}
+          >
+            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+            Filters
+            {activeFilterCount > 0 && (
+              <Badge variant="brand" className="absolute -right-2 -top-2">
+                {activeFilterCount}
+              </Badge>
+            )}
+          </Button>
+        </div>
       </StickySubHeader>
 
       <div className="hidden gap-4 lg:grid lg:grid-cols-3">

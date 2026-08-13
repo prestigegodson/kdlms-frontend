@@ -1,6 +1,7 @@
 import { can } from "@/auth/permissions";
 import { FormField } from "@/components/ui/FormField";
 import { Select } from "@/components/ui/Select";
+import { useFilterChip } from "@/components/ui/StickySubHeader";
 import { useAuthStore } from "@/stores/authStore";
 import { useBranchStore } from "@/stores/branchStore";
 
@@ -32,12 +33,17 @@ export function BranchFilter({ id, className = "min-w-0 flex-1 lg:max-w-[12rem]"
   const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
   const select = useBranchStore((state) => state.select);
 
+  // Called unconditionally, ahead of the early return below, since hooks
+  // can't be conditional - a no-op unmount (nothing ever published) is fine
+  // for the roles that return null.
+  useFilterChip("branch", branches.find((branch) => branch.id === selectedBranchId)?.name);
+
   if (!can.selectBranch(role)) {
     return null;
   }
 
   return (
-    <FormField label="Branch" htmlFor={id} labelClassName="sr-only lg:not-sr-only" className={className}>
+    <FormField label="Branch" htmlFor={id} className={className}>
       <Select id={id} value={selectedBranchId ?? ""} onChange={(event) => select(event.target.value)}>
         {branches.map((branch) => (
           <option key={branch.id} value={branch.id}>

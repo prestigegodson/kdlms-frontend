@@ -9,7 +9,7 @@ import { FormField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
-import { StickySubHeader } from "@/components/ui/StickySubHeader";
+import { StickySubHeader, useFilterChip } from "@/components/ui/StickySubHeader";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
 import { RatingEntryGrid } from "@/features/assessments/components/RatingEntryGrid";
 import { SaveOutcomeList } from "@/features/assessments/components/SaveOutcomeList";
@@ -83,6 +83,10 @@ export function TeacherEntryPanel({ initialClassId }: TeacherEntryPanelProps = {
 
   const classOptions = (classes ?? []).map((c) => ({ id: c.classId, name: c.className }));
 
+  // Published unconditionally (mirrors BranchFilter's hook-before-early-return note) even though
+  // the Subject field itself only renders once a class is chosen - a no-op chip until then.
+  useFilterChip("subject", classId ? (subjects ?? []).find((subject) => subject.id === subjectId)?.name : null);
+
   return (
     <div className="space-y-6">
       <PageHeader title="Record scores" description="Pick a class, subject, and term to open its sheet." />
@@ -101,10 +105,10 @@ export function TeacherEntryPanel({ initialClassId }: TeacherEntryPanelProps = {
       )}
 
       {classes !== null && classes.length > 0 && (
-        <StickySubHeader>
+        <StickySubHeader collapsible>
           <ClassTermPicker classes={classOptions} classId={classId} onClassChange={setClassId} termId={termId} onTermChange={setTermId}>
             {classId && (
-              <FormField label="Subject" htmlFor="entry-subject" labelClassName="sr-only lg:not-sr-only">
+              <FormField label="Subject" htmlFor="entry-subject">
                 <Select id="entry-subject" value={subjectId} onChange={(event) => setSubjectId(event.target.value)}>
                   <option value="">Select a subject…</option>
                   {(subjects ?? []).map((subject) => (

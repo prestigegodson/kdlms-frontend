@@ -121,9 +121,9 @@ function AdminClasses({ role }: { role: Role | undefined }) {
       />
 
       <StickySubHeader>
-        <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none lg:gap-4 lg:max-w-xl">
+        <div className="grid min-w-0 flex-1 gap-2 lg:grid-flow-col lg:auto-cols-fr lg:gap-4 lg:max-w-xl">
           {!isBranchScoped && (
-            <FormField label="Branch" htmlFor="class-branch-filter" labelClassName="sr-only lg:not-sr-only">
+            <FormField label="Branch" htmlFor="class-branch-filter">
               <Select id="class-branch-filter" value={branchId} onChange={(event) => setBranchId(event.target.value)}>
                 <option value="">All branches</option>
                 {branches?.map((branch) => (
@@ -134,7 +134,7 @@ function AdminClasses({ role }: { role: Role | undefined }) {
               </Select>
             </FormField>
           )}
-          <FormField label="Level" htmlFor="class-level-filter" labelClassName="sr-only lg:not-sr-only">
+          <FormField label="Level" htmlFor="class-level-filter">
             <LevelSelect
               id="class-level-filter"
               levels={levels}

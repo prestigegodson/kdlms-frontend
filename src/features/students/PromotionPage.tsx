@@ -18,7 +18,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
-import { StickySubHeader } from "@/components/ui/StickySubHeader";
+import { StickySubHeader, useFilterChip } from "@/components/ui/StickySubHeader";
 import { OutcomeList } from "@/features/students/components/OutcomeList";
 import { StudentPicker, type StudentPickerRow } from "@/features/students/components/StudentPicker";
 import { useAuthStore } from "@/stores/authStore";
@@ -32,8 +32,8 @@ function toPickerRow(student: StudentView, showCurrentClass?: boolean): StudentP
   };
 }
 
-/** The `sr-only lg:not-sr-only` sub-header grid idiom `ClassTermPicker`/`ClassDatePicker` established - 2-up below `lg`, one equal-width row from `lg` up. */
-const PICKER_GRID_CLASS = "grid min-w-0 flex-1 grid-cols-2 gap-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none lg:gap-4";
+/** The sub-header grid idiom `ClassTermPicker`/`ClassDatePicker` established - stacked, labelled rows below `lg`, one equal-width row from `lg` up. */
+const PICKER_GRID_CLASS = "grid min-w-0 flex-1 gap-2 lg:grid-flow-col lg:auto-cols-fr lg:gap-4";
 
 type Mode = "promote" | "place";
 
@@ -157,15 +157,16 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
     }
   }
 
+  useFilterChip("promote-source-session", sessions.find((session) => session.id === sourceSessionId)?.name);
+  useFilterChip("promote-source-class", classes.find((schoolClass) => schoolClass.id === sourceClassId)?.name);
+  useFilterChip("promote-target-session", sessions.find((session) => session.id === targetSessionId)?.name);
+  useFilterChip("promote-target-class", classes.find((schoolClass) => schoolClass.id === targetClassId)?.name);
+
   return (
     <div className="space-y-6">
-      <StickySubHeader>
+      <StickySubHeader collapsible>
         <div className={PICKER_GRID_CLASS}>
-          <FormField
-            label="Source session"
-            htmlFor="promote-source-session"
-            labelClassName="sr-only lg:not-sr-only"
-          >
+          <FormField label="Source session" htmlFor="promote-source-session">
             <Select
               id="promote-source-session"
               value={sourceSessionId}
@@ -179,11 +180,7 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
               ))}
             </Select>
           </FormField>
-          <FormField
-            label="Source class"
-            htmlFor="promote-source-class"
-            labelClassName="sr-only lg:not-sr-only"
-          >
+          <FormField label="Source class" htmlFor="promote-source-class">
             <Select
               id="promote-source-class"
               value={sourceClassId}
@@ -200,11 +197,7 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
               ))}
             </Select>
           </FormField>
-          <FormField
-            label="Target session"
-            htmlFor="promote-target-session"
-            labelClassName="sr-only lg:not-sr-only"
-          >
+          <FormField label="Target session" htmlFor="promote-target-session">
             <Select
               id="promote-target-session"
               value={targetSessionId}
@@ -218,11 +211,7 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
               ))}
             </Select>
           </FormField>
-          <FormField
-            label="Target class"
-            htmlFor="promote-target-class"
-            labelClassName="sr-only lg:not-sr-only"
-          >
+          <FormField label="Target class" htmlFor="promote-target-class">
             <Select
               id="promote-target-class"
               value={targetClassId}
@@ -329,11 +318,15 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
     }
   }
 
+  useFilterChip("place-search", query);
+  useFilterChip("place-target-session", sessions.find((session) => session.id === sessionId)?.name);
+  useFilterChip("place-target-class", classes.find((schoolClass) => schoolClass.id === targetClassId)?.name);
+
   return (
     <div className="space-y-6">
-      <StickySubHeader>
+      <StickySubHeader collapsible>
         <div className={PICKER_GRID_CLASS}>
-          <FormField label="Search students" htmlFor="place-search" labelClassName="sr-only lg:not-sr-only">
+          <FormField label="Search students" htmlFor="place-search">
             <SearchInput
               id="place-search"
               value={query}
@@ -344,7 +337,7 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
               placeholder="Name or admission no."
             />
           </FormField>
-          <FormField label="Target session" htmlFor="place-target-session" labelClassName="sr-only lg:not-sr-only">
+          <FormField label="Target session" htmlFor="place-target-session">
             <Select id="place-target-session" value={sessionId} onChange={(event) => setSessionId(event.target.value)}>
               <option value="">Select a session…</option>
               {sessions.map((session) => (
@@ -354,7 +347,7 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
               ))}
             </Select>
           </FormField>
-          <FormField label="Target class" htmlFor="place-target-class" labelClassName="sr-only lg:not-sr-only">
+          <FormField label="Target class" htmlFor="place-target-class">
             <Select id="place-target-class" value={targetClassId} onChange={(event) => setTargetClassId(event.target.value)}>
               <option value="">Select a class…</option>
               {classes.map((schoolClass) => (
