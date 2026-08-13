@@ -1,6 +1,6 @@
 import type { DashboardNextTerm, DashboardTermProgress } from "@/api/dashboard";
 import { Card } from "@/components/ui/Card";
-import { formatDateRange, formatLongDate } from "@/utils/date";
+import { formatDateRange, formatLongDate, parseIsoDate } from "@/utils/date";
 
 interface TermProgressCardProps {
   currentTerm: DashboardTermProgress;
@@ -9,15 +9,17 @@ interface TermProgressCardProps {
 
 /**
  * The current term's own date range and how far through it the school is -
- * `currentTerm.daysRemaining` is already clamped to zero server-side for a
- * term whose end date has passed but hasn't been superseded yet, so the
- * rail never overshoots. `nextTerm` is omitted entirely (not just an empty
- * state) until a school admin has actually created the following term.
+ * `currentTerm.daysRemaining` is signed, not clamped, so a term whose end
+ * date has passed without a later term being marked current (the marker is
+ * set explicitly, never inferred from today's date) reads as "Ended N days
+ * ago" rather than an indefinite "Ends today". `nextTerm` is omitted
+ * entirely (not just an empty state) until a school admin has actually
+ * created the following term.
  */
 export function TermProgressCard({ currentTerm, nextTerm }: TermProgressCardProps) {
   const totalDays = daysBetween(currentTerm.startDate, currentTerm.endDate);
   const elapsedDays = Math.max(0, totalDays - currentTerm.daysRemaining);
-  const percent = totalDays === 0 ? 100 : Math.min(100, Math.round((elapsedDays / totalDays) * 100));
+  const percent = Math.min(100, Math.round((elapsedDays / totalDays) * 100));
 
   return (
     <Card>
@@ -27,11 +29,7 @@ export function TermProgressCard({ currentTerm, nextTerm }: TermProgressCardProp
       </div>
 
       <div className="mt-3 space-y-1.5">
-        <p className="text-xs text-slate-500">
-          {currentTerm.daysRemaining > 0
-            ? `Ends in ${currentTerm.daysRemaining} day${currentTerm.daysRemaining === 1 ? "" : "s"}`
-            : "Ends today"}
-        </p>
+        <p className="text-xs text-slate-500">{daysRemainingLabel(currentTerm.daysRemaining)}</p>
         <div className="h-1 w-full overflow-hidden rounded-full bg-slate-100">
           <div
             className="h-full rounded-full bg-brand-500 transition-[width] duration-300"
@@ -50,8 +48,19 @@ export function TermProgressCard({ currentTerm, nextTerm }: TermProgressCardProp
   );
 }
 
+function daysRemainingLabel(daysRemaining: number): string {
+  if (daysRemaining > 0) {
+    return `Ends in ${daysRemaining} day${daysRemaining === 1 ? "" : "s"}`;
+  }
+  if (daysRemaining === 0) {
+    return "Ends today";
+  }
+  const daysAgo = -daysRemaining;
+  return `Ended ${daysAgo} day${daysAgo === 1 ? "" : "s"} ago - mark the next term current in Sessions & Terms`;
+}
+
 function daysBetween(startIso: string, endIso: string): number {
-  const start = new Date(startIso).getTime();
-  const end = new Date(endIso).getTime();
+  const start = parseIsoDate(startIso)?.getTime() ?? 0;
+  const end = parseIsoDate(endIso)?.getTime() ?? 0;
   return Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)));
 }

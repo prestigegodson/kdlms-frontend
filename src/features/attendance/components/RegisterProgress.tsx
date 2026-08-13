@@ -4,6 +4,11 @@ interface RegisterProgressProps {
   /** Noun for the remaining-count line, e.g. "student" (default) or "class". */
   itemLabel?: string;
   /**
+   * Plural form of `itemLabel`, for when a naive `+"s"` would be wrong (e.g.
+   * "class" -> "classes"). Defaults to `` `${itemLabel}s` ``.
+   */
+  itemLabelPlural?: string;
+  /**
    * Past-tense verb for both lines, e.g. "marked" (default) or "published" -
    * the dashboard's publication-progress card reuses this component for
    * something that's published, not marked, and "3 classes still unmarked"
@@ -24,6 +29,7 @@ export function RegisterProgress({
   markedCount,
   totalCount,
   itemLabel = "student",
+  itemLabelPlural = `${itemLabel}s`,
   verbLabel = "marked",
 }: RegisterProgressProps) {
   const percent = totalCount === 0 ? 0 : Math.round((markedCount / totalCount) * 100);
@@ -37,8 +43,7 @@ export function RegisterProgress({
         </span>
         {remaining > 0 && (
           <span>
-            {remaining} {itemLabel}
-            {remaining === 1 ? "" : "s"} still un{verbLabel}
+            {remaining} {remaining === 1 ? itemLabel : itemLabelPlural} still un{verbLabel}
           </span>
         )}
       </div>

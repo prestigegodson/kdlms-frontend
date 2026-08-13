@@ -24,6 +24,17 @@ describe("TermProgressCard", () => {
     expect(screen.getByText("Ends today")).toBeInTheDocument();
   });
 
+  it("says the term ended N days ago, rather than showing a permanent 'ends today', once its end date has passed", () => {
+    render(
+      <TermProgressCard
+        currentTerm={{ name: "Term 1", startDate: "2026-09-01", endDate: "2026-12-12", daysRemaining: -5 }}
+      />,
+    );
+
+    expect(screen.getByText(/Ended 5 days ago/)).toBeInTheDocument();
+    expect(screen.queryByText("Ends today")).not.toBeInTheDocument();
+  });
+
   it("omits the next-term line when no term has been created yet after the current one", () => {
     render(
       <TermProgressCard

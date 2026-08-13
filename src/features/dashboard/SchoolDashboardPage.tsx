@@ -1,6 +1,6 @@
 import { ChevronRight, ClipboardCheck, GraduationCap, Library, UserCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { ApiError } from "@/api/client";
 import { getSchoolDashboard, type SchoolDashboardView } from "@/api/dashboard";
 import { Badge } from "@/components/ui/Badge";
@@ -87,14 +87,25 @@ interface AdminDashboardProps {
   nextTerm?: SchoolDashboardView["nextTerm"];
 }
 
+const MAX_UNPUBLISHED_ROWS = 8;
+
 function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
-  const { present, absent, late, excused } = admin.attendanceToday;
+  const { classesMarked, totalClasses, present, absent, late, excused } = admin.attendanceToday;
   const totalMarked = present + absent + late + excused;
   const attendanceRate = totalMarked === 0 ? null : Math.round(((present + late) / totalMarked) * 100);
+  const attendanceCoverageHint =
+    totalMarked === 0
+      ? undefined
+      : classesMarked < totalClasses
+        ? `Across ${classesMarked} of ${totalClasses} registers`
+        : `${present} present · ${absent} absent · ${late} late · ${excused} excused`;
   const allPublished =
     admin.publicationProgress !== undefined &&
     admin.publicationProgress.totalClasses > 0 &&
     admin.publicationProgress.publishedClasses === admin.publicationProgress.totalClasses;
+  const unpublishedClasses = admin.publicationProgress?.unpublishedClasses ?? [];
+  const shownUnpublished = unpublishedClasses.slice(0, MAX_UNPUBLISHED_ROWS);
+  const hiddenUnpublishedCount = unpublishedClasses.length - shownUnpublished.length;
 
   return (
     <>
@@ -119,13 +130,13 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
           icon={UserCheck}
           label="Attendance today"
           value={attendanceRate === null ? "—" : `${attendanceRate}%`}
-          hint={totalMarked === 0 ? undefined : `${present} present · ${absent} absent · ${late} late`}
+          hint={attendanceCoverageHint}
           to="/school/attendance"
         />
         <StatTile
           icon={ClipboardCheck}
           label="Registers marked"
-          value={admin.registersMarkable ? `${admin.attendanceToday.classesMarked} / ${admin.attendanceToday.totalClasses}` : "—"}
+          value={admin.registersMarkable ? `${classesMarked} / ${totalClasses}` : "—"}
           hint={admin.registersMarkable ? undefined : "Not a marking day"}
           to="/school/attendance"
         />
@@ -146,23 +157,38 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
               markedCount={admin.publicationProgress.publishedClasses}
               totalCount={admin.publicationProgress.totalClasses}
               itemLabel="class"
+              itemLabelPlural="classes"
               verbLabel="published"
             />
           </div>
-          {admin.publicationProgress.unpublishedClasses.length > 0 && (
+          {shownUnpublished.length > 0 && (
             <ul className="mt-4 divide-y divide-slate-100">
-              {admin.publicationProgress.unpublishedClasses.map((classRef) => (
-                <li key={classRef.classId} className="flex items-center justify-between gap-3 py-2 text-sm">
-                  <span className="font-medium text-slate-900">{classRef.className}</span>
-                  <Badge variant="warning">Not published</Badge>
+              {shownUnpublished.map((classRef) => (
+                <li key={classRef.classId}>
+                  <Link
+                    to={`/school/academics/classes/${classRef.classId}`}
+                    className="flex min-h-11 items-center justify-between gap-2 rounded-control py-2 text-sm text-slate-700 hover:bg-slate-50"
+                  >
+                    <span className="truncate font-medium text-slate-900">
+                      {classRef.className}
+                      {classRef.levelName && <span className="font-normal text-slate-400"> · {classRef.levelName}</span>}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <Badge variant="warning">Not published</Badge>
+                      <ChevronRight className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                    </span>
+                  </Link>
                 </li>
               ))}
+              {hiddenUnpublishedCount > 0 && (
+                <li className="py-2 text-xs text-slate-500">+{hiddenUnpublishedCount} more</li>
+              )}
             </ul>
           )}
         </Card>
       )}
 
-      <AttendanceTodayCard />
+      {admin.registersMarkable && <AttendanceTodayCard />}
     </>
   );
 }

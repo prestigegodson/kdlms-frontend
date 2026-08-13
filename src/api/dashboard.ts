@@ -44,7 +44,11 @@ export interface DashboardSetupGaps {
 /** Mirrors backend dashboard.application.port.in.SchoolDashboardView.AdminSection - SCHOOL_ADMIN/BRANCH_ADMIN only. */
 export interface SchoolDashboardAdminSection {
   activeStudents: number;
-  /** `undefined` when the school has no currently-active subscription - distinct from "plan allows zero students". */
+  /**
+   * `undefined` for a BRANCH_ADMIN (the plan limit is school-wide, not
+   * branch-scoped) or when the school has no currently-active subscription
+   * - both render as a bare count with no denominator.
+   */
   activeStudentLimit?: number;
   activeClasses: number;
   registersMarkable: boolean;
@@ -65,7 +69,11 @@ export interface SchoolDashboardTeacherSection {
   classes: DashboardTeacherClassRow[];
 }
 
-/** Mirrors backend dashboard.application.port.in.SchoolDashboardView.TermProgress. */
+/**
+ * Mirrors backend dashboard.application.port.in.SchoolDashboardView.TermProgress.
+ * `daysRemaining` is signed, not clamped to zero - negative once the term's
+ * `endDate` has passed without a later term being marked current.
+ */
 export interface DashboardTermProgress {
   name: string;
   startDate: string;

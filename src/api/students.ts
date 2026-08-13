@@ -213,6 +213,8 @@ export interface ListStudentsFilter {
   classId?: string;
   sessionId?: string;
   status?: StudentStatus;
+  /** `true`/`false` narrows to students with/without at least one active linked guardian; omitted applies no such filter. */
+  hasGuardian?: boolean;
   q?: string;
 }
 
@@ -226,6 +228,7 @@ export function listStudents(
   if (filter.classId) params.set("classId", filter.classId);
   if (filter.sessionId) params.set("sessionId", filter.sessionId);
   if (filter.status) params.set("status", filter.status);
+  if (filter.hasGuardian !== undefined) params.set("hasGuardian", String(filter.hasGuardian));
   if (filter.q) params.set("q", filter.q);
   return apiFetch<Page<StudentView>>(`${BASE}?${params.toString()}`);
 }

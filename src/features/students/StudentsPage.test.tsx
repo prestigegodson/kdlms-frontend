@@ -69,7 +69,7 @@ function mockStudents(students: StudentView[]) {
   });
 }
 
-function renderAsSchoolAdmin() {
+function renderAsSchoolAdmin(initialEntry = "/") {
   resetAuthStore();
   useAuthStore.setState({
     user: { id: "user-1", email: "admin@school.example", firstName: "Ada", lastName: "Obi", role: "SCHOOL_ADMIN", schoolId: "school-1" },
@@ -81,7 +81,7 @@ function renderAsSchoolAdmin() {
       { path: "/", element: <StudentsPage /> },
       { path: "/school/students/:studentId", element: <div>Student detail page</div> },
     ],
-    { initialEntries: ["/"] },
+    { initialEntries: [initialEntry] },
   );
   render(<RouterProvider router={router} />);
 }
@@ -170,6 +170,37 @@ describe("StudentsPage", () => {
     await user.click(within(sheet).getByRole("button", { name: "Done" }));
 
     expect(screen.getByRole("button", { name: /Filters/ })).toHaveTextContent("1");
+  });
+
+  it("initializes the guardian filter from the URL and reaches the API, backing the dashboard's deep link", async () => {
+    mockStudents([]);
+
+    renderAsSchoolAdmin("/?hasGuardian=false");
+    await screen.findByText(/No students found/);
+
+    expect(studentsApi.listStudents).toHaveBeenCalledWith(
+      expect.objectContaining({ hasGuardian: false }),
+      0,
+      expect.any(Number),
+    );
+    expect(screen.getByRole("button", { name: /Filters/ })).toHaveTextContent("1");
+    expect(screen.getByLabelText("Guardian")).toHaveValue("false");
+  });
+
+  it("filters by guardian linkage through the inline field", async () => {
+    mockStudents([STUDENT_VIEW]);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Ada Obi");
+
+    await user.selectOptions(screen.getByLabelText("Guardian"), "true");
+
+    expect(studentsApi.listStudents).toHaveBeenCalledWith(
+      expect.objectContaining({ hasGuardian: true }),
+      0,
+      expect.any(Number),
+    );
   });
 
   it("registers a student into the selected class", async () => {

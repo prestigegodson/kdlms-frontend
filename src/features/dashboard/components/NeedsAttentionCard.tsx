@@ -57,7 +57,7 @@ export function NeedsAttentionCard({ setupGaps }: NeedsAttentionCardProps) {
         {studentsWithoutGuardian > 0 && (
           <div className="py-2 last:pb-0">
             <Link
-              to="/school/guardians"
+              to="/school/students?hasGuardian=false"
               className="flex min-h-11 items-center justify-between gap-2 rounded-control px-2 -mx-2 text-sm text-slate-700 hover:bg-slate-50"
             >
               <span>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { listBranches, type BranchView } from "@/api/branches";
 import { listClasses, type SchoolClassView } from "@/api/classes";
 import { ApiError } from "@/api/client";
@@ -48,17 +48,26 @@ export function StudentsPage() {
   return <AdminStudents isBranchScoped={role === "BRANCH_ADMIN"} />;
 }
 
+type HasGuardianFilter = "" | "true" | "false";
+
 function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   const role = useAuthStore((state) => state.user?.role);
   const canManage = can.manageStudents(role);
   const canPromote = can.managePromotions(role);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [branches, setBranches] = useState<BranchView[] | null>(null);
   const [classes, setClasses] = useState<SchoolClassView[] | null>(null);
   const [branchId, setBranchId] = useState("");
   const [classId, setClassId] = useState("");
   const [status, setStatus] = useState<StudentStatus | "">("");
+  // Seeded from the URL so NeedsAttentionCard's "no linked guardian" deep
+  // link (`?hasGuardian=false`) lands pre-filtered.
+  const [hasGuardian, setHasGuardian] = useState<HasGuardianFilter>(() => {
+    const param = searchParams.get("hasGuardian");
+    return param === "true" || param === "false" ? param : "";
+  });
   const [query, setQuery] = useState("");
   const [pageIndex, setPageIndex] = useState(0);
   const [state, setState] = useState<ListState>({ kind: "loading" });
@@ -78,7 +87,13 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
 
   function fetchStudents() {
     listStudents(
-      { branchId: branchId || undefined, classId: classId || undefined, status: status || undefined, q: query || undefined },
+      {
+        branchId: branchId || undefined,
+        classId: classId || undefined,
+        status: status || undefined,
+        hasGuardian: hasGuardian === "" ? undefined : hasGuardian === "true",
+        q: query || undefined,
+      },
       pageIndex,
       PAGE_SIZE,
     )
@@ -91,7 +106,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
       );
   }
 
-  useEffect(fetchStudents, [branchId, classId, status, query, pageIndex]);
+  useEffect(fetchStudents, [branchId, classId, status, hasGuardian, query, pageIndex]);
 
   function load() {
     setState({ kind: "loading" });
@@ -106,12 +121,13 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   }
 
   const classOptions = (isBranchScoped ? classes?.filter((c) => c.branchId) : classes) ?? [];
-  const activeFilterCount = [branchId, classId, status].filter(Boolean).length;
+  const activeFilterCount = [branchId, classId, status, hasGuardian].filter(Boolean).length;
 
   function clearFilters() {
     resetToFirstPage(setBranchId)("");
     resetToFirstPage(setClassId)("");
     resetToFirstPage(setStatus)("");
+    resetToFirstPage(setHasGuardian)("");
   }
 
   return (
@@ -164,7 +180,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
         </div>
       </StickySubHeader>
 
-      <div className="hidden gap-4 lg:grid lg:grid-cols-3">
+      <div className="hidden gap-4 lg:grid lg:grid-cols-4">
         <StudentFilterFields
           idPrefix="student-filter"
           isBranchScoped={isBranchScoped}
@@ -176,6 +192,8 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
           onClassChange={resetToFirstPage(setClassId)}
           status={status}
           onStatusChange={resetToFirstPage(setStatus)}
+          hasGuardian={hasGuardian}
+          onHasGuardianChange={resetToFirstPage(setHasGuardian)}
         />
       </div>
 
@@ -193,6 +211,8 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
               onClassChange={resetToFirstPage(setClassId)}
               status={status}
               onStatusChange={resetToFirstPage(setStatus)}
+              hasGuardian={hasGuardian}
+              onHasGuardianChange={resetToFirstPage(setHasGuardian)}
             />
           </div>
           <div
@@ -293,9 +313,11 @@ interface StudentFilterFieldsProps {
   onClassChange: (value: string) => void;
   status: StudentStatus | "";
   onStatusChange: (value: StudentStatus | "") => void;
+  hasGuardian: HasGuardianFilter;
+  onHasGuardianChange: (value: HasGuardianFilter) => void;
 }
 
-/** Branch/Class/Status filters - rendered once inline at `lg` and up, once inside the mobile Filters sheet. */
+/** Branch/Class/Status/Guardian filters - rendered once inline at `lg` and up, once inside the mobile Filters sheet. */
 function StudentFilterFields({
   idPrefix,
   isBranchScoped,
@@ -307,6 +329,8 @@ function StudentFilterFields({
   onClassChange,
   status,
   onStatusChange,
+  hasGuardian,
+  onHasGuardianChange,
 }: StudentFilterFieldsProps) {
   return (
     <>
@@ -346,6 +370,17 @@ function StudentFilterFields({
           <option value="ACTIVE">Active</option>
           <option value="GRADUATED">Graduated</option>
           <option value="WITHDRAWN">Withdrawn</option>
+        </Select>
+      </FormField>
+      <FormField label="Guardian" htmlFor={`${idPrefix}-has-guardian`}>
+        <Select
+          id={`${idPrefix}-has-guardian`}
+          value={hasGuardian}
+          onChange={(event) => onHasGuardianChange(event.target.value as HasGuardianFilter)}
+        >
+          <option value="">All guardians</option>
+          <option value="true">Has a guardian</option>
+          <option value="false">No guardian</option>
         </Select>
       </FormField>
     </>

@@ -25,7 +25,6 @@ function renderPage() {
       { path: "/school/academics/classes", element: <div>Classes page</div> },
       { path: "/school/attendance", element: <div>Attendance page</div> },
       { path: "/school/academics/classes/:classId", element: <div>Class detail page</div> },
-      { path: "/school/guardians", element: <div>Guardians page</div> },
     ],
     { initialEntries: ["/"] },
   );
@@ -150,9 +149,13 @@ describe("SchoolDashboardPage", () => {
     expect(await screen.findByText("Needs attention")).toBeInTheDocument();
     expect(screen.getByText("1 class with no class teacher")).toBeInTheDocument();
     expect(screen.getByText("4 students with no linked guardian")).toBeInTheDocument();
+    expect(screen.getByText("4 students with no linked guardian").closest("a")).toHaveAttribute(
+      "href",
+      "/school/students?hasGuardian=false",
+    );
 
     await user.click(screen.getByText("4 students with no linked guardian"));
-    expect(await screen.findByText("Guardians page")).toBeInTheDocument();
+    expect(await screen.findByText("Students page")).toBeInTheDocument();
   });
 
   it("omits the needs-attention card entirely when there are no setup gaps", async () => {
@@ -172,7 +175,7 @@ describe("SchoolDashboardPage", () => {
     expect(screen.queryByText("Needs attention")).not.toBeInTheDocument();
   });
 
-  it("names the classes still unpublished for the current term", async () => {
+  it("names the classes still unpublished for the current term, with their level, linking to the class", async () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
       admin: {
         activeStudents: 0,
@@ -193,7 +196,87 @@ describe("SchoolDashboardPage", () => {
     expect(await screen.findByText("1 of 2 published")).toBeInTheDocument();
     expect(screen.queryByText("All published")).not.toBeInTheDocument();
     expect(screen.getByText("Primary 2")).toBeInTheDocument();
+    // The level name renders in its own nested span, separated by a middot.
+    expect(screen.getByText("· Primary")).toBeInTheDocument();
     expect(screen.getByText("Not published")).toBeInTheDocument();
+    expect(screen.getByText("Primary 2").closest("a")).toHaveAttribute(
+      "href",
+      "/school/academics/classes/c2",
+    );
+  });
+
+  it("pluralizes the publication card's remaining-count line correctly for classes", async () => {
+    vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
+      admin: {
+        activeStudents: 0,
+        activeClasses: 3,
+        registersMarkable: true,
+        attendanceToday: { totalClasses: 0, classesMarked: 0, present: 0, absent: 0, late: 0, excused: 0 },
+        publicationProgress: {
+          totalClasses: 3,
+          publishedClasses: 1,
+          unpublishedClasses: [
+            { classId: "c2", className: "Primary 2", levelName: "Primary" },
+            { classId: "c3", className: "Primary 3", levelName: "Primary" },
+          ],
+        },
+        setupGaps: { classesWithoutClassTeacher: [], studentsWithoutGuardian: 0 },
+      },
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("2 classes still unpublished")).toBeInTheDocument();
+  });
+
+  it("shows the attendance-today percentage's coverage instead of a full breakdown while some registers are still unmarked", async () => {
+    vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
+      admin: {
+        activeStudents: 0,
+        activeClasses: 8,
+        registersMarkable: true,
+        attendanceToday: { totalClasses: 8, classesMarked: 1, present: 25, absent: 0, late: 0, excused: 0 },
+        setupGaps: { classesWithoutClassTeacher: [], studentsWithoutGuardian: 0 },
+      },
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("100%")).toBeInTheDocument();
+    expect(screen.getByText("Across 1 of 8 registers")).toBeInTheDocument();
+  });
+
+  it("includes excused students in the attendance-today breakdown once every register is in", async () => {
+    vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
+      admin: {
+        activeStudents: 0,
+        activeClasses: 1,
+        registersMarkable: true,
+        attendanceToday: { totalClasses: 1, classesMarked: 1, present: 100, absent: 10, late: 5, excused: 5 },
+        setupGaps: { classesWithoutClassTeacher: [], studentsWithoutGuardian: 0 },
+      },
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("100 present · 10 absent · 5 late · 5 excused")).toBeInTheDocument();
+  });
+
+  it("hides AttendanceTodayCard's second attendance panel when today isn't a marking day", async () => {
+    vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
+      admin: {
+        activeStudents: 0,
+        activeClasses: 3,
+        registersMarkable: false,
+        attendanceToday: { totalClasses: 3, classesMarked: 0, present: 0, absent: 0, late: 0, excused: 0 },
+        setupGaps: { classesWithoutClassTeacher: [], studentsWithoutGuardian: 0 },
+      },
+    });
+
+    renderPage();
+
+    await screen.findByText("Not a marking day");
+    expect(attendanceApi.getDailyOverview).not.toHaveBeenCalled();
   });
 
   it("renders the teacher section's classes with today's marked status", async () => {
