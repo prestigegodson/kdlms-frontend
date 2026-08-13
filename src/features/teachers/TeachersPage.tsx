@@ -2,12 +2,22 @@ import { type FormEvent, useEffect, useState } from "react";
 import type { UserSummary } from "@/api/auth";
 import type { BranchView } from "@/api/branches";
 import { ApiError } from "@/api/client";
-import { createTeacher, listTeachers, updateTeacher, updateTeacherSignature, type CreateUserResult } from "@/api/users";
+import {
+  createTeacher,
+  getTeacherRemovalImpact,
+  listTeachers,
+  removeTeacher,
+  updateTeacher,
+  updateTeacherSignature,
+  type CreateUserResult,
+  type TeacherRemovalImpact,
+} from "@/api/users";
 import { can } from "@/auth/permissions";
 import { Users } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CredentialsReveal } from "@/components/ui/CredentialsReveal";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
@@ -42,6 +52,9 @@ export function TeachersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<UserSummary | null>(null);
   const [signing, setSigning] = useState<UserSummary | null>(null);
+  const [removing, setRemoving] = useState<UserSummary | null>(null);
+  const [removalImpact, setRemovalImpact] = useState<TeacherRemovalImpact | null>(null);
+  const [removalError, setRemovalError] = useState<string | null>(null);
 
   function fetchTeachers() {
     if (!branchReady) return;
@@ -66,6 +79,25 @@ export function TeachersPage() {
     return branches.find((branch) => branch.id === teacherBranchId)?.name ?? "—";
   }
 
+  async function handleRemoveClick(teacher: UserSummary) {
+    setRemovalError(null);
+    try {
+      const impact = await getTeacherRemovalImpact(teacher.id);
+      setRemovalImpact(impact);
+      setRemoving(teacher);
+    } catch (err) {
+      setRemovalError(err instanceof ApiError ? err.message : "Failed to load this teacher's assignments");
+    }
+  }
+
+  async function confirmRemove() {
+    if (!removing) return;
+    await removeTeacher(removing.id);
+    setRemoving(null);
+    setRemovalImpact(null);
+    load();
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -86,6 +118,7 @@ export function TeachersPage() {
         </Card>
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
+      {removalError && <Alert variant="error">{removalError}</Alert>}
       {state.kind === "loaded" && state.teachers.length === 0 && (
         <EmptyState icon={Users} title="No teachers yet" description="Add a teacher to get started." />
       )}
@@ -127,6 +160,13 @@ export function TeachersPage() {
                         >
                           {teacher.signatureFileId ? "Signature" : "Add signature"}
                         </button>
+                        <button
+                          type="button"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleRemoveClick(teacher)}
+                        >
+                          Remove
+                        </button>
                       </div>
                     </TableCell>
                   )}
@@ -167,6 +207,58 @@ export function TeachersPage() {
           }}
         />
       )}
+      {removing && removalImpact && (
+        <ConfirmDialog
+          title="Remove this teacher?"
+          message={<RemovalImpactMessage teacher={removing} impact={removalImpact} />}
+          confirmLabel="Remove teacher"
+          variant="danger"
+          onConfirm={confirmRemove}
+          onClose={() => {
+            setRemoving(null);
+            setRemovalImpact(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+interface RemovalImpactMessageProps {
+  teacher: UserSummary;
+  impact: TeacherRemovalImpact;
+}
+
+/**
+ * What {@link confirmRemove} is about to do, spelled out before the caller
+ * commits to it - releasing the teacher's email is permanent (see
+ * CLAUDE.md: no restore), so this is the one chance to back out.
+ */
+function RemovalImpactMessage({ teacher, impact }: RemovalImpactMessageProps) {
+  const hasAssignments = impact.classTeacherOf.length > 0 || impact.subjectAssignmentCount > 0;
+  return (
+    <div className="space-y-2">
+      <p>
+        <strong>
+          {teacher.firstName} {teacher.lastName}
+        </strong>{" "}
+        will no longer be able to sign in, and their email will be free for a fresh account here or at another
+        school. This can't be undone.
+      </p>
+      {hasAssignments && (
+        <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+          {impact.classTeacherOf.map((className) => (
+            <li key={className}>Class teacher of {className} - will be unassigned</li>
+          ))}
+          {impact.subjectAssignmentCount > 0 && (
+            <li>
+              {impact.subjectAssignmentCount} subject-teacher assignment
+              {impact.subjectAssignmentCount === 1 ? "" : "s"} - will be cleared
+            </li>
+          )}
+        </ul>
+      )}
+      <p className="text-sm text-slate-500">Recorded scores, attendance, and messages are kept.</p>
     </div>
   );
 }

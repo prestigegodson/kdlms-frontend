@@ -141,6 +141,26 @@ export function updateTeacherSignature(userId: string, signatureFileId: string |
   });
 }
 
+/** What removing this teacher would clear - fetched before the confirmation prompt is shown. */
+export interface TeacherRemovalImpact {
+  classTeacherOf: string[];
+  subjectAssignmentCount: number;
+}
+
+export function getTeacherRemovalImpact(userId: string): Promise<TeacherRemovalImpact> {
+  return apiFetch<TeacherRemovalImpact>(`/api/v1/users/teachers/${userId}/removal-impact`);
+}
+
+/**
+ * Soft-deletes the teacher's account - terminal, releases their email for
+ * reuse at this school or another. Clears their class-teacher/subject-
+ * teacher assignments; recorded scores, attendance, and communication
+ * history are untouched.
+ */
+export function removeTeacher(userId: string): Promise<void> {
+  return apiFetch<void>(`/api/v1/users/teachers/${userId}`, { method: "DELETE" });
+}
+
 export function enableUser(userId: string): Promise<void> {
   return apiFetch<void>(`/api/v1/users/${userId}/enable`, { method: "PATCH" });
 }

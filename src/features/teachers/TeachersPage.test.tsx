@@ -12,7 +12,14 @@ import { resetBranchStore } from "@/stores/branchStore";
 
 vi.mock("@/api/users", async () => {
   const actual = await vi.importActual<typeof import("@/api/users")>("@/api/users");
-  return { ...actual, listTeachers: vi.fn(), createTeacher: vi.fn(), updateTeacher: vi.fn() };
+  return {
+    ...actual,
+    listTeachers: vi.fn(),
+    createTeacher: vi.fn(),
+    updateTeacher: vi.fn(),
+    getTeacherRemovalImpact: vi.fn(),
+    removeTeacher: vi.fn(),
+  };
 });
 
 vi.mock("@/api/branches", async () => {
@@ -192,6 +199,30 @@ describe("TeachersPage", () => {
     );
     expect(usersApi.listTeachers).toHaveBeenCalledTimes(2);
     await screen.findByRole("button", { name: "Add teacher" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("removes a teacher after confirming, showing the assignments that will be cleared", async () => {
+    mockTeachers([TEACHER]);
+    vi.mocked(usersApi.getTeacherRemovalImpact).mockResolvedValue({
+      classTeacherOf: ["JSS 1A"],
+      subjectAssignmentCount: 2,
+    });
+    vi.mocked(usersApi.removeTeacher).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await user.click(await screen.findByRole("button", { name: "Remove" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Remove this teacher?" });
+    expect(usersApi.getTeacherRemovalImpact).toHaveBeenCalledWith("teacher-1");
+    expect(within(dialog).getByText(/Class teacher of JSS 1A/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/2 subject-teacher assignments/)).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "Remove teacher" }));
+
+    expect(usersApi.removeTeacher).toHaveBeenCalledWith("teacher-1");
+    expect(usersApi.listTeachers).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
