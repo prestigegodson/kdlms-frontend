@@ -143,7 +143,7 @@ export function LevelsPage() {
         <Card className="p-0">
           <ol className="divide-y divide-slate-100">
             {levels.map((level, index) => (
-              <li key={level.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+              <li key={level.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-800">
                   {level.rank}
                 </span>
@@ -162,56 +162,61 @@ export function LevelsPage() {
                 </div>
 
                 {canManage && (
-                  <div className="flex shrink-0 flex-wrap items-center gap-1">
-                    <button
-                      type="button"
-                      aria-label={`Move ${level.displayName} up`}
-                      className="flex items-center justify-center rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-30 mobile:h-11 mobile:w-11"
-                      disabled={index === 0 || reordering}
-                      onClick={() => move(index, -1)}
-                    >
-                      <ArrowUp className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`Move ${level.displayName} down`}
-                      className="flex items-center justify-center rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-30 mobile:h-11 mobile:w-11"
-                      disabled={index === levels.length - 1 || reordering}
-                      onClick={() => move(index, 1)}
-                    >
-                      <ArrowDown className="h-4 w-4" aria-hidden="true" />
-                    </button>
+                  <>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        aria-label={`Move ${level.displayName} up`}
+                        className="flex items-center justify-center rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-30 mobile:h-11 mobile:w-11"
+                        disabled={index === 0 || reordering}
+                        onClick={() => move(index, -1)}
+                      >
+                        <ArrowUp className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Move ${level.displayName} down`}
+                        className="flex items-center justify-center rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-30 mobile:h-11 mobile:w-11"
+                        disabled={index === levels.length - 1 || reordering}
+                        onClick={() => move(index, 1)}
+                      >
+                        <ArrowDown className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </div>
 
-                    <span className="mx-1 h-4 w-px bg-slate-200" aria-hidden="true" />
+                    {/* Only separates the arrows from the text actions when they share one line - from `md` up. */}
+                    <span className="mx-1 hidden h-4 w-px bg-slate-200 md:block" aria-hidden="true" />
 
-                    <button
-                      type="button"
-                      className="inline-flex items-center px-2 py-1 text-sm text-brand-500 hover:text-brand-600 mobile:min-h-11"
-                      onClick={() => setEditing(level)}
-                    >
-                      Rename
-                    </button>
-                    <button
-                      type="button"
-                      className="inline-flex items-center px-2 py-1 text-sm text-slate-500 hover:text-slate-700 mobile:min-h-11"
-                      onClick={() => toggleActive(level)}
-                    >
-                      {level.status === "ACTIVE" ? "Archive" : "Restore"}
-                    </button>
-                    <button
-                      type="button"
-                      className="inline-flex items-center px-2 py-1 text-sm text-red-600 hover:text-red-700 disabled:pointer-events-none disabled:opacity-40 mobile:min-h-11"
-                      disabled={level.subjectCount + level.classCount + level.subjectGroupCount > 0}
-                      title={
-                        level.subjectCount + level.classCount + level.subjectGroupCount > 0
-                          ? "Move or delete what this level still holds before deleting it."
-                          : undefined
-                      }
-                      onClick={() => setDeleting(level)}
-                    >
-                      Delete
-                    </button>
-                  </div>
+                    <div className="flex w-full flex-wrap items-center justify-end gap-1 md:w-auto md:shrink-0">
+                      <button
+                        type="button"
+                        className="inline-flex items-center px-2 py-1 text-sm text-brand-500 hover:text-brand-600 mobile:min-h-11"
+                        onClick={() => setEditing(level)}
+                      >
+                        Rename
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex items-center px-2 py-1 text-sm text-slate-500 hover:text-slate-700 mobile:min-h-11"
+                        onClick={() => toggleActive(level)}
+                      >
+                        {level.status === "ACTIVE" ? "Archive" : "Restore"}
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex items-center px-2 py-1 text-sm text-red-600 hover:text-red-700 disabled:pointer-events-none disabled:opacity-40 mobile:min-h-11"
+                        disabled={level.subjectCount + level.classCount + level.subjectGroupCount > 0}
+                        title={
+                          level.subjectCount + level.classCount + level.subjectGroupCount > 0
+                            ? "Move or delete what this level still holds before deleting it."
+                            : undefined
+                        }
+                        onClick={() => setDeleting(level)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </>
                 )}
               </li>
             ))}
