@@ -88,6 +88,9 @@ export function SubscriptionPage() {
               <Badge variant={state.summary.onDemandLearning ? "success" : "neutral"}>
                 {state.summary.onDemandLearning ? "On-demand learning included" : "No on-demand learning"}
               </Badge>
+              <Badge variant={state.summary.communication ? "success" : "neutral"}>
+                {state.summary.communication ? "Home-school communication included" : "No home-school communication"}
+              </Badge>
             </div>
           </Card>
 

@@ -12,6 +12,8 @@ import { StatTile } from "@/components/ui/StatTile";
 import { StatTileSkeleton } from "@/components/ui/StatTileSkeleton";
 import { AttendanceTodayCard } from "@/features/attendance/components/AttendanceTodayCard";
 import { RegisterProgress } from "@/features/attendance/components/RegisterProgress";
+import { NeedsAttentionCard } from "@/features/dashboard/components/NeedsAttentionCard";
+import { TermProgressCard } from "@/features/dashboard/components/TermProgressCard";
 
 type LoadState =
   | { kind: "loading" }
@@ -71,20 +73,40 @@ export function SchoolDashboardPage() {
         </div>
       )}
 
-      {state.kind === "loaded" && state.view.admin && <AdminDashboard admin={state.view.admin} />}
+      {state.kind === "loaded" && state.view.admin && (
+        <AdminDashboard admin={state.view.admin} currentTerm={state.view.currentTerm} nextTerm={state.view.nextTerm} />
+      )}
       {state.kind === "loaded" && state.view.teacher && <TeacherDashboard teacher={state.view.teacher} />}
     </div>
   );
 }
 
-function AdminDashboard({ admin }: { admin: NonNullable<SchoolDashboardView["admin"]> }) {
+interface AdminDashboardProps {
+  admin: NonNullable<SchoolDashboardView["admin"]>;
+  currentTerm?: SchoolDashboardView["currentTerm"];
+  nextTerm?: SchoolDashboardView["nextTerm"];
+}
+
+function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
+  const { present, absent, late, excused } = admin.attendanceToday;
+  const totalMarked = present + absent + late + excused;
+  const attendanceRate = totalMarked === 0 ? null : Math.round(((present + late) / totalMarked) * 100);
+  const allPublished =
+    admin.publicationProgress !== undefined &&
+    admin.publicationProgress.totalClasses > 0 &&
+    admin.publicationProgress.publishedClasses === admin.publicationProgress.totalClasses;
+
   return (
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
           icon={GraduationCap}
           label="Active students"
-          value={admin.activeStudents}
+          value={
+            admin.activeStudentLimit !== undefined
+              ? `${admin.activeStudents} / ${admin.activeStudentLimit}`
+              : admin.activeStudents
+          }
           to="/school/students"
         />
         <StatTile
@@ -95,28 +117,48 @@ function AdminDashboard({ admin }: { admin: NonNullable<SchoolDashboardView["adm
         />
         <StatTile
           icon={UserCheck}
-          label="Present today"
-          value={admin.attendanceToday.present}
+          label="Attendance today"
+          value={attendanceRate === null ? "—" : `${attendanceRate}%`}
+          hint={totalMarked === 0 ? undefined : `${present} present · ${absent} absent · ${late} late`}
           to="/school/attendance"
         />
         <StatTile
           icon={ClipboardCheck}
           label="Registers marked"
-          value={`${admin.attendanceToday.classesMarked} / ${admin.attendanceToday.totalClasses}`}
+          value={admin.registersMarkable ? `${admin.attendanceToday.classesMarked} / ${admin.attendanceToday.totalClasses}` : "—"}
+          hint={admin.registersMarkable ? undefined : "Not a marking day"}
           to="/school/attendance"
         />
       </div>
 
+      {currentTerm && <TermProgressCard currentTerm={currentTerm} nextTerm={nextTerm} />}
+
+      <NeedsAttentionCard setupGaps={admin.setupGaps} />
+
       {admin.publicationProgress && (
         <Card>
-          <h2 className="text-sm font-semibold text-slate-900">This term&rsquo;s results published</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-slate-900">This term&rsquo;s results published</h2>
+            {allPublished && <Badge variant="success">All published</Badge>}
+          </div>
           <div className="mt-3">
             <RegisterProgress
               markedCount={admin.publicationProgress.publishedClasses}
               totalCount={admin.publicationProgress.totalClasses}
               itemLabel="class"
+              verbLabel="published"
             />
           </div>
+          {admin.publicationProgress.unpublishedClasses.length > 0 && (
+            <ul className="mt-4 divide-y divide-slate-100">
+              {admin.publicationProgress.unpublishedClasses.map((classRef) => (
+                <li key={classRef.classId} className="flex items-center justify-between gap-3 py-2 text-sm">
+                  <span className="font-medium text-slate-900">{classRef.className}</span>
+                  <Badge variant="warning">Not published</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
       )}
 
