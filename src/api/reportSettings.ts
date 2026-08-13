@@ -1,4 +1,4 @@
-import { apiFetch } from "@/api/client";
+import { apiFetch, apiFetchText } from "@/api/client";
 import type { ReportAssessmentMode, ResultTemplateSummary } from "@/api/resultTemplates";
 
 const BASE = "/api/v1/report-settings";
@@ -61,4 +61,15 @@ export function assignLevelTemplate(levelId: string, templateId: string): Promis
 /** Reverts the level to the system-template fallback (see `resolvedTemplateId`). A no-op when nothing was assigned. */
 export function clearLevelTemplate(levelId: string): Promise<LevelTemplateAssignmentView> {
   return apiFetch<LevelTemplateAssignmentView>(`${BASE}/levels/${levelId}/template`, { method: "DELETE" });
+}
+
+/**
+ * Final rendered HTML for a sample report at this level - a synthetic
+ * student and scores, but this school's own branding, level name,
+ * session/term, and grading scale. Renders whichever template the level
+ * resolves to today (`resolvedTemplateId`), so it's only meaningful once
+ * that's non-null.
+ */
+export function previewLevelSample(levelId: string): Promise<string> {
+  return apiFetchText(`${BASE}/levels/${levelId}/preview`);
 }

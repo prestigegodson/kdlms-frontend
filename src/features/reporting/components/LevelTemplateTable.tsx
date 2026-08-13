@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { LevelTemplateAssignmentView } from "@/api/reportSettings";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
@@ -9,6 +10,7 @@ interface LevelTemplateTableProps {
   levels: LevelTemplateAssignmentView[];
   onAssign: (levelId: string, templateId: string) => Promise<void>;
   onClear: (levelId: string) => Promise<void>;
+  onPreview: (level: LevelTemplateAssignmentView) => void;
   editable: boolean;
 }
 
@@ -24,7 +26,7 @@ interface LevelTemplateTableProps {
  * convention publish/retire buttons elsewhere in the app use, rather than a
  * form with its own Save button.
  */
-export function LevelTemplateTable({ levels, onAssign, onClear, editable }: LevelTemplateTableProps) {
+export function LevelTemplateTable({ levels, onAssign, onClear, onPreview, editable }: LevelTemplateTableProps) {
   const [savingLevelId, setSavingLevelId] = useState<string | null>(null);
 
   async function handleChange(levelId: string, templateId: string) {
@@ -47,6 +49,7 @@ export function LevelTemplateTable({ levels, onAssign, onClear, editable }: Leve
           <TableHeaderCell>Level</TableHeaderCell>
           <TableHeaderCell>Mode</TableHeaderCell>
           <TableHeaderCell>Template</TableHeaderCell>
+          <TableHeaderCell>Preview</TableHeaderCell>
         </TableRow>
       </TableHead>
       <TableBody>
@@ -91,6 +94,16 @@ export function LevelTemplateTable({ levels, onAssign, onClear, editable }: Leve
               ) : (
                 <span>{level.assignedTemplateName ?? level.resolvedTemplateName ?? "Using the default template"}</span>
               )}
+            </TableCell>
+            <TableCell label="Preview">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => onPreview(level)}
+                disabled={!level.resolvedTemplateId}
+              >
+                Preview sample
+              </Button>
             </TableCell>
           </TableRow>
         ))}

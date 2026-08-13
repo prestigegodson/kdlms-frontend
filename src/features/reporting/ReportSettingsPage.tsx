@@ -5,6 +5,7 @@ import {
   getReportSettings,
   type LevelTemplateAssignmentView,
   listLevelTemplates,
+  previewLevelSample,
   saveReportSettings,
 } from "@/api/reportSettings";
 import { ApiError } from "@/api/client";
@@ -12,10 +13,12 @@ import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { type BrandingValues, BrandingFields } from "@/features/reporting/components/BrandingFields";
 import { LevelTemplateTable } from "@/features/reporting/components/LevelTemplateTable";
+import { ReportPreviewFrame } from "@/features/reporting/components/ReportPreviewFrame";
 import { useAuthStore } from "@/stores/authStore";
 
 const BLANK: BrandingValues = {
@@ -41,6 +44,9 @@ export function ReportSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [previewLevel, setPreviewLevel] = useState<LevelTemplateAssignmentView | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   function loadLevels() {
     listLevelTemplates()
@@ -90,6 +96,17 @@ export function ReportSettingsPage() {
     loadLevels();
   }
 
+  async function handlePreview(level: LevelTemplateAssignmentView) {
+    setPreviewLevel(level);
+    setPreviewHtml(null);
+    setPreviewError(null);
+    try {
+      setPreviewHtml(await previewLevelSample(level.levelId));
+    } catch (error) {
+      setPreviewError(error instanceof ApiError ? error.message : "Failed to render this preview");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -134,10 +151,37 @@ export function ReportSettingsPage() {
               <Spinner /> Loading levels…
             </div>
           ) : (
-            <LevelTemplateTable levels={levels} onAssign={handleAssign} onClear={handleClear} editable={editable} />
+            <LevelTemplateTable
+              levels={levels}
+              onAssign={handleAssign}
+              onClear={handleClear}
+              onPreview={handlePreview}
+              editable={editable}
+            />
           )}
         </div>
       </Card>
+
+      {previewLevel && (
+        <Modal
+          open
+          onClose={() => setPreviewLevel(null)}
+          title={`Sample report — ${previewLevel.levelName}`}
+          size="xl"
+        >
+          <p className="mb-3 text-xs text-slate-500">
+            A sample student and scores, rendered with your school's own branding by the same server-side pipeline a
+            real report uses.
+          </p>
+          {previewError && <Alert variant="error">{previewError}</Alert>}
+          {!previewError && !previewHtml && (
+            <div className="flex items-center gap-2 text-sm text-slate-500">
+              <Spinner /> Rendering…
+            </div>
+          )}
+          {previewHtml && <ReportPreviewFrame html={previewHtml} />}
+        </Modal>
+      )}
     </div>
   );
 }
