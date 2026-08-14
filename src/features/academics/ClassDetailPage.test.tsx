@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserSummary } from "@/api/auth";
+import * as birthdaysApi from "@/api/birthdays";
 import { listBranches } from "@/api/branches";
 import * as classesApi from "@/api/classes";
 import type { RosterStudentView, SchoolClassView } from "@/api/classes";
@@ -55,6 +56,11 @@ vi.mock("@/api/branches", async () => {
 vi.mock("@/api/levels", async () => {
   const actual = await vi.importActual<typeof import("@/api/levels")>("@/api/levels");
   return { ...actual, listLevels: vi.fn() };
+});
+
+vi.mock("@/api/birthdays", async () => {
+  const actual = await vi.importActual<typeof import("@/api/birthdays")>("@/api/birthdays");
+  return { ...actual, listClassBirthdays: vi.fn() };
 });
 
 const TEACHER: UserSummary = {
@@ -177,6 +183,7 @@ describe("ClassDetailPage - class teacher assignment", () => {
     vi.mocked(meApi.listRecordableSubjects).mockResolvedValue([]);
     vi.mocked(listBranches).mockResolvedValue({ content: [], totalElements: 0, totalPages: 1, number: 0, size: 50 });
     vi.mocked(levelsApi.listLevels).mockResolvedValue([LEVEL]);
+    vi.mocked(birthdaysApi.listClassBirthdays).mockResolvedValue([]);
   });
 
   it("renders a PageHeader with the back link while the class is still loading", async () => {
@@ -281,6 +288,7 @@ describe("ClassDetailPage - enrolled students roster", () => {
     vi.mocked(listBranches).mockResolvedValue({ content: [], totalElements: 0, totalPages: 1, number: 0, size: 50 });
     vi.mocked(levelsApi.listLevels).mockResolvedValue([LEVEL]);
     vi.mocked(classesApi.getClass).mockResolvedValue(BASE_CLASS);
+    vi.mocked(birthdaysApi.listClassBirthdays).mockResolvedValue([]);
   });
 
   it("shows a gender-split summary and lets an admin tap into a student's detail page", async () => {
@@ -355,5 +363,67 @@ describe("ClassDetailPage - enrolled students roster", () => {
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/Little Star 1/)).toBeInTheDocument();
+  });
+});
+
+describe("ClassDetailPage - upcoming birthdays", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetLevelStore();
+    vi.mocked(usersApi.listTeachers).mockResolvedValue({
+      content: [TEACHER],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 200,
+    });
+    vi.mocked(subjectsApi.listSubjects).mockResolvedValue({
+      content: [],
+      totalElements: 0,
+      totalPages: 1,
+      number: 0,
+      size: 100,
+    });
+    vi.mocked(classesApi.listSubjectTeachers).mockResolvedValue([]);
+    vi.mocked(classesApi.listClassStudents).mockResolvedValue([]);
+    vi.mocked(meApi.listRecordableSubjects).mockResolvedValue([]);
+    vi.mocked(listBranches).mockResolvedValue({ content: [], totalElements: 0, totalPages: 1, number: 0, size: 50 });
+    vi.mocked(levelsApi.listLevels).mockResolvedValue([LEVEL]);
+    vi.mocked(birthdaysApi.listClassBirthdays).mockResolvedValue([]);
+  });
+
+  it("shows the section for a SCHOOL_ADMIN", async () => {
+    vi.mocked(classesApi.getClass).mockResolvedValue(BASE_CLASS);
+
+    renderAsSchoolAdmin();
+
+    expect(await screen.findByText("Upcoming birthdays")).toBeInTheDocument();
+    expect(birthdaysApi.listClassBirthdays).toHaveBeenCalledWith("class-1");
+  });
+
+  it("shows the section for the class's own class teacher", async () => {
+    vi.mocked(classesApi.getClass).mockResolvedValue({
+      ...BASE_CLASS,
+      classTeacherId: "teacher-1",
+      classTeacherName: "Sonia B",
+    });
+
+    renderAsTeacher();
+
+    expect(await screen.findByText("Upcoming birthdays")).toBeInTheDocument();
+  });
+
+  it("hides the section for a TEACHER who isn't this class's class teacher", async () => {
+    vi.mocked(classesApi.getClass).mockResolvedValue({
+      ...BASE_CLASS,
+      classTeacherId: "some-other-teacher",
+      classTeacherName: "Someone Else",
+    });
+
+    renderAsTeacher();
+
+    await screen.findByText("Enrolled students (0)");
+    expect(screen.queryByText("Upcoming birthdays")).not.toBeInTheDocument();
+    expect(birthdaysApi.listClassBirthdays).not.toHaveBeenCalled();
   });
 });

@@ -126,6 +126,35 @@ export const can = {
     return role === "TEACHER" && (scope?.isClassTeacher ?? false);
   },
 
+  /**
+   * The school dashboard's upcoming-birthdays card - admins school/branch-wide,
+   * a TEACHER only if they class-teach at least one class (mirrors
+   * `markAttendance`'s scoping; a subject-teacher-only account gets nothing).
+   */
+  viewBirthdays(role: Role | undefined, scope: TeacherScope | null): boolean {
+    if (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN") {
+      return true;
+    }
+    return role === "TEACHER" && (scope?.isClassTeacher ?? false);
+  },
+
+  /**
+   * The class detail page's own "Upcoming birthdays" section - as
+   * {@link viewBirthdays}, but for one specific class, where the caller
+   * already knows whether they're *that* class's class teacher
+   * (`isClassTeacherOfThisClass`) rather than relying on the coarser
+   * `TeacherScope.isClassTeacher` (true if they class-teach *any* class). A
+   * subject-teacher-only account on this class must not see the section -
+   * the server 404s the same request, so this only keeps the UI from
+   * offering a control that would fail.
+   */
+  viewClassBirthdays(role: Role | undefined, isClassTeacherOfThisClass: boolean): boolean {
+    if (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN") {
+      return true;
+    }
+    return role === "TEACHER" && isClassTeacherOfThisClass;
+  },
+
   /** Per-level grading system configuration - SCHOOL_ADMIN only, school-wide like levels themselves. */
   manageGradingSystems(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN";

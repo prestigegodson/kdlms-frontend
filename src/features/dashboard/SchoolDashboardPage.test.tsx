@@ -3,8 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as attendanceApi from "@/api/attendance";
+import * as birthdaysApi from "@/api/birthdays";
 import * as dashboardApi from "@/api/dashboard";
 import { SchoolDashboardPage } from "@/features/dashboard/SchoolDashboardPage";
+import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 
 vi.mock("@/api/dashboard", async () => {
   const actual = await vi.importActual<typeof import("@/api/dashboard")>("@/api/dashboard");
@@ -15,6 +17,13 @@ vi.mock("@/api/dashboard", async () => {
 vi.mock("@/api/attendance", async () => {
   const actual = await vi.importActual<typeof import("@/api/attendance")>("@/api/attendance");
   return { ...actual, getDailyOverview: vi.fn() };
+});
+
+// Both AdminDashboard and TeacherDashboard render UpcomingBirthdaysCard, which
+// self-fetches independently.
+vi.mock("@/api/birthdays", async () => {
+  const actual = await vi.importActual<typeof import("@/api/birthdays")>("@/api/birthdays");
+  return { ...actual, listUpcomingBirthdays: vi.fn() };
 });
 
 function renderPage() {
@@ -34,12 +43,14 @@ function renderPage() {
 describe("SchoolDashboardPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetAuthStore();
     vi.mocked(attendanceApi.getDailyOverview).mockResolvedValue({
       date: "2026-08-06",
       totalClasses: 0,
       classesMarked: 0,
       classes: [],
     });
+    vi.mocked(birthdaysApi.listUpcomingBirthdays).mockResolvedValue([]);
   });
 
   it("renders the admin section's stats and current session/term", async () => {
@@ -317,5 +328,90 @@ describe("SchoolDashboardPage", () => {
     renderPage();
 
     expect(await screen.findByText("No classes assigned yet")).toBeInTheDocument();
+  });
+
+  it("shows the upcoming-birthdays card on the admin dashboard, linking a row to the student's detail page", async () => {
+    useAuthStore.setState({
+      user: {
+        id: "admin-1",
+        email: "admin@school.example",
+        firstName: "Ada",
+        lastName: "Obi",
+        role: "SCHOOL_ADMIN",
+        schoolId: "school-1",
+      },
+      accessToken: "access",
+      refreshToken: "refresh",
+    });
+    vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
+      admin: {
+        activeStudents: 0,
+        activeClasses: 0,
+        registersMarkable: true,
+        attendanceToday: { totalClasses: 0, classesMarked: 0, present: 0, absent: 0, late: 0, excused: 0 },
+        setupGaps: { classesWithoutClassTeacher: [], studentsWithoutGuardian: 0 },
+      },
+    });
+    vi.mocked(birthdaysApi.listUpcomingBirthdays).mockResolvedValue([
+      {
+        studentId: "student-ada",
+        fullName: "Ada Obi",
+        admissionNumber: "BFA/2026/0001",
+        classId: "class-1",
+        className: "Primary 1",
+        levelName: "Primary",
+        dateOfBirth: "1990-08-17",
+        daysUntil: 3,
+        turningAge: 8,
+      },
+    ]);
+
+    renderPage();
+
+    expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
+    expect(screen.getByText("Upcoming birthdays")).toBeInTheDocument();
+    expect(screen.getByText("Ada Obi").closest("a")).toHaveAttribute("href", "/school/students/student-ada");
+  });
+
+  it("omits the upcoming-birthdays card on the admin dashboard when there are none in the window", async () => {
+    vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
+      admin: {
+        activeStudents: 0,
+        activeClasses: 0,
+        registersMarkable: true,
+        attendanceToday: { totalClasses: 0, classesMarked: 0, present: 0, absent: 0, late: 0, excused: 0 },
+        setupGaps: { classesWithoutClassTeacher: [], studentsWithoutGuardian: 0 },
+      },
+    });
+
+    renderPage();
+
+    await screen.findByText("Active students");
+    expect(screen.queryByText("Upcoming birthdays")).not.toBeInTheDocument();
+  });
+
+  it("shows the upcoming-birthdays card on the teacher dashboard without a link to student detail", async () => {
+    vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
+      teacher: { classes: [{ classId: "c1", className: "Primary 3", registerMarkedToday: true }] },
+    });
+    vi.mocked(birthdaysApi.listUpcomingBirthdays).mockResolvedValue([
+      {
+        studentId: "student-ada",
+        fullName: "Ada Obi",
+        admissionNumber: "BFA/2026/0001",
+        classId: "c1",
+        className: "Primary 3",
+        levelName: "Primary",
+        dateOfBirth: "1990-08-17",
+        daysUntil: 3,
+        turningAge: 8,
+      },
+    ]);
+
+    renderPage();
+
+    expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
+    expect(screen.getByText("Upcoming birthdays")).toBeInTheDocument();
+    expect(screen.getByText("Ada Obi").closest("a")).toBeNull();
   });
 });

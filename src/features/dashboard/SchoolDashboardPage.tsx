@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ApiError } from "@/api/client";
 import { getSchoolDashboard, type SchoolDashboardView } from "@/api/dashboard";
+import { can } from "@/auth/permissions";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -14,6 +15,8 @@ import { AttendanceTodayCard } from "@/features/attendance/components/Attendance
 import { RegisterProgress } from "@/features/attendance/components/RegisterProgress";
 import { NeedsAttentionCard } from "@/features/dashboard/components/NeedsAttentionCard";
 import { TermProgressCard } from "@/features/dashboard/components/TermProgressCard";
+import { UpcomingBirthdaysCard } from "@/features/students/components/UpcomingBirthdaysCard";
+import { useAuthStore } from "@/stores/authStore";
 
 type LoadState =
   | { kind: "loading" }
@@ -90,6 +93,7 @@ interface AdminDashboardProps {
 const MAX_UNPUBLISHED_ROWS = 8;
 
 function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
+  const role = useAuthStore((state) => state.user?.role);
   const { classesMarked, totalClasses, present, absent, late, excused } = admin.attendanceToday;
   const totalMarked = present + absent + late + excused;
   const attendanceRate = totalMarked === 0 ? null : Math.round(((present + late) / totalMarked) * 100);
@@ -144,12 +148,20 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
 
       {currentTerm && <TermProgressCard currentTerm={currentTerm} nextTerm={nextTerm} />}
 
-      <NeedsAttentionCard setupGaps={admin.setupGaps} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-1 lg:grid-cols-2">
+        <NeedsAttentionCard setupGaps={admin.setupGaps} />
 
+        <UpcomingBirthdaysCard hideWhenEmpty linkable={can.manageStudents(role)} />
+      </div>
+
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-1 lg:grid-cols-2">
       {admin.publicationProgress && (
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-slate-900">This term&rsquo;s results published</h2>
+            <h2 className="text-sm font-semibold text-slate-900">
+              This term&rsquo;s results published
+            </h2>
             {allPublished && <Badge variant="success">All published</Badge>}
           </div>
           <div className="mt-3">
@@ -171,7 +183,9 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
                   >
                     <span className="truncate font-medium text-slate-900">
                       {classRef.className}
-                      {classRef.levelName && <span className="font-normal text-slate-400"> · {classRef.levelName}</span>}
+                      {classRef.levelName && (
+                        <span className="font-normal text-slate-400"> · {classRef.levelName}</span>
+                      )}
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
                       <Badge variant="warning">Not published</Badge>
@@ -189,6 +203,7 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
       )}
 
       {admin.registersMarkable && <AttendanceTodayCard />}
+      </div>
     </>
   );
 }
@@ -207,27 +222,31 @@ function TeacherDashboard({ teacher }: { teacher: NonNullable<SchoolDashboardVie
   }
 
   return (
-    <Card className="p-0">
-      <h2 className="p-6 pb-0 text-sm font-semibold text-slate-900">Your classes</h2>
-      <ul className="mt-4 divide-y divide-slate-100 pb-2">
-        {teacher.classes.map((row) => (
-          <li key={row.classId}>
-            <button
-              type="button"
-              className="flex min-h-14 w-full items-center justify-between gap-3 px-6 py-3 text-left hover:bg-slate-50"
-              onClick={() => navigate(`/school/academics/classes/${row.classId}`)}
-            >
-              <span className="text-sm font-medium text-slate-900">{row.className}</span>
-              <span className="flex shrink-0 items-center gap-2">
-                <Badge variant={row.registerMarkedToday ? "success" : "warning"}>
-                  {row.registerMarkedToday ? "Register marked today" : "Register not marked yet"}
-                </Badge>
-                <ChevronRight className="h-4 w-4 text-slate-400" aria-hidden="true" />
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </Card>
+    <>
+      <Card className="p-0">
+        <h2 className="p-6 pb-0 text-sm font-semibold text-slate-900">Your classes</h2>
+        <ul className="mt-4 divide-y divide-slate-100 pb-2">
+          {teacher.classes.map((row) => (
+            <li key={row.classId}>
+              <button
+                type="button"
+                className="flex min-h-14 w-full items-center justify-between gap-3 px-6 py-3 text-left hover:bg-slate-50"
+                onClick={() => navigate(`/school/academics/classes/${row.classId}`)}
+              >
+                <span className="text-sm font-medium text-slate-900">{row.className}</span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <Badge variant={row.registerMarkedToday ? "success" : "warning"}>
+                    {row.registerMarkedToday ? "Register marked today" : "Register not marked yet"}
+                  </Badge>
+                  <ChevronRight className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      <UpcomingBirthdaysCard hideWhenEmpty />
+    </>
   );
 }

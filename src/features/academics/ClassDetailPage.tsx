@@ -23,6 +23,7 @@ import { BookOpen, UserCheck, Users } from "lucide-react";
 import { ClassRosterPanel } from "@/features/academics/components/ClassRosterPanel";
 import { SubjectTeachersPanel } from "@/features/academics/components/SubjectTeachersPanel";
 import { RegisterStudentModal } from "@/features/students/components/RegisterStudentModal";
+import { UpcomingBirthdaysCard } from "@/features/students/components/UpcomingBirthdaysCard";
 import { Accordion } from "@/components/ui/Accordion";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
@@ -54,6 +55,7 @@ export function ClassDetailPage() {
   const { classId } = useParams<{ classId: string }>();
   const navigate = useNavigate();
   const role = useAuthStore((state) => state.user?.role);
+  const currentUserId = useAuthStore((state) => state.user?.id);
   const canManage = can.manageAcademics(role);
   const teacherCapabilities = useTeacherScopeStore((state) => state.capabilities);
   const canManageSubjectRegistrations = can.manageStudentSubjects(role, teacherCapabilities);
@@ -217,6 +219,7 @@ export function ClassDetailPage() {
   const boys = roster?.filter((student) => student.gender === "MALE").length ?? 0;
   const girls = roster?.filter((student) => student.gender === "FEMALE").length ?? 0;
   const assignedSubjectCount = assignments?.length ?? 0;
+  const showBirthdays = can.viewClassBirthdays(role, schoolClass.classTeacherId === currentUserId);
 
   return (
     <div className="space-y-6">
@@ -328,6 +331,12 @@ export function ClassDetailPage() {
           <ClassRosterPanel students={roster} canManage={canManage} onRegister={() => setRegisterOpen(true)} />
         )}
       </Accordion>
+
+      {showBirthdays && (
+        <Accordion title="Upcoming birthdays">
+          <UpcomingBirthdaysCard classId={schoolClass.id} linkable={can.manageStudents(role)} showHeader={false} />
+        </Accordion>
+      )}
 
       <Accordion title={`Subject teachers${subjects ? ` (${subjects.length})` : ""}`}>
         {subjects === null || assignments === null ? (

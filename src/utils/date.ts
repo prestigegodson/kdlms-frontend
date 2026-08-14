@@ -1,4 +1,5 @@
 const MONTH_FORMATTER = new Intl.DateTimeFormat("en-GB", { month: "long" });
+const SHORT_MONTH_FORMATTER = new Intl.DateTimeFormat("en-GB", { month: "short" });
 
 /**
  * Parses a "YYYY-MM-DD" (LocalDate JSON) string into a local Date at
@@ -70,6 +71,33 @@ export function todayIso(): string {
 export function isWeekend(date: Date): boolean {
   const day = date.getDay();
   return day === 0 || day === 6;
+}
+
+/**
+ * "1990-08-14" -> "14 Aug" - a birth date shown year-less, since only the
+ * day/month matter for an upcoming-birthdays list (`UpcomingBirthdaysCard`).
+ * Returns "—" for missing/unparseable input.
+ */
+export function formatDayAndMonth(iso: string | null | undefined): string {
+  if (!iso) {
+    return "—";
+  }
+  const date = parseIsoDate(iso);
+  if (!date) {
+    return "—";
+  }
+  return `${date.getDate()} ${SHORT_MONTH_FORMATTER.format(date)}`;
+}
+
+/** "0 -> Today", "1 -> Tomorrow", "n -> in n days" - `BirthdayView.daysUntil`'s display form. */
+export function formatDaysUntil(daysUntil: number): string {
+  if (daysUntil === 0) {
+    return "Today";
+  }
+  if (daysUntil === 1) {
+    return "Tomorrow";
+  }
+  return `in ${daysUntil} days`;
 }
 
 /**
