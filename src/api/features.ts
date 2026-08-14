@@ -9,6 +9,7 @@ import { apiFetch } from "@/api/client";
  */
 export interface MyFeaturesView {
   communication: boolean;
+  timetable: boolean;
 }
 
 export function getMyFeatures(): Promise<MyFeaturesView> {

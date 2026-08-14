@@ -4,10 +4,13 @@ import { apiFetch } from "@/api/client";
 export interface SchoolSettingsView {
   schoolId: string;
   allowWeekendAttendance: boolean;
+  allowWeekendTimetable: boolean;
 }
 
+/** A full replace, like the rest of this resource - omitting a field clears it. */
 export interface SaveSchoolSettingsRequest {
   allowWeekendAttendance: boolean;
+  allowWeekendTimetable: boolean;
 }
 
 const BASE = "/api/v1/school/settings";

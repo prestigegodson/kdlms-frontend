@@ -20,10 +20,12 @@ describe("SchoolSettingsPage", () => {
     vi.mocked(schoolSettingsApi.getSchoolSettings).mockResolvedValue({
       schoolId: "school-1",
       allowWeekendAttendance: false,
+      allowWeekendTimetable: false,
     });
     vi.mocked(schoolSettingsApi.updateSchoolSettings).mockResolvedValue({
       schoolId: "school-1",
       allowWeekendAttendance: true,
+      allowWeekendTimetable: false,
     });
     const user = userEvent.setup();
     render(<SchoolSettingsPage />);
@@ -36,7 +38,39 @@ describe("SchoolSettingsPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
-    expect(schoolSettingsApi.updateSchoolSettings).toHaveBeenCalledWith({ allowWeekendAttendance: true });
+    expect(schoolSettingsApi.updateSchoolSettings).toHaveBeenCalledWith({
+      allowWeekendAttendance: true,
+      allowWeekendTimetable: false,
+    });
+    expect(await screen.findByText("Settings updated.")).toBeInTheDocument();
+  });
+
+  it("toggles the timetable weekend setting independently of the attendance one", async () => {
+    vi.mocked(schoolSettingsApi.getSchoolSettings).mockResolvedValue({
+      schoolId: "school-1",
+      allowWeekendAttendance: false,
+      allowWeekendTimetable: false,
+    });
+    vi.mocked(schoolSettingsApi.updateSchoolSettings).mockResolvedValue({
+      schoolId: "school-1",
+      allowWeekendAttendance: false,
+      allowWeekendTimetable: true,
+    });
+    const user = userEvent.setup();
+    render(<SchoolSettingsPage />);
+
+    const checkbox = await screen.findByRole("checkbox", { name: "Allow timetable periods on weekends" });
+    expect(checkbox).not.toBeChecked();
+
+    await user.click(checkbox);
+    expect(checkbox).toBeChecked();
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(schoolSettingsApi.updateSchoolSettings).toHaveBeenCalledWith({
+      allowWeekendAttendance: false,
+      allowWeekendTimetable: true,
+    });
     expect(await screen.findByText("Settings updated.")).toBeInTheDocument();
   });
 

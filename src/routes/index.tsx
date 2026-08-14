@@ -48,6 +48,7 @@ import { StudentResultHistoryPage } from "@/features/students/StudentResultHisto
 import { StudentsPage } from "@/features/students/StudentsPage";
 import { SubscriptionPage } from "@/features/subscription/SubscriptionPage";
 import { TeachersPage } from "@/features/teachers/TeachersPage";
+import { PeriodGridPage } from "@/features/timetable/PeriodGridPage";
 import { GuardianLayout } from "@/layouts/GuardianLayout";
 import { RootLayout } from "@/layouts/RootLayout";
 import { SchoolLayout } from "@/layouts/SchoolLayout";
@@ -162,6 +163,14 @@ export const routes: RouteObject[] = [
             element: (
               <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
                 <TeachersPage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "timetable/periods",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN"]}>
+                <PeriodGridPage />
               </RequireRole>
             ),
           },

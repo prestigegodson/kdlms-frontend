@@ -19,6 +19,8 @@ export interface PackageView {
   onDemandLearning: boolean;
   /** Unlike takeHomeQuiz/onDemandLearning, this flag actually gates the `communication` module - see CLAUDE.md. */
   communication: boolean;
+  /** Also actually gates the feature, the same hard-lockout shape `communication` uses - see CLAUDE.md. */
+  timetable: boolean;
   status: PackageStatus;
 }
 
@@ -34,6 +36,7 @@ export interface SavePackageRequest {
   takeHomeQuiz: boolean;
   onDemandLearning: boolean;
   communication: boolean;
+  timetable: boolean;
 }
 
 const BASE = "/api/v1/admin/packages";

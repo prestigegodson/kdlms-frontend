@@ -45,6 +45,7 @@ export interface SubscriptionSummaryView {
   takeHomeQuiz: boolean;
   onDemandLearning: boolean;
   communication: boolean;
+  timetable: boolean;
 }
 
 function adminBase(schoolId: string): string {

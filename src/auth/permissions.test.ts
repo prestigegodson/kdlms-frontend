@@ -54,3 +54,20 @@ describe("can.composeMessages", () => {
     expect(can.composeMessages("TEACHER", { isClassTeacher: false }, true)).toBe(false);
   });
 });
+
+describe("can.managePeriodGrid", () => {
+  it("is true only for an entitled SCHOOL_ADMIN", () => {
+    expect(can.managePeriodGrid("SCHOOL_ADMIN", true)).toBe(true);
+  });
+
+  it("is false when the school isn't entitled, even for SCHOOL_ADMIN", () => {
+    expect(can.managePeriodGrid("SCHOOL_ADMIN", false)).toBe(false);
+  });
+
+  it("is false for every other role, even when entitled", () => {
+    expect(can.managePeriodGrid("BRANCH_ADMIN", true)).toBe(false);
+    expect(can.managePeriodGrid("TEACHER", true)).toBe(false);
+    expect(can.managePeriodGrid("GUARDIAN", true)).toBe(false);
+    expect(can.managePeriodGrid(undefined, true)).toBe(false);
+  });
+});

@@ -30,6 +30,7 @@ const STARTER_PACKAGE: PackageView = {
   takeHomeQuiz: false,
   onDemandLearning: false,
   communication: false,
+  timetable: false,
   status: "ACTIVE",
 };
 

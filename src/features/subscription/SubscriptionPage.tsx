@@ -91,6 +91,9 @@ export function SubscriptionPage() {
               <Badge variant={state.summary.communication ? "success" : "neutral"}>
                 {state.summary.communication ? "Home-school communication included" : "No home-school communication"}
               </Badge>
+              <Badge variant={state.summary.timetable ? "success" : "neutral"}>
+                {state.summary.timetable ? "Timetables included" : "No timetables"}
+              </Badge>
             </div>
           </Card>
 

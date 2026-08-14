@@ -3,6 +3,7 @@ import {
   CalendarDays,
   ClipboardCheck,
   ClipboardList,
+  Clock,
   Contact,
   CreditCard,
   FileText,
@@ -69,6 +70,20 @@ const NAV_ITEMS: NavItem[] = [
     group: "Academics",
     // School-wide, not branch-scoped - see auth/permissions.ts's manageGradingSystems.
     roles: ["SCHOOL_ADMIN"],
+  },
+  {
+    label: "Period grid",
+    href: "/school/timetable/periods",
+    icon: Clock,
+    group: "Academics",
+    // School-wide, not branch-scoped, like Levels/Grading systems - plus the
+    // school's Timetables package entitlement, the same hard-lockout shape
+    // Messages uses - see auth/permissions.ts's managePeriodGrid.
+    visible: () => {
+      const role = useAuthStore.getState().user?.role;
+      const entitled = useFeatureStore.getState().timetable;
+      return can.managePeriodGrid(role, entitled);
+    },
   },
   {
     label: "Assessments",
@@ -205,19 +220,20 @@ export function SchoolLayout() {
   // date picker just as much as the admin roles need it for School Settings.
   const fetchSchoolSettings = useSchoolSettingsStore((state) => state.fetchIfNeeded);
 
-  // Every role this layout admits needs the entitlement flag for the
-  // Messages nav item's visible() check above.
+  // Every role this layout admits needs the entitlement flags for the
+  // Messages/Period grid nav items' visible() checks above.
   const fetchFeatures = useFeatureStore((state) => state.fetchIfNeeded);
   // Readable by every role this layout admits, same as school settings above -
   // PortalShell's sidebar reads this to swap the wordmark for the school's logo.
   const fetchSchoolBranding = useSchoolBrandingStore((state) => state.fetchIfNeeded);
   const fetchUnreadMessages = useUnreadMessagesStore((state) => state.fetchIfNeeded);
   // Subscribed (return value intentionally discarded) only to force a
-  // re-render - so the Messages `visible()`/`badge()` closures above
-  // re-evaluate once these async fetches resolve, the same reason
+  // re-render - so the Messages/Period grid `visible()`/`badge()` closures
+  // above re-evaluate once these async fetches resolve, the same reason
   // teacherCapabilities is subscribed below. The values themselves are read
   // fresh from getState() inside those closures.
   useFeatureStore((state) => state.communication);
+  useFeatureStore((state) => state.timetable);
   useUnreadMessagesStore((state) => state.count);
 
   useEffect(() => {

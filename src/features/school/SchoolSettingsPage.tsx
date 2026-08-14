@@ -15,9 +15,10 @@ type LoadState =
   | { kind: "error"; message: string };
 
 /**
- * School-wide operational policy toggles - today just whether attendance can
- * be marked on weekends (default off: Monday-Friday only, per CLAUDE.md's
- * attendance rules). SCHOOL_ADMIN only, matching School Profile.
+ * School-wide operational policy toggles - whether attendance and timetable
+ * periods can be marked/scheduled on weekends (each default off:
+ * Monday-Friday only, per CLAUDE.md's attendance and timetable rules).
+ * SCHOOL_ADMIN only, matching School Profile.
  */
 export function SchoolSettingsPage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
@@ -43,7 +44,10 @@ export function SchoolSettingsPage() {
     setSaveError(null);
     setSaved(false);
     try {
-      const updated = await updateSchoolSettings({ allowWeekendAttendance: state.settings.allowWeekendAttendance });
+      const updated = await updateSchoolSettings({
+        allowWeekendAttendance: state.settings.allowWeekendAttendance,
+        allowWeekendTimetable: state.settings.allowWeekendTimetable,
+      });
       setState({ kind: "loaded", settings: updated });
       // The attendance date picker reads this same store - push the save straight in
       // rather than waiting for schoolSettingsStore's own idempotent fetchIfNeeded to
@@ -104,6 +108,24 @@ export function SchoolSettingsPage() {
             By default, attendance can only be marked Monday through Friday. Turn this on if your school
             runs Saturday or Sunday classes. A register already marked on a weekend stays correctable even
             if this is turned back off.
+          </p>
+
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <Checkbox
+              checked={settings.allowWeekendTimetable}
+              onChange={(event) =>
+                setState({
+                  kind: "loaded",
+                  settings: { ...settings, allowWeekendTimetable: event.target.checked },
+                })
+              }
+            />
+            Allow timetable periods on weekends
+          </label>
+          <p className="text-sm text-slate-500">
+            By default, timetable periods can only be scheduled Monday through Friday. Turn this on if
+            your school runs Saturday or Sunday classes. A timetable entry already saved on a weekend
+            stays correctable even if this is turned back off.
           </p>
 
           <Button type="submit" disabled={saving}>

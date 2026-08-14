@@ -257,4 +257,18 @@ export const can = {
   manageMyNotifications(role: Role | undefined, entitled: boolean): boolean {
     return entitled && role === "GUARDIAN";
   },
+
+  /**
+   * Editing a level's period grid - SCHOOL_ADMIN only, school-wide like
+   * levels and grading systems themselves (mirrors `manageGradingSystems`).
+   * Gated on the school's Timetables package entitlement (see
+   * stores/featureStore.ts) on top of role, the same hard-lockout shape
+   * `viewMessages`/`composeMessages` use for communication - full lockout on
+   * downgrade, reads included, not merely dormant. `viewTimetable`/
+   * `manageTimetable` (Phase 12C/12D) will follow the same entitled-first
+   * shape once the class-timetable pages land.
+   */
+  managePeriodGrid(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && role === "SCHOOL_ADMIN";
+  },
 };

@@ -131,6 +131,7 @@ export function PackagesPage() {
                       {pkg.takeHomeQuiz && <Badge variant="neutral">Take-home quizzes</Badge>}
                       {pkg.onDemandLearning && <Badge variant="neutral">Learning</Badge>}
                       {pkg.communication && <Badge variant="brand">Messaging</Badge>}
+                      {pkg.timetable && <Badge variant="brand">Timetables</Badge>}
                     </div>
                   </TableCell>
                   <TableCell label="Status">
@@ -217,6 +218,7 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
   const [takeHomeQuiz, setTakeHomeQuiz] = useState(initial?.takeHomeQuiz ?? false);
   const [onDemandLearning, setOnDemandLearning] = useState(initial?.onDemandLearning ?? false);
   const [communication, setCommunication] = useState(initial?.communication ?? false);
+  const [timetable, setTimetable] = useState(initial?.timetable ?? false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -237,6 +239,7 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
         takeHomeQuiz,
         onDemandLearning,
         communication,
+        timetable,
       });
       onSaved();
     } catch (err) {
@@ -348,6 +351,15 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
         <p className="-mt-2 text-xs text-slate-500">
           Unlike the flags above, this one actually gates the feature - a school without it loses
           the Messages screen entirely, for both staff and guardians.
+        </p>
+
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <Checkbox checked={timetable} onChange={(event) => setTimetable(event.target.checked)} />
+          Timetables
+        </label>
+        <p className="-mt-2 text-xs text-slate-500">
+          Also actually gates the feature - a school without it loses the Timetable screen entirely,
+          for staff and guardians alike.
         </p>
 
         <div className="flex justify-end gap-2">
