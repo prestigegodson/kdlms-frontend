@@ -2,7 +2,6 @@ import { type FormEvent, useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { listClasses, type SchoolClassView } from "@/api/classes";
 import { ApiError } from "@/api/client";
-import { downloadFile } from "@/api/files";
 import {
   createGuardian,
   type GuardianCreateResult,
@@ -35,11 +34,10 @@ import { can } from "@/auth/permissions";
 import { StudentAttendanceCard } from "@/features/attendance/components/StudentAttendanceCard";
 import { EditStudentMedicalModal } from "@/features/students/components/EditStudentMedicalModal";
 import { StudentMedicalPanel } from "@/features/students/components/StudentMedicalPanel";
-import { useObjectUrl } from "@/hooks/useObjectUrl";
-import { Camera, UserPlus } from "lucide-react";
+import { StudentPhotoPanel } from "@/features/students/components/StudentPhotoPanel";
+import { UserPlus } from "lucide-react";
 import { Accordion } from "@/components/ui/Accordion";
 import { Alert } from "@/components/ui/Alert";
-import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -65,7 +63,6 @@ import {
 } from "@/components/ui/Table";
 import { useAuthStore } from "@/stores/authStore";
 import { formatLongDate, todayIso } from "@/utils/date";
-import { initialsOf } from "@/utils/initials";
 
 type LoadState =
   | { kind: "loading" }
@@ -87,10 +84,6 @@ export function StudentDetailPage() {
   const [confirmingGraduate, setConfirmingGraduate] = useState(false);
   const [confirmingWithdraw, setConfirmingWithdraw] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const photoUrl = useObjectUrl(
-    state.kind === "loaded" ? state.student.photoFileId : undefined,
-    downloadFile,
-  );
 
   function fetchStudent() {
     if (!studentId) return;
@@ -159,94 +152,82 @@ export function StudentDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-4">
-        {canManage ? (
-          <button
-            type="button"
-            onClick={() => setEditingPhoto(true)}
-            aria-label={`Edit ${student.fullName}'s photo`}
-            className="group relative shrink-0 cursor-pointer rounded-full"
-          >
-            <Avatar initials={initialsOf(student)} url={photoUrl} size="lg" />
-            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-slate-900/0 text-white opacity-0 transition-opacity group-hover:bg-slate-900/40 group-hover:opacity-100">
-              <Camera className="h-5 w-5" aria-hidden="true" />
-            </span>
-          </button>
-        ) : (
-          <Avatar initials={initialsOf(student)} url={photoUrl} size="lg" className="shrink-0" />
-        )}
-        <div className="min-w-0 flex-1">
-          <PageHeader
-            title={student.fullName}
-            description={student.admissionNumber}
-            backTo="/school/students"
-            actions={
+      <PageHeader
+        title={student.fullName}
+        description={student.admissionNumber}
+        backTo="/school/students"
+        actions={
+          <>
+            <Badge
+              variant={
+                student.status === "ACTIVE"
+                  ? "success"
+                  : student.status === "WITHDRAWN"
+                    ? "danger"
+                    : "neutral"
+              }
+            >
+              {student.status}
+            </Badge>
+            {canManage && (
+              <Button variant="secondary" onClick={() => setEditing(true)}>
+                Edit
+              </Button>
+            )}
+            {canManage && student.status === "ACTIVE" && (
               <>
-                <Badge
-                  variant={
-                    student.status === "ACTIVE"
-                      ? "success"
-                      : student.status === "WITHDRAWN"
-                        ? "danger"
-                        : "neutral"
-                  }
-                >
-                  {student.status}
-                </Badge>
-                {canManage && (
-                  <Button variant="secondary" onClick={() => setEditing(true)}>
-                    Edit
-                  </Button>
-                )}
-                {canManage && student.status === "ACTIVE" && (
-                  <>
-                    <Button variant="secondary" onClick={() => setConfirmingWithdraw(true)}>
-                      Withdraw
-                    </Button>
-                    <Button variant="secondary" onClick={() => setConfirmingGraduate(true)}>
-                      Graduate
-                    </Button>
-                  </>
-                )}
-                {canManage && student.status === "WITHDRAWN" && (
-                  <Button variant="secondary" onClick={handleReinstate}>
-                    Reinstate
-                  </Button>
-                )}
+                <Button variant="secondary" onClick={() => setConfirmingWithdraw(true)}>
+                  Withdraw
+                </Button>
+                <Button variant="secondary" onClick={() => setConfirmingGraduate(true)}>
+                  Graduate
+                </Button>
               </>
-            }
-          />
-        </div>
-      </div>
+            )}
+            {canManage && student.status === "WITHDRAWN" && (
+              <Button variant="secondary" onClick={handleReinstate}>
+                Reinstate
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Accordion title="Bio" defaultOpen>
-          <dl className="grid grid-cols-1 gap-x-4 gap-y-3 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-slate-500">Branch</dt>
-              <dd className="text-slate-900">{student.branchName ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500">Current class</dt>
-              <dd className="text-slate-900">{student.currentClassName ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500">Gender</dt>
-              <dd className="text-slate-900">{student.gender === "FEMALE" ? "Female" : "Male"}</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500">Date of birth</dt>
-              <dd className="text-slate-900">{formatLongDate(student.dateOfBirth)}</dd>
-            </div>
-            {student.otherName && (
-              <div className="col-span-2">
-                <dt className="text-slate-500">Other name</dt>
-                <dd className="text-slate-900">{student.otherName}</dd>
+          <div className="flex gap-4 sm:gap-6">
+            <StudentPhotoPanel
+              student={student}
+              canManage={canManage}
+              onEdit={() => setEditingPhoto(true)}
+            />
+            <dl className="grid min-w-0 flex-1 grid-cols-1 gap-x-4 gap-y-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-slate-500">Branch</dt>
+                <dd className="text-slate-900">{student.branchName ?? "—"}</dd>
               </div>
-            )}
-          </dl>
+              <div>
+                <dt className="text-slate-500">Current class</dt>
+                <dd className="text-slate-900">{student.currentClassName ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">Gender</dt>
+                <dd className="text-slate-900">{student.gender === "FEMALE" ? "Female" : "Male"}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">Date of birth</dt>
+                <dd className="text-slate-900">{formatLongDate(student.dateOfBirth)}</dd>
+              </div>
+              {student.otherName && (
+                <div className="col-span-2">
+                  <dt className="text-slate-500">Other name</dt>
+                  <dd className="text-slate-900">{student.otherName}</dd>
+                </div>
+              )}
+            </dl>
+          </div>
         </Accordion>
 
         <GuardiansCard

@@ -297,6 +297,21 @@ describe("StudentDetailPage", () => {
     expect(studentsApi.updateStudentPhoto).toHaveBeenCalledWith("student-1", "photo-1");
   });
 
+  it("shows the student's photo in the Bio card", async () => {
+    vi.mocked(studentsApi.getStudent).mockResolvedValue({
+      ...STUDENT_VIEW,
+      photoFileId: "photo-1",
+    });
+    vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+    vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+    vi.mocked(filesApi.downloadFile).mockResolvedValue(new Blob());
+
+    renderAsSchoolAdmin();
+    await screen.findByRole("heading", { name: "Ada Obi" });
+
+    expect(await screen.findByRole("img", { name: "Ada Obi" })).toBeInTheDocument();
+  });
+
   it("graduates the student after confirming", async () => {
     vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
     vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([ENROLLMENT_VIEW]);

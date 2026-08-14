@@ -1,7 +1,7 @@
 import { ImagePlus, X } from "lucide-react";
-import { type ChangeEvent, useRef, useState } from "react";
+import { type ChangeEvent, useId, useRef, useState } from "react";
 import { ApiError } from "@/api/client";
-import { downloadFile, uploadFile } from "@/api/files";
+import { downloadFile, MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, uploadFile } from "@/api/files";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
@@ -28,11 +28,16 @@ export function ImageUploadField({ label, fileId, onChange }: ImageUploadFieldPr
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const hintId = useId();
 
   async function handleFileSelected(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError(`Image is larger than ${MAX_UPLOAD_LABEL}. Please choose a smaller file.`);
+      return;
+    }
     setUploading(true);
     setError(null);
     try {
@@ -63,6 +68,7 @@ export function ImageUploadField({ label, fileId, onChange }: ImageUploadFieldPr
           ref={inputRef}
           type="file"
           accept="image/png,image/jpeg,image/webp"
+          aria-describedby={hintId}
           className="hidden"
           onChange={handleFileSelected}
         />
@@ -79,6 +85,9 @@ export function ImageUploadField({ label, fileId, onChange }: ImageUploadFieldPr
           </button>
         )}
       </div>
+      <p id={hintId} className="mt-1 text-xs text-slate-500">
+        PNG, JPEG or WebP · max {MAX_UPLOAD_LABEL}
+      </p>
     </div>
   );
 }
