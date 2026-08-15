@@ -20,6 +20,8 @@ export interface PeriodRow {
 interface PeriodRowsProps {
   periods: PeriodRow[];
   onChange: (periods: PeriodRow[]) => void;
+  /** BRANCH_ADMIN's read-only view of the grid - every control disabled, add/reorder/remove hidden entirely. */
+  readOnly?: boolean;
 }
 
 const BLANK_PERIOD: PeriodRow = {
@@ -45,7 +47,7 @@ const BLANK_PERIOD: PeriodRow = {
  * because `Button`'s `disabled:pointer-events-none` would otherwise
  * suppress the native tooltip on hover.
  */
-export function PeriodRows({ periods, onChange }: PeriodRowsProps) {
+export function PeriodRows({ periods, onChange, readOnly = false }: PeriodRowsProps) {
   function updateRow(index: number, patch: Partial<PeriodRow>) {
     onChange(periods.map((period, i) => (i === index ? { ...period, ...patch } : period)));
   }
@@ -71,9 +73,11 @@ export function PeriodRows({ periods, onChange }: PeriodRowsProps) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-slate-900">Periods</h3>
-        <button type="button" className="text-sm text-brand-500 hover:text-brand-600" onClick={addRow}>
-          Add period
-        </button>
+        {!readOnly && (
+          <button type="button" className="text-sm text-brand-500 hover:text-brand-600" onClick={addRow}>
+            Add period
+          </button>
+        )}
       </div>
 
       {periods.length === 0 && <p className="text-sm text-slate-500">No periods yet - add at least one.</p>}
@@ -92,6 +96,7 @@ export function PeriodRows({ periods, onChange }: PeriodRowsProps) {
                 <Input
                   id={`period-${index}-label`}
                   required
+                  disabled={readOnly}
                   value={period.label}
                   onChange={(event) => updateRow(index, { label: event.target.value })}
                 />
@@ -101,6 +106,7 @@ export function PeriodRows({ periods, onChange }: PeriodRowsProps) {
                   id={`period-${index}-start`}
                   type="time"
                   required
+                  disabled={readOnly}
                   value={period.startTime}
                   onChange={(event) => updateRow(index, { startTime: event.target.value })}
                 />
@@ -110,6 +116,7 @@ export function PeriodRows({ periods, onChange }: PeriodRowsProps) {
                   id={`period-${index}-end`}
                   type="time"
                   required
+                  disabled={readOnly}
                   value={period.endTime}
                   onChange={(event) => updateRow(index, { endTime: event.target.value })}
                 />
@@ -118,6 +125,7 @@ export function PeriodRows({ periods, onChange }: PeriodRowsProps) {
                 <Select
                   id={`period-${index}-kind`}
                   value={period.kind}
+                  disabled={readOnly}
                   onChange={(event) => updateRow(index, { kind: event.target.value as PeriodRowKind })}
                 >
                   <option value="TEACHING">Teaching</option>
@@ -125,38 +133,40 @@ export function PeriodRows({ periods, onChange }: PeriodRowsProps) {
                 </Select>
               </FormField>
             </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                aria-label={`Move ${period.label || "this period"} up`}
-                className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-30"
-                disabled={index === 0}
-                onClick={() => move(index, -1)}
-              >
-                <ArrowUp className="h-4 w-4" aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                aria-label={`Move ${period.label || "this period"} down`}
-                className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-30"
-                disabled={index === periods.length - 1}
-                onClick={() => move(index, 1)}
-              >
-                <ArrowDown className="h-4 w-4" aria-hidden="true" />
-              </button>
-              <span title={period.inUse ? "This period has scheduled entries - clear those cells before deleting it." : undefined}>
-                <Button
+            {!readOnly && (
+              <div className="flex shrink-0 items-center gap-1">
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-red-600 hover:bg-red-50"
-                  disabled={period.inUse}
-                  onClick={() => removeRow(index)}
+                  aria-label={`Move ${period.label || "this period"} up`}
+                  className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-30"
+                  disabled={index === 0}
+                  onClick={() => move(index, -1)}
                 >
-                  Remove
-                </Button>
-              </span>
-            </div>
+                  <ArrowUp className="h-4 w-4" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Move ${period.label || "this period"} down`}
+                  className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-30"
+                  disabled={index === periods.length - 1}
+                  onClick={() => move(index, 1)}
+                >
+                  <ArrowDown className="h-4 w-4" aria-hidden="true" />
+                </button>
+                <span title={period.inUse ? "This period has scheduled entries - clear those cells before deleting it." : undefined}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:bg-red-50"
+                    disabled={period.inUse}
+                    onClick={() => removeRow(index)}
+                  >
+                    Remove
+                  </Button>
+                </span>
+              </div>
+            )}
           </li>
         ))}
       </ol>

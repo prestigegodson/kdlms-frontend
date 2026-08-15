@@ -3,14 +3,16 @@ import type { GradingSystemView } from "@/api/gradingSystems";
 import type { StudentTermResultView } from "@/api/assessments";
 import type { StudentAttendanceSummaryView } from "@/api/attendance";
 import type { StudentMedicalView } from "@/api/students";
+import type { ClassTimetableView } from "@/api/timetable";
 
 /**
  * Self-service views for the currently authenticated GUARDIAN - ward
- * listing, ward term results/attendance, ward report preview/PDF. Mirrors
- * backend student.adapter.in.web.MyWardsController,
+ * listing, ward term results/attendance/timetable, ward report preview/PDF.
+ * Mirrors backend student.adapter.in.web.MyWardsController,
  * assessment.adapter.in.web.MyWardResultsController,
- * attendance.adapter.in.web.MyWardAttendanceController, and
- * reporting.adapter.in.web.MyWardReportsController - all under
+ * attendance.adapter.in.web.MyWardAttendanceController,
+ * reporting.adapter.in.web.MyWardReportsController, and
+ * timetable.adapter.in.web.MyWardTimetableController - all under
  * `/api/v1/me/wards`.
  */
 const BASE = "/api/v1/me/wards";
@@ -80,6 +82,11 @@ export function getWardAttendance(studentId: string, termId: string): Promise<St
 /** A ward's medical & emergency details, read-only - also not publication-gated. */
 export function getWardMedical(studentId: string): Promise<StudentMedicalView> {
   return apiFetch<StudentMedicalView>(`${BASE}/${studentId}/medical`);
+}
+
+/** A ward's class timetable for one term, read-only - also not publication-gated, like attendance and medical info. */
+export function getWardTimetable(studentId: string, termId: string): Promise<ClassTimetableView> {
+  return apiFetch<ClassTimetableView>(`${BASE}/${studentId}/timetable?termId=${termId}`);
 }
 
 /**

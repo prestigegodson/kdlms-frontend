@@ -32,6 +32,7 @@ import { WardSessionsPage } from "@/features/guardian/WardSessionsPage";
 import { WardSessionTermsPage } from "@/features/guardian/WardSessionTermsPage";
 import { WardTermAttendancePage } from "@/features/guardian/WardTermAttendancePage";
 import { WardTermResultPage } from "@/features/guardian/WardTermResultPage";
+import { WardTimetablePage } from "@/features/guardian/WardTimetablePage";
 import { WardsPage } from "@/features/guardian/WardsPage";
 import { GuardiansPage } from "@/features/guardians/GuardiansPage";
 import { PackagesPage } from "@/features/packages/PackagesPage";
@@ -170,7 +171,7 @@ export const routes: RouteObject[] = [
           {
             path: "timetable/periods",
             element: (
-              <RequireRole roles={["SCHOOL_ADMIN"]}>
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
                 <PeriodGridPage />
               </RequireRole>
             ),
@@ -286,6 +287,7 @@ export const routes: RouteObject[] = [
             ],
           },
           { path: "messages", element: <WardMessagesPage /> },
+          { path: "timetable", element: <WardTimetablePage /> },
           { path: "settings", element: <NotificationSettingsPage /> },
         ],
       },

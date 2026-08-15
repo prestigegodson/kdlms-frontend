@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
+import { can } from "@/auth/permissions";
 import { ApiError } from "@/api/client";
-import { getPeriodGrid, type PeriodCommand, savePeriodGrid } from "@/api/timetable";
+import { type LevelPeriodGridView, getPeriodGrid, type PeriodCommand, savePeriodGrid } from "@/api/timetable";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -10,7 +11,10 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader, useFilterChip } from "@/components/ui/StickySubHeader";
 import { LevelSelect } from "@/features/academics/components/LevelSelect";
+import { CopyLevelPeriodsModal } from "@/features/timetable/components/CopyLevelPeriodsModal";
 import { type PeriodRow, PeriodRows } from "@/features/timetable/components/PeriodRows";
+import { useAuthStore } from "@/stores/authStore";
+import { useFeatureStore } from "@/stores/featureStore";
 import { useLevelStore } from "@/stores/levelStore";
 
 /**
@@ -44,6 +48,10 @@ function validatePeriods(periods: PeriodRow[]): string | null {
  * control, per that component's own guidance.
  */
 export function PeriodGridPage() {
+  const role = useAuthStore((state) => state.user?.role);
+  const entitled = useFeatureStore((state) => state.timetable);
+  const canManage = can.managePeriodGrid(role, entitled);
+
   const levels = useLevelStore((state) => state.levels);
   const levelsStatus = useLevelStore((state) => state.status);
   const fetchLevels = useLevelStore((state) => state.fetchIfNeeded);
@@ -58,6 +66,11 @@ export function PeriodGridPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [copyOpen, setCopyOpen] = useState(false);
+  // The *saved* count, not the local draft - an unsaved blank row shouldn't
+  // disable "Copy from another level" (the server's own refusal is the real
+  // guard regardless).
+  const [serverPeriodCount, setServerPeriodCount] = useState(0);
 
   useEffect(() => {
     fetchLevels();
@@ -75,6 +88,7 @@ export function PeriodGridPage() {
     setLoadError(null);
     setError(null);
     setSaved(false);
+    setCopyOpen(false);
   }
 
   useEffect(() => {
@@ -92,12 +106,28 @@ export function PeriodGridPage() {
             inUse: period.inUse,
           })),
         );
+        setServerPeriodCount(grid.periods.length);
         setGridLoaded(true);
       })
       .catch((err: unknown) =>
         setLoadError(err instanceof ApiError ? err.message : "Failed to load period grid"),
       );
   }, [levelId]);
+
+  function applyGrid(grid: LevelPeriodGridView) {
+    setLevelName(grid.levelName);
+    setPeriods(
+      grid.periods.map((period) => ({
+        id: period.id,
+        label: period.label,
+        startTime: period.startTime,
+        endTime: period.endTime,
+        kind: period.kind,
+        inUse: period.inUse,
+      })),
+    );
+    setServerPeriodCount(grid.periods.length);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -122,16 +152,7 @@ export function PeriodGridPage() {
     setSubmitting(true);
     try {
       const grid = await savePeriodGrid(levelId, { periods: commands });
-      setPeriods(
-        grid.periods.map((period) => ({
-          id: period.id,
-          label: period.label,
-          startTime: period.startTime,
-          endTime: period.endTime,
-          kind: period.kind,
-          inUse: period.inUse,
-        })),
-      );
+      applyGrid(grid);
       setSaved(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to save period grid");
@@ -140,9 +161,35 @@ export function PeriodGridPage() {
     }
   }
 
+  function handleCopied(grid: LevelPeriodGridView) {
+    applyGrid(grid);
+    setSaved(false);
+    setError(null);
+  }
+
+  const copyDisabled = serverPeriodCount > 0;
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Period grid" description="Define each level's bell-time grid." />
+      <PageHeader
+        title="Period grid"
+        description="Define each level's bell-time grid."
+        actions={
+          canManage && levels.length > 1 ? (
+            <span
+              title={
+                copyDisabled
+                  ? "This level already has a period grid - remove its periods first."
+                  : undefined
+              }
+            >
+              <Button type="button" variant="secondary" disabled={copyDisabled} onClick={() => setCopyOpen(true)}>
+                Copy from another level
+              </Button>
+            </span>
+          ) : undefined
+        }
+      />
 
       {levelsStatus !== "loaded" && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -180,15 +227,28 @@ export function PeriodGridPage() {
               {saved && <Alert variant="success">Period grid saved.</Alert>}
 
               <Card>
-                <PeriodRows periods={periods} onChange={setPeriods} />
+                <PeriodRows periods={periods} onChange={setPeriods} readOnly={!canManage} />
               </Card>
 
-              <div className="flex justify-end gap-2">
-                <Button type="submit" variant="accent" loading={submitting}>
-                  Save period grid
-                </Button>
-              </div>
+              {canManage && (
+                <div className="flex justify-end gap-2">
+                  <Button type="submit" variant="accent" loading={submitting}>
+                    Save period grid
+                  </Button>
+                </div>
+              )}
             </form>
+          )}
+
+          {canManage && (
+            <CopyLevelPeriodsModal
+              open={copyOpen}
+              onClose={() => setCopyOpen(false)}
+              targetLevelId={levelId}
+              targetLevelName={levelName}
+              levels={levels}
+              onCopied={handleCopied}
+            />
           )}
         </>
       )}

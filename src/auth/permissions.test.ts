@@ -71,3 +71,21 @@ describe("can.managePeriodGrid", () => {
     expect(can.managePeriodGrid(undefined, true)).toBe(false);
   });
 });
+
+describe("can.viewPeriodGrid", () => {
+  it("is true for an entitled SCHOOL_ADMIN or BRANCH_ADMIN", () => {
+    expect(can.viewPeriodGrid("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.viewPeriodGrid("BRANCH_ADMIN", true)).toBe(true);
+  });
+
+  it("is false when the school isn't entitled, even for SCHOOL_ADMIN/BRANCH_ADMIN", () => {
+    expect(can.viewPeriodGrid("SCHOOL_ADMIN", false)).toBe(false);
+    expect(can.viewPeriodGrid("BRANCH_ADMIN", false)).toBe(false);
+  });
+
+  it("is false for every other role, even when entitled", () => {
+    expect(can.viewPeriodGrid("TEACHER", true)).toBe(false);
+    expect(can.viewPeriodGrid("GUARDIAN", true)).toBe(false);
+    expect(can.viewPeriodGrid(undefined, true)).toBe(false);
+  });
+});

@@ -78,11 +78,13 @@ const NAV_ITEMS: NavItem[] = [
     group: "Academics",
     // School-wide, not branch-scoped, like Levels/Grading systems - plus the
     // school's Timetables package entitlement, the same hard-lockout shape
-    // Messages uses - see auth/permissions.ts's managePeriodGrid.
+    // Messages uses. SCHOOL_ADMIN can edit (and copy from another level),
+    // BRANCH_ADMIN sees it read-only - see auth/permissions.ts's
+    // viewPeriodGrid/managePeriodGrid.
     visible: () => {
       const role = useAuthStore.getState().user?.role;
       const entitled = useFeatureStore.getState().timetable;
-      return can.managePeriodGrid(role, entitled);
+      return can.viewPeriodGrid(role, entitled);
     },
   },
   {

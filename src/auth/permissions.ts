@@ -259,17 +259,28 @@ export const can = {
   },
 
   /**
-   * Editing a level's period grid - SCHOOL_ADMIN only, school-wide like
-   * levels and grading systems themselves (mirrors `manageGradingSystems`).
-   * Gated on the school's Timetables package entitlement (see
-   * stores/featureStore.ts) on top of role, the same hard-lockout shape
-   * `viewMessages`/`composeMessages` use for communication - full lockout on
-   * downgrade, reads included, not merely dormant. `viewTimetable`/
-   * `manageTimetable` (Phase 12C/12D) will follow the same entitled-first
-   * shape once the class-timetable pages land.
+   * Editing a level's period grid, and copying one level's grid onto
+   * another - SCHOOL_ADMIN only, school-wide like levels and grading
+   * systems themselves (mirrors `manageGradingSystems`). Gated on the
+   * school's Timetables package entitlement (see stores/featureStore.ts) on
+   * top of role, the same hard-lockout shape `viewMessages`/`composeMessages`
+   * use for communication - full lockout on downgrade, reads included, not
+   * merely dormant.
    */
   managePeriodGrid(role: Role | undefined, entitled: boolean): boolean {
     return entitled && role === "SCHOOL_ADMIN";
+  },
+
+  /**
+   * Seeing a level's period grid at all - SCHOOL_ADMIN (who can also edit,
+   * via `managePeriodGrid`) or BRANCH_ADMIN read-only, mirroring the
+   * `viewReportSettings`/`manageReportSettings` pair. The GET endpoints have
+   * always allowed BRANCH_ADMIN; this is what actually surfaces the page for
+   * them. Gated on the Timetables entitlement, the same full-lockout shape
+   * every other check in this module uses.
+   */
+  viewPeriodGrid(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN");
   },
 
   /**

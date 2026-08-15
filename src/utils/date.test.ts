@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDateRange, formatLongDate, formatMonthName } from "@/utils/date";
+import { formatClockTime, formatDateRange, formatLongDate, formatMonthName } from "@/utils/date";
 
 describe("formatLongDate", () => {
   it("formats an ISO date as 'D Month, YYYY'", () => {
@@ -44,5 +44,34 @@ describe("formatDateRange", () => {
   it("tolerates missing ends", () => {
     expect(formatDateRange(undefined, "2027-07-29")).toBe("— - 29 July, 2027");
     expect(formatDateRange("2026-06-29", undefined)).toBe("29 June, 2026 - —");
+  });
+});
+
+describe("formatClockTime", () => {
+  it("formats a morning time", () => {
+    expect(formatClockTime("08:30")).toBe("08:30 AM");
+  });
+
+  it("formats an afternoon time", () => {
+    expect(formatClockTime("14:10")).toBe("02:10 PM");
+  });
+
+  it("formats midnight as 12 AM", () => {
+    expect(formatClockTime("00:15")).toBe("12:15 AM");
+  });
+
+  it("formats noon as 12 PM", () => {
+    expect(formatClockTime("12:05")).toBe("12:05 PM");
+  });
+
+  it("tolerates a seconds-bearing value", () => {
+    expect(formatClockTime("08:30:45")).toBe("08:30 AM");
+  });
+
+  it("returns an em dash for missing/unparseable input", () => {
+    expect(formatClockTime(undefined)).toBe("—");
+    expect(formatClockTime(null)).toBe("—");
+    expect(formatClockTime("")).toBe("—");
+    expect(formatClockTime("garbage")).toBe("—");
   });
 });

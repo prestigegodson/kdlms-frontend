@@ -53,6 +53,24 @@ export function savePeriodGrid(levelId: string, request: SavePeriodGridRequest):
   });
 }
 
+/** Mirrors backend timetable.adapter.in.web.PeriodGridController.CopyPeriodGridRequest. */
+export interface CopyPeriodGridRequest {
+  sourceLevelId: string;
+}
+
+/**
+ * Clones sourceLevelId's whole grid onto targetLevelId - all-or-nothing like
+ * savePeriodGrid: refused (422) if targetLevelId already has any period, if
+ * sourceLevelId has none, or if the two are the same level.
+ */
+export function copyPeriodGrid(targetLevelId: string, sourceLevelId: string): Promise<LevelPeriodGridView> {
+  const request: CopyPeriodGridRequest = { sourceLevelId };
+  return apiFetch<LevelPeriodGridView>(`${BASE}/periods/${targetLevelId}/copy`, {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
 export type EntryKind = "SUBJECT" | "ACTIVITY";
 
 /** Mirrors backend timetable.application.port.in.ClassTimetableView.CellView. */

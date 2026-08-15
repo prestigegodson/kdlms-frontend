@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Select } from "@/components/ui/Select";
 import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
+import { formatClockTime } from "@/utils/date";
 import { XCircle } from "lucide-react";
 
 const DAYS: { value: number; label: string }[] = [
@@ -183,7 +184,9 @@ export function TimetableGrid({ view, subjects, teachers, onSaved }: TimetableGr
                 >
                   <div>{period.label}</div>
                   <div className="font-normal text-slate-400">
-                    {period.startTime}–{period.endTime}
+                    <div>{formatClockTime(period.startTime)}</div>
+                    <div>--</div>
+                    <div>{formatClockTime(period.endTime)}</div>
                   </div>
                 </th>
                 {period.kind === "BREAK" ? (

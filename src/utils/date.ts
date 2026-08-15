@@ -101,6 +101,31 @@ export function formatDaysUntil(daysUntil: number): string {
 }
 
 /**
+ * "08:30" -> "08:30 AM", "14:10" -> "02:10 PM". Tolerates the "HH:mm:ss"
+ * form Jackson emits when a LocalTime carries non-zero seconds; the seconds
+ * are dropped, since a bell time is only ever minute-precise. Returns "—"
+ * for missing/unparseable input.
+ *
+ * Deliberately hand-rolled rather than Intl.DateTimeFormat with hour12:
+ * modern ICU separates the AM/PM marker with U+202F (narrow no-break space)
+ * rather than a plain space, which is invisible in review but breaks any
+ * assertion on the literal "08:30 AM". Display-only - never feed the result
+ * back to an `<input type="time">` or to PeriodGridPage's string
+ * comparisons, both of which require the raw 24-hour value.
+ */
+export function formatClockTime(time: string | null | undefined): string {
+  const match = /^(\d{2}):(\d{2})(?::\d{2})?$/.exec(time ?? "");
+  if (!match) {
+    return "—";
+  }
+  const hour = Number(match[1]);
+  const minute = match[2];
+  const period = hour < 12 ? "AM" : "PM";
+  const twelveHour = String(hour % 12 || 12).padStart(2, "0");
+  return `${twelveHour}:${minute} ${period}`;
+}
+
+/**
  * Today if it's a weekday, otherwise the most recent Friday - the default
  * date `TeacherRegisterPanel` seeds when the school hasn't opted in to
  * weekend attendance, so opening the page on a Saturday/Sunday doesn't land

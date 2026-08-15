@@ -18,6 +18,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { TimetableGrid } from "@/components/TimetableGrid";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
+import { formatClockTime } from "@/utils/date";
 import { CalendarDays } from "lucide-react";
 
 const DAY_NAMES: Record<number, string> = { 1: "Monday", 2: "Tuesday", 3: "Wednesday", 4: "Thursday", 5: "Friday", 6: "Saturday", 7: "Sunday" };
@@ -240,8 +241,10 @@ function TimetableAgendaRow({ entry }: { entry: MyTimetableEntryView }) {
           {entry.className} &middot; {entry.periodLabel}
         </p>
       </div>
-      <div className="whitespace-nowrap text-xs text-slate-500">
-        {entry.startTime}&ndash;{entry.endTime}
+      <div className="text-xs text-slate-500">
+        <span className="whitespace-nowrap">{formatClockTime(entry.startTime)}</span>
+        {" – "}
+        <span className="whitespace-nowrap">{formatClockTime(entry.endTime)}</span>
       </div>
     </div>
   );

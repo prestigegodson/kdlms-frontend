@@ -1,4 +1,4 @@
-import { Bell, ClipboardCheck, ClipboardList, MessageSquare, Users } from "lucide-react";
+import { Bell, CalendarDays, ClipboardCheck, ClipboardList, MessageSquare, Users } from "lucide-react";
 import { useEffect } from "react";
 import { can } from "@/auth/permissions";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
@@ -20,6 +20,17 @@ const NAV_ITEMS: NavItem[] = [
     badge: () => useUnreadMessagesStore.getState().count,
   },
   {
+    label: "Timetable",
+    href: "/guardian/timetable",
+    icon: CalendarDays,
+    // Overflow-only (drawer via the tab bar's More tab) - My Wards/Results/
+    // Attendance/Messages already fill the tab bar's four-destination limit
+    // (CLAUDE.md's mobile nav rule). Gated on the school's Timetables
+    // package entitlement, the same full-lockout shape `viewMessages` uses -
+    // see auth/permissions.ts's viewTimetable.
+    visible: () => can.viewTimetable("GUARDIAN", null, useFeatureStore.getState().timetable),
+  },
+  {
     label: "Notifications",
     href: "/guardian/settings",
     icon: Bell,
@@ -35,9 +46,10 @@ export function GuardianLayout() {
   const fetchFeatures = useFeatureStore((state) => state.fetchIfNeeded);
   const fetchUnreadMessages = useUnreadMessagesStore((state) => state.fetchIfNeeded);
   // Subscribed (return value intentionally discarded) only to force a
-  // re-render, so the Messages `visible()`/`badge()` closures above
+  // re-render, so the Messages/Timetable `visible()`/`badge()` closures above
   // re-evaluate once these async fetches resolve - mirrors SchoolLayout.
   useFeatureStore((state) => state.communication);
+  useFeatureStore((state) => state.timetable);
   useUnreadMessagesStore((state) => state.count);
 
   // Deliberately no schoolBrandingStore fetch here, unlike SchoolLayout: a
