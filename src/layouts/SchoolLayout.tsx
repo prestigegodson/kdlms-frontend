@@ -86,6 +86,22 @@ const NAV_ITEMS: NavItem[] = [
     },
   },
   {
+    label: "Timetable",
+    href: "/school/timetable",
+    icon: Clock,
+    group: "Academics",
+    // Admin (authoring) and every TEACHER (their own "My timetable"/"Class
+    // timetable" tabs, TimetablePage's role fork) - see auth/permissions.ts's
+    // viewTimetable, the single source of truth. `manageTimetable` narrows
+    // further to who may actually write a class's grid.
+    visible: () => {
+      const role = useAuthStore.getState().user?.role;
+      const isClassTeacher = useTeacherScopeStore.getState().capabilities?.isClassTeacher ?? false;
+      const entitled = useFeatureStore.getState().timetable;
+      return can.viewTimetable(role, { isClassTeacher }, entitled);
+    },
+  },
+  {
     label: "Assessments",
     href: "/school/assessments",
     icon: ClipboardCheck,

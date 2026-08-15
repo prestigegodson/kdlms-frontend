@@ -271,4 +271,39 @@ export const can = {
   managePeriodGrid(role: Role | undefined, entitled: boolean): boolean {
     return entitled && role === "SCHOOL_ADMIN";
   },
+
+  /**
+   * Filling/editing a class's weekly timetable - SCHOOL_ADMIN/BRANCH_ADMIN
+   * (own branch) only, no teacher write path at all (see CLAUDE.md's Roles
+   * table - unlike attendance, there's no class-teacher-write shape here).
+   * Gated on the school's Timetables package entitlement, the same
+   * full-lockout shape `managePeriodGrid` uses. Pulled forward from Phase
+   * 12D (which adds the teacher/guardian read views and the matching
+   * `viewTimetable` check) so the Phase 12C authoring screen is reachable
+   * and verifiable end-to-end - the same call `managePeriodGrid` made in
+   * Phase 12B.
+   */
+  manageTimetable(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN");
+  },
+
+  /**
+   * Seeing a timetable at all - SCHOOL_ADMIN/BRANCH_ADMIN (the authoring
+   * screen, `manageTimetable` narrows further to who may write), GUARDIAN
+   * (their ward's class grid, Phase 12E), or any TEACHER, class-teacher or
+   * subject-teacher-only alike - unlike `viewAttendance`, a subject-teacher-
+   * only account still has periods of their own to see on the "My timetable"
+   * tab, so `scope` isn't consulted here; it's `TeacherTimetablePanel` that
+   * uses `scope?.isClassTeacher` to decide whether the second "Class
+   * timetable" tab renders at all. Gated on the Timetables entitlement, the
+   * same full-lockout shape every other check in this module uses.
+   */
+  viewTimetable(role: Role | undefined, _scope: TeacherScope | null, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return (
+      role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "GUARDIAN" || role === "TEACHER"
+    );
+  },
 };

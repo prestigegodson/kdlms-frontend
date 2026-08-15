@@ -49,6 +49,7 @@ import { StudentsPage } from "@/features/students/StudentsPage";
 import { SubscriptionPage } from "@/features/subscription/SubscriptionPage";
 import { TeachersPage } from "@/features/teachers/TeachersPage";
 import { PeriodGridPage } from "@/features/timetable/PeriodGridPage";
+import { TimetablePage } from "@/features/timetable/TimetablePage";
 import { GuardianLayout } from "@/layouts/GuardianLayout";
 import { RootLayout } from "@/layouts/RootLayout";
 import { SchoolLayout } from "@/layouts/SchoolLayout";
@@ -174,6 +175,7 @@ export const routes: RouteObject[] = [
               </RequireRole>
             ),
           },
+          { path: "timetable", element: <TimetablePage /> },
           {
             path: "students",
             element: (
