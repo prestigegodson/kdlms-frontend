@@ -222,6 +222,7 @@ function AdminClasses({ role }: { role: Role | undefined }) {
           title="Add class"
           branches={branches ?? []}
           levels={levels}
+          selectedLevelId={levelId || undefined}
           showBranchField={!isBranchScoped}
           onClose={() => setCreateOpen(false)}
           onSubmit={async (values) => {
@@ -338,6 +339,7 @@ interface ClassFormModalProps {
   onClose: () => void;
   onSubmit: (values: ClassFormValues) => Promise<void>;
   onSaved: () => void;
+  selectedLevelId?: string;
 }
 
 function ClassFormModal({
@@ -348,10 +350,11 @@ function ClassFormModal({
   onClose,
   onSubmit,
   onSaved,
+  selectedLevelId,
 }: ClassFormModalProps) {
   const [branchId, setBranchId] = useState(branches[0]?.id ?? "");
   const [levelId, setLevelId] = useState(
-    levels.find((level) => level.status === "ACTIVE")?.id ?? "",
+    selectedLevelId || (levels.find((level) => level.status === "ACTIVE")?.id ?? "")
   );
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);

@@ -33,11 +33,20 @@ export interface SessionResponse {
   user: UserSummary;
 }
 
-export function login(email: string, password: string): Promise<SessionResponse> {
+/**
+ * `subdomain` is the browser hostname's own subdomain label (see
+ * `lib/host.ts`'s `resolveSchoolSubdomain`), passed explicitly since the
+ * backend can't read it off the request `Host` header itself - the deployed
+ * frontend calls a separate `api.kdlms.com` origin. Omit it (or pass
+ * `null`/`undefined`) for the platform's own host, which imposes no
+ * restriction. See `AuthenticationService#requireMatchingHost` (backend)
+ * for what a school subdomain actually does with it.
+ */
+export function login(email: string, password: string, subdomain?: string | null): Promise<SessionResponse> {
   return apiFetch<SessionResponse>("/api/v1/auth/login", {
     method: "POST",
     authenticated: false,
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, subdomain: subdomain ?? null }),
   });
 }
 

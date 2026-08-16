@@ -9,6 +9,7 @@ import {
   restoreSchool,
   type SchoolView,
   suspendSchool,
+  updateSchool,
 } from "@/api/schools";
 import {
   assignSubscription,
@@ -63,6 +64,7 @@ export function SchoolDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [adminsRefreshKey, setAdminsRefreshKey] = useState(0);
+  const [editOpen, setEditOpen] = useState(false);
 
   function fetchSchool() {
     if (!schoolId) return;
@@ -134,7 +136,12 @@ export function SchoolDetailPage() {
           {actionError && <Alert variant="error">{actionError}</Alert>}
 
           <Card>
-            <h2 className="text-sm font-semibold text-slate-900">Profile</h2>
+            <div className="flex items-start justify-between gap-2">
+              <h2 className="text-sm font-semibold text-slate-900">Profile</h2>
+              <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
+                Edit
+              </Button>
+            </div>
             <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
               <dt className="text-slate-500">Email</dt>
               <dd className="text-slate-900">{state.school.email ?? "—"}</dd>
@@ -142,6 +149,10 @@ export function SchoolDetailPage() {
               <dd className="text-slate-900">{state.school.phone ?? "—"}</dd>
               <dt className="text-slate-500">Address</dt>
               <dd className="text-slate-900">{state.school.address ?? "—"}</dd>
+              <dt className="text-slate-500">Login page</dt>
+              <dd className="text-slate-900">
+                {state.school.subdomain ? `${state.school.subdomain}.kdlms.com` : "—"}
+              </dd>
             </dl>
             <div className="mt-4 flex flex-wrap gap-2">
               {state.school.status === "SUSPENDED" && (
@@ -166,6 +177,17 @@ export function SchoolDetailPage() {
               )}
             </div>
           </Card>
+
+          {editOpen && (
+            <EditSchoolModal
+              school={state.school}
+              onClose={() => setEditOpen(false)}
+              onSaved={() => {
+                setEditOpen(false);
+                load();
+              }}
+            />
+          )}
 
           {pending?.kind === "suspend" && (
             <ConfirmDialog
@@ -224,6 +246,95 @@ export function SchoolDetailPage() {
         </>
       )}
     </div>
+  );
+}
+
+interface EditSchoolModalProps {
+  school: SchoolView;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+/**
+ * Name/email/phone/address plus the SYSTEM_ADMIN-only subdomain - a full
+ * replace like the backend PUT, so this always resends every field
+ * (including the current subdomain unchanged) rather than only the diff.
+ */
+function EditSchoolModal({ school, onClose, onSaved }: EditSchoolModalProps) {
+  const [name, setName] = useState(school.name);
+  const [email, setEmail] = useState(school.email ?? "");
+  const [phone, setPhone] = useState(school.phone ?? "");
+  const [address, setAddress] = useState(school.address ?? "");
+  const [subdomain, setSubdomain] = useState(school.subdomain ?? "");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    try {
+      await updateSchool(school.id, {
+        name,
+        email: email || undefined,
+        phone: phone || undefined,
+        address: address || undefined,
+        subdomain: subdomain || undefined,
+      });
+      onSaved();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to save school");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Edit school">
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        {error && <Alert variant="error">{error}</Alert>}
+        <FormField label="School name" htmlFor="edit-school-name">
+          <Input id="edit-school-name" required value={name} onChange={(event) => setName(event.target.value)} />
+        </FormField>
+        <FormField label="Email" htmlFor="edit-school-email">
+          <Input
+            id="edit-school-email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+        </FormField>
+        <FormField label="Phone" htmlFor="edit-school-phone">
+          <Input id="edit-school-phone" value={phone} onChange={(event) => setPhone(event.target.value)} />
+        </FormField>
+        <FormField label="Address" htmlFor="edit-school-address">
+          <Input id="edit-school-address" value={address} onChange={(event) => setAddress(event.target.value)} />
+        </FormField>
+        <FormField label="Subdomain" htmlFor="edit-school-subdomain">
+          <Input
+            id="edit-school-subdomain"
+            placeholder="greenwood"
+            pattern="[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
+            autoCapitalize="none"
+            value={subdomain}
+            onChange={(event) => setSubdomain(event.target.value)}
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            {subdomain
+              ? `Login page: ${subdomain.toLowerCase()}.kdlms.com`
+              : "No custom login page - the school signs in at the main site."}
+          </p>
+        </FormField>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={submitting}>
+            {submitting ? "Saving…" : "Save"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

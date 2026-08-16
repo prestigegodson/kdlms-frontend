@@ -8,6 +8,10 @@ import { Input } from "@/components/ui/Input";
 import { AuthLayout } from "@/features/auth/AuthLayout";
 import { homePathForRole } from "@/routes/roleHome";
 import { useAuthStore } from "@/stores/authStore";
+import { usePublicBrandingStore } from "@/stores/publicBrandingStore";
+import { platformLoginUrl, resolveSchoolSubdomain } from "@/utils/host";
+
+const SCHOOL_HOST_MISMATCH_TYPE = "https://kdlms.com/problems/school-host-mismatch";
 
 interface LocationState {
   from?: { pathname: string; search: string };
@@ -17,33 +21,54 @@ interface LocationState {
 export function LoginPage() {
   const login = useAuthStore((state) => state.login);
   const status = useAuthStore((state) => state.status);
+  const schoolName = usePublicBrandingStore((state) => state.schoolName);
   const navigate = useNavigate();
   const location = useLocation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [hostMismatch, setHostMismatch] = useState(false);
 
   const from = (location.state as LocationState | null)?.from;
+  const subdomain = resolveSchoolSubdomain();
+  const brandName = schoolName ?? "KDLMS";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
+    setHostMismatch(false);
     try {
-      const user = await login(email, password);
+      const user = await login(email, password, subdomain);
       const destination = from ? `${from.pathname}${from.search}` : homePathForRole(user.role);
       navigate(destination, { replace: true });
     } catch (error) {
-      setFormError(
-        error instanceof ApiError ? error.message : "Unable to sign in. Please try again.",
-      );
+      if (error instanceof ApiError) {
+        setFormError(error.message);
+        setHostMismatch(error.problem?.type === SCHOOL_HOST_MISMATCH_TYPE);
+      } else {
+        setFormError("Unable to sign in. Please try again.");
+      }
     }
   }
 
   return (
-    <AuthLayout title="Sign in to KDLMS" description="Use the credentials your school or system admin gave you.">
+    <AuthLayout title={`Sign in to ${brandName}`} description="Use the credentials your school or system admin gave you.">
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-        {formError && <Alert variant="error">{formError}</Alert>}
+        {formError && (
+          <Alert variant="error">
+            <span>{formError}</span>
+            {hostMismatch && (
+              <>
+                {" "}
+                <a href={platformLoginUrl()} className="font-medium underline">
+                  Sign in at the main site instead
+                </a>
+                .
+              </>
+            )}
+          </Alert>
+        )}
         <FormField label="Email" htmlFor="email">
           <Input
             id="email"

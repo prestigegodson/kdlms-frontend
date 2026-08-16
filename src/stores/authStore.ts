@@ -44,7 +44,7 @@ interface AuthState {
     accessToken: string;
     refreshToken: string;
   }) => void;
-  login: (email: string, password: string) => Promise<AuthenticatedUser>;
+  login: (email: string, password: string, subdomain?: string | null) => Promise<AuthenticatedUser>;
   logout: () => void;
   refreshSession: () => Promise<boolean>;
   setHydrated: () => void;
@@ -61,10 +61,10 @@ export const useAuthStore = create<AuthState>()(
 
       setSession: ({ user, accessToken, refreshToken }) => set({ user, accessToken, refreshToken }),
 
-      login: async (email, password) => {
+      login: async (email, password, subdomain) => {
         set({ status: "authenticating" });
         try {
-          const session = await authApi.login(email, password);
+          const session = await authApi.login(email, password, subdomain);
           set({
             user: session.user,
             accessToken: session.accessToken,

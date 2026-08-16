@@ -129,6 +129,7 @@ function CreateSchoolModal({ open, onClose, onCreated }: CreateSchoolModalProps)
   const [code, setCode] = useState("");
   const [email, setEmail] = useState("");
   const [mainBranchName, setMainBranchName] = useState("");
+  const [subdomain, setSubdomain] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -142,11 +143,13 @@ function CreateSchoolModal({ open, onClose, onCreated }: CreateSchoolModalProps)
         code,
         email: email || undefined,
         mainBranchName: mainBranchName || undefined,
+        subdomain: subdomain || undefined,
       });
       setName("");
       setCode("");
       setEmail("");
       setMainBranchName("");
+      setSubdomain("");
       onCreated();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to create school");
@@ -191,6 +194,17 @@ function CreateSchoolModal({ open, onClose, onCreated }: CreateSchoolModalProps)
             value={mainBranchName}
             onChange={(event) => setMainBranchName(event.target.value)}
           />
+        </FormField>
+        <FormField label="Subdomain (optional)" htmlFor="school-subdomain">
+          <Input
+            id="school-subdomain"
+            placeholder="greenwood"
+            pattern="[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
+            autoCapitalize="none"
+            value={subdomain}
+            onChange={(event) => setSubdomain(event.target.value)}
+          />
+          {subdomain && <p className="mt-1 text-xs text-slate-500">Login page: {subdomain.toLowerCase()}.kdlms.com</p>}
         </FormField>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
