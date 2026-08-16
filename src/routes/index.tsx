@@ -48,6 +48,8 @@ import { StudentDetailPage } from "@/features/students/StudentDetailPage";
 import { StudentResultHistoryPage } from "@/features/students/StudentResultHistoryPage";
 import { StudentsPage } from "@/features/students/StudentsPage";
 import { SubscriptionPage } from "@/features/subscription/SubscriptionPage";
+import { AdminSupportContactPage } from "@/features/support/AdminSupportContactPage";
+import { SupportPage } from "@/features/support/SupportPage";
 import { TeachersPage } from "@/features/teachers/TeachersPage";
 import { PeriodGridPage } from "@/features/timetable/PeriodGridPage";
 import { TimetablePage } from "@/features/timetable/TimetablePage";
@@ -90,6 +92,7 @@ export const routes: RouteObject[] = [
           { path: "packages", element: <PackagesPage /> },
           { path: "templates", element: <ResultTemplatesPage /> },
           { path: "templates/:templateId", element: <TemplateDesignerRoute /> },
+          { path: "support", element: <AdminSupportContactPage /> },
         ],
       },
       {
@@ -138,6 +141,14 @@ export const routes: RouteObject[] = [
             element: (
               <RequireRole roles={["SCHOOL_ADMIN"]}>
                 <SubscriptionPage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "support",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
+                <SupportPage />
               </RequireRole>
             ),
           },

@@ -317,4 +317,14 @@ export const can = {
       role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "GUARDIAN" || role === "TEACHER"
     );
   },
+
+  /** Setting the platform's own support contact details - SYSTEM_ADMIN only, outside tenant scope entirely. */
+  manageSupportContact(role: Role | undefined): boolean {
+    return role === "SYSTEM_ADMIN";
+  },
+
+  /** Reading the platform's support contact - SCHOOL_ADMIN and BRANCH_ADMIN only, so they have a way to reach KDLMS. */
+  viewSupportContact(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
 };

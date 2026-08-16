@@ -89,3 +89,25 @@ describe("can.viewPeriodGrid", () => {
     expect(can.viewPeriodGrid(undefined, true)).toBe(false);
   });
 });
+
+describe("can.manageSupportContact", () => {
+  it("is true only for SYSTEM_ADMIN", () => {
+    expect(can.manageSupportContact("SYSTEM_ADMIN")).toBe(true);
+    expect(can.manageSupportContact("SCHOOL_ADMIN")).toBe(false);
+    expect(can.manageSupportContact("BRANCH_ADMIN")).toBe(false);
+    expect(can.manageSupportContact("TEACHER")).toBe(false);
+    expect(can.manageSupportContact("GUARDIAN")).toBe(false);
+    expect(can.manageSupportContact(undefined)).toBe(false);
+  });
+});
+
+describe("can.viewSupportContact", () => {
+  it("is true only for SCHOOL_ADMIN/BRANCH_ADMIN", () => {
+    expect(can.viewSupportContact("SCHOOL_ADMIN")).toBe(true);
+    expect(can.viewSupportContact("BRANCH_ADMIN")).toBe(true);
+    expect(can.viewSupportContact("SYSTEM_ADMIN")).toBe(false);
+    expect(can.viewSupportContact("TEACHER")).toBe(false);
+    expect(can.viewSupportContact("GUARDIAN")).toBe(false);
+    expect(can.viewSupportContact(undefined)).toBe(false);
+  });
+});

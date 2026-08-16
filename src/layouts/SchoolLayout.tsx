@@ -10,6 +10,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   Layers,
+  LifeBuoy,
   Library,
   BookOpen,
   MessageSquare,
@@ -217,6 +218,14 @@ const NAV_ITEMS: NavItem[] = [
     icon: CreditCard,
     group: "Administration",
     roles: ["SCHOOL_ADMIN"],
+  },
+  {
+    label: "Support",
+    href: "/school/support",
+    icon: LifeBuoy,
+    group: "Administration",
+    // Read-only for both - see auth/permissions.ts's viewSupportContact.
+    roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"],
   },
 ];
 
