@@ -5,6 +5,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { AuthLayout } from "@/features/auth/AuthLayout";
 import { homePathForRole } from "@/routes/roleHome";
 import { useAuthStore } from "@/stores/authStore";
@@ -82,9 +83,8 @@ export function LoginPage() {
           />
         </FormField>
         <FormField label="Password" htmlFor="password">
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="current-password"
             enterKeyHint="go"
             required

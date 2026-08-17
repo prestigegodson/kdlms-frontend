@@ -4,8 +4,8 @@ import { ApiError } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
-import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 interface ChangePasswordDialogProps {
   open: boolean;
@@ -86,9 +86,8 @@ export function ChangePasswordDialog({ open, onClose }: ChangePasswordDialogProp
         <form className="space-y-4" onSubmit={handleSubmit}>
           {status.kind === "error" && <Alert variant="error">{status.message}</Alert>}
           <FormField label="Current password" htmlFor="currentPassword">
-            <Input
+            <PasswordInput
               id="currentPassword"
-              type="password"
               autoComplete="current-password"
               enterKeyHint="next"
               required
@@ -97,9 +96,8 @@ export function ChangePasswordDialog({ open, onClose }: ChangePasswordDialogProp
             />
           </FormField>
           <FormField label="New password" htmlFor="newPassword">
-            <Input
+            <PasswordInput
               id="newPassword"
-              type="password"
               autoComplete="new-password"
               enterKeyHint="next"
               required
@@ -109,9 +107,8 @@ export function ChangePasswordDialog({ open, onClose }: ChangePasswordDialogProp
             />
           </FormField>
           <FormField label="Confirm new password" htmlFor="confirmPassword">
-            <Input
+            <PasswordInput
               id="confirmPassword"
-              type="password"
               autoComplete="new-password"
               enterKeyHint="go"
               required

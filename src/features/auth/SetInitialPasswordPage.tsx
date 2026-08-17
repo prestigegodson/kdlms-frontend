@@ -5,7 +5,7 @@ import { ApiError } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
-import { Input } from "@/components/ui/Input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { AuthLayout } from "@/features/auth/AuthLayout";
 import { homePathForRole } from "@/routes/roleHome";
 import { useAuthStore } from "@/stores/authStore";
@@ -87,9 +87,8 @@ export function SetInitialPasswordPage() {
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
         {status.kind === "error" && <Alert variant="error">{status.message}</Alert>}
         <FormField label="New password" htmlFor="newPassword">
-          <Input
+          <PasswordInput
             id="newPassword"
-            type="password"
             autoComplete="new-password"
             enterKeyHint="next"
             required
@@ -99,9 +98,8 @@ export function SetInitialPasswordPage() {
           />
         </FormField>
         <FormField label="Confirm new password" htmlFor="confirmPassword">
-          <Input
+          <PasswordInput
             id="confirmPassword"
-            type="password"
             autoComplete="new-password"
             enterKeyHint="go"
             required

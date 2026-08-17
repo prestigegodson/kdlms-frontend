@@ -6,6 +6,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { AuthLayout } from "@/features/auth/AuthLayout";
 
 type Status =
@@ -60,9 +61,8 @@ export function ResetPasswordPage() {
             />
           </FormField>
           <FormField label="New password" htmlFor="newPassword">
-            <Input
+            <PasswordInput
               id="newPassword"
-              type="password"
               autoComplete="new-password"
               enterKeyHint="go"
               required
