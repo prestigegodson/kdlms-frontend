@@ -122,6 +122,7 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
               ? `${admin.activeStudents} / ${admin.activeStudentLimit}`
               : admin.activeStudents
           }
+          hint={admin.activeStudents > 0 ? `${admin.activeGirls} girls · ${admin.activeBoys} boys` : undefined}
           to="/school/students"
         />
         <StatTile

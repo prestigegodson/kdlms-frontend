@@ -59,6 +59,8 @@ describe("SchoolDashboardPage", () => {
       currentTermName: "Term 1",
       admin: {
         activeStudents: 120,
+        activeGirls: 65,
+        activeBoys: 55,
         activeStudentLimit: 500,
         activeClasses: 8,
         registersMarkable: true,
@@ -72,6 +74,7 @@ describe("SchoolDashboardPage", () => {
 
     expect(await screen.findByText("2026/2027 · Term 1")).toBeInTheDocument();
     expect(screen.getByText("120 / 500")).toBeInTheDocument();
+    expect(screen.getByText("65 girls · 55 boys")).toBeInTheDocument();
     expect(screen.getByText("5 / 8")).toBeInTheDocument();
     expect(screen.getByText("This term’s results published")).toBeInTheDocument();
 
@@ -89,6 +92,8 @@ describe("SchoolDashboardPage", () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
       admin: {
         activeStudents: 120,
+        activeGirls: 70,
+        activeBoys: 50,
         activeClasses: 8,
         registersMarkable: true,
         attendanceToday: { totalClasses: 8, classesMarked: 8, present: 100, absent: 10, late: 5, excused: 5 },
@@ -106,6 +111,8 @@ describe("SchoolDashboardPage", () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
       admin: {
         activeStudents: 0,
+        activeGirls: 0,
+        activeBoys: 0,
         activeClasses: 3,
         registersMarkable: false,
         attendanceToday: { totalClasses: 3, classesMarked: 0, present: 0, absent: 0, late: 0, excused: 0 },
@@ -126,6 +133,8 @@ describe("SchoolDashboardPage", () => {
       nextTerm: { name: "Term 2", startDate: "2027-01-10" },
       admin: {
         activeStudents: 0,
+        activeGirls: 0,
+        activeBoys: 0,
         activeClasses: 0,
         registersMarkable: true,
         attendanceToday: { totalClasses: 0, classesMarked: 0, present: 0, absent: 0, late: 0, excused: 0 },
@@ -144,6 +153,8 @@ describe("SchoolDashboardPage", () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
       admin: {
         activeStudents: 0,
+        activeGirls: 0,
+        activeBoys: 0,
         activeClasses: 1,
         registersMarkable: true,
         attendanceToday: { totalClasses: 0, classesMarked: 0, present: 0, absent: 0, late: 0, excused: 0 },
@@ -173,6 +184,8 @@ describe("SchoolDashboardPage", () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
       admin: {
         activeStudents: 0,
+        activeGirls: 0,
+        activeBoys: 0,
         activeClasses: 0,
         registersMarkable: true,
         attendanceToday: { totalClasses: 0, classesMarked: 0, present: 0, absent: 0, late: 0, excused: 0 },
@@ -190,6 +203,8 @@ describe("SchoolDashboardPage", () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
       admin: {
         activeStudents: 0,
+        activeGirls: 0,
+        activeBoys: 0,
         activeClasses: 2,
         registersMarkable: true,
         attendanceToday: { totalClasses: 0, classesMarked: 0, present: 0, absent: 0, late: 0, excused: 0 },
@@ -220,6 +235,8 @@ describe("SchoolDashboardPage", () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
       admin: {
         activeStudents: 0,
+        activeGirls: 0,
+        activeBoys: 0,
         activeClasses: 3,
         registersMarkable: true,
         attendanceToday: { totalClasses: 0, classesMarked: 0, present: 0, absent: 0, late: 0, excused: 0 },
@@ -244,6 +261,8 @@ describe("SchoolDashboardPage", () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
       admin: {
         activeStudents: 0,
+        activeGirls: 0,
+        activeBoys: 0,
         activeClasses: 8,
         registersMarkable: true,
         attendanceToday: { totalClasses: 8, classesMarked: 1, present: 25, absent: 0, late: 0, excused: 0 },
@@ -261,6 +280,8 @@ describe("SchoolDashboardPage", () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
       admin: {
         activeStudents: 0,
+        activeGirls: 0,
+        activeBoys: 0,
         activeClasses: 1,
         registersMarkable: true,
         attendanceToday: { totalClasses: 1, classesMarked: 1, present: 100, absent: 10, late: 5, excused: 5 },
@@ -277,6 +298,8 @@ describe("SchoolDashboardPage", () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
       admin: {
         activeStudents: 0,
+        activeGirls: 0,
+        activeBoys: 0,
         activeClasses: 3,
         registersMarkable: false,
         attendanceToday: { totalClasses: 3, classesMarked: 0, present: 0, absent: 0, late: 0, excused: 0 },
@@ -346,6 +369,8 @@ describe("SchoolDashboardPage", () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
       admin: {
         activeStudents: 0,
+        activeGirls: 0,
+        activeBoys: 0,
         activeClasses: 0,
         registersMarkable: true,
         attendanceToday: { totalClasses: 0, classesMarked: 0, present: 0, absent: 0, late: 0, excused: 0 },
@@ -377,6 +402,8 @@ describe("SchoolDashboardPage", () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
       admin: {
         activeStudents: 0,
+        activeGirls: 0,
+        activeBoys: 0,
         activeClasses: 0,
         registersMarkable: true,
         attendanceToday: { totalClasses: 0, classesMarked: 0, present: 0, absent: 0, late: 0, excused: 0 },

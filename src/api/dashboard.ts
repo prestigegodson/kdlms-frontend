@@ -44,6 +44,9 @@ export interface DashboardSetupGaps {
 /** Mirrors backend dashboard.application.port.in.SchoolDashboardView.AdminSection - SCHOOL_ADMIN/BRANCH_ADMIN only. */
 export interface SchoolDashboardAdminSection {
   activeStudents: number;
+  /** The activeStudents headcount split by gender - activeGirls + activeBoys always equals activeStudents. */
+  activeGirls: number;
+  activeBoys: number;
   /**
    * `undefined` for a BRANCH_ADMIN (the plan limit is school-wide, not
    * branch-scoped) or when the school has no currently-active subscription
