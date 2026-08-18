@@ -325,3 +325,27 @@ export function graduateClass(request: GraduateClassRequest): Promise<MovementRe
     body: JSON.stringify(request),
   });
 }
+
+/** Mirrors backend student.domain.AgeDistribution.AgeBand. */
+export interface AgeBand {
+  age: number;
+  count: number;
+}
+
+/**
+ * Mirrors backend student.domain.AgeDistribution - the school dashboard's
+ * "Age distribution" card. `bands` is sparse (one entry per age that has at
+ * least one student, ascending, no zero-filled gap years); `totalStudents`
+ * counts every ACTIVE student including `unknownAge` (no date of birth on
+ * file, or one after today).
+ */
+export interface AgeDistribution {
+  bands: AgeBand[];
+  totalStudents: number;
+  unknownAge: number;
+}
+
+/** SCHOOL_ADMIN sees the whole school, BRANCH_ADMIN their own branch - resolved server-side from the caller's token. */
+export function getStudentAgeDistribution(): Promise<AgeDistribution> {
+  return apiFetch<AgeDistribution>(`${BASE}/age-distribution`);
+}

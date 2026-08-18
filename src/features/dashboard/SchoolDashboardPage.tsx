@@ -15,6 +15,7 @@ import { AttendanceTodayCard } from "@/features/attendance/components/Attendance
 import { RegisterProgress } from "@/features/attendance/components/RegisterProgress";
 import { NeedsAttentionCard } from "@/features/dashboard/components/NeedsAttentionCard";
 import { TermProgressCard } from "@/features/dashboard/components/TermProgressCard";
+import { AgeDistributionCard } from "@/features/students/components/AgeDistributionCard";
 import { UpcomingBirthdaysCard } from "@/features/students/components/UpcomingBirthdaysCard";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -155,6 +156,7 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
         <UpcomingBirthdaysCard hideWhenEmpty linkable={can.manageStudents(role)} />
       </div>
 
+      <AgeDistributionCard hideWhenEmpty />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-1 lg:grid-cols-2">
       {admin.publicationProgress && (
