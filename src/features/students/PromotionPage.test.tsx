@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,7 +15,13 @@ import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 
 vi.mock("@/api/students", async () => {
   const actual = await vi.importActual<typeof import("@/api/students")>("@/api/students");
-  return { ...actual, listStudents: vi.fn(), promoteStudents: vi.fn(), placeStudents: vi.fn() };
+  return {
+    ...actual,
+    listStudents: vi.fn(),
+    promoteStudents: vi.fn(),
+    placeStudents: vi.fn(),
+    graduateClass: vi.fn(),
+  };
 });
 
 vi.mock("@/api/branches", async () => {
@@ -74,6 +80,20 @@ const STUDENT_VIEW: StudentView = {
   currentClassName: "Primary 1",
 };
 
+const OTHER_STUDENT_VIEW: StudentView = {
+  id: "student-2",
+  schoolId: "school-1",
+  branchId: "branch-1",
+  admissionNumber: "BFA/2026/0002",
+  firstName: "Bola",
+  lastName: "Ade",
+  fullName: "Bola Ade",
+  gender: "MALE",
+  status: "ACTIVE",
+  currentClassId: "class-1",
+  currentClassName: "Primary 1",
+};
+
 function renderPage() {
   resetAuthStore();
   useAuthStore.setState({
@@ -125,7 +145,7 @@ describe("PromotionPage", () => {
 
     await waitFor(() => {
       expect(useAppBarStore.getState()).toMatchObject({
-        title: "Promote or place students",
+        title: "Promote, place or graduate students",
         backTo: "/school/students",
       });
     });
@@ -191,5 +211,36 @@ describe("PromotionPage", () => {
       sessionId: "session-2",
       studentIds: ["student-1"],
     });
+  });
+
+  it("graduates the deselected-adjusted roster of a class after confirming", async () => {
+    vi.mocked(studentsApi.listStudents).mockResolvedValue({
+      content: [STUDENT_VIEW, OTHER_STUDENT_VIEW],
+      totalElements: 2,
+      totalPages: 1,
+      number: 0,
+      size: 200,
+    });
+    vi.mocked(studentsApi.graduateClass).mockResolvedValue({
+      outcomes: [{ studentId: "student-1", success: true }],
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: "Graduate a class" }));
+    await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
+    await screen.findByText("Ada Obi");
+    await user.click(screen.getByLabelText("Select Bola Ade"));
+
+    await user.click(screen.getByRole("button", { name: /Graduate 1 student/ }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Graduate" }));
+
+    expect(studentsApi.graduateClass).toHaveBeenCalledWith({
+      classId: "class-1",
+      studentIds: ["student-1"],
+    });
+    expect(await screen.findByText("1 of 1 succeeded.")).toBeInTheDocument();
   });
 });

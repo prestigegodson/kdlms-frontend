@@ -4,6 +4,7 @@ import { listClasses, type SchoolClassView } from "@/api/classes";
 import { ApiError } from "@/api/client";
 import { listSessions, type AcademicSessionView } from "@/api/sessions";
 import {
+  graduateClass,
   listStudents,
   placeStudents,
   promoteStudents,
@@ -12,6 +13,7 @@ import {
 } from "@/api/students";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -35,14 +37,14 @@ function toPickerRow(student: StudentView, showCurrentClass?: boolean): StudentP
 /** The sub-header grid idiom `ClassTermPicker`/`ClassDatePicker` established - stacked, labelled rows below `lg`, one equal-width row from `lg` up. */
 const PICKER_GRID_CLASS = "grid min-w-0 flex-1 gap-2 lg:grid-flow-col lg:auto-cols-fr lg:gap-4";
 
-type Mode = "promote" | "place";
+type Mode = "promote" | "place" | "graduate";
 
 /**
- * Two ways to move students into a new session's class: bulk-promoting a
- * whole source class's roster, or searching for and placing individually
- * selected students (typically from a lower level/class). Both submit to a
- * per-student outcome rather than an all-or-nothing result - see
- * api/students.ts's {@link MovementResult}.
+ * Three ways to move students at the end of a session: bulk-promoting a
+ * whole source class's roster, searching for and placing individually
+ * selected students (typically from a lower level/class), or bulk-graduating
+ * a whole exit class. All three submit to a per-student outcome rather than
+ * an all-or-nothing result - see api/students.ts's {@link MovementResult}.
  */
 export function PromotionPage() {
   const role = useAuthStore((state) => state.user?.role);
@@ -66,8 +68,8 @@ export function PromotionPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Promote or place students"
-        description="Move a whole class into a new session, or search for and place individual students."
+        title="Promote, place or graduate students"
+        description="Move a whole class into a new session, search for and place individual students, or graduate an exit class."
         backTo="/school/students"
       />
 
@@ -86,6 +88,13 @@ export function PromotionPage() {
         >
           Place students
         </button>
+        <button
+          type="button"
+          onClick={() => setMode("graduate")}
+          className={`rounded-control px-3 py-1.5 text-sm font-medium ${mode === "graduate" ? "bg-brand-50 text-brand-800" : "text-slate-500 hover:bg-slate-100"}`}
+        >
+          Graduate a class
+        </button>
       </div>
 
       {!referenceDataLoaded && (
@@ -94,12 +103,13 @@ export function PromotionPage() {
         </div>
       )}
 
-      {referenceDataLoaded &&
-        (mode === "promote" ? (
-          <PromoteClassPanel classes={classes ?? []} sessions={sessions ?? []} />
-        ) : (
-          <PlaceStudentsPanel classes={classes ?? []} sessions={sessions ?? []} />
-        ))}
+      {referenceDataLoaded && mode === "promote" && (
+        <PromoteClassPanel classes={classes ?? []} sessions={sessions ?? []} />
+      )}
+      {referenceDataLoaded && mode === "place" && (
+        <PlaceStudentsPanel classes={classes ?? []} sessions={sessions ?? []} />
+      )}
+      {referenceDataLoaded && mode === "graduate" && <GraduateClassPanel classes={classes ?? []} />}
     </div>
   );
 }
@@ -399,6 +409,129 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
         <OutcomeList
           result={result}
           nameOf={(id) => (candidates ?? []).find((student) => student.id === id)?.fullName ?? id}
+        />
+      )}
+    </div>
+  );
+}
+
+function GraduateClassPanel({ classes }: { classes: SchoolClassView[] }) {
+  const [classId, setClassId] = useState("");
+  const [roster, setRoster] = useState<StudentView[] | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<MovementResult | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
+  useEffect(() => {
+    if (!classId) {
+      return;
+    }
+    listStudents({ classId, status: "ACTIVE" }, 0, 200)
+      .then((page) => {
+        setRoster(page.content);
+        setSelected(new Set(page.content.map((student) => student.id)));
+      })
+      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Failed to load the class roster"));
+  }, [classId]);
+
+  function toggle(studentId: string) {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(studentId)) {
+        next.delete(studentId);
+      } else {
+        next.add(studentId);
+      }
+      return next;
+    });
+  }
+
+  async function confirmGraduate() {
+    const outcome = await graduateClass({ classId, studentIds: [...selected] });
+    setResult(outcome);
+    setConfirming(false);
+  }
+
+  const className = classes.find((schoolClass) => schoolClass.id === classId)?.name ?? "this class";
+
+  useFilterChip("graduate-class", classes.find((schoolClass) => schoolClass.id === classId)?.name);
+
+  return (
+    <div className="space-y-6">
+      <StickySubHeader>
+        <div className={PICKER_GRID_CLASS}>
+          <FormField label="Class" htmlFor="graduate-class">
+            <Select
+              id="graduate-class"
+              value={classId}
+              onChange={(event) => {
+                setClassId(event.target.value);
+                setResult(null);
+              }}
+            >
+              <option value="">Select a class…</option>
+              {classes.map((schoolClass) => (
+                <option key={schoolClass.id} value={schoolClass.id}>
+                  {schoolClass.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        </div>
+      </StickySubHeader>
+
+      {error && <Alert variant="error">{error}</Alert>}
+
+      {classId && roster === null && (
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <Spinner /> Loading roster…
+        </div>
+      )}
+      {classId && roster !== null && roster.length === 0 && (
+        <EmptyState title="No active students in this class" description="Choose a different class." />
+      )}
+      {classId && roster !== null && roster.length > 0 && (
+        <StudentPicker
+          rows={roster.map((student) => toPickerRow(student))}
+          selected={selected}
+          onToggle={toggle}
+          onSelectAll={() => setSelected(new Set(roster.map((student) => student.id)))}
+          onSelectNone={() => setSelected(new Set())}
+        />
+      )}
+
+      {classId && roster !== null && roster.length > 0 && (
+        <div className="flex justify-end">
+          <Button variant="danger" disabled={selected.size === 0} onClick={() => setConfirming(true)}>
+            {`Graduate ${selected.size} student${selected.size === 1 ? "" : "s"}`}
+          </Button>
+        </div>
+      )}
+
+      {result && (
+        <OutcomeList
+          result={result}
+          nameOf={(id) => (roster ?? []).find((student) => student.id === id)?.fullName ?? id}
+        />
+      )}
+
+      {confirming && (
+        <ConfirmDialog
+          title={`Graduate ${selected.size} student${selected.size === 1 ? "" : "s"}?`}
+          message={
+            <>
+              <strong>
+                {selected.size} student{selected.size === 1 ? "" : "s"}
+              </strong>{" "}
+              in <strong>{className}</strong> will be marked graduated and their current enrollments closed. This
+              can't be undone.
+            </>
+          }
+          confirmLabel="Graduate"
+          variant="danger"
+          onConfirm={confirmGraduate}
+          onClose={() => setConfirming(false)}
         />
       )}
     </div>

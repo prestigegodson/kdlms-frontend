@@ -172,6 +172,11 @@ export interface PromotionRequest {
   studentIds: string[];
 }
 
+export interface GraduateClassRequest {
+  classId: string;
+  studentIds: string[];
+}
+
 const BASE = "/api/v1/students";
 
 export function registerStudent(request: RegisterStudentRequest): Promise<StudentView> {
@@ -308,6 +313,14 @@ export function placeStudents(request: PlacementRequest): Promise<MovementResult
 /** Bulk promotion of a whole source class's roster into a target class/session. */
 export function promoteStudents(request: PromotionRequest): Promise<MovementResult> {
   return apiFetch<MovementResult>("/api/v1/enrollments/promotions", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+/** Bulk graduation of selected students of one class - the end-of-year counterpart to {@link graduateStudent}. */
+export function graduateClass(request: GraduateClassRequest): Promise<MovementResult> {
+  return apiFetch<MovementResult>(`${BASE}/graduations`, {
     method: "POST",
     body: JSON.stringify(request),
   });
