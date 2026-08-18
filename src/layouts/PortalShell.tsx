@@ -1,8 +1,11 @@
 import type { LucideIcon } from "lucide-react";
-import { ChevronDown, ChevronLeft, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, Download, X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 import type { Role } from "@/api/types";
+import { useInstallApp } from "@/hooks/useInstallApp";
+import { InstallBanner } from "@/layouts/InstallBanner";
+import { InstallInstructionsModal } from "@/layouts/InstallInstructionsModal";
 import { MobileTabBar } from "@/layouts/MobileTabBar";
 import { UserMenu } from "@/layouts/UserMenu";
 import { useAppBarStore } from "@/stores/appBarStore";
@@ -184,6 +187,7 @@ export function PortalShell({
   const user = useAuthStore((state) => state.user);
   const collapsedGroups = useNavGroupsStore((state) => state.collapsed);
   const setGroupCollapsed = useNavGroupsStore((state) => state.setCollapsed);
+  const { platform, canInstall, install, instructionsOpen, closeInstructions } = useInstallApp();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerPathname, setDrawerPathname] = useState(location.pathname);
@@ -426,6 +430,25 @@ export function PortalShell({
               )}
             </div>
             {renderNav(undefined, "drawer")}
+            {canInstall && (
+              // A <button>, not a NavItem - NavItem.href is required and
+              // always renders a Link, but installing is an action, not a
+              // route. The permanent fallback for anyone who dismissed
+              // InstallBanner or is only discovering the feature now.
+              <div className="shrink-0 border-t border-slate-200 p-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrawerOpen(false);
+                    install();
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-control px-2.5 py-2 text-sm text-slate-700 hover:bg-slate-100 mobile:min-h-11"
+                >
+                  <Download className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  Install app
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -446,6 +469,7 @@ export function PortalShell({
         </header>
         <main className="flex-1 pb-tabbar-safe lg:pb-0">
           <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <InstallBanner />
             {banner}
             {children ?? <Outlet />}
           </div>
@@ -460,6 +484,11 @@ export function PortalShell({
           portalName={portalName}
         />
       </div>
+      {/* Shared by the drawer's Install entry above - InstallBanner owns its
+          own copy for its own CTA, but the drawer's fallback needs one too,
+          rendered here rather than nested inside the (conditionally
+          unmounted) drawer markup. */}
+      <InstallInstructionsModal open={instructionsOpen} onClose={closeInstructions} platform={platform} />
     </div>
   );
 }

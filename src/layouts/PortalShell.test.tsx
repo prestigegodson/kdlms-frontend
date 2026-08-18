@@ -2,13 +2,14 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PageHeader } from "@/components/ui/PageHeader";
 import type { NavItem } from "@/layouts/PortalShell";
 import { PortalShell } from "@/layouts/PortalShell";
 import { resetAppBarStore } from "@/stores/appBarStore";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import type { AuthenticatedUser } from "@/stores/authStore";
+import { resetInstallPromptStore, useInstallPromptStore } from "@/stores/installPromptStore";
 import { resetNavGroupsStore, useNavGroupsStore } from "@/stores/navGroupsStore";
 import { resetSchoolBrandingStore, useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 
@@ -78,6 +79,7 @@ describe("PortalShell nav active state", () => {
     resetAuthStore();
     useAuthStore.setState({ user: USER, accessToken: "t", refreshToken: "r" });
     resetNavGroupsStore();
+    resetInstallPromptStore();
   });
 
   it("marks only Grading systems current on its own route, not Assessments", () => {
@@ -121,6 +123,7 @@ describe("PortalShell brand mark", () => {
     useAuthStore.setState({ user: USER, accessToken: "t", refreshToken: "r" });
     resetSchoolBrandingStore();
     resetNavGroupsStore();
+    resetInstallPromptStore();
   });
 
   afterEach(() => {
@@ -170,6 +173,7 @@ describe("PortalShell tab bar", () => {
     resetAuthStore();
     useAuthStore.setState({ user: USER, accessToken: "t", refreshToken: "r" });
     resetNavGroupsStore();
+    resetInstallPromptStore();
   });
 
   function tabBar() {
@@ -269,6 +273,7 @@ describe("PortalShell mobile app bar", () => {
     useAuthStore.setState({ user: USER, accessToken: "t", refreshToken: "r" });
     resetAppBarStore();
     resetNavGroupsStore();
+    resetInstallPromptStore();
   });
 
   afterEach(() => {
@@ -340,6 +345,7 @@ describe("PortalShell collapsible sidebar groups", () => {
     resetAuthStore();
     useAuthStore.setState({ user: USER, accessToken: "t", refreshToken: "r" });
     resetNavGroupsStore();
+    resetInstallPromptStore();
   });
 
   function sidebar() {
@@ -395,5 +401,54 @@ describe("PortalShell collapsible sidebar groups", () => {
     const academics = within(sidebar()).getByRole("button", { name: /Academics/ });
     expect(academics).toHaveAttribute("aria-expanded", "false");
     expect(within(sidebar()).queryByText("Classes")).not.toBeInTheDocument();
+  });
+});
+
+function fakeInstallEvent(): BeforeInstallPromptEvent {
+  return {
+    platforms: ["web"],
+    prompt: vi.fn().mockResolvedValue(undefined),
+    userChoice: Promise.resolve({ outcome: "accepted" as const, platform: "web" }),
+  } as unknown as BeforeInstallPromptEvent;
+}
+
+describe("PortalShell drawer install entry", () => {
+  beforeEach(() => {
+    resetAuthStore();
+    useAuthStore.setState({ user: USER, accessToken: "t", refreshToken: "r" });
+    resetNavGroupsStore();
+    resetInstallPromptStore();
+  });
+
+  it("omits Install app from the drawer when nothing is installable", async () => {
+    const user = userEvent.setup();
+    renderShell({ pathname: "/school", items: TAB_NAV_ITEMS });
+
+    await user.click(screen.getByRole("button", { name: /More/ }));
+
+    expect(screen.queryByRole("button", { name: "Install app" })).not.toBeInTheDocument();
+  });
+
+  it("shows Install app in the drawer once a beforeinstallprompt event has been deferred", async () => {
+    const user = userEvent.setup();
+    useInstallPromptStore.getState().setDeferredPrompt(fakeInstallEvent());
+    renderShell({ pathname: "/school", items: TAB_NAV_ITEMS });
+
+    await user.click(screen.getByRole("button", { name: /More/ }));
+
+    expect(screen.getByRole("button", { name: "Install app" })).toBeInTheDocument();
+  });
+
+  it("closes the drawer and fires the native install dialog when Install app is tapped", async () => {
+    const user = userEvent.setup();
+    const event = fakeInstallEvent();
+    useInstallPromptStore.getState().setDeferredPrompt(event);
+    renderShell({ pathname: "/school", items: TAB_NAV_ITEMS });
+    await user.click(screen.getByRole("button", { name: /More/ }));
+
+    await user.click(screen.getByRole("button", { name: "Install app" }));
+
+    expect(screen.queryByRole("dialog", { name: "School navigation" })).not.toBeInTheDocument();
+    expect(event.prompt).toHaveBeenCalledOnce();
   });
 });
