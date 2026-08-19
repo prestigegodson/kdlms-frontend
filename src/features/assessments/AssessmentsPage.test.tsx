@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as branchesApi from "@/api/branches";
@@ -49,10 +50,23 @@ describe("AssessmentsPage", () => {
     });
   });
 
-  it("shows the recording flow for a TEACHER", async () => {
+  it("shows the recording flow for a TEACHER, with a Scores/Remarks tab pair", async () => {
     renderAs("TEACHER");
 
-    expect(await screen.findByText("Record scores")).toBeInTheDocument();
+    expect(await screen.findByText("Assessments")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Scores" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Remarks" })).toHaveAttribute("aria-selected", "false");
+  });
+
+  it("switches to the Remarks tab for a TEACHER", async () => {
+    const user = userEvent.setup();
+    renderAs("TEACHER");
+    await screen.findByRole("tab", { name: "Remarks" });
+
+    await user.click(screen.getByRole("tab", { name: "Remarks" }));
+
+    expect(screen.getByRole("tab", { name: "Remarks" })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByText("No classes assigned yet")).toBeInTheDocument();
   });
 
   it("shows the read-only results view for a SCHOOL_ADMIN, narrowed to the auto-selected branch", async () => {

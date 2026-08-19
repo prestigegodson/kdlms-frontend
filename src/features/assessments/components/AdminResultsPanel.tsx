@@ -3,7 +3,10 @@ import {
   type BroadsheetView,
   getBroadsheet,
   getPublicationStatus,
+  getRemarksSheet,
   publishResults,
+  type RemarksSheetView,
+  type RowOutcome,
   unpublishResults,
 } from "@/api/assessments";
 import { ApiError } from "@/api/client";
@@ -20,6 +23,8 @@ import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { BroadsheetTable } from "@/features/assessments/components/BroadsheetTable";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
 import { GradeKey } from "@/features/assessments/components/GradeKey";
+import { RemarksEntryGrid } from "@/features/assessments/components/RemarksEntryGrid";
+import { SaveOutcomeList } from "@/features/assessments/components/SaveOutcomeList";
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
 import { useBranchScope } from "@/features/branches/useBranchScope";
 import { useAuthStore } from "@/stores/authStore";
@@ -34,6 +39,7 @@ interface AdminResultsPanelProps {
 export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {}) {
   const role = useAuthStore((state) => state.user?.role);
   const canPublish = can.publishResults(role);
+  const canRecordPrincipalRemark = can.recordPrincipalRemark(role);
   const { ready: branchReady, branchId } = useBranchScope();
 
   const [classes, setClasses] = useState<SchoolClassView[] | null>(null);
@@ -46,6 +52,8 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [remarksSheet, setRemarksSheet] = useState<RemarksSheetView | null>(null);
+  const [remarkOutcomes, setRemarkOutcomes] = useState<RowOutcome[] | null>(null);
 
   useEffect(() => {
     if (!branchReady) return;
@@ -71,6 +79,8 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
     setBroadsheet(null);
     setGradingSystem(null);
     setLoadError(null);
+    setRemarksSheet(null);
+    setRemarkOutcomes(null);
   }
 
   useEffect(() => {
@@ -90,8 +100,23 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
         .then((status) => setPublished(status.published))
         .catch(() => undefined);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- classes/canPublish are read for the levelId lookup and publish gate, not triggers
+    if (canRecordPrincipalRemark) {
+      getRemarksSheet(classId, termId)
+        .then(setRemarksSheet)
+        .catch(() => setRemarksSheet(null));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- classes/canPublish/canRecordPrincipalRemark are read for the levelId lookup and gates, not triggers
   }, [classId, termId]);
+
+  function reloadRemarksSheet() {
+    if (!classId || !termId) return;
+    getRemarksSheet(classId, termId).then(setRemarksSheet).catch(() => undefined);
+  }
+
+  function handleRemarksSaved(outcomes: RowOutcome[]) {
+    setRemarkOutcomes(outcomes);
+    reloadRemarksSheet();
+  }
 
   async function togglePublish() {
     setActionError(null);
@@ -156,6 +181,19 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
         <EmptyState icon={BarChart3} title="No results recorded for this term yet" />
       )}
       {broadsheet && broadsheet.rows.length > 0 && <BroadsheetTable broadsheet={broadsheet} />}
+
+      {canRecordPrincipalRemark && remarksSheet && (
+        <div className="space-y-4">
+          <h2 className="font-display text-lg font-medium text-slate-900">Principal's remarks</h2>
+          <RemarksEntryGrid sheet={remarksSheet} field="principal" onSaved={handleRemarksSaved} />
+          {remarkOutcomes && (
+            <SaveOutcomeList
+              outcomes={remarkOutcomes}
+              nameOf={(id) => remarksSheet.rows.find((row) => row.enrollmentId === id)?.studentName ?? id}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

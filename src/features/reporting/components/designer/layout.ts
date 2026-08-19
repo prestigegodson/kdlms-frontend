@@ -28,6 +28,8 @@ export const REPORT_BLOCK_NAMES = [
   "RATING_LEGEND",
   "SIGNATURE_CLASS_TEACHER",
   "SIGNATURE_PRINCIPAL",
+  "REMARK_CLASS_TEACHER",
+  "REMARK_PRINCIPAL",
 ] as const;
 
 export type ReportBlockName = (typeof REPORT_BLOCK_NAMES)[number];
@@ -155,6 +157,8 @@ export const BLOCK_LABELS: Record<ReportBlockName, string> = {
   RATING_LEGEND: "Rating legend",
   SIGNATURE_CLASS_TEACHER: "Class teacher signature",
   SIGNATURE_PRINCIPAL: "Principal signature",
+  REMARK_CLASS_TEACHER: "Class teacher's remark",
+  REMARK_PRINCIPAL: "Principal's remark",
 };
 
 /** Only these four blocks are mode-specific - every other block (and every non-BLOCK element) is offered regardless of assessment mode. */

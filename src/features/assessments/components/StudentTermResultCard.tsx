@@ -76,6 +76,23 @@ export function StudentTermResultCard({ result }: StudentTermResultCardProps) {
             </span>
           </div>
         )}
+
+        {(result.classTeacherRemark || result.principalRemark) && (
+          <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+            {result.classTeacherRemark && (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Class teacher's remark</h3>
+                <p className="mt-1 text-sm text-slate-700">{result.classTeacherRemark}</p>
+              </div>
+            )}
+            {result.principalRemark && (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Principal's remark</h3>
+                <p className="mt-1 text-sm text-slate-700">{result.principalRemark}</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </Card>
   );

@@ -100,6 +100,40 @@ export interface StudentTermResultView {
   total?: number;
   average?: number;
   position?: number;
+  classTeacherRemark?: string;
+  principalRemark?: string;
+}
+
+/** Mirrors backend assessment.application.port.in.RemarksSheetView.RemarkRow. */
+export interface RemarkSheetRow {
+  enrollmentId: string;
+  studentName: string;
+  admissionNumber: string;
+  classTeacherRemark?: string;
+  classTeacherRemarkByName?: string;
+  principalRemark?: string;
+}
+
+/**
+ * Mirrors backend assessment.application.port.in.RemarksSheetView - a
+ * class's termly remarks sheet. `classTeacherEditable`/`principalRemarkEditable`
+ * are the server's own truth for whether the corresponding save would
+ * succeed for this exact class/term/caller (mirrors AttendanceRegisterView's
+ * `editable`) - the frontend never re-derives this rule itself.
+ */
+export interface RemarksSheetView {
+  classId: string;
+  className: string;
+  termId: string;
+  classTeacherEditable: boolean;
+  principalRemarkEditable: boolean;
+  rows: RemarkSheetRow[];
+}
+
+/** One student's remark text for a save - a blank/whitespace value clears that half (see TermRemark.recordClassTeacherRemark/recordPrincipalRemark). */
+export interface RemarkEntry {
+  enrollmentId: string;
+  remark: string | null;
 }
 
 export function openSheet(classId: string, subjectId: string, termId: string): Promise<AssessmentSheetView> {
@@ -153,4 +187,22 @@ export function publishResults(classId: string, termId: string): Promise<void> {
 
 export function unpublishResults(classId: string, termId: string): Promise<void> {
   return apiFetch<void>(`/api/v1/results/publications?classId=${classId}&termId=${termId}`, { method: "DELETE" });
+}
+
+export function getRemarksSheet(classId: string, termId: string): Promise<RemarksSheetView> {
+  return apiFetch<RemarksSheetView>(`/api/v1/classes/${classId}/terms/${termId}/remarks`);
+}
+
+export function saveTeacherRemarks(classId: string, termId: string, entries: RemarkEntry[]): Promise<SaveOutcome> {
+  return apiFetch<SaveOutcome>(`/api/v1/classes/${classId}/terms/${termId}/remarks`, {
+    method: "PUT",
+    body: JSON.stringify({ entries }),
+  });
+}
+
+export function savePrincipalRemarks(classId: string, termId: string, entries: RemarkEntry[]): Promise<SaveOutcome> {
+  return apiFetch<SaveOutcome>(`/api/v1/classes/${classId}/terms/${termId}/principal-remarks`, {
+    method: "PUT",
+    body: JSON.stringify({ entries }),
+  });
 }

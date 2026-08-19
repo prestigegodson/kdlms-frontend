@@ -6,7 +6,6 @@ import type { SubjectView } from "@/api/subjects";
 import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader, useFilterChip } from "@/components/ui/StickySubHeader";
@@ -21,7 +20,11 @@ interface TeacherEntryPanelProps {
   initialClassId?: string;
 }
 
-/** A TEACHER's recording flow: pick a class, subject, and term, then fill in the sheet. */
+/**
+ * A TEACHER's recording flow: pick a class, subject, and term, then fill in
+ * the sheet. Renders as the "Scores" tab body under `AssessmentsPage`'s own
+ * PageHeader, so it carries no title of its own.
+ */
 export function TeacherEntryPanel({ initialClassId }: TeacherEntryPanelProps = {}) {
   const [classes, setClasses] = useState<TeacherClassView[] | null>(null);
   const [classId, setClassId] = useState(initialClassId ?? "");
@@ -89,8 +92,6 @@ export function TeacherEntryPanel({ initialClassId }: TeacherEntryPanelProps = {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Record scores" description="Pick a class, subject, and term to open its sheet." />
-
       {classes === null && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
           <Spinner /> Loading your classes…

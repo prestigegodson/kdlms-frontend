@@ -170,6 +170,30 @@ export const can = {
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER";
   },
 
+  /**
+   * Writing a class's holistic term remark - the class teacher only, not
+   * every recordAssessments-eligible teacher: a remark is the class
+   * teacher's alone, narrower than recordAssessments' class-teach ∪
+   * subject-teach union (mirrors markAttendance's scoping). A
+   * subject-teacher-only TEACHER can still read the sheet - RemarksEntryGrid
+   * renders it read-only for them based on the server's own
+   * `classTeacherEditable` flag, not this check.
+   */
+  recordRemarks(role: Role | undefined, scope: TeacherScope | null): boolean {
+    return role === "TEACHER" && (scope?.isClassTeacher ?? false);
+  },
+
+  /**
+   * Writing the separate principal remark - SCHOOL_ADMIN/BRANCH_ADMIN only,
+   * the one deliberate admin-write exception to assessment's usual
+   * teacher-write/admin-read shape (see CLAUDE.md's Domain Rules:
+   * `principal_remark` is a physically separate column a teacher can never
+   * write, and an admin can never edit the teacher's half).
+   */
+  recordPrincipalRemark(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
   /** The guardian-visibility publication gate - SCHOOL_ADMIN and BRANCH_ADMIN only. */
   publishResults(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";

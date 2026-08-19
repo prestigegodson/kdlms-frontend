@@ -31,6 +31,16 @@ export const REPORT_BLOCKS: ReportBlockDefinition[] = [
   { id: "RATING_LEGEND", label: "Rating legend", mode: "QUALITATIVE", description: "Rating scale and descriptions" },
   { id: "SIGNATURE_CLASS_TEACHER", label: "Class teacher signature", description: "Signature image and name" },
   { id: "SIGNATURE_PRINCIPAL", label: "Principal signature", description: "Signature image and name" },
+  {
+    id: "REMARK_CLASS_TEACHER",
+    label: "Class teacher's remark",
+    description: "The term's holistic remark - closes up when never written for a student",
+  },
+  {
+    id: "REMARK_PRINCIPAL",
+    label: "Principal's remark",
+    description: "The term's holistic remark - closes up when never written for a student",
+  },
 ];
 
 /**
@@ -62,4 +72,6 @@ export const REPORT_TOKENS: Array<{ key: string; description: string }> = [
   { key: "attendance.rate", description: "Attendance rate" },
   { key: "teacher.name", description: "Class teacher's name" },
   { key: "principal.name", description: "Principal's name" },
+  { key: "remark.classTeacher", description: "Class teacher's remark" },
+  { key: "remark.principal", description: "Principal's remark" },
 ];

@@ -101,6 +101,39 @@ describe("can.manageSupportContact", () => {
   });
 });
 
+describe("can.recordRemarks", () => {
+  it("is true only for a class-teaching TEACHER", () => {
+    expect(can.recordRemarks("TEACHER", { isClassTeacher: true })).toBe(true);
+  });
+
+  it("is false for a subject-teacher-only account", () => {
+    expect(can.recordRemarks("TEACHER", { isClassTeacher: false })).toBe(false);
+    expect(can.recordRemarks("TEACHER", null)).toBe(false);
+  });
+
+  it("is false for every admin role, even class-teacher scope aside", () => {
+    expect(can.recordRemarks("SCHOOL_ADMIN", { isClassTeacher: true })).toBe(false);
+    expect(can.recordRemarks("BRANCH_ADMIN", { isClassTeacher: true })).toBe(false);
+    expect(can.recordRemarks("GUARDIAN", { isClassTeacher: true })).toBe(false);
+  });
+});
+
+describe("can.recordPrincipalRemark", () => {
+  it("is true only for SCHOOL_ADMIN/BRANCH_ADMIN", () => {
+    expect(can.recordPrincipalRemark("SCHOOL_ADMIN")).toBe(true);
+    expect(can.recordPrincipalRemark("BRANCH_ADMIN")).toBe(true);
+  });
+
+  it("is false for a TEACHER - not even a class teacher writes the principal's half", () => {
+    expect(can.recordPrincipalRemark("TEACHER")).toBe(false);
+  });
+
+  it("is false for GUARDIAN and undefined", () => {
+    expect(can.recordPrincipalRemark("GUARDIAN")).toBe(false);
+    expect(can.recordPrincipalRemark(undefined)).toBe(false);
+  });
+});
+
 describe("can.viewSupportContact", () => {
   it("is true only for SCHOOL_ADMIN/BRANCH_ADMIN", () => {
     expect(can.viewSupportContact("SCHOOL_ADMIN")).toBe(true);
