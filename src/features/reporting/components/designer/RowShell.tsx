@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, Trash2 } from "lucide-react";
 import { ColumnShell } from "@/features/reporting/components/designer/ColumnShell";
 import type { LayoutRow } from "@/features/reporting/components/designer/layout";
 import type { LayoutEditor } from "@/features/reporting/components/designer/useLayoutEditor";
@@ -39,12 +39,16 @@ interface RowShellProps {
   index: number;
   rowCount: number;
   editor: LayoutEditor;
+  /** View-only, owned by `DesignerCanvas` - collapses this row to a one-line summary so a long canvas is easier to navigate. Never persisted. */
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
-export function RowShell({ row, index, rowCount, editor }: RowShellProps) {
+export function RowShell({ row, index, rowCount, editor, collapsed, onToggleCollapse }: RowShellProps) {
   const selected = editor.selection?.type === "row" && editor.selection.rowId === row.id;
   const currentKey = presetKey(row.columns.map((c) => c.widthPercent));
   const matchesPreset = COLUMN_PRESETS.some((preset) => presetKey(preset.widths) === currentKey);
+  const elementCount = row.columns.reduce((sum, column) => sum + column.elements.length, 0);
 
   return (
     <div
@@ -58,29 +62,58 @@ export function RowShell({ row, index, rowCount, editor }: RowShellProps) {
         backgroundColor: row.style?.backgroundColor,
       }}
     >
-      <div className="mb-2 flex items-center justify-between opacity-0 transition-opacity group-hover:opacity-100 has-[:focus]:opacity-100">
-        <select
-          aria-label="Column split"
-          value={matchesPreset ? currentKey : "custom"}
-          onClick={(event) => event.stopPropagation()}
-          onChange={(event) => {
-            const preset = COLUMN_PRESETS.find((p) => presetKey(p.widths) === event.target.value);
-            if (preset) editor.setColumnWidths(row.id, preset.widths);
-          }}
-          className="rounded-control border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
-        >
-          {!matchesPreset && (
-            <option value="custom" disabled>
-              Custom split
-            </option>
+      <div
+        className={`mb-2 flex items-center justify-between ${
+          collapsed ? "" : "opacity-0 transition-opacity group-hover:opacity-100 has-[:focus]:opacity-100"
+        }`}
+      >
+        <div className="flex min-w-0 items-center gap-1.5">
+          <button
+            type="button"
+            aria-label={collapsed ? "Expand row" : "Collapse row"}
+            aria-expanded={!collapsed}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleCollapse();
+            }}
+            className="rounded p-1 text-slate-500 hover:bg-slate-100"
+          >
+            {collapsed ? (
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+          </button>
+          {collapsed ? (
+            <span className="truncate text-xs text-slate-500">
+              Row {index + 1} · {row.columns.length} column{row.columns.length === 1 ? "" : "s"} · {elementCount}{" "}
+              element{elementCount === 1 ? "" : "s"}
+            </span>
+          ) : (
+            <select
+              aria-label="Column split"
+              value={matchesPreset ? currentKey : "custom"}
+              onClick={(event) => event.stopPropagation()}
+              onChange={(event) => {
+                const preset = COLUMN_PRESETS.find((p) => presetKey(p.widths) === event.target.value);
+                if (preset) editor.setColumnWidths(row.id, preset.widths);
+              }}
+              className="rounded-control border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
+            >
+              {!matchesPreset && (
+                <option value="custom" disabled>
+                  Custom split
+                </option>
+              )}
+              {COLUMN_PRESETS.map((preset) => (
+                <option key={preset.label} value={presetKey(preset.widths)}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
           )}
-          {COLUMN_PRESETS.map((preset) => (
-            <option key={preset.label} value={presetKey(preset.widths)}>
-              {preset.label}
-            </option>
-          ))}
-        </select>
-        <div className="flex items-center gap-0.5">
+        </div>
+        <div className="flex shrink-0 items-center gap-0.5">
           <button
             type="button"
             aria-label="Move row up"
@@ -118,11 +151,13 @@ export function RowShell({ row, index, rowCount, editor }: RowShellProps) {
           </button>
         </div>
       </div>
-      <div className="flex gap-2">
-        {row.columns.map((column) => (
-          <ColumnShell key={column.id} column={column} editor={editor} />
-        ))}
-      </div>
+      {!collapsed && (
+        <div className="flex gap-2">
+          {row.columns.map((column) => (
+            <ColumnShell key={column.id} column={column} editor={editor} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

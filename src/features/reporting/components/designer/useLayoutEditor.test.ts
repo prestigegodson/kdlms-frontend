@@ -79,6 +79,37 @@ describe("useLayoutEditor", () => {
     expect(result.current.selection?.type).toBe("row");
   });
 
+  it("insertAtSelection inserts after a selected element, in the same container", () => {
+    const { result } = renderHook(() => useLayoutEditor(blankLayout()));
+    act(() => result.current.insertElement("col-1", 0, TEXT_ELEMENT));
+
+    act(() => result.current.insertAtSelection({ id: "el-2", type: "TEXT", text: "second" }));
+
+    expect(result.current.layout.rows[0].columns[0].elements.map((e) => e.id)).toEqual(["el-1", "el-2"]);
+    expect(result.current.selection).toEqual({ type: "element", elementId: "el-2" });
+  });
+
+  it("insertAtSelection with a row selected appends to that row's first column", () => {
+    const { result } = renderHook(() => useLayoutEditor(blankLayout()));
+    act(() => result.current.addRow());
+    const secondRowId = result.current.layout.rows[1].id;
+    act(() => result.current.setSelection({ type: "row", rowId: secondRowId }));
+
+    act(() => result.current.insertAtSelection(TEXT_ELEMENT));
+
+    expect(result.current.layout.rows[1].columns[0].elements.map((e) => e.id)).toEqual(["el-1"]);
+    expect(result.current.layout.rows[0].columns[0].elements).toHaveLength(0);
+  });
+
+  it("insertAtSelection falls back to appending at the end when the page (or nothing) is selected", () => {
+    const { result } = renderHook(() => useLayoutEditor(blankLayout()));
+    act(() => result.current.setSelection({ type: "page" }));
+
+    act(() => result.current.insertAtSelection(TEXT_ELEMENT));
+
+    expect(result.current.layout.rows[0].columns[0].elements.map((e) => e.id)).toEqual(["el-1"]);
+  });
+
   it("updatePage replaces the whole page style, including the logo background fields, and marks the layout dirty", () => {
     const { result } = renderHook(() => useLayoutEditor(blankLayout()));
 

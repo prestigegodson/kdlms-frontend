@@ -60,12 +60,20 @@ interface BlockPaletteProps {
  * `ReportBlock`s (filtered to the template's own assessment mode, fixing a
  * bug the old GrapesJS designer had where a QUALITATIVE template's palette
  * still offered `SCORE_TABLE`) plus five freeform elements. Each item is
- * both `draggable` (drop onto a `DropZone`) and clickable (appended to the
- * end of the canvas) - a system admin without a mouse-drag-friendly setup
- * still has a full path to building a layout.
+ * both `draggable` (drop onto a `DropZone`) and clickable
+ * (`editor.insertAtSelection` - lands after the current selection, or at
+ * the end of the canvas with nothing selected) - a system admin without a
+ * mouse-drag-friendly setup still has a full path to building a layout.
  */
 export function BlockPalette({ mode, editor }: BlockPaletteProps) {
   const blocks = REPORT_BLOCKS.filter((block) => !block.mode || block.mode === mode);
+
+  const destinationCaption =
+    editor.selection?.type === "element"
+      ? "Clicking a block inserts it right after the selected element."
+      : editor.selection?.type === "row"
+        ? "Clicking a block adds it to the selected row."
+        : "Clicking a block adds it to the end of the canvas.";
 
   /** `STUDENT_PHOTO` is the one block the inspector lets a designer resize - seeded here so it opens at a size that already renders sensibly rather than 0x0. */
   function blockElement(blockId: (typeof REPORT_BLOCKS)[number]["id"]): LayoutElement {
@@ -81,6 +89,7 @@ export function BlockPalette({ mode, editor }: BlockPaletteProps) {
 
   return (
     <div className="space-y-4">
+      <p className="text-[11px] text-slate-500">{destinationCaption}</p>
       <div>
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Report blocks</h3>
         <div className="space-y-1.5">
@@ -91,7 +100,7 @@ export function BlockPalette({ mode, editor }: BlockPaletteProps) {
               draggable
               onDragStart={(event) => handleDragStart(event, block.label, "BLOCK", () => blockElement(block.id))}
               onDragEnd={() => setCurrentDrag(null)}
-              onClick={() => editor.appendElement(blockElement(block.id))}
+              onClick={() => editor.insertAtSelection(blockElement(block.id))}
               className="w-full cursor-grab rounded-control border border-slate-200 bg-white px-3 py-2 text-left text-sm hover:border-brand-400 hover:bg-brand-50/40 active:cursor-grabbing"
               title={block.description}
             >
@@ -112,7 +121,7 @@ export function BlockPalette({ mode, editor }: BlockPaletteProps) {
                 draggable
                 onDragStart={(event) => handleDragStart(event, item.label, item.elementType, item.factory)}
                 onDragEnd={() => setCurrentDrag(null)}
-                onClick={() => editor.appendElement(item.factory())}
+                onClick={() => editor.insertAtSelection(item.factory())}
                 className="flex w-full cursor-grab items-center gap-2 rounded-control border border-slate-200 bg-white px-3 py-2 text-left text-sm hover:border-brand-400 hover:bg-brand-50/40 active:cursor-grabbing"
                 title={item.description}
               >

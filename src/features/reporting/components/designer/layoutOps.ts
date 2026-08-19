@@ -142,6 +142,14 @@ export function appendToEnd(layout: ReportLayout, element: LayoutElement): Repor
   return insertElement(layout, lastColumn.id, lastColumn.elements.length, element);
 }
 
+/** Appends `element` to the end of a specific row's first column - `useLayoutEditor.insertAtSelection`'s row-selected case, so a click-to-add lands where the designer is working rather than always at the very end of the canvas. */
+export function appendToRow(layout: ReportLayout, rowId: string, element: LayoutElement): ReportLayout {
+  const row = layout.rows.find((r) => r.id === rowId);
+  if (!row || row.columns.length === 0) return layout;
+  const firstColumn = row.columns[0];
+  return insertElement(layout, firstColumn.id, firstColumn.elements.length, element);
+}
+
 export function addRow(layout: ReportLayout): ReportLayout {
   const row: LayoutRow = {
     id: newElementId("row"),

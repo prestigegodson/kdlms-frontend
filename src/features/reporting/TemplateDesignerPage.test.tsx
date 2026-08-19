@@ -9,6 +9,7 @@ import {
   buildEarlyYearsProgressReportLayout,
   buildStandardResultSheetLayout,
 } from "@/features/reporting/components/designer/starterLayouts";
+import type { ReportLayout } from "@/features/reporting/components/designer/layout";
 
 vi.mock("@/api/resultTemplates", async () => {
   const actual = await vi.importActual<typeof import("@/api/resultTemplates")>("@/api/resultTemplates");
@@ -116,5 +117,59 @@ describe("TemplateDesignerPage", () => {
     await user.click(screen.getByRole("button", { name: /Attendance summary/ }));
 
     expect(screen.getByRole("button", { name: "Undo" })).not.toBeDisabled();
+  });
+
+  it("clicking a palette block with an element selected inserts it right after that element, not at the end", async () => {
+    const user = userEvent.setup();
+    const layout: ReportLayout = {
+      version: 1,
+      page: { paddingPx: 24, fontFamily: "Helvetica, Arial, sans-serif", fontSizePx: 12, color: "#1a1a1a" },
+      rows: [
+        {
+          id: "row-1",
+          columns: [
+            {
+              id: "col-1",
+              widthPercent: 100,
+              elements: [
+                { id: "el-1", type: "TEXT", text: "First element" },
+                { id: "el-2", type: "TEXT", text: "Second element" },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    vi.mocked(templatesApi.getResultTemplate).mockResolvedValue({ ...NUMERIC_TEMPLATE, layout });
+    renderPage();
+    await screen.findByDisplayValue("Standard result sheet");
+
+    await user.click(screen.getByText("First element"));
+    await user.click(screen.getByRole("button", { name: "Spacer" }));
+
+    // Spacer's preview renders "<n>px gap" - a unique marker to locate it in document order
+    // against the two text elements, since the palette caption should have said it would
+    // land right after the selected "First element", not at the canvas's very end.
+    const text = document.body.textContent ?? "";
+    expect(text.indexOf("First element")).toBeLessThan(text.indexOf("px gap"));
+    expect(text.indexOf("px gap")).toBeLessThan(text.indexOf("Second element"));
+  });
+
+  it("the palette caption reflects where a click will insert", async () => {
+    const user = userEvent.setup();
+    const layout: ReportLayout = {
+      version: 1,
+      page: { paddingPx: 24, fontFamily: "Helvetica, Arial, sans-serif", fontSizePx: 12, color: "#1a1a1a" },
+      rows: [{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [{ id: "el-1", type: "TEXT", text: "Only element" }] }] }],
+    };
+    vi.mocked(templatesApi.getResultTemplate).mockResolvedValue({ ...NUMERIC_TEMPLATE, layout });
+    renderPage();
+    await screen.findByDisplayValue("Standard result sheet");
+
+    expect(screen.getByText(/adds it to the end of the canvas/i)).toBeInTheDocument();
+
+    await user.click(screen.getByText("Only element"));
+
+    expect(screen.getByText(/inserts it right after the selected element/i)).toBeInTheDocument();
   });
 });

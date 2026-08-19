@@ -22,6 +22,7 @@ import { BlockPalette } from "@/features/reporting/components/designer/BlockPale
 import { DesignerCanvas } from "@/features/reporting/components/designer/DesignerCanvas";
 import { InspectorPanel } from "@/features/reporting/components/designer/InspectorPanel";
 import { TokenPanel } from "@/features/reporting/components/designer/TokenPanel";
+import { useDragAutoScroll } from "@/features/reporting/components/designer/useDragAutoScroll";
 import { useLayoutEditor } from "@/features/reporting/components/designer/useLayoutEditor";
 import { validateLayout } from "@/features/reporting/components/designer/layoutValidation";
 import { ReportPreviewFrame } from "@/features/reporting/components/ReportPreviewFrame";
@@ -105,6 +106,7 @@ function TemplateDesignerBody({ initialTemplate }: { initialTemplate: ResultTemp
 
   const editor = useLayoutEditor(initialTemplate.layout);
   const validationErrors = validateLayout(editor.layout, template.assessmentMode);
+  useDragAutoScroll();
 
   async function handleSave(): Promise<ResultTemplateView | null> {
     setSaving(true);
@@ -229,12 +231,12 @@ function TemplateDesignerBody({ initialTemplate }: { initialTemplate: ResultTemp
         <Alert variant="warning">{validationErrors[0]} Fix this before saving.</Alert>
       )}
 
-      <div className="hidden flex-1 gap-4 lg:grid lg:grid-cols-[220px_1fr_280px]">
-        <Card className="max-h-[calc(100vh-220px)] overflow-y-auto overscroll-contain p-3">
+      <div className="hidden flex-1 items-start gap-4 lg:grid lg:grid-cols-[220px_1fr_280px]">
+        <Card className="sticky top-16 z-10 max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain p-3">
           <BlockPalette mode={template.assessmentMode} editor={editor} />
         </Card>
         <DesignerCanvas editor={editor} />
-        <div className="max-h-[calc(100vh-220px)] space-y-4 overflow-y-auto overscroll-contain">
+        <div className="sticky top-16 z-10 max-h-[calc(100dvh-5rem)] space-y-4 overflow-y-auto overscroll-contain">
           <Card className="p-3">
             <InspectorPanel editor={editor} />
           </Card>

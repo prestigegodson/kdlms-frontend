@@ -117,6 +117,34 @@ describe("layoutOps", () => {
     expect(layout.rows[0].columns[1].elements).toEqual([]);
   });
 
+  it("appendToRow adds an element to the end of the row's first column", () => {
+    let layout: ReportLayout = {
+      ...blankLayout(),
+      rows: [
+        {
+          id: "row-1",
+          columns: [
+            { id: "col-1", widthPercent: 50, elements: [textElement("el-1")] },
+            { id: "col-2", widthPercent: 50, elements: [] },
+          ],
+        },
+      ],
+    };
+
+    layout = ops.appendToRow(layout, "row-1", textElement("el-2"));
+
+    expect(layout.rows[0].columns[0].elements.map((e) => e.id)).toEqual(["el-1", "el-2"]);
+    expect(layout.rows[0].columns[1].elements).toEqual([]);
+  });
+
+  it("appendToRow is a no-op for an unknown row id", () => {
+    const layout = blankLayout();
+
+    const unchanged = ops.appendToRow(layout, "no-such-row", textElement("el-1"));
+
+    expect(unchanged).toEqual(layout);
+  });
+
   it("the standard result sheet starter is a structurally sound layout tree", () => {
     const layout = buildStandardResultSheetLayout();
 

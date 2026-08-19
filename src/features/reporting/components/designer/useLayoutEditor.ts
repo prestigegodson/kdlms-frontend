@@ -114,6 +114,34 @@ export function useLayoutEditor(initial: ReportLayout) {
     [layout, commit],
   );
 
+  /**
+   * `BlockPalette`'s click-to-add path: lands `element` right where the
+   * designer is currently working rather than always at the end of the
+   * canvas (`appendElement`/`appendToEnd`) - directly after a selected
+   * element (same container), at the end of a selected row's first column,
+   * or falls back to `appendToEnd` when nothing - or the page - is selected.
+   */
+  const insertAtSelection = useCallback(
+    (element: LayoutElement) => {
+      if (selection?.type === "element") {
+        const location = ops.findElementLocation(layout, selection.elementId);
+        if (location) {
+          commit(ops.insertElement(layout, location.containerId, location.index + 1, element));
+          setSelection({ type: "element", elementId: element.id });
+          return;
+        }
+      }
+      if (selection?.type === "row") {
+        commit(ops.appendToRow(layout, selection.rowId, element));
+        setSelection({ type: "element", elementId: element.id });
+        return;
+      }
+      commit(ops.appendToEnd(layout, element));
+      setSelection({ type: "element", elementId: element.id });
+    },
+    [layout, commit, selection],
+  );
+
   const addRow = useCallback(() => {
     const next = ops.addRow(layout);
     commit(next);
@@ -170,6 +198,7 @@ export function useLayoutEditor(initial: ReportLayout) {
     reset,
     insertElement,
     appendElement,
+    insertAtSelection,
     removeElement,
     moveElement,
     moveElementDirection,

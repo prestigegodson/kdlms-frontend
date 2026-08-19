@@ -1,4 +1,5 @@
-import { Plus } from "lucide-react";
+import { ChevronsDownUp, ChevronsUpDown, Plus } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { RowShell } from "@/features/reporting/components/designer/RowShell";
 import type { LayoutEditor } from "@/features/reporting/components/designer/useLayoutEditor";
@@ -11,6 +12,23 @@ import type { LayoutEditor } from "@/features/reporting/components/designer/useL
  * the page itself, surfacing page-level settings in `InspectorPanel`.
  */
 export function DesignerCanvas({ editor }: { editor: LayoutEditor }) {
+  /**
+   * Which rows are collapsed to a one-line summary, so a long canvas is
+   * easier to navigate and reach with a drag. View-only and deliberately
+   * local state, not part of `LayoutEditor` - it must never enter
+   * `ReportLayout`, reach `layout_json`, or push an undo entry.
+   */
+  const [collapsedRowIds, setCollapsedRowIds] = useState<ReadonlySet<string>>(new Set());
+
+  function toggleRowCollapsed(rowId: string) {
+    setCollapsedRowIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(rowId)) next.delete(rowId);
+      else next.add(rowId);
+      return next;
+    });
+  }
+
   return (
     <div className="flex justify-center overflow-x-auto overscroll-x-contain rounded-panel bg-slate-100 p-4 sm:p-8">
       <div
@@ -25,9 +43,17 @@ export function DesignerCanvas({ editor }: { editor: LayoutEditor }) {
         }}
       >
         {editor.layout.rows.map((row, index) => (
-          <RowShell key={row.id} row={row} index={index} rowCount={editor.layout.rows.length} editor={editor} />
+          <RowShell
+            key={row.id}
+            row={row}
+            index={index}
+            rowCount={editor.layout.rows.length}
+            editor={editor}
+            collapsed={collapsedRowIds.has(row.id)}
+            onToggleCollapse={() => toggleRowCollapsed(row.id)}
+          />
         ))}
-        <div className="pt-1">
+        <div className="flex flex-wrap items-center gap-2 pt-1">
           <Button
             type="button"
             variant="secondary"
@@ -39,6 +65,32 @@ export function DesignerCanvas({ editor }: { editor: LayoutEditor }) {
           >
             <Plus className="h-4 w-4" aria-hidden="true" /> Add row
           </Button>
+          {editor.layout.rows.length > 1 && (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setCollapsedRowIds(new Set(editor.layout.rows.map((row) => row.id)));
+                }}
+              >
+                <ChevronsDownUp className="h-4 w-4" aria-hidden="true" /> Collapse all
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setCollapsedRowIds(new Set());
+                }}
+              >
+                <ChevronsUpDown className="h-4 w-4" aria-hidden="true" /> Expand all
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>
