@@ -46,6 +46,9 @@ export interface SubscriptionSummaryView {
   onDemandLearning: boolean;
   communication: boolean;
   timetable: boolean;
+  lessonNotes: boolean;
+  aiLessonNotes: boolean;
+  aiGenerationLimit: number;
 }
 
 function adminBase(schoolId: string): string {

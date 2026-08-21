@@ -31,6 +31,9 @@ const ACTIVE_SUMMARY: SubscriptionSummaryView = {
   onDemandLearning: false,
   communication: false,
   timetable: false,
+  lessonNotes: false,
+  aiLessonNotes: false,
+  aiGenerationLimit: 0,
 };
 
 describe("SubscriptionBanner", () => {

@@ -4,15 +4,17 @@ import type { StudentTermResultView } from "@/api/assessments";
 import type { StudentAttendanceSummaryView } from "@/api/attendance";
 import type { StudentMedicalView } from "@/api/students";
 import type { ClassTimetableView } from "@/api/timetable";
+import type { LessonNoteView } from "@/api/lessonNotes";
 
 /**
  * Self-service views for the currently authenticated GUARDIAN - ward
- * listing, ward term results/attendance/timetable, ward report preview/PDF.
- * Mirrors backend student.adapter.in.web.MyWardsController,
+ * listing, ward term results/attendance/timetable/lesson notes, ward report
+ * preview/PDF. Mirrors backend student.adapter.in.web.MyWardsController,
  * assessment.adapter.in.web.MyWardResultsController,
  * attendance.adapter.in.web.MyWardAttendanceController,
- * reporting.adapter.in.web.MyWardReportsController, and
- * timetable.adapter.in.web.MyWardTimetableController - all under
+ * reporting.adapter.in.web.MyWardReportsController,
+ * timetable.adapter.in.web.MyWardTimetableController, and
+ * lessonnote.adapter.in.web.MyWardLessonNoteController - all under
  * `/api/v1/me/wards`.
  */
 const BASE = "/api/v1/me/wards";
@@ -105,4 +107,34 @@ export function previewWardReport(studentId: string, termId: string): Promise<st
 
 export function downloadWardReportPdf(studentId: string, termId: string): Promise<Blob> {
   return apiFetchBlob(`${BASE}/${studentId}/report/pdf?termId=${termId}`);
+}
+
+/** Mirrors backend lessonnote.application.port.in.MyWardLessonNotesUseCase.WardLessonNoteSummary. */
+export interface WardLessonNoteSummary {
+  noteId: string;
+  weekNumber: number;
+  weekStart: string | null;
+  weekEnd: string | null;
+  topic: string;
+}
+
+/** Mirrors backend lessonnote.application.port.in.MyWardLessonNotesUseCase.WardSubjectLessonNotesView. `notes` may be empty - a subject with nothing approved yet still gets a row. */
+export interface WardSubjectLessonNotesView {
+  subjectId: string;
+  subjectName: string;
+  notes: WardLessonNoteSummary[];
+}
+
+/**
+ * The ward's applicable subjects (mandatory ∪ their registered selectives) for one term, each
+ * carrying its APPROVED lesson notes - this feature's own publication gate, deliberately not
+ * `resultsPublished`-gated like `getWardResult` is.
+ */
+export function getWardLessonNotes(studentId: string, termId: string): Promise<WardSubjectLessonNotesView[]> {
+  return apiFetch<WardSubjectLessonNotesView[]>(`${BASE}/${studentId}/lesson-notes?termId=${termId}`);
+}
+
+/** One note in full, read-only - 404s unless it's APPROVED and belongs to one of this ward's applicable subjects. */
+export function getWardLessonNote(studentId: string, noteId: string): Promise<LessonNoteView> {
+  return apiFetch<LessonNoteView>(`${BASE}/${studentId}/lesson-notes/${noteId}`);
 }

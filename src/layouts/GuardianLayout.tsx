@@ -1,4 +1,4 @@
-import { Bell, CalendarDays, ClipboardCheck, ClipboardList, MessageSquare, Users } from "lucide-react";
+import { Bell, CalendarDays, ClipboardCheck, ClipboardList, MessageSquare, NotebookPen, Users } from "lucide-react";
 import { useEffect } from "react";
 import { can } from "@/auth/permissions";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
@@ -31,6 +31,15 @@ const NAV_ITEMS: NavItem[] = [
     visible: () => can.viewTimetable("GUARDIAN", null, useFeatureStore.getState().timetable),
   },
   {
+    label: "Lesson notes",
+    href: "/guardian/lesson-notes",
+    icon: NotebookPen,
+    // Overflow-only (drawer via the tab bar's More tab) - see the Timetable
+    // item's comment above for why. A separate `viewWardLessonNotes` check,
+    // not `viewLessonNotes` (which is staff-only) - see auth/permissions.ts.
+    visible: () => can.viewWardLessonNotes("GUARDIAN", useFeatureStore.getState().lessonNotes),
+  },
+  {
     label: "Notifications",
     href: "/guardian/settings",
     icon: Bell,
@@ -50,6 +59,7 @@ export function GuardianLayout() {
   // re-evaluate once these async fetches resolve - mirrors SchoolLayout.
   useFeatureStore((state) => state.communication);
   useFeatureStore((state) => state.timetable);
+  useFeatureStore((state) => state.lessonNotes);
   useUnreadMessagesStore((state) => state.count);
 
   // Deliberately no schoolBrandingStore fetch here, unlike SchoolLayout: a

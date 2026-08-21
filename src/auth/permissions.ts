@@ -342,6 +342,83 @@ export const can = {
     );
   },
 
+  /**
+   * Seeing the lesson-notes week grid / an individual note - staff
+   * (school-wide, no branch scoping: a lesson note is keyed on
+   * subject+level+term+week, and levels/subjects are school-wide constructs
+   * here, the same reason `viewPeriodGrid`/`managePeriodGrid` give
+   * BRANCH_ADMIN unscoped access) or a TEACHER assigned (class-teach or
+   * subject-teach) at that subject's level - the backend
+   * `LessonNoteAccessGuard.requireVisible` union. Gated on the school's
+   * Lesson notes entitlement, the same full-lockout shape Messages/Timetable
+   * use.
+   */
+  viewLessonNotes(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER";
+  },
+
+  /**
+   * Authoring/editing a lesson note - admins (any), or a TEACHER who
+   * subject-teaches that subject specifically (narrower than
+   * `viewLessonNotes` - a class teacher who doesn't teach the subject can't
+   * author its note, per CLAUDE.md's Domain Rules). The frontend can't
+   * evaluate the subject-teach narrowing itself (it needs server data), so
+   * this only gates route/nav visibility; the editor's actual save is
+   * additionally enforced server-side by `LessonNoteAccessGuard.requireAuthorable`.
+   */
+  authorLessonNotes(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER";
+  },
+
+  /**
+   * Reviewing a lesson note (approve/reject/reopen) and browsing the review queue - admins only,
+   * mirroring the backend `LessonNoteAccessGuard.requireReviewable`'s narrower-than-`authorLessonNotes`
+   * shape: a subject's own subject teacher may write and see the note but never review it, even
+   * their own.
+   */
+  reviewLessonNotes(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /**
+   * Showing the "Generate with AI" button on the lesson-note editor - the same role set as
+   * `authorLessonNotes` (only someone who can write a note has any use for a draft to review), but
+   * gated on the school's separate `aiLessonNotes` entitlement rather than the base `lessonNotes`
+   * one, per CLAUDE.md: a school can hold Lesson notes without AI lesson notes. The backend layers
+   * its own per-school monthly quota on top of this, which the frontend can't evaluate - a school
+   * that's simply exhausted its quota for the month still sees this button and gets a clean refusal
+   * from the generate call itself.
+   */
+  generateLessonNotesWithAi(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER";
+  },
+
+  /**
+   * A guardian's read of their own ward's approved lesson notes - a **separate** check from
+   * `viewLessonNotes`, not GUARDIAN added to it, the same reasoning `viewWards` gives for not
+   * reusing staff `viewResults`/`viewReports`: the guardian path
+   * (`MyWardLessonNotesUseCase`/`GET /api/v1/me/wards/{id}/lesson-notes`) is authorized entirely
+   * through the `shared` SPI `GuardianWards` and gated on `APPROVED` status, an entirely separate
+   * backend path from `LessonNoteAccessGuard.requireVisible` (which `viewLessonNotes` names, and
+   * which `LessonNoteAccessGuardTest` asserts refuses a GUARDIAN caller outright). Gated on the
+   * school's Lesson notes entitlement, the same full-lockout shape every other check here uses.
+   */
+  viewWardLessonNotes(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && role === "GUARDIAN";
+  },
+
   /** Setting the platform's own support contact details - SYSTEM_ADMIN only, outside tenant scope entirely. */
   manageSupportContact(role: Role | undefined): boolean {
     return role === "SYSTEM_ADMIN";
@@ -350,5 +427,15 @@ export const can = {
   /** Reading the platform's support contact - SCHOOL_ADMIN and BRANCH_ADMIN only, so they have a way to reach KDLMS. */
   viewSupportContact(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /**
+   * Setting the platform's own AI provider/model - SYSTEM_ADMIN only, outside tenant scope
+   * entirely, like `manageSupportContact`. Unlike support contact, no school role can even read
+   * this - a school never needs to know which provider the operator has chosen, only whether the
+   * lesson-notes AI button is entitled (a separate, per-school concern).
+   */
+  manageAiSettings(role: Role | undefined): boolean {
+    return role === "SYSTEM_ADMIN";
   },
 };

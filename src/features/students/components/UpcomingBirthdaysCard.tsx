@@ -9,6 +9,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Spinner } from "@/components/ui/Spinner";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
 import { formatDayAndMonth, formatDaysUntil } from "@/utils/date";
@@ -17,7 +18,7 @@ import { initialsOfFullName } from "@/utils/initials";
 interface UpcomingBirthdaysCardProps {
   /** Narrows to one class's birthdays (the class detail page). Omitted for the role-shaped dashboard list. */
   classId?: string;
-  /** Renders nothing when there's nothing to show - the dashboard card's convention (`NeedsAttentionCard`'s precedent). Off by default for the class-page section, which shows an explicit empty message instead since its `Accordion` header is already there. */
+  /** Renders nothing when there's nothing to show - the dashboard card's convention (`NeedsAttentionCard`'s precedent). Off by default for the class-page section, which shows an `EmptyState` instead since its `Accordion` header is already there. */
   hideWhenEmpty?: boolean;
   /** Whether a row links to the student's detail page - an admin caller only; a TEACHER has no such route. */
   linkable?: boolean;
@@ -102,9 +103,17 @@ export function UpcomingBirthdaysCard({
         </div>
       )}
       {state.kind === "loaded" && total === 0 && (
-        <p className={`text-sm text-slate-500 ${showHeader ? "px-6 pb-6 pt-3" : ""}`}>
-          No birthdays in the next 7 days.
-        </p>
+        <div className={showHeader ? "px-6 pb-6 pt-3" : ""}>
+          <EmptyState
+            icon={Cake}
+            title="No upcoming birthdays"
+            description={
+              classId
+                ? "No one in this class has a birthday in the next 7 days."
+                : "No birthdays in the next 7 days."
+            }
+          />
+        </div>
       )}
       {state.kind === "loaded" && total > 0 && (
         <>
@@ -153,7 +162,7 @@ export function UpcomingBirthdaysCard({
       <div className="flex items-center gap-2 p-6 pb-0">
         <h2 className="text-sm font-semibold text-slate-900">
           {state.kind === "loaded" && total > 0 && <Badge variant="neutral">{total}</Badge>}{" "}
-          Upcoming birthday{ total > 1 ? 's': ''}
+          Upcoming birthdays
         </h2>
         <Cake className="h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
       </div>

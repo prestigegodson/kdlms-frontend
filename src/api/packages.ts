@@ -21,6 +21,15 @@ export interface PackageView {
   communication: boolean;
   /** Also actually gates the feature, the same hard-lockout shape `communication` uses - see CLAUDE.md. */
   timetable: boolean;
+  /** Also actually gates the feature, the same hard-lockout shape `communication`/`timetable` use - see CLAUDE.md. */
+  lessonNotes: boolean;
+  /**
+   * A second, independent gate layered on top of lessonNotes for the AI-generation button only -
+   * a school can have the lesson-notes module without the AI add-on. Paired with aiGenerationLimit.
+   */
+  aiLessonNotes: boolean;
+  /** Per-school AI lesson-note generations allowed per calendar month. 0 = none (also the effective value whenever aiLessonNotes is false). */
+  aiGenerationLimit: number;
   status: PackageStatus;
 }
 
@@ -37,6 +46,9 @@ export interface SavePackageRequest {
   onDemandLearning: boolean;
   communication: boolean;
   timetable: boolean;
+  lessonNotes: boolean;
+  aiLessonNotes: boolean;
+  aiGenerationLimit: number;
 }
 
 const BASE = "/api/v1/admin/packages";

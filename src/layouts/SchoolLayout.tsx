@@ -14,6 +14,7 @@ import {
   Library,
   BookOpen,
   MessageSquare,
+  NotebookPen,
   Scale,
   School,
   Settings,
@@ -27,6 +28,7 @@ import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useAcademicContextStore } from "@/stores/academicContextStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
+import { usePendingLessonNotesStore } from "@/stores/pendingLessonNotesStore";
 import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
@@ -103,6 +105,24 @@ const NAV_ITEMS: NavItem[] = [
       const entitled = useFeatureStore.getState().timetable;
       return can.viewTimetable(role, { isClassTeacher }, entitled);
     },
+  },
+  {
+    label: "Lesson notes",
+    href: "/school/lesson-notes",
+    icon: NotebookPen,
+    group: "Academics",
+    // Admin (school-wide, no branch scoping - see LessonNoteAccessGuard's
+    // Javadoc) and every TEACHER (class-teach or subject-teach at the
+    // subject's level widens what they can view; authoring narrows further
+    // to their own subject-teach assignments) - see auth/permissions.ts's
+    // viewLessonNotes, the single source of truth.
+    visible: () => {
+      const role = useAuthStore.getState().user?.role;
+      const entitled = useFeatureStore.getState().lessonNotes;
+      return can.viewLessonNotes(role, entitled);
+    },
+    // Admin-only badge - the review queue's pending count, mirroring Messages' unread badge.
+    badge: () => usePendingLessonNotesStore.getState().count,
   },
   {
     label: "Assessments",
@@ -248,20 +268,25 @@ export function SchoolLayout() {
   const fetchSchoolSettings = useSchoolSettingsStore((state) => state.fetchIfNeeded);
 
   // Every role this layout admits needs the entitlement flags for the
-  // Messages/Period grid nav items' visible() checks above.
+  // Messages/Period grid/Lesson notes nav items' visible() checks above.
   const fetchFeatures = useFeatureStore((state) => state.fetchIfNeeded);
   // Readable by every role this layout admits, same as school settings above -
   // PortalShell's sidebar reads this to swap the wordmark for the school's logo.
   const fetchSchoolBranding = useSchoolBrandingStore((state) => state.fetchIfNeeded);
   const fetchUnreadMessages = useUnreadMessagesStore((state) => state.fetchIfNeeded);
+  // Admin-only - the review-queue nav badge; a TEACHER never reviews, see
+  // auth/permissions.ts's reviewLessonNotes.
+  const fetchPendingLessonNotes = usePendingLessonNotesStore((state) => state.fetchIfNeeded);
   // Subscribed (return value intentionally discarded) only to force a
-  // re-render - so the Messages/Period grid `visible()`/`badge()` closures
-  // above re-evaluate once these async fetches resolve, the same reason
-  // teacherCapabilities is subscribed below. The values themselves are read
-  // fresh from getState() inside those closures.
+  // re-render - so the Messages/Period grid/Lesson notes `visible()`/`badge()`
+  // closures above re-evaluate once these async fetches resolve, the same
+  // reason teacherCapabilities is subscribed below. The values themselves are
+  // read fresh from getState() inside those closures.
   useFeatureStore((state) => state.communication);
   useFeatureStore((state) => state.timetable);
+  useFeatureStore((state) => state.lessonNotes);
   useUnreadMessagesStore((state) => state.count);
+  usePendingLessonNotesStore((state) => state.count);
 
   useEffect(() => {
     if (role === "TEACHER") {
@@ -269,6 +294,7 @@ export function SchoolLayout() {
       fetchUnreadMessages("TEACHER");
     } else if (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN") {
       fetchAcademicContext();
+      fetchPendingLessonNotes();
     }
     fetchSchoolSettings();
     fetchFeatures();
@@ -281,6 +307,7 @@ export function SchoolLayout() {
     fetchFeatures,
     fetchSchoolBranding,
     fetchUnreadMessages,
+    fetchPendingLessonNotes,
   ]);
 
   const contextLabel =

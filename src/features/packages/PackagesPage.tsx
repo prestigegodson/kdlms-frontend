@@ -132,6 +132,8 @@ export function PackagesPage() {
                       {pkg.onDemandLearning && <Badge variant="neutral">Learning</Badge>}
                       {pkg.communication && <Badge variant="brand">Messaging</Badge>}
                       {pkg.timetable && <Badge variant="brand">Timetables</Badge>}
+                      {pkg.lessonNotes && <Badge variant="brand">Lesson notes</Badge>}
+                      {pkg.aiLessonNotes && <Badge variant="brand">AI lesson notes</Badge>}
                     </div>
                   </TableCell>
                   <TableCell label="Status">
@@ -219,6 +221,11 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
   const [onDemandLearning, setOnDemandLearning] = useState(initial?.onDemandLearning ?? false);
   const [communication, setCommunication] = useState(initial?.communication ?? false);
   const [timetable, setTimetable] = useState(initial?.timetable ?? false);
+  const [lessonNotes, setLessonNotes] = useState(initial?.lessonNotes ?? false);
+  const [aiLessonNotes, setAiLessonNotes] = useState(initial?.aiLessonNotes ?? false);
+  const [aiGenerationLimit, setAiGenerationLimit] = useState(
+    initial ? String(initial.aiGenerationLimit) : "0",
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -240,6 +247,9 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
         onDemandLearning,
         communication,
         timetable,
+        lessonNotes,
+        aiLessonNotes,
+        aiGenerationLimit: aiLessonNotes ? Number(aiGenerationLimit) : 0,
       });
       onSaved();
     } catch (err) {
@@ -361,6 +371,35 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
           Also actually gates the feature - a school without it loses the Timetable screen entirely,
           for staff and guardians alike.
         </p>
+
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <Checkbox checked={lessonNotes} onChange={(event) => setLessonNotes(event.target.checked)} />
+          Lesson notes
+        </label>
+        <p className="-mt-2 text-xs text-slate-500">
+          Also actually gates the feature - a school without it loses the Lesson notes screen entirely,
+          for staff and guardians alike.
+        </p>
+
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <Checkbox checked={aiLessonNotes} onChange={(event) => setAiLessonNotes(event.target.checked)} />
+          AI lesson notes
+        </label>
+        <p className="-mt-2 text-xs text-slate-500">
+          A second, independent gate on top of Lesson notes for the AI-generation button only - a school
+          can have the module without this add-on.
+        </p>
+        <FormField label="AI generations per month" htmlFor="package-ai-generation-limit">
+          <Input
+            id="package-ai-generation-limit"
+            type="number"
+            min="0"
+            required
+            disabled={!aiLessonNotes}
+            value={aiLessonNotes ? aiGenerationLimit : "0"}
+            onChange={(event) => setAiGenerationLimit(event.target.value)}
+          />
+        </FormField>
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

@@ -94,6 +94,12 @@ export function SubscriptionPage() {
               <Badge variant={state.summary.timetable ? "success" : "neutral"}>
                 {state.summary.timetable ? "Timetables included" : "No timetables"}
               </Badge>
+              <Badge variant={state.summary.lessonNotes ? "success" : "neutral"}>
+                {state.summary.lessonNotes ? "Lesson notes included" : "No lesson notes"}
+              </Badge>
+              <Badge variant={state.summary.aiLessonNotes ? "success" : "neutral"}>
+                {state.summary.aiLessonNotes ? "AI lesson notes included" : "No AI lesson notes"}
+              </Badge>
             </div>
           </Card>
 

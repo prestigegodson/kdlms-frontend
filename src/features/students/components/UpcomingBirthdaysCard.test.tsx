@@ -89,12 +89,30 @@ describe("UpcomingBirthdaysCard", () => {
     await waitFor(() => expect(container).toBeEmptyDOMElement());
   });
 
-  it("shows an explicit empty message when empty and hideWhenEmpty is not set", async () => {
+  it("shows an EmptyState when empty and hideWhenEmpty is not set", async () => {
     vi.mocked(birthdaysApi.listUpcomingBirthdays).mockResolvedValue([]);
 
     renderCard();
 
-    expect(await screen.findByText("No birthdays in the next 7 days.")).toBeInTheDocument();
+    expect(await screen.findByText("No upcoming birthdays")).toBeInTheDocument();
+    expect(screen.getByText("No birthdays in the next 7 days.")).toBeInTheDocument();
+  });
+
+  it("shows the class-scoped empty description when classId is set and there are no rows", async () => {
+    vi.mocked(birthdaysApi.listClassBirthdays).mockResolvedValue([]);
+
+    renderCard({ classId: "class-1", showHeader: false });
+
+    expect(await screen.findByText("No upcoming birthdays")).toBeInTheDocument();
+    expect(screen.getByText("No one in this class has a birthday in the next 7 days.")).toBeInTheDocument();
+  });
+
+  it("shows the plural header even when there are no upcoming birthdays", async () => {
+    vi.mocked(birthdaysApi.listUpcomingBirthdays).mockResolvedValue([]);
+
+    renderCard();
+
+    expect(await screen.findByText("Upcoming birthdays")).toBeInTheDocument();
   });
 
   it("renders an error alert when the fetch fails", async () => {

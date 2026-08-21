@@ -185,6 +185,76 @@ export async function apiFetchText(path: string, options: RequestOptions = {}): 
   return response.text();
 }
 
+/** One parsed Server-Sent Events frame - `event` defaults to `"message"` per the SSE spec when the server omits an `event:` line. */
+interface SseFrame {
+  event: string;
+  data: string;
+}
+
+function parseSseFrame(rawFrame: string): SseFrame | null {
+  let event = "message";
+  const dataLines: string[] = [];
+  for (const line of rawFrame.split("\n")) {
+    if (line.startsWith("event:")) {
+      event = line.slice("event:".length).trim();
+    } else if (line.startsWith("data:")) {
+      dataLines.push(line.slice("data:".length).trim());
+    }
+  }
+  // A frame with no `data:` line (a blank keep-alive, or stray leading bytes) carries nothing to
+  // deliver - skip it rather than calling back with an empty string the caller would have to
+  // special-case.
+  if (dataLines.length === 0) {
+    return null;
+  }
+  return { event, data: dataLines.join("\n") };
+}
+
+/**
+ * Streams a Server-Sent Events response, invoking `onEvent` once per frame as it arrives -
+ * `lessonnote`'s AI generation endpoint (Phase 16E) is the first caller. Reuses
+ * {@link fetchWithAuth} so the single-flight 401-refresh interceptor still applies, then reads
+ * `response.body.getReader()` directly and splits frames on the blank-line separator the SSE wire
+ * format uses. Native `EventSource` cannot send an `Authorization` header, so it isn't an option
+ * here - this is a deliberate hand-rolled reader instead.
+ * <p>
+ * A pre-flight failure (the server rejects the request before ever opening the stream - a 403/422/
+ * 429/503 problem response) surfaces as the usual {@link ApiError} thrown from this function,
+ * exactly like {@link apiFetch}; a genuine mid-stream failure instead arrives as a server-defined
+ * `error` frame through `onEvent`, since by then a 200 response is already committed. Pass
+ * `options.signal` (a plain `AbortSignal`, e.g. from an `AbortController`) to let the caller cancel
+ * an in-flight generation.
+ */
+export async function apiStream(
+  path: string,
+  onEvent: (event: string, data: string) => void,
+  options: RequestOptions = {},
+): Promise<void> {
+  const response = await fetchWithAuth(path, withDefaultAccept(options, "text/event-stream"));
+  const reader = response.body?.getReader();
+  if (!reader) {
+    return;
+  }
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    buffer += decoder.decode(value, { stream: true });
+    let separatorIndex = buffer.indexOf("\n\n");
+    while (separatorIndex !== -1) {
+      const frame = parseSseFrame(buffer.slice(0, separatorIndex));
+      buffer = buffer.slice(separatorIndex + 2);
+      if (frame) {
+        onEvent(frame.event, frame.data);
+      }
+      separatorIndex = buffer.indexOf("\n\n");
+    }
+  }
+}
+
 /**
  * Multipart upload - deliberately reuses {@link apiFetch}'s auth/refresh/error
  * handling rather than duplicating it; the only difference is the request

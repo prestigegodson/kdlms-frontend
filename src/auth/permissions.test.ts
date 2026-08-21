@@ -90,6 +90,76 @@ describe("can.viewPeriodGrid", () => {
   });
 });
 
+describe("can.viewLessonNotes", () => {
+  it("is true for an entitled SCHOOL_ADMIN, BRANCH_ADMIN, or TEACHER", () => {
+    expect(can.viewLessonNotes("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.viewLessonNotes("BRANCH_ADMIN", true)).toBe(true);
+    expect(can.viewLessonNotes("TEACHER", true)).toBe(true);
+  });
+
+  it("is false when the school isn't entitled, even for staff roles", () => {
+    expect(can.viewLessonNotes("SCHOOL_ADMIN", false)).toBe(false);
+    expect(can.viewLessonNotes("TEACHER", false)).toBe(false);
+  });
+
+  it("is false for GUARDIAN, even when entitled", () => {
+    expect(can.viewLessonNotes("GUARDIAN", true)).toBe(false);
+    expect(can.viewLessonNotes(undefined, true)).toBe(false);
+  });
+});
+
+describe("can.authorLessonNotes", () => {
+  it("is true for an entitled SCHOOL_ADMIN, BRANCH_ADMIN, or TEACHER", () => {
+    expect(can.authorLessonNotes("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.authorLessonNotes("BRANCH_ADMIN", true)).toBe(true);
+    expect(can.authorLessonNotes("TEACHER", true)).toBe(true);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.authorLessonNotes("TEACHER", false)).toBe(false);
+  });
+
+  it("is false for GUARDIAN, even when entitled", () => {
+    expect(can.authorLessonNotes("GUARDIAN", true)).toBe(false);
+  });
+});
+
+describe("can.reviewLessonNotes", () => {
+  it("is true for an entitled SCHOOL_ADMIN or BRANCH_ADMIN", () => {
+    expect(can.reviewLessonNotes("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.reviewLessonNotes("BRANCH_ADMIN", true)).toBe(true);
+  });
+
+  it("is false for TEACHER, even when entitled - narrower than authorLessonNotes", () => {
+    expect(can.reviewLessonNotes("TEACHER", true)).toBe(false);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.reviewLessonNotes("SCHOOL_ADMIN", false)).toBe(false);
+  });
+
+  it("is false for GUARDIAN, even when entitled", () => {
+    expect(can.reviewLessonNotes("GUARDIAN", true)).toBe(false);
+  });
+});
+
+describe("can.viewWardLessonNotes", () => {
+  it("is true only for an entitled GUARDIAN", () => {
+    expect(can.viewWardLessonNotes("GUARDIAN", true)).toBe(true);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.viewWardLessonNotes("GUARDIAN", false)).toBe(false);
+  });
+
+  it("is false for every staff role, even when entitled - a separate backend path from viewLessonNotes", () => {
+    expect(can.viewWardLessonNotes("SCHOOL_ADMIN", true)).toBe(false);
+    expect(can.viewWardLessonNotes("BRANCH_ADMIN", true)).toBe(false);
+    expect(can.viewWardLessonNotes("TEACHER", true)).toBe(false);
+    expect(can.viewWardLessonNotes(undefined, true)).toBe(false);
+  });
+});
+
 describe("can.manageSupportContact", () => {
   it("is true only for SYSTEM_ADMIN", () => {
     expect(can.manageSupportContact("SYSTEM_ADMIN")).toBe(true);
@@ -142,5 +212,16 @@ describe("can.viewSupportContact", () => {
     expect(can.viewSupportContact("TEACHER")).toBe(false);
     expect(can.viewSupportContact("GUARDIAN")).toBe(false);
     expect(can.viewSupportContact(undefined)).toBe(false);
+  });
+});
+
+describe("can.manageAiSettings", () => {
+  it("is true only for SYSTEM_ADMIN", () => {
+    expect(can.manageAiSettings("SYSTEM_ADMIN")).toBe(true);
+    expect(can.manageAiSettings("SCHOOL_ADMIN")).toBe(false);
+    expect(can.manageAiSettings("BRANCH_ADMIN")).toBe(false);
+    expect(can.manageAiSettings("TEACHER")).toBe(false);
+    expect(can.manageAiSettings("GUARDIAN")).toBe(false);
+    expect(can.manageAiSettings(undefined)).toBe(false);
   });
 });

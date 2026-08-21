@@ -7,6 +7,7 @@ import { LevelsPage } from "@/features/academics/LevelsPage";
 import { SessionsPage } from "@/features/academics/SessionsPage";
 import { SubjectsPage } from "@/features/academics/SubjectsPage";
 import { AdministratorsPage } from "@/features/administrators/AdministratorsPage";
+import { AdminAiSettingsPage } from "@/features/ai/AdminAiSettingsPage";
 import { AssessmentsPage } from "@/features/assessments/AssessmentsPage";
 import { GradingSystemEditorPage } from "@/features/assessments/GradingSystemEditorPage";
 import { GradingSystemsPage } from "@/features/assessments/GradingSystemsPage";
@@ -35,6 +36,7 @@ import { WardTermResultPage } from "@/features/guardian/WardTermResultPage";
 import { WardTimetablePage } from "@/features/guardian/WardTimetablePage";
 import { WardsPage } from "@/features/guardian/WardsPage";
 import { GuardiansPage } from "@/features/guardians/GuardiansPage";
+import { LessonNotesPage } from "@/features/lessonNotes/LessonNotesPage";
 import { PackagesPage } from "@/features/packages/PackagesPage";
 import { ReportSettingsPage } from "@/features/reporting/ReportSettingsPage";
 import { ReportsPage } from "@/features/reporting/ReportsPage";
@@ -58,8 +60,10 @@ import { RootLayout } from "@/layouts/RootLayout";
 import { SchoolLayout } from "@/layouts/SchoolLayout";
 import { SystemAdminLayout } from "@/layouts/SystemAdminLayout";
 import { HomeRedirect } from "@/routes/HomeRedirect";
+import { LessonNoteEditorRoute } from "@/routes/LessonNoteEditorRoute";
 import { RequireRole } from "@/routes/RequireRole";
 import { TemplateDesignerRoute } from "@/routes/TemplateDesignerRoute";
+import { WardLessonNotesRoute } from "@/routes/WardLessonNotesRoute";
 
 /**
  * Exported as a plain array (rather than only building `router` below) so
@@ -93,6 +97,7 @@ export const routes: RouteObject[] = [
           { path: "templates", element: <ResultTemplatesPage /> },
           { path: "templates/:templateId", element: <TemplateDesignerRoute /> },
           { path: "support", element: <AdminSupportContactPage /> },
+          { path: "ai", element: <AdminAiSettingsPage /> },
         ],
       },
       {
@@ -188,6 +193,8 @@ export const routes: RouteObject[] = [
             ),
           },
           { path: "timetable", element: <TimetablePage /> },
+          { path: "lesson-notes", element: <LessonNotesPage /> },
+          { path: "lesson-notes/:noteId", element: <LessonNoteEditorRoute /> },
           {
             path: "students",
             element: (
@@ -299,6 +306,7 @@ export const routes: RouteObject[] = [
           },
           { path: "messages", element: <WardMessagesPage /> },
           { path: "timetable", element: <WardTimetablePage /> },
+          { path: "lesson-notes", element: <WardLessonNotesRoute /> },
           { path: "settings", element: <NotificationSettingsPage /> },
         ],
       },
