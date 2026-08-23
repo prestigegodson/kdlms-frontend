@@ -5,18 +5,24 @@ import { ApiError } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
-import { Input } from "@/components/ui/Input";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { AuthLayout } from "@/features/auth/AuthLayout";
 
 type Status =
   { kind: "form" } | { kind: "submitting" } | { kind: "done" } | { kind: "error"; message: string };
 
-/** Confirms a password reset. Pre-fills the token from ?token= if the link included one (e.g. via the dev-only exposed-token flow). */
+/**
+ * Confirms a password reset. The token is never user-typed: it comes solely
+ * from ?token= on the link the reset email sends (see
+ * ZeptoMailNotificationAdapter/LoggingNotificationAdapter, which always
+ * build the link as {appBaseUrl}/reset-password?token=<rawToken>). A link
+ * opened without one renders an invalid-link state instead of a form, since
+ * there'd be nothing valid to submit.
+ */
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [token, setToken] = useState(searchParams.get("token") ?? "");
+  const token = searchParams.get("token") ?? "";
   const [newPassword, setNewPassword] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "form" });
 
@@ -35,6 +41,27 @@ export function ResetPasswordPage() {
     }
   }
 
+  if (!token) {
+    return (
+      <AuthLayout title="Choose a new password">
+        <div className="mt-6 space-y-4">
+          <Alert variant="error">
+            This reset link is invalid or incomplete. Request a new one.
+          </Alert>
+          <Button className="w-full" onClick={() => navigate("/forgot-password")}>
+            Request a new link
+          </Button>
+          <Link
+            to="/login"
+            className="block text-center text-sm font-medium text-brand-500 hover:text-brand-600"
+          >
+            Back to sign in
+          </Link>
+        </div>
+      </AuthLayout>
+    );
+  }
+
   return (
     <AuthLayout title="Choose a new password">
       {status.kind === "done" ? (
@@ -47,19 +74,6 @@ export function ResetPasswordPage() {
       ) : (
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           {status.kind === "error" && <Alert variant="error">{status.message}</Alert>}
-          <FormField label="Reset token" htmlFor="token">
-            <Input
-              id="token"
-              autoComplete="off"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              enterKeyHint="next"
-              required
-              value={token}
-              onChange={(event) => setToken(event.target.value)}
-            />
-          </FormField>
           <FormField label="New password" htmlFor="newPassword">
             <PasswordInput
               id="newPassword"

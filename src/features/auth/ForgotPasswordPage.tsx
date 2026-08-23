@@ -106,7 +106,12 @@ function DevTokenReveal({ token }: { token: string }) {
 
   return (
     <Alert variant="info">
-      Dev token: <code className="break-all">{token}</code>
+      <Link
+        to={`/reset-password?token=${encodeURIComponent(token)}`}
+        className="font-medium text-brand-500 underline hover:text-brand-600"
+      >
+        Continue to reset password
+      </Link>
     </Alert>
   );
 }
