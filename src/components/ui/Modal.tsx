@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 
 type Size = "md" | "lg" | "xl";
 
@@ -23,11 +24,15 @@ const FOCUSABLE_SELECTOR =
 
 /**
  * Minimal centered-overlay modal; closes on backdrop click, Escape, or the
- * close button. No portal - fine at this app's current nesting depth. Traps
- * Tab focus within the dialog while open, locks page scroll, and restores
- * focus to whatever triggered it on close. The panel caps at 90dvh with its
- * own internal scroll so a tall form (e.g. Sessions' repeating term rows)
- * never pushes its submit button off a short viewport.
+ * close button. Rendered via createPortal into document.body - several call
+ * sites (e.g. UserMenu's ChangePasswordDialog, opened from PortalShell's
+ * sticky z-30 header) mount this from inside a sticky/z-indexed ancestor,
+ * which would otherwise trap the overlay's z-50 inside that ancestor's own
+ * stacking context and let MobileTabBar's fixed z-30 bar paint over it.
+ * Traps Tab focus within the dialog while open, locks page scroll, and
+ * restores focus to whatever triggered it on close. The panel caps at 90dvh
+ * with its own internal scroll so a tall form (e.g. Sessions' repeating term
+ * rows) never pushes its submit button off a short viewport.
  *
  * Below `md` this presents as a bottom sheet instead - docked to the
  * viewport bottom, full width, top-rounded only, capped at 92dvh, with a
@@ -88,7 +93,7 @@ export function Modal({ open, onClose, title, size = "lg", children }: ModalProp
     }
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 mobile:items-end mobile:justify-center mobile:p-0">
       <div className="overlay-fade fixed inset-0 bg-slate-900/50" onClick={onClose} aria-hidden="true" />
       <div
@@ -118,6 +123,7 @@ export function Modal({ open, onClose, title, size = "lg", children }: ModalProp
         </div>
         <div className="overflow-y-auto overscroll-contain px-6 pb-6 pt-4 mobile:has-[[data-sheet-dock]]:pb-0">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
