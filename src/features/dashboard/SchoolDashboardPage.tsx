@@ -153,7 +153,7 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-1 lg:grid-cols-2">
         <NeedsAttentionCard setupGaps={admin.setupGaps} />
 
-        <UpcomingBirthdaysCard hideWhenEmpty linkable={can.manageStudents(role)} />
+        <UpcomingBirthdaysCard linkable={can.manageStudents(role)} />
       </div>
 
       <AgeDistributionCard hideWhenEmpty />
@@ -249,7 +249,7 @@ function TeacherDashboard({ teacher }: { teacher: NonNullable<SchoolDashboardVie
         </ul>
       </Card>
 
-      <UpcomingBirthdaysCard hideWhenEmpty />
+      <UpcomingBirthdaysCard />
     </>
   );
 }
