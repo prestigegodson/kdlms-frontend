@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { FormEvent } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -59,5 +59,50 @@ describe("PasswordInput", () => {
     const input = screen.getByLabelText("Password");
     expect(input).toHaveAttribute("autoComplete", "new-password");
     expect(input).toHaveAttribute("enterKeyHint", "go");
+  });
+
+  it("unmasks on a bare pointerdown, without waiting for a click (touch path)", () => {
+    render(
+      <>
+        <label htmlFor="password">Password</label>
+        <PasswordInput id="password" value="secret" onChange={vi.fn()} />
+      </>,
+    );
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Show password" }), { pointerType: "touch" });
+    expect(screen.getByLabelText("Password")).toHaveAttribute("type", "text");
+  });
+
+  it("keeps the password input focused across a toggle (soft keyboard must not dismiss)", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <label htmlFor="password">Password</label>
+        <PasswordInput id="password" value="secret" onChange={vi.fn()} />
+      </>,
+    );
+
+    const input = screen.getByLabelText("Password");
+    input.focus();
+    expect(input).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: "Show password" }));
+    expect(input).toHaveFocus();
+  });
+
+  it("still toggles via keyboard activation (Enter on the focused button)", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <label htmlFor="password">Password</label>
+        <PasswordInput id="password" value="secret" onChange={vi.fn()} />
+      </>,
+    );
+
+    const toggleButton = screen.getByRole("button", { name: "Show password" });
+    toggleButton.focus();
+    await user.keyboard("{Enter}");
+
+    expect(screen.getByLabelText("Password")).toHaveAttribute("type", "text");
   });
 });
