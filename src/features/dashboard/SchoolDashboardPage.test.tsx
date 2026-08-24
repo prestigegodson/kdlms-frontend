@@ -180,7 +180,7 @@ describe("SchoolDashboardPage", () => {
     expect(await screen.findByText("Students page")).toBeInTheDocument();
   });
 
-  it("omits the needs-attention card entirely when there are no setup gaps", async () => {
+  it("shows the needs-attention card's all-clear state when there are no setup gaps", async () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
       admin: {
         activeStudents: 0,
@@ -196,7 +196,8 @@ describe("SchoolDashboardPage", () => {
     renderPage();
 
     await screen.findByText("Active students");
-    expect(screen.queryByText("Needs attention")).not.toBeInTheDocument();
+    expect(screen.getByText("Needs attention")).toBeInTheDocument();
+    expect(screen.getByText("All clear")).toBeInTheDocument();
   });
 
   it("names the classes still unpublished for the current term, with their level, linking to the class", async () => {

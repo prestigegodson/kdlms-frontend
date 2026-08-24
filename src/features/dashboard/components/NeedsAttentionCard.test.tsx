@@ -16,12 +16,17 @@ function renderCard(props: Parameters<typeof NeedsAttentionCard>[0]) {
 }
 
 describe("NeedsAttentionCard", () => {
-  it("renders nothing when both gaps are clear", () => {
-    const { container } = renderCard({
+  it("shows a positive all-clear state when both gaps are clear", () => {
+    renderCard({
       setupGaps: { classesWithoutClassTeacher: [], studentsWithoutGuardian: 0 },
     });
 
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByText("All clear")).toBeInTheDocument();
+    expect(
+      screen.getByText("Every class has a class teacher and every student has a linked guardian."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/class teacher$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/linked guardian$/)).not.toBeInTheDocument();
   });
 
   it("names each class with no class teacher, pluralizing the summary line", () => {

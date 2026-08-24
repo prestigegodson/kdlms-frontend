@@ -81,7 +81,6 @@ export function UpcomingBirthdaysCard({
   }, [classId]);
 
   if (state.kind === "loaded" && state.rows.length === 0 && hideWhenEmpty) {
-    console.log(`UpcomingBirthdaysCard: hideWhenEmpty=${hideWhenEmpty ? 'True': 'False'}, state.rows.length=${state.rows.length}`);
     return null;
   }
 

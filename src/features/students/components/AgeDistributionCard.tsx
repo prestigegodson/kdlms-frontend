@@ -1,9 +1,11 @@
-import { ChartNoAxesColumn } from "lucide-react";
+import { CalendarDays, ChartNoAxesColumn } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import { type AgeDistribution, getStudentAgeDistribution } from "@/api/students";
 import { ApiError } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Spinner } from "@/components/ui/Spinner";
 
 interface AgeDistributionCardProps {
@@ -75,10 +77,36 @@ export function AgeDistributionCard({ hideWhenEmpty = false }: AgeDistributionCa
       )}
 
       {state.kind === "loaded" && distribution && distribution.totalStudents === 0 && (
-        <p className="px-6 pb-6 pt-3 text-sm text-slate-500">No active students yet.</p>
+        <div className="px-6 pb-6 pt-3">
+          <EmptyState
+            icon={ChartNoAxesColumn}
+            title="No students yet"
+            description="Register students to see how your school's ages break down."
+            action={
+              <Link to="/school/students" className="text-sm font-medium text-brand-700">
+                Go to students
+              </Link>
+            }
+          />
+        </div>
       )}
 
-      {state.kind === "loaded" && distribution && distribution.totalStudents > 0 && (
+      {state.kind === "loaded" && distribution && distribution.totalStudents > 0 && distribution.bands.length === 0 && (
+        <div className="px-6 pb-6 pt-3">
+          <EmptyState
+            icon={CalendarDays}
+            title="No dates of birth on file"
+            description={`None of your ${distribution.totalStudents} active student${distribution.totalStudents === 1 ? "" : "s"} has a date of birth recorded, so there's no age breakdown to show.`}
+            action={
+              <Link to="/school/students" className="text-sm font-medium text-brand-700">
+                Go to students
+              </Link>
+            }
+          />
+        </div>
+      )}
+
+      {state.kind === "loaded" && distribution && distribution.totalStudents > 0 && distribution.bands.length > 0 && (
         <div className="px-6 pb-6 pt-3">
           <ul className="space-y-2">
             {distribution.bands.map((band) => {

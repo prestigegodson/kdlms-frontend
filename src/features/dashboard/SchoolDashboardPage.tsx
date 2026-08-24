@@ -156,7 +156,7 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
         <UpcomingBirthdaysCard linkable={can.manageStudents(role)} />
       </div>
 
-      <AgeDistributionCard hideWhenEmpty />
+      <AgeDistributionCard />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-1 lg:grid-cols-2">
       {admin.publicationProgress && (
