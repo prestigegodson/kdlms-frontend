@@ -16,28 +16,56 @@ import { type PeriodRow, PeriodRows } from "@/features/timetable/components/Peri
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
 import { useLevelStore } from "@/stores/levelStore";
+import { formatClockTime, normalizeClockTime, parseClockMinutes } from "@/utils/date";
 
 /**
  * Client-side mirror of PeriodGridPolicy.normalize's overlap check and
  * LevelPeriod's own validators - re-validated by the backend regardless.
- * Half-open, so back-to-back periods never count as overlapping.
+ * Half-open, so back-to-back periods (one ending exactly when the next
+ * starts) never count as overlapping. Compares parsed minutes-since-midnight
+ * via `parseClockMinutes`, not the raw strings - a bare string compare only
+ * agrees with clock time when every value is exactly "HH:mm".
  */
 function validatePeriods(periods: PeriodRow[]): string | null {
   if (periods.length === 0) return "Add at least one period.";
+  const parsed: { label: string; startTime: string; endTime: string; start: number; end: number }[] = [];
   for (const period of periods) {
     if (!period.label.trim()) return "Every period needs a label.";
     if (!period.startTime || !period.endTime) return "Every period needs a start and end time.";
-    if (period.startTime >= period.endTime) return `"${period.label}" - the start time must be before the end time.`;
+    const start = parseClockMinutes(period.startTime);
+    const end = parseClockMinutes(period.endTime);
+    if (start === null || end === null) return "Every period needs a start and end time.";
+    if (start >= end) return `"${period.label}" - the start time must be before the end time.`;
+    parsed.push({ label: period.label, startTime: period.startTime, endTime: period.endTime, start, end });
   }
-  const sorted = [...periods].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const sorted = [...parsed].sort((a, b) => a.start - b.start);
   for (let i = 0; i < sorted.length - 1; i++) {
     const current = sorted[i];
     const next = sorted[i + 1];
-    if (current.endTime > next.startTime) {
-      return `"${current.label}" and "${next.label}" overlap - periods must not overlap.`;
+    if (current.end > next.start) {
+      return `"${current.label}" (${formatClockTime(current.startTime)}–${formatClockTime(current.endTime)}) and "${next.label}" (${formatClockTime(next.startTime)}–${formatClockTime(next.endTime)}) overlap - periods must not overlap.`;
     }
   }
   return null;
+}
+
+/**
+ * `PeriodView[] -> PeriodRow[]`, canonicalizing each time to "HH:mm" via
+ * `normalizeClockTime` - so a seconds-bearing value ("12:30:00", the shape
+ * Jackson emits for a LocalTime with non-zero seconds) never lands in an
+ * `<input type="time">` or reaches `validatePeriods`' comparison. Shared by
+ * the initial fetch and `applyGrid` (both a save response and a copy
+ * response), which previously duplicated this mapping.
+ */
+function toRows(periods: LevelPeriodGridView["periods"]): PeriodRow[] {
+  return periods.map((period) => ({
+    id: period.id,
+    label: period.label,
+    startTime: normalizeClockTime(period.startTime) ?? period.startTime,
+    endTime: normalizeClockTime(period.endTime) ?? period.endTime,
+    kind: period.kind,
+    inUse: period.inUse,
+  }));
 }
 
 /**
@@ -96,16 +124,7 @@ export function PeriodGridPage() {
     getPeriodGrid(levelId)
       .then((grid) => {
         setLevelName(grid.levelName);
-        setPeriods(
-          grid.periods.map((period) => ({
-            id: period.id,
-            label: period.label,
-            startTime: period.startTime,
-            endTime: period.endTime,
-            kind: period.kind,
-            inUse: period.inUse,
-          })),
-        );
+        setPeriods(toRows(grid.periods));
         setServerPeriodCount(grid.periods.length);
         setGridLoaded(true);
       })
@@ -116,16 +135,7 @@ export function PeriodGridPage() {
 
   function applyGrid(grid: LevelPeriodGridView) {
     setLevelName(grid.levelName);
-    setPeriods(
-      grid.periods.map((period) => ({
-        id: period.id,
-        label: period.label,
-        startTime: period.startTime,
-        endTime: period.endTime,
-        kind: period.kind,
-        inUse: period.inUse,
-      })),
-    );
+    setPeriods(toRows(grid.periods));
     setServerPeriodCount(grid.periods.length);
   }
 
@@ -144,8 +154,8 @@ export function PeriodGridPage() {
     const commands: PeriodCommand[] = periods.map((period) => ({
       id: period.id,
       label: period.label,
-      startTime: period.startTime,
-      endTime: period.endTime,
+      startTime: normalizeClockTime(period.startTime) ?? period.startTime,
+      endTime: normalizeClockTime(period.endTime) ?? period.endTime,
       kind: period.kind,
     }));
 

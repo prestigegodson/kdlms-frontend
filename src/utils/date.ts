@@ -126,6 +126,57 @@ export function formatClockTime(time: string | null | undefined): string {
 }
 
 /**
+ * Parses a clock time into minutes since midnight, for numeric comparison -
+ * the counterpart `formatClockTime`'s own Javadoc says never to do with a
+ * bare string compare (`"12:30 PM" > "01:30 PM"` is true lexically, false in
+ * clock time). Accepts the 24-hour `<input type="time">`/LocalTime-JSON form
+ * ("13:00", and "13:00:45" for the non-zero-seconds case `formatClockTime`
+ * already tolerates) and, defensively, the 12-hour display form
+ * `formatClockTime` itself produces, in case a value ever round-trips
+ * through it. Returns `null` for missing/unparseable input.
+ */
+export function parseClockMinutes(time: string | null | undefined): number | null {
+  const value = (time ?? "").trim();
+  const h24 = /^(\d{2}):(\d{2})(?::\d{2})?$/.exec(value);
+  if (h24) {
+    const hour = Number(h24[1]);
+    const minute = Number(h24[2]);
+    if (hour > 23 || minute > 59) {
+      return null;
+    }
+    return hour * 60 + minute;
+  }
+  const h12 = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(value);
+  if (h12) {
+    const rawHour = Number(h12[1]);
+    const minute = Number(h12[2]);
+    if (rawHour < 1 || rawHour > 12 || minute > 59) {
+      return null;
+    }
+    const isPM = h12[3].toUpperCase() === "PM";
+    const hour = (rawHour % 12) + (isPM ? 12 : 0);
+    return hour * 60 + minute;
+  }
+  return null;
+}
+
+/**
+ * Canonicalizes a clock time to the "HH:mm" shape an `<input type="time">`
+ * and the API both require - collapsing away a seconds component ("13:00:45")
+ * or a 12-hour display string, so neither can reach a native time input or a
+ * `PeriodRequest` PUT. Returns `null` for missing/unparseable input.
+ */
+export function normalizeClockTime(time: string | null | undefined): string | null {
+  const minutes = parseClockMinutes(time);
+  if (minutes === null) {
+    return null;
+  }
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+/**
  * Today if it's a weekday, otherwise the most recent Friday - the default
  * date `TeacherRegisterPanel` seeds when the school hasn't opted in to
  * weekend attendance, so opening the page on a Saturday/Sunday doesn't land

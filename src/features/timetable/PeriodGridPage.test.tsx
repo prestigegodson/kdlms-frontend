@@ -189,6 +189,142 @@ describe("PeriodGridPage", () => {
     expect(timetableApi.savePeriodGrid).not.toHaveBeenCalled();
   });
 
+  it("names the overlapping times in the error message", async () => {
+    vi.mocked(timetableApi.getPeriodGrid).mockResolvedValue({
+      levelId: "level-1",
+      levelName: "Primary",
+      periods: [
+        {
+          id: "period-1",
+          position: 1,
+          label: "Period 1",
+          startTime: "08:00",
+          endTime: "09:00",
+          kind: "TEACHING",
+          inUse: false,
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PeriodGridPage />);
+
+    await screen.findByDisplayValue("Period 1");
+    await user.click(screen.getByRole("button", { name: "Add period" }));
+    const rows = screen.getAllByRole("listitem");
+    const secondRow = rows[1];
+    await user.type(within(secondRow).getByLabelText("Label"), "Period 2");
+    await user.type(within(secondRow).getByLabelText("Start time"), "08:30");
+    await user.type(within(secondRow).getByLabelText("End time"), "09:30");
+
+    await user.click(screen.getByRole("button", { name: "Save period grid" }));
+
+    expect(
+      await screen.findByText(
+        '"Period 1" (08:00 AM–09:00 AM) and "Period 2" (08:30 AM–09:30 AM) overlap - periods must not overlap.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("allows a period to start exactly when the previous one ends", async () => {
+    // The reported bug: Period 5 ending at 12:30 PM and Period 6 starting at
+    // 12:30 PM must save cleanly - half-open, not a false overlap.
+    vi.mocked(timetableApi.getPeriodGrid).mockResolvedValue({
+      levelId: "level-1",
+      levelName: "Primary",
+      periods: [
+        {
+          id: "period-1",
+          position: 1,
+          label: "Period 5",
+          startTime: "11:50",
+          endTime: "12:30",
+          kind: "TEACHING",
+          inUse: false,
+        },
+      ],
+    });
+    vi.mocked(timetableApi.savePeriodGrid).mockResolvedValue({
+      levelId: "level-1",
+      levelName: "Primary",
+      periods: [
+        { id: "period-1", position: 1, label: "Period 5", startTime: "11:50", endTime: "12:30", kind: "TEACHING", inUse: false },
+        { id: "period-2", position: 2, label: "Period 6", startTime: "12:30", endTime: "13:30", kind: "TEACHING", inUse: false },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PeriodGridPage />);
+
+    await screen.findByDisplayValue("Period 5");
+    await user.click(screen.getByRole("button", { name: "Add period" }));
+    const rows = screen.getAllByRole("listitem");
+    const secondRow = rows[1];
+    await user.type(within(secondRow).getByLabelText("Label"), "Period 6");
+    await user.type(within(secondRow).getByLabelText("Start time"), "12:30");
+    await user.type(within(secondRow).getByLabelText("End time"), "13:30");
+
+    await user.click(screen.getByRole("button", { name: "Save period grid" }));
+
+    expect(timetableApi.savePeriodGrid).toHaveBeenCalledWith("level-1", {
+      periods: [
+        { id: "period-1", label: "Period 5", startTime: "11:50", endTime: "12:30", kind: "TEACHING" },
+        { id: null, label: "Period 6", startTime: "12:30", endTime: "13:30", kind: "TEACHING" },
+      ],
+    });
+    expect(await screen.findByText("Period grid saved.")).toBeInTheDocument();
+  });
+
+  it("canonicalizes a seconds-bearing server time before comparing or saving it", async () => {
+    // A LocalTime with non-zero seconds serializes as "HH:mm:ss" - "12:30:00"
+    // is lexically greater than the "12:30" a native <input type="time">
+    // produces, which would falsely flag this as an overlap without
+    // normalizing first.
+    vi.mocked(timetableApi.getPeriodGrid).mockResolvedValue({
+      levelId: "level-1",
+      levelName: "Primary",
+      periods: [
+        {
+          id: "period-1",
+          position: 1,
+          label: "Period 5",
+          startTime: "11:50:00",
+          endTime: "12:30:00",
+          kind: "TEACHING",
+          inUse: false,
+        },
+      ],
+    });
+    vi.mocked(timetableApi.savePeriodGrid).mockResolvedValue({
+      levelId: "level-1",
+      levelName: "Primary",
+      periods: [
+        { id: "period-1", position: 1, label: "Period 5", startTime: "11:50", endTime: "12:30", kind: "TEACHING", inUse: false },
+        { id: "period-2", position: 2, label: "Period 6", startTime: "12:30", endTime: "13:30", kind: "TEACHING", inUse: false },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PeriodGridPage />);
+
+    // Displayed/edited as "12:30", not the raw "12:30:00" the server sent.
+    expect(await screen.findByLabelText("End time")).toHaveValue("12:30");
+
+    await user.click(screen.getByRole("button", { name: "Add period" }));
+    const rows = screen.getAllByRole("listitem");
+    const secondRow = rows[1];
+    await user.type(within(secondRow).getByLabelText("Label"), "Period 6");
+    await user.type(within(secondRow).getByLabelText("Start time"), "12:30");
+    await user.type(within(secondRow).getByLabelText("End time"), "13:30");
+
+    await user.click(screen.getByRole("button", { name: "Save period grid" }));
+
+    expect(timetableApi.savePeriodGrid).toHaveBeenCalledWith("level-1", {
+      periods: [
+        { id: "period-1", label: "Period 5", startTime: "11:50", endTime: "12:30", kind: "TEACHING" },
+        { id: null, label: "Period 6", startTime: "12:30", endTime: "13:30", kind: "TEACHING" },
+      ],
+    });
+    expect(await screen.findByText("Period grid saved.")).toBeInTheDocument();
+  });
+
   it("copies a period grid from another level", async () => {
     vi.mocked(levelsApi.listLevels).mockResolvedValue([PRIMARY, SECONDARY]);
     vi.mocked(timetableApi.getPeriodGrid).mockResolvedValue({
