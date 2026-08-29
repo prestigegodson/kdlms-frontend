@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "@/api/client";
 import * as levelsApi from "@/api/levels";
 import type { LevelView } from "@/api/levels";
 import * as timetableApi from "@/api/timetable";
@@ -128,6 +129,83 @@ describe("PeriodGridPage", () => {
       ],
     });
     expect(await screen.findByText("Period grid saved.")).toBeInTheDocument();
+    const successDialog = screen.getByRole("dialog");
+    expect(within(successDialog).getByText("Period grid saved.")).toBeInTheDocument();
+
+    await user.click(within(successDialog).getByRole("button", { name: "Done" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("opens an error dialog with the server's message when save is rejected", async () => {
+    vi.mocked(timetableApi.getPeriodGrid).mockResolvedValue({
+      levelId: "level-1",
+      levelName: "Primary",
+      periods: [
+        {
+          id: "period-1",
+          position: 1,
+          label: "Period 1",
+          startTime: "08:00",
+          endTime: "08:40",
+          kind: "TEACHING",
+          inUse: false,
+        },
+      ],
+    });
+    vi.mocked(timetableApi.savePeriodGrid).mockRejectedValue(new ApiError(422, "That period is scheduled."));
+    const user = userEvent.setup();
+    render(<PeriodGridPage />);
+
+    await screen.findByDisplayValue("Period 1");
+    await user.click(screen.getByRole("button", { name: "Save period grid" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("That period is scheduled.")).toBeInTheDocument();
+  });
+
+  it("dismisses an open result dialog when the level is switched", async () => {
+    vi.mocked(levelsApi.listLevels).mockResolvedValue([PRIMARY, SECONDARY]);
+    vi.mocked(timetableApi.getPeriodGrid).mockImplementation((levelId) =>
+      Promise.resolve({
+        levelId,
+        levelName: levelId === "level-1" ? "Primary" : "Secondary",
+        periods: [
+          {
+            id: "period-1",
+            position: 1,
+            label: "Period 1",
+            startTime: "08:00",
+            endTime: "08:40",
+            kind: "TEACHING",
+            inUse: false,
+          },
+        ],
+      }),
+    );
+    vi.mocked(timetableApi.savePeriodGrid).mockResolvedValue({
+      levelId: "level-1",
+      levelName: "Primary",
+      periods: [
+        {
+          id: "period-1",
+          position: 1,
+          label: "Period 1",
+          startTime: "08:00",
+          endTime: "08:40",
+          kind: "TEACHING",
+          inUse: false,
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PeriodGridPage />);
+
+    await screen.findByDisplayValue("Period 1");
+    await user.click(screen.getByRole("button", { name: "Save period grid" }));
+    await screen.findByRole("dialog");
+
+    await user.selectOptions(screen.getByLabelText("Level"), "Secondary");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("shows a disabled delete with a tooltip for a period that is in use", async () => {

@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ResultDialog } from "@/components/ui/ResultDialog";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader, useFilterChip } from "@/components/ui/StickySubHeader";
 import { LevelSelect } from "@/features/academics/components/LevelSelect";
@@ -92,8 +93,7 @@ export function PeriodGridPage() {
   const [gridLoaded, setGridLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [result, setResult] = useState<{ variant: "success" | "error"; message: string } | null>(null);
   const [copyOpen, setCopyOpen] = useState(false);
   // The *saved* count, not the local draft - an unsaved blank row shouldn't
   // disable "Copy from another level" (the server's own refusal is the real
@@ -114,8 +114,7 @@ export function PeriodGridPage() {
     setLastLevelId(levelId);
     setGridLoaded(false);
     setLoadError(null);
-    setError(null);
-    setSaved(false);
+    setResult(null);
     setCopyOpen(false);
   }
 
@@ -142,12 +141,11 @@ export function PeriodGridPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!levelId) return;
-    setError(null);
-    setSaved(false);
+    setResult(null);
 
     const validationError = validatePeriods(periods);
     if (validationError) {
-      setError(validationError);
+      setResult({ variant: "error", message: validationError });
       return;
     }
 
@@ -163,9 +161,12 @@ export function PeriodGridPage() {
     try {
       const grid = await savePeriodGrid(levelId, { periods: commands });
       applyGrid(grid);
-      setSaved(true);
+      setResult({ variant: "success", message: "Period grid saved." });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to save period grid");
+      setResult({
+        variant: "error",
+        message: err instanceof ApiError ? err.message : "Failed to save period grid",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -173,8 +174,7 @@ export function PeriodGridPage() {
 
   function handleCopied(grid: LevelPeriodGridView) {
     applyGrid(grid);
-    setSaved(false);
-    setError(null);
+    setResult(null);
   }
 
   const copyDisabled = serverPeriodCount > 0;
@@ -233,9 +233,6 @@ export function PeriodGridPage() {
 
           {gridLoaded && (
             <form className="space-y-6" onSubmit={handleSubmit}>
-              {error && <Alert variant="error">{error}</Alert>}
-              {saved && <Alert variant="success">Period grid saved.</Alert>}
-
               <Card>
                 <PeriodRows periods={periods} onChange={setPeriods} readOnly={!canManage} />
               </Card>
@@ -259,6 +256,10 @@ export function PeriodGridPage() {
               levels={levels}
               onCopied={handleCopied}
             />
+          )}
+
+          {result && (
+            <ResultDialog variant={result.variant} message={result.message} onClose={() => setResult(null)} />
           )}
         </>
       )}
