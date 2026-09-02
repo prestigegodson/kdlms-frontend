@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Plus, X } from "lucide-react";
 import type { PresentationStep } from "@/api/lessonNotes";
 import { Button } from "@/components/ui/Button";
@@ -7,6 +8,8 @@ import { Input } from "@/components/ui/Input";
 interface PresentationStepsFieldProps {
   steps: PresentationStep[];
   onChange: (steps: PresentationStep[]) => void;
+  /** Passed straight through to the `FormField` this component owns internally. */
+  description?: ReactNode;
 }
 
 const EMPTY_STEP: PresentationStep = { label: "", teacherActivity: "", learnerActivity: "" };
@@ -17,7 +20,11 @@ const EMPTY_STEP: PresentationStep = { label: "", teacherActivity: "", learnerAc
  * entirely for its read-only/preview render, rather than this component growing a second,
  * divergent read-only branch of its own.
  */
-export function PresentationStepsField({ steps, onChange }: PresentationStepsFieldProps) {
+export function PresentationStepsField({
+  steps,
+  onChange,
+  description,
+}: PresentationStepsFieldProps) {
   function updateAt(index: number, patch: Partial<PresentationStep>) {
     const next = steps.map((step, i) => (i === index ? { ...step, ...patch } : step));
     onChange(next);
@@ -28,7 +35,7 @@ export function PresentationStepsField({ steps, onChange }: PresentationStepsFie
   }
 
   return (
-    <FormField label="Presentation">
+    <FormField label="Presentation" description={description}>
       <div className="space-y-4">
         {steps.map((step, index) => (
           // Rows have no stable identity of their own; index is fine for a purely positional list.

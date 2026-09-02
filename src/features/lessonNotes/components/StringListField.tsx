@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
@@ -8,6 +9,8 @@ interface StringListFieldProps {
   values: string[];
   onChange: (values: string[]) => void;
   placeholder?: string;
+  /** Passed straight through to the `FormField` this component owns internally. */
+  description?: ReactNode;
 }
 
 /**
@@ -23,7 +26,13 @@ interface StringListFieldProps {
  * `MathText` and prose formatting this component never had), rather than
  * this component growing a second, divergent read-only branch of its own.
  */
-export function StringListField({ label, values, onChange, placeholder }: StringListFieldProps) {
+export function StringListField({
+  label,
+  values,
+  onChange,
+  placeholder,
+  description,
+}: StringListFieldProps) {
   function updateAt(index: number, value: string) {
     const next = [...values];
     next[index] = value;
@@ -35,7 +44,7 @@ export function StringListField({ label, values, onChange, placeholder }: String
   }
 
   return (
-    <FormField label={label}>
+    <FormField label={label} description={description}>
       <div className="space-y-2">
         {values.map((value, index) => (
           // Rows have no stable identity of their own; index is fine for a purely positional list.

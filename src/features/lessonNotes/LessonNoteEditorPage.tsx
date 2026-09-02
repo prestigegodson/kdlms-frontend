@@ -28,6 +28,7 @@ import { MathText } from "@/features/lessonNotes/components/MathText";
 import { PresentationStepsField } from "@/features/lessonNotes/components/PresentationStepsField";
 import { ReviewDecisionModal } from "@/features/lessonNotes/components/ReviewDecisionModal";
 import { StringListField } from "@/features/lessonNotes/components/StringListField";
+import { LESSON_NOTE_FIELD_HELP } from "@/features/lessonNotes/lessonNoteFieldHelp";
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
 import { usePendingLessonNotesStore } from "@/stores/pendingLessonNotesStore";
@@ -369,58 +370,85 @@ export function LessonNoteEditorPage() {
         </div>
       ) : (
         <>
-          <FormField label="Topic" htmlFor="lesson-note-topic">
+          <FormField
+            label="Topic"
+            htmlFor="lesson-note-topic"
+            description={LESSON_NOTE_FIELD_HELP.topic}
+          >
             <Input
               id="lesson-note-topic"
               value={topic}
               onChange={(event) => setTopic(event.target.value)}
               required
               enterKeyHint="next"
+              aria-describedby="lesson-note-topic-description"
             />
           </FormField>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Sub-topic" htmlFor="lesson-note-subtopic">
+            <FormField
+              label="Sub-topic"
+              htmlFor="lesson-note-subtopic"
+              description={LESSON_NOTE_FIELD_HELP.subTopic}
+            >
               <Input
                 id="lesson-note-subtopic"
                 value={content.subTopic ?? ""}
                 onChange={(event) => setContent({ ...content, subTopic: event.target.value })}
+                aria-describedby="lesson-note-subtopic-description"
               />
             </FormField>
-            <FormField label="Duration" htmlFor="lesson-note-duration">
+            <FormField
+              label="Duration"
+              htmlFor="lesson-note-duration"
+              description={LESSON_NOTE_FIELD_HELP.duration}
+            >
               <Input
                 id="lesson-note-duration"
                 placeholder="e.g. 40 minutes"
                 value={content.duration ?? ""}
                 onChange={(event) => setContent({ ...content, duration: event.target.value })}
+                aria-describedby="lesson-note-duration-description"
               />
             </FormField>
-            <FormField label="Average age" htmlFor="lesson-note-average-age">
+            <FormField
+              label="Average age"
+              htmlFor="lesson-note-average-age"
+              description={LESSON_NOTE_FIELD_HELP.averageAge}
+            >
               <Input
                 id="lesson-note-average-age"
                 placeholder="e.g. 12 years"
                 value={content.averageAge ?? ""}
                 onChange={(event) => setContent({ ...content, averageAge: event.target.value })}
+                aria-describedby="lesson-note-average-age-description"
               />
             </FormField>
           </div>
 
-          <FormField label="Entry behaviour" htmlFor="lesson-note-entry-behaviour">
+          <FormField
+            label="Entry behaviour"
+            htmlFor="lesson-note-entry-behaviour"
+            description={LESSON_NOTE_FIELD_HELP.entryBehaviour}
+          >
             <Textarea
               id="lesson-note-entry-behaviour"
               rows={2}
               value={content.entryBehaviour ?? ""}
               onChange={(event) => setContent({ ...content, entryBehaviour: event.target.value })}
+              aria-describedby="lesson-note-entry-behaviour-description"
             />
           </FormField>
 
           <StringListField
             label="Behavioural objectives"
+            description={LESSON_NOTE_FIELD_HELP.objectives}
             values={content.objectives}
             onChange={(objectives) => setContent({ ...content, objectives })}
           />
           <StringListField
             label="Instructional materials"
+            description={LESSON_NOTE_FIELD_HELP.instructionalMaterials}
             values={content.instructionalMaterials}
             onChange={(instructionalMaterials) =>
               setContent({ ...content, instructionalMaterials })
@@ -428,37 +456,54 @@ export function LessonNoteEditorPage() {
           />
           <StringListField
             label="References"
+            description={LESSON_NOTE_FIELD_HELP.references}
             values={content.references}
             onChange={(references) => setContent({ ...content, references })}
           />
 
           <PresentationStepsField
+            description={LESSON_NOTE_FIELD_HELP.presentation}
             steps={content.presentation}
             onChange={(presentation) => setContent({ ...content, presentation })}
           />
 
-          <FormField label="Evaluation" htmlFor="lesson-note-evaluation">
+          <FormField
+            label="Evaluation"
+            htmlFor="lesson-note-evaluation"
+            description={LESSON_NOTE_FIELD_HELP.evaluation}
+          >
             <Textarea
               id="lesson-note-evaluation"
               rows={3}
               value={content.evaluation ?? ""}
               onChange={(event) => setContent({ ...content, evaluation: event.target.value })}
+              aria-describedby="lesson-note-evaluation-description"
             />
           </FormField>
-          <FormField label="Conclusion" htmlFor="lesson-note-conclusion">
+          <FormField
+            label="Conclusion"
+            htmlFor="lesson-note-conclusion"
+            description={LESSON_NOTE_FIELD_HELP.conclusion}
+          >
             <Textarea
               id="lesson-note-conclusion"
               rows={2}
               value={content.conclusion ?? ""}
               onChange={(event) => setContent({ ...content, conclusion: event.target.value })}
+              aria-describedby="lesson-note-conclusion-description"
             />
           </FormField>
-          <FormField label="Assignment" htmlFor="lesson-note-assignment">
+          <FormField
+            label="Assignment"
+            htmlFor="lesson-note-assignment"
+            description={LESSON_NOTE_FIELD_HELP.assignment}
+          >
             <Textarea
               id="lesson-note-assignment"
               rows={2}
               value={content.assignment ?? ""}
               onChange={(event) => setContent({ ...content, assignment: event.target.value })}
+              aria-describedby="lesson-note-assignment-description"
             />
           </FormField>
         </>
