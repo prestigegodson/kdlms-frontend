@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { listBranches, type BranchView } from "@/api/branches";
+import type { BranchView } from "@/api/branches";
 import { listClasses, type SchoolClassView } from "@/api/classes";
 import { ApiError } from "@/api/client";
 import { listClassRoster, listMyClasses, type RosterStudentView, type TeacherClassView } from "@/api/me";
@@ -8,6 +8,7 @@ import { listStudents, type StudentStatus, type StudentView } from "@/api/studen
 import type { Page } from "@/api/types";
 import { can } from "@/auth/permissions";
 import { ArrowLeftRight, GraduationCap, SlidersHorizontal, Users } from "lucide-react";
+import { useBranchFilter } from "@/features/branches/useBranchFilter";
 import { RegisterStudentModal } from "@/features/students/components/RegisterStudentModal";
 import { StudentMedicalModal } from "@/features/students/components/StudentMedicalModal";
 import { Alert } from "@/components/ui/Alert";
@@ -57,9 +58,8 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const [branches, setBranches] = useState<BranchView[] | null>(null);
+  const { ready: branchReady, branches, branchId, defaultBranchId, setBranchId } = useBranchFilter();
   const [classes, setClasses] = useState<SchoolClassView[] | null>(null);
-  const [branchId, setBranchId] = useState("");
   const [classId, setClassId] = useState("");
   const [status, setStatus] = useState<StudentStatus | "">("");
   // Seeded from the URL so NeedsAttentionCard's "no linked guardian" deep
@@ -75,17 +75,13 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
-    if (!isBranchScoped) {
-      listBranches()
-        .then((page) => setBranches(page.content))
-        .catch(() => setBranches([]));
-    }
     listClasses(undefined, undefined, 0, 200)
       .then((page) => setClasses(page.content))
       .catch(() => setClasses([]));
-  }, [isBranchScoped]);
+  }, []);
 
   function fetchStudents() {
+    if (!branchReady) return;
     listStudents(
       {
         branchId: branchId || undefined,
@@ -106,7 +102,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
       );
   }
 
-  useEffect(fetchStudents, [branchId, classId, status, hasGuardian, query, pageIndex]);
+  useEffect(fetchStudents, [branchReady, branchId, classId, status, hasGuardian, query, pageIndex]);
 
   function load() {
     setState({ kind: "loading" });
@@ -121,10 +117,12 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   }
 
   const classOptions = (isBranchScoped ? classes?.filter((c) => c.branchId) : classes) ?? [];
-  const activeFilterCount = [branchId, classId, status, hasGuardian].filter(Boolean).length;
+  // The branch filter only counts as "active" when it deviates from its
+  // main-branch default - otherwise every fresh load would show a "1" badge.
+  const activeFilterCount = [branchId !== defaultBranchId, classId, status, hasGuardian].filter(Boolean).length;
 
   function clearFilters() {
-    resetToFirstPage(setBranchId)("");
+    resetToFirstPage(setBranchId)(defaultBranchId);
     resetToFirstPage(setClassId)("");
     resetToFirstPage(setStatus)("");
     resetToFirstPage(setHasGuardian)("");

@@ -10,6 +10,7 @@ import * as levelsApi from "@/api/levels";
 import type { LevelView } from "@/api/levels";
 import { ClassesPage } from "@/features/academics/ClassesPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetBranchStore } from "@/stores/branchStore";
 import { resetLevelStore } from "@/stores/levelStore";
 
 vi.mock("@/api/classes", async () => {
@@ -39,6 +40,14 @@ const MAIN_BRANCH: BranchView = {
   schoolId: "school-1",
   name: "Main Branch",
   main: true,
+  status: "ACTIVE",
+};
+
+const ANNEX_BRANCH: BranchView = {
+  id: "branch-2",
+  schoolId: "school-1",
+  name: "Annex Campus",
+  main: false,
   status: "ACTIVE",
 };
 
@@ -102,9 +111,10 @@ describe("ClassesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetLevelStore();
+    resetBranchStore();
     vi.mocked(branchesApi.listBranches).mockResolvedValue({
-      content: [MAIN_BRANCH],
-      totalElements: 1,
+      content: [MAIN_BRANCH, ANNEX_BRANCH],
+      totalElements: 2,
       totalPages: 1,
       number: 0,
       size: 50,
@@ -121,6 +131,28 @@ describe("ClassesPage", () => {
     expect(screen.getByText("ACTIVE")).toBeInTheDocument();
     const table = screen.getByRole("table");
     expect(within(table).getByText("Primary")).toBeInTheDocument();
+  });
+
+  it("defaults to the school's main branch", async () => {
+    mockClasses([CLASS_VIEW]);
+
+    renderAsSchoolAdmin();
+
+    await screen.findByText("Little Star 1");
+    expect(screen.getByLabelText("Branch")).toHaveValue("branch-1");
+    expect(classesApi.listClasses).toHaveBeenCalledWith("branch-1", undefined);
+  });
+
+  it("widens to every branch", async () => {
+    mockClasses([CLASS_VIEW]);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Little Star 1");
+
+    await user.selectOptions(screen.getByLabelText("Branch"), "All branches");
+
+    expect(classesApi.listClasses).toHaveBeenCalledWith(undefined, undefined);
   });
 
   it("creates a class for the selected branch and level", async () => {

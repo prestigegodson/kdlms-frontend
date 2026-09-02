@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { listBranches, type BranchView } from "@/api/branches";
 import { listClasses, type SchoolClassView } from "@/api/classes";
 import { ApiError } from "@/api/client";
 import { listSessions, type AcademicSessionView } from "@/api/sessions";
@@ -23,7 +22,6 @@ import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader, useFilterChip } from "@/components/ui/StickySubHeader";
 import { OutcomeList } from "@/features/students/components/OutcomeList";
 import { StudentPicker, type StudentPickerRow } from "@/features/students/components/StudentPicker";
-import { useAuthStore } from "@/stores/authStore";
 
 function toPickerRow(student: StudentView, showCurrentClass?: boolean): StudentPickerRow {
   return {
@@ -47,23 +45,17 @@ type Mode = "promote" | "place" | "graduate";
  * an all-or-nothing result - see api/students.ts's {@link MovementResult}.
  */
 export function PromotionPage() {
-  const role = useAuthStore((state) => state.user?.role);
-  const isBranchScoped = role === "BRANCH_ADMIN";
   const [mode, setMode] = useState<Mode>("promote");
 
-  const [branches, setBranches] = useState<BranchView[] | null>(null);
   const [classes, setClasses] = useState<SchoolClassView[] | null>(null);
   const [sessions, setSessions] = useState<AcademicSessionView[] | null>(null);
 
   useEffect(() => {
-    if (!isBranchScoped) {
-      listBranches().then((page) => setBranches(page.content)).catch(() => setBranches([]));
-    }
     listClasses(undefined, undefined, 0, 200).then((page) => setClasses(page.content)).catch(() => setClasses([]));
     listSessions(0, 50).then((page) => setSessions(page.content)).catch(() => setSessions([]));
-  }, [isBranchScoped]);
+  }, []);
 
-  const referenceDataLoaded = classes !== null && sessions !== null && (isBranchScoped || branches !== null);
+  const referenceDataLoaded = classes !== null && sessions !== null;
 
   return (
     <div className="space-y-6">

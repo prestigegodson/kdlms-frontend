@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { listBranches, type BranchView } from "@/api/branches";
+import type { BranchView } from "@/api/branches";
 import {
   activateClass,
   createClass,
@@ -28,6 +28,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { LevelSelect } from "@/features/academics/components/LevelSelect";
+import { useBranchFilter } from "@/features/branches/useBranchFilter";
 import { useAuthStore } from "@/stores/authStore";
 import { useLevelStore } from "@/stores/levelStore";
 
@@ -56,10 +57,9 @@ function AdminClasses({ role }: { role: Role | undefined }) {
   const canManage = can.manageAcademics(role);
   const isBranchScoped = role === "BRANCH_ADMIN";
 
-  const [branches, setBranches] = useState<BranchView[] | null>(null);
+  const { ready: branchReady, branches, branchId, defaultBranchId, setBranchId } = useBranchFilter();
   const levels = useLevelStore((storeState) => storeState.levels);
   const fetchLevels = useLevelStore((storeState) => storeState.fetchIfNeeded);
-  const [branchId, setBranchId] = useState("");
   const [levelId, setLevelId] = useState("");
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [createOpen, setCreateOpen] = useState(false);
@@ -72,15 +72,11 @@ function AdminClasses({ role }: { role: Role | undefined }) {
   );
 
   useEffect(() => {
-    if (!isBranchScoped) {
-      listBranches()
-        .then((page) => setBranches(page.content))
-        .catch(() => setBranches([]));
-    }
     fetchLevels();
-  }, [isBranchScoped, fetchLevels]);
+  }, [fetchLevels]);
 
   function fetchClasses() {
+    if (!branchReady) return;
     listClasses(branchId || undefined, levelId || undefined)
       .then((page) => setState({ kind: "loaded", classes: page.content }))
       .catch((error: unknown) =>
@@ -91,7 +87,7 @@ function AdminClasses({ role }: { role: Role | undefined }) {
       );
   }
 
-  useEffect(fetchClasses, [branchId, levelId]);
+  useEffect(fetchClasses, [branchReady, branchId, levelId]);
 
   function load() {
     setState({ kind: "loading" });
@@ -126,7 +122,7 @@ function AdminClasses({ role }: { role: Role | undefined }) {
             <FormField label="Branch" htmlFor="class-branch-filter">
               <Select id="class-branch-filter" value={branchId} onChange={(event) => setBranchId(event.target.value)}>
                 <option value="">All branches</option>
-                {branches?.map((branch) => (
+                {branches.map((branch) => (
                   <option key={branch.id} value={branch.id}>
                     {branch.name}
                   </option>
@@ -220,9 +216,10 @@ function AdminClasses({ role }: { role: Role | undefined }) {
       {createOpen && (
         <ClassFormModal
           title="Add class"
-          branches={branches ?? []}
+          branches={branches}
           levels={levels}
           selectedLevelId={levelId || undefined}
+          selectedBranchId={branchId || defaultBranchId || undefined}
           showBranchField={!isBranchScoped}
           onClose={() => setCreateOpen(false)}
           onSubmit={async (values) => {
@@ -340,6 +337,7 @@ interface ClassFormModalProps {
   onSubmit: (values: ClassFormValues) => Promise<void>;
   onSaved: () => void;
   selectedLevelId?: string;
+  selectedBranchId?: string;
 }
 
 function ClassFormModal({
@@ -351,8 +349,9 @@ function ClassFormModal({
   onSubmit,
   onSaved,
   selectedLevelId,
+  selectedBranchId,
 }: ClassFormModalProps) {
-  const [branchId, setBranchId] = useState(branches[0]?.id ?? "");
+  const [branchId, setBranchId] = useState(selectedBranchId ?? branches[0]?.id ?? "");
   const [levelId, setLevelId] = useState(
     selectedLevelId || (levels.find((level) => level.status === "ACTIVE")?.id ?? "")
   );

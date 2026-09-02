@@ -2,7 +2,6 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as branchesApi from "@/api/branches";
 import * as classesApi from "@/api/classes";
 import type { SchoolClassView } from "@/api/classes";
 import * as sessionsApi from "@/api/sessions";
@@ -22,11 +21,6 @@ vi.mock("@/api/students", async () => {
     placeStudents: vi.fn(),
     graduateClass: vi.fn(),
   };
-});
-
-vi.mock("@/api/branches", async () => {
-  const actual = await vi.importActual<typeof import("@/api/branches")>("@/api/branches");
-  return { ...actual, listBranches: vi.fn() };
 });
 
 vi.mock("@/api/classes", async () => {
@@ -109,13 +103,6 @@ describe("PromotionPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetAppBarStore();
-    vi.mocked(branchesApi.listBranches).mockResolvedValue({
-      content: [],
-      totalElements: 0,
-      totalPages: 0,
-      number: 0,
-      size: 50,
-    });
     vi.mocked(classesApi.listClasses).mockResolvedValue({
       content: [SOURCE_CLASS, TARGET_CLASS],
       totalElements: 2,
