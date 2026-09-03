@@ -70,6 +70,7 @@ export function GradingSystemEditorPage() {
     examMax: 100,
   });
   const [showPosition, setShowPosition] = useState(true);
+  const [showMidtermGrade, setShowMidtermGrade] = useState(true);
   const [boundaries, setBoundaries] = useState<GradeBoundary[]>([]);
   const [ratingOptions, setRatingOptions] = useState<RatingScaleRow[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -89,6 +90,7 @@ export function GradingSystemEditorPage() {
           examMax: system.examMax ?? 100,
         });
         setShowPosition(system.showPosition);
+        setShowMidtermGrade(system.showMidtermGrade);
         setBoundaries(system.boundaries);
         setRatingOptions(system.ratingOptions.map((option) => ({ label: option.label, description: option.description ?? "" })));
       })
@@ -105,7 +107,7 @@ export function GradingSystemEditorPage() {
 
     if (mode === "NUMERIC") {
       if (weighting.quizWeight + weighting.examWeight !== 100) {
-        setError("Quiz and exam weight must sum to 100.");
+        setError("Midterm quiz and exam weight must sum to 100.");
         return;
       }
       const boundaryError = validateBoundaries(boundaries);
@@ -124,7 +126,7 @@ export function GradingSystemEditorPage() {
     setSubmitting(true);
     try {
       if (mode === "NUMERIC") {
-        await saveNumericGradingSystem(levelId, { ...weighting, showPosition, boundaries });
+        await saveNumericGradingSystem(levelId, { ...weighting, showPosition, showMidtermGrade, boundaries });
       } else {
         await saveQualitativeGradingSystem(levelId, {
           ratingOptions: ratingOptions.map((option, index) => ({
@@ -191,15 +193,27 @@ export function GradingSystemEditorPage() {
             <Card>
               <WeightingFields values={weighting} onChange={setWeighting} />
             </Card>
-            <Card>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <Checkbox checked={showPosition} onChange={(e) => setShowPosition(e.target.checked)} />
-                Show class position on reports
-              </label>
-              <p className="mt-1 text-sm text-slate-500">
-                Turning this off hides position from the printed report and the guardian portal. Staff still see it
-                on the broadsheet.
-              </p>
+            <Card className="space-y-4">
+              <div>
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <Checkbox checked={showPosition} onChange={(e) => setShowPosition(e.target.checked)} />
+                  Show class position on reports
+                </label>
+                <p className="mt-1 text-sm text-slate-500">
+                  Turning this off hides position from the printed report and the guardian portal. Staff still see it
+                  on the broadsheet.
+                </p>
+              </div>
+              <div>
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <Checkbox checked={showMidtermGrade} onChange={(e) => setShowMidtermGrade(e.target.checked)} />
+                  Show grade on mid-term results
+                </label>
+                <p className="mt-1 text-sm text-slate-500">
+                  Turning this off hides the grade letter from mid-term results everywhere, including the
+                  broadsheet - unlike class position, which staff always see.
+                </p>
+              </div>
             </Card>
             <Card>
               <GradeBoundaryRows boundaries={boundaries} onChange={setBoundaries} />

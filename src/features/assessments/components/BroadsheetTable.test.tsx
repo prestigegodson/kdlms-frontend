@@ -57,6 +57,33 @@ describe("BroadsheetTable", () => {
     expect(screen.getByText("Meets Expectation")).toBeInTheDocument();
   });
 
+  it("hides Total/Average/Position on a mid-term numeric broadsheet - they're always null on MIDTERM", () => {
+    render(<BroadsheetTable broadsheet={NUMERIC_BROADSHEET} scope="MIDTERM" />);
+
+    expect(screen.queryByText("Total")).not.toBeInTheDocument();
+    expect(screen.queryByText("Average")).not.toBeInTheDocument();
+    expect(screen.queryByText("Position")).not.toBeInTheDocument();
+  });
+
+  it("renders a mid-term score as the raw mark over its snapshotted max, not a percentage", () => {
+    const midtermBroadsheet: BroadsheetView = {
+      ...NUMERIC_BROADSHEET,
+      rows: [
+        {
+          ...NUMERIC_BROADSHEET.rows[0],
+          subjectResults: [{ subjectId: "subject-1", finalScore: 18, scoreMax: 20 }],
+          total: undefined,
+          average: undefined,
+          position: undefined,
+        },
+      ],
+    };
+    render(<BroadsheetTable broadsheet={midtermBroadsheet} scope="MIDTERM" />);
+
+    expect(screen.getByText("18 / 20")).toBeInTheDocument();
+    expect(screen.queryByText("90")).not.toBeInTheDocument();
+  });
+
   it("keeps the scroll hint visible through the tablet width, hiding only from lg up", () => {
     render(<BroadsheetTable broadsheet={NUMERIC_BROADSHEET} />);
 

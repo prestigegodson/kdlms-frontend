@@ -48,6 +48,7 @@ const TERM_A = {
   classId: "class-a",
   className: "Primary 3",
   resultsPublished: true,
+  midtermPublished: false,
 };
 
 const TERM_B = {
@@ -60,6 +61,7 @@ const TERM_B = {
   classId: "class-b",
   className: "Primary 4",
   resultsPublished: true,
+  midtermPublished: false,
 };
 
 const RESULT_A = {
@@ -83,6 +85,7 @@ const RESULT_A = {
     baseLevel: "PRIMARY" as const,
     assessmentMode: "NUMERIC" as const,
     showPosition: true,
+    showMidtermGrade: true,
     boundaries: [{ grade: "A", minScore: 70, maxScore: 100, remark: "Excellent" }],
     ratingOptions: [],
     configured: true,
@@ -147,12 +150,12 @@ describe("Guardian results drill-down (School -> Ward -> Session -> Term -> Repo
     // Step 2: pick its session.
     await user.click(await screen.findByText("2026/2027"));
 
-    // Step 3: pick its term.
-    await user.click(await screen.findByText("First Term"));
+    // Step 3: pick its term - the End of term row, since only that scope is published here.
+    await user.click(await screen.findByText("End of term"));
 
     // Step 4: the report.
     expect(await screen.findByText("Mathematics")).toBeInTheDocument();
-    expect(wardsApi.getWardResult).toHaveBeenCalledWith("s1", "term-a");
+    expect(wardsApi.getWardResult).toHaveBeenCalledWith("s1", "term-a", "TERM");
 
     // Back to step 1 via the breadcrumb, then into ward B.
     await user.click(screen.getByRole("link", { name: "Bright Star Academy" }));

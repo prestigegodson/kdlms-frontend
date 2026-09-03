@@ -37,6 +37,7 @@ const TERM_1 = {
   classId: "class-a",
   className: "Primary 3",
   resultsPublished: true,
+  midtermPublished: false,
 };
 
 const TERM_2 = {
@@ -49,6 +50,7 @@ const TERM_2 = {
   classId: "class-a",
   className: "Primary 3",
   resultsPublished: false,
+  midtermPublished: false,
 };
 
 const SUMMARY_1 = {

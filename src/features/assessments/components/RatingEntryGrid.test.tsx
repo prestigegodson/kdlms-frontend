@@ -16,6 +16,7 @@ const SHEET: AssessmentSheetView = {
   subjectId: "subject-1",
   termId: "term-1",
   assessmentMode: "QUALITATIVE",
+  showMidtermGrade: true,
   boundaries: [],
   ratingOptions: [
     { id: "rating-1", label: "Needs Reinforcement", rank: 1 },
@@ -44,19 +45,47 @@ describe("RatingEntryGrid", () => {
     vi.clearAllMocks();
   });
 
-  it("round-trips a rating and observation to the save payload", async () => {
+  it("round-trips an end-of-term rating and observation to the save payload", async () => {
     const user = userEvent.setup();
     vi.mocked(assessmentsApi.saveRatings).mockResolvedValue({
       outcomes: [{ enrollmentId: "enrollment-1", success: true }],
     });
     const { onSaved } = renderGrid();
 
-    await user.selectOptions(screen.getByLabelText("Rating for Zara Bello"), "rating-2");
-    await user.type(screen.getByLabelText("Observation for Zara Bello"), "Settling in well");
+    await user.selectOptions(screen.getByLabelText("End-of-term rating for Zara Bello"), "rating-2");
+    await user.type(screen.getByLabelText("End-of-term observation for Zara Bello"), "Settling in well");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     expect(assessmentsApi.saveRatings).toHaveBeenCalledWith("class-1", "subject-1", "term-1", [
-      { enrollmentId: "enrollment-1", ratingOptionId: "rating-2", observation: "Settling in well" },
+      {
+        enrollmentId: "enrollment-1",
+        midtermRatingOptionId: null,
+        midtermObservation: null,
+        ratingOptionId: "rating-2",
+        observation: "Settling in well",
+      },
+    ]);
+    expect(onSaved).toHaveBeenCalledWith([{ enrollmentId: "enrollment-1", success: true }]);
+  });
+
+  it("saves a mid-term-only rating, leaving the end-of-term pair null", async () => {
+    const user = userEvent.setup();
+    vi.mocked(assessmentsApi.saveRatings).mockResolvedValue({
+      outcomes: [{ enrollmentId: "enrollment-1", success: true }],
+    });
+    const { onSaved } = renderGrid();
+
+    await user.selectOptions(screen.getByLabelText("Midterm rating for Zara Bello"), "rating-1");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(assessmentsApi.saveRatings).toHaveBeenCalledWith("class-1", "subject-1", "term-1", [
+      {
+        enrollmentId: "enrollment-1",
+        midtermRatingOptionId: "rating-1",
+        midtermObservation: null,
+        ratingOptionId: null,
+        observation: null,
+      },
     ]);
     expect(onSaved).toHaveBeenCalledWith([{ enrollmentId: "enrollment-1", success: true }]);
   });

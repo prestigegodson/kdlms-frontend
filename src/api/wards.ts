@@ -5,6 +5,7 @@ import type { StudentAttendanceSummaryView } from "@/api/attendance";
 import type { StudentMedicalView } from "@/api/students";
 import type { ClassTimetableView } from "@/api/timetable";
 import type { LessonNoteView } from "@/api/lessonNotes";
+import type { ResultScope } from "@/api/types";
 
 /**
  * Self-service views for the currently authenticated GUARDIAN - ward
@@ -42,7 +43,13 @@ export interface MyWardView {
   schoolName: string;
 }
 
-/** Mirrors backend student.application.port.in.WardTermView. */
+/**
+ * Mirrors backend student.application.port.in.WardTermView.
+ * `resultsPublished`/`midtermPublished` are independent (Phase 17) - a
+ * term's mid-term and end-of-term results publish on separate schedules, so
+ * the guardian portal can offer either scope's result the moment it,
+ * specifically, is published.
+ */
 export interface WardTermView {
   sessionId: string;
   sessionName: string;
@@ -53,6 +60,7 @@ export interface WardTermView {
   classId: string;
   className?: string;
   resultsPublished: boolean;
+  midtermPublished: boolean;
 }
 
 /** Mirrors backend assessment.application.port.in.MyWardResultsUseCase.WardTermResultView. */
@@ -71,9 +79,13 @@ export function listWardTerms(studentId: string): Promise<WardTermView[]> {
   return apiFetch<WardTermView[]>(`${BASE}/${studentId}/terms`);
 }
 
-/** Only resolves once the ward's class+term is published - 404 otherwise. */
-export function getWardResult(studentId: string, termId: string): Promise<WardTermResultView> {
-  return apiFetch<WardTermResultView>(`${BASE}/${studentId}/results?termId=${termId}`);
+/** Only resolves once the ward's class+term is published for the given scope - 404 otherwise. */
+export function getWardResult(
+  studentId: string,
+  termId: string,
+  scope: ResultScope = "TERM",
+): Promise<WardTermResultView> {
+  return apiFetch<WardTermResultView>(`${BASE}/${studentId}/results?termId=${termId}&scope=${scope}`);
 }
 
 /** Not publication-gated - attendance is live operational information. */
@@ -101,12 +113,12 @@ export function downloadWardPhoto(studentId: string): Promise<Blob> {
 }
 
 /** Final rendered HTML for a ward's term report - the report-preview screen's `iframe srcDoc` source. */
-export function previewWardReport(studentId: string, termId: string): Promise<string> {
-  return apiFetchText(`${BASE}/${studentId}/report?termId=${termId}`);
+export function previewWardReport(studentId: string, termId: string, scope: ResultScope = "TERM"): Promise<string> {
+  return apiFetchText(`${BASE}/${studentId}/report?termId=${termId}&scope=${scope}`);
 }
 
-export function downloadWardReportPdf(studentId: string, termId: string): Promise<Blob> {
-  return apiFetchBlob(`${BASE}/${studentId}/report/pdf?termId=${termId}`);
+export function downloadWardReportPdf(studentId: string, termId: string, scope: ResultScope = "TERM"): Promise<Blob> {
+  return apiFetchBlob(`${BASE}/${studentId}/report/pdf?termId=${termId}&scope=${scope}`);
 }
 
 /** Mirrors backend lessonnote.application.port.in.MyWardLessonNotesUseCase.WardLessonNoteSummary. */

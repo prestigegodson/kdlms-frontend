@@ -5,6 +5,7 @@ import { ApiError } from "@/api/client";
 import { getGradingSystem, type GradingSystemView } from "@/api/gradingSystems";
 import { downloadStudentReportPdf, previewStudentReport } from "@/api/reports";
 import { getStudent, listStudentTerms, type StudentTermView, type StudentView } from "@/api/students";
+import type { ResultScope } from "@/api/types";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -15,6 +16,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { GradeKey } from "@/features/assessments/components/GradeKey";
+import { ScopeToggle } from "@/features/assessments/components/ScopeToggle";
 import { StudentTermResultCard } from "@/features/assessments/components/StudentTermResultCard";
 import { ReportPreviewFrame } from "@/features/reporting/components/ReportPreviewFrame";
 import { downloadBlob } from "@/utils/download";
@@ -37,6 +39,7 @@ export function StudentResultHistoryPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [termId, setTermId] = useState<string | null>(null);
+  const [scope, setScope] = useState<ResultScope>("TERM");
   const [result, setResult] = useState<StudentTermResultView | null>(null);
   const [gradingSystem, setGradingSystem] = useState<GradingSystemView | null>(null);
   const [noResult, setNoResult] = useState(false);
@@ -67,12 +70,13 @@ export function StudentResultHistoryPage() {
       );
   }, [studentId, sessionId]);
 
-  // A term change resets the previous term's result during render (the
+  // A term or scope change resets the previous result during render (the
   // pattern WardTermResultPage.tsx documents) rather than inside the effect
   // below, which only fetches.
-  const [lastTermId, setLastTermId] = useState(termId);
-  if (termId !== lastTermId) {
-    setLastTermId(termId);
+  const resultKey = `${termId}|${scope}`;
+  const [lastResultKey, setLastResultKey] = useState(resultKey);
+  if (resultKey !== lastResultKey) {
+    setLastResultKey(resultKey);
     setResult(null);
     setGradingSystem(null);
     setNoResult(false);
@@ -84,7 +88,7 @@ export function StudentResultHistoryPage() {
     const term = terms?.find((candidate) => candidate.termId === termId);
     if (!term) return;
 
-    getStudentResult(studentId, termId)
+    getStudentResult(studentId, termId, scope)
       .then(setResult)
       .catch((error: unknown) => {
         if (error instanceof ApiError && error.status === 404) {
@@ -98,7 +102,7 @@ export function StudentResultHistoryPage() {
       .then(setGradingSystem)
       .catch(() => setGradingSystem(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- terms is read for the current termId's levelId only, not a dependency of the fetch itself
-  }, [studentId, termId]);
+  }, [studentId, termId, scope]);
 
   async function handlePreview() {
     if (!studentId || !termId) return;
@@ -106,7 +110,7 @@ export function StudentResultHistoryPage() {
     setPreviewHtml(null);
     setPreviewError(null);
     try {
-      const html = await previewStudentReport(studentId, termId);
+      const html = await previewStudentReport(studentId, termId, scope);
       setPreviewHtml(html);
     } catch (error) {
       setPreviewError(error instanceof ApiError ? error.message : "Failed to render this report");
@@ -118,8 +122,9 @@ export function StudentResultHistoryPage() {
     setDownloading(true);
     setDownloadError(null);
     try {
-      const blob = await downloadStudentReportPdf(studentId, termId);
-      downloadBlob(blob, `${result.admissionNumber || result.studentName}-result.pdf`);
+      const blob = await downloadStudentReportPdf(studentId, termId, scope);
+      const stem = result.admissionNumber || result.studentName;
+      downloadBlob(blob, scope === "MIDTERM" ? `${stem}-result-midterm.pdf` : `${stem}-result.pdf`);
     } catch (error) {
       setDownloadError(error instanceof ApiError ? error.message : "Failed to download the report");
     } finally {
@@ -165,25 +170,29 @@ export function StudentResultHistoryPage() {
       {terms !== null && terms.length > 0 && (
         <>
           <StickySubHeader>
-            <div className="flex gap-3 lg:contents">
-              {terms.map((term) => (
-                <Button
-                  key={term.termId}
-                  type="button"
-                  size="sm"
-                  variant={term.termId === termId ? "primary" : "secondary"}
-                  className="flex-1 justify-center lg:flex-none"
-                  onClick={() => setTermId(term.termId)}
-                >
-                  {term.termName}
-                  <Badge
-                    variant={term.resultsPublished ? "success" : "neutral"}
-                    className={term.termId === termId ? "bg-white/20 text-white" : undefined}
+            <div className="flex flex-wrap gap-3 lg:contents">
+              {terms.map((term) => {
+                const published = scope === "MIDTERM" ? term.midtermPublished : term.resultsPublished;
+                return (
+                  <Button
+                    key={term.termId}
+                    type="button"
+                    size="sm"
+                    variant={term.termId === termId ? "primary" : "secondary"}
+                    className="flex-1 justify-center lg:flex-none"
+                    onClick={() => setTermId(term.termId)}
                   >
-                    {term.resultsPublished ? "Published" : "Unpublished"}
-                  </Badge>
-                </Button>
-              ))}
+                    {term.termName}
+                    <Badge
+                      variant={published ? "success" : "neutral"}
+                      className={term.termId === termId ? "bg-white/20 text-white" : undefined}
+                    >
+                      {published ? "Published" : "Unpublished"}
+                    </Badge>
+                  </Button>
+                );
+              })}
+              <ScopeToggle scope={scope} onChange={setScope} />
             </div>
           </StickySubHeader>
 

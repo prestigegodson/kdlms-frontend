@@ -20,6 +20,7 @@ const SHEET: AssessmentSheetView = {
   examWeight: 70,
   quizMax: 20,
   examMax: 80,
+  showMidtermGrade: true,
   boundaries: [
     { grade: "A", minScore: 70, maxScore: 100, remark: "Excellent" },
     { grade: "F", minScore: 0, maxScore: 69.99, remark: "Fail" },
@@ -39,9 +40,9 @@ const SHEET: AssessmentSheetView = {
   ],
 };
 
-function renderGrid(onSaved = vi.fn()) {
+function renderGrid(onSaved = vi.fn(), sheet: AssessmentSheetView = SHEET) {
   const router = createMemoryRouter(
-    [{ path: "/", element: <ScoreEntryGrid sheet={SHEET} onSaved={onSaved} /> }],
+    [{ path: "/", element: <ScoreEntryGrid sheet={sheet} onSaved={onSaved} /> }],
     { initialEntries: ["/"] },
   );
   render(<RouterProvider router={router} />);
@@ -57,11 +58,12 @@ describe("ScoreEntryGrid", () => {
     const user = userEvent.setup();
     renderGrid();
 
-    await user.type(screen.getByLabelText(/Quiz/), "20");
+    await user.type(screen.getByLabelText(/Midterm quiz/i), "20");
     await user.type(screen.getByLabelText(/Exam/), "80");
 
     // quiz 20/20 -> 100% * 30 = 30; exam 80/80 -> 100% * 70 = 70; total 100.
-    expect(await screen.findByText("100")).toBeInTheDocument();
+    // Both the Final cell and the Midterm % cell read 100 (quiz 20/20 is also 100%).
+    expect(await screen.findAllByText("100")).toHaveLength(2);
     expect(screen.getByText("A")).toBeInTheDocument();
     expect(assessmentsApi.saveScores).not.toHaveBeenCalled();
   });
@@ -70,10 +72,31 @@ describe("ScoreEntryGrid", () => {
     const user = userEvent.setup();
     renderGrid();
 
-    await user.type(screen.getByLabelText(/Quiz/), "20");
+    await user.type(screen.getByLabelText(/Midterm quiz/i), "20");
 
     // Final and Grade cells both render "—" - a quiz mark alone is not a term result.
     expect(await screen.findAllByText("—")).toHaveLength(2);
+  });
+
+  it("previews the derived mid-term percentage and grade as the quiz mark is typed", async () => {
+    const user = userEvent.setup();
+    renderGrid();
+
+    await user.type(screen.getByLabelText(/Midterm quiz/i), "18");
+
+    // 18/20 -> 90%, which falls in the A boundary (70-100).
+    expect(await screen.findByText("90")).toBeInTheDocument();
+    expect(screen.getByText("(A)")).toBeInTheDocument();
+  });
+
+  it("hides the mid-term grade letter when the level's showMidtermGrade flag is off", async () => {
+    const user = userEvent.setup();
+    renderGrid(vi.fn(), { ...SHEET, showMidtermGrade: false });
+
+    await user.type(screen.getByLabelText(/Midterm quiz/i), "18");
+
+    expect(await screen.findByText("90")).toBeInTheDocument();
+    expect(screen.queryByText("(A)")).not.toBeInTheDocument();
   });
 
   it("shows the unsaved-changes count only once a cell has been edited", async () => {
@@ -82,7 +105,7 @@ describe("ScoreEntryGrid", () => {
 
     expect(screen.queryByText(/unsaved change/)).not.toBeInTheDocument();
 
-    await user.type(screen.getByLabelText(/Quiz/), "15");
+    await user.type(screen.getByLabelText(/Midterm quiz/i), "15");
 
     expect(await screen.findByText("1 unsaved change")).toBeInTheDocument();
   });
@@ -90,7 +113,7 @@ describe("ScoreEntryGrid", () => {
   it("hints a numeric keypad with a Next action on the quiz and exam inputs", () => {
     renderGrid();
 
-    expect(screen.getByLabelText(/Quiz/)).toHaveAttribute("enterKeyHint", "next");
+    expect(screen.getByLabelText(/Midterm quiz/i)).toHaveAttribute("enterKeyHint", "next");
     expect(screen.getByLabelText(/Exam/)).toHaveAttribute("enterKeyHint", "next");
   });
 
@@ -98,7 +121,7 @@ describe("ScoreEntryGrid", () => {
     const user = userEvent.setup();
     renderGrid();
 
-    await user.type(screen.getByLabelText(/Quiz/), "15");
+    await user.type(screen.getByLabelText(/Midterm quiz/i), "15");
     const saveBar = (await screen.findByText("1 unsaved change")).closest("div.sticky");
 
     expect(saveBar).toHaveClass("bottom-tabbar-safe");
@@ -112,7 +135,7 @@ describe("ScoreEntryGrid", () => {
     });
     const { onSaved } = renderGrid();
 
-    await user.type(screen.getByLabelText(/Quiz/), "18");
+    await user.type(screen.getByLabelText(/Midterm quiz/i), "18");
     await user.type(screen.getByLabelText(/Exam/), "70");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
@@ -126,7 +149,7 @@ describe("ScoreEntryGrid", () => {
     const user = userEvent.setup();
     renderGrid();
 
-    await user.type(screen.getByLabelText(/Quiz/), "25");
+    await user.type(screen.getByLabelText(/Midterm quiz/i), "25");
 
     expect(await screen.findByText("Must be between 0 and 20.")).toBeInTheDocument();
   });

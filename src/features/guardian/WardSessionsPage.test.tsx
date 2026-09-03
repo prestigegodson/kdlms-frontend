@@ -34,6 +34,7 @@ const CURRENT_TERM = {
   classId: "class-2",
   className: "Primary 4",
   resultsPublished: true,
+  midtermPublished: false,
 };
 
 const PAST_TERM_UNPUBLISHED = {
@@ -46,6 +47,7 @@ const PAST_TERM_UNPUBLISHED = {
   classId: "class-1",
   className: "Primary 3",
   resultsPublished: false,
+  midtermPublished: false,
 };
 
 function renderPage(initialPath = "/guardian/results/s1") {

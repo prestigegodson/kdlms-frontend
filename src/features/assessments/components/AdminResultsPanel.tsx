@@ -12,6 +12,7 @@ import {
 import { ApiError } from "@/api/client";
 import { listClasses, type SchoolClassView } from "@/api/classes";
 import { getGradingSystem, type GradingSystemView } from "@/api/gradingSystems";
+import type { ResultScope } from "@/api/types";
 import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
@@ -25,6 +26,7 @@ import { ClassTermPicker } from "@/features/assessments/components/ClassTermPick
 import { GradeKey } from "@/features/assessments/components/GradeKey";
 import { RemarksEntryGrid } from "@/features/assessments/components/RemarksEntryGrid";
 import { SaveOutcomeList } from "@/features/assessments/components/SaveOutcomeList";
+import { ScopeToggle } from "@/features/assessments/components/ScopeToggle";
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
 import { useBranchScope } from "@/features/branches/useBranchScope";
 import { useAuthStore } from "@/stores/authStore";
@@ -45,6 +47,7 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
   const [classes, setClasses] = useState<SchoolClassView[] | null>(null);
   const [classId, setClassId] = useState(initialClassId ?? "");
   const [termId, setTermId] = useState("");
+  const [scope, setScope] = useState<ResultScope>("TERM");
 
   const [broadsheet, setBroadsheet] = useState<BroadsheetView | null>(null);
   const [gradingSystem, setGradingSystem] = useState<GradingSystemView | null>(null);
@@ -72,7 +75,7 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
 
   // Selection resets downstream state during render (see ScoreEntryGrid's comment on this
   // pattern) rather than in an effect; the effect below only fetches.
-  const selectionKey = `${classId}|${termId}`;
+  const selectionKey = `${classId}|${termId}|${scope}`;
   const [lastSelectionKey, setLastSelectionKey] = useState(selectionKey);
   if (selectionKey !== lastSelectionKey) {
     setLastSelectionKey(selectionKey);
@@ -85,7 +88,7 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
 
   useEffect(() => {
     if (!classId || !termId) return;
-    getBroadsheet(classId, termId)
+    getBroadsheet(classId, termId, scope)
       .then(setBroadsheet)
       .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load results"));
 
@@ -96,7 +99,7 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
         .catch(() => setGradingSystem(null));
     }
     if (canPublish) {
-      getPublicationStatus(classId, termId)
+      getPublicationStatus(classId, termId, scope)
         .then((status) => setPublished(status.published))
         .catch(() => undefined);
     }
@@ -106,7 +109,7 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
         .catch(() => setRemarksSheet(null));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- classes/canPublish/canRecordPrincipalRemark are read for the levelId lookup and gates, not triggers
-  }, [classId, termId]);
+  }, [classId, termId, scope]);
 
   function reloadRemarksSheet() {
     if (!classId || !termId) return;
@@ -123,9 +126,9 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
     setPublishing(true);
     try {
       if (published) {
-        await unpublishResults(classId, termId);
+        await unpublishResults(classId, termId, scope);
       } else {
-        await publishResults(classId, termId);
+        await publishResults(classId, termId, scope);
       }
       setPublished(!published);
     } catch (error) {
@@ -147,7 +150,13 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
           canPublish &&
           broadsheet && (
             <Button variant={published ? "secondary" : "accent"} loading={publishing} onClick={togglePublish}>
-              {published ? "Unpublish results" : "Publish results"}
+              {scope === "MIDTERM"
+                ? published
+                  ? "Unpublish mid-term results"
+                  : "Publish mid-term results"
+                : published
+                  ? "Unpublish results"
+                  : "Publish results"}
             </Button>
           )
         }
@@ -165,6 +174,7 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
           {classes.length > 0 && (
             <ClassTermPicker classes={classOptions} classId={classId} onClassChange={setClassId} termId={termId} onTermChange={setTermId} />
           )}
+          <ScopeToggle scope={scope} onChange={setScope} />
         </StickySubHeader>
       )}
 
@@ -180,7 +190,7 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
       {broadsheet && broadsheet.rows.length === 0 && (
         <EmptyState icon={BarChart3} title="No results recorded for this term yet" />
       )}
-      {broadsheet && broadsheet.rows.length > 0 && <BroadsheetTable broadsheet={broadsheet} />}
+      {broadsheet && broadsheet.rows.length > 0 && <BroadsheetTable broadsheet={broadsheet} scope={scope} />}
 
       {canRecordPrincipalRemark && remarksSheet && (
         <div className="space-y-4">

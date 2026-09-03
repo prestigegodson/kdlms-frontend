@@ -13,14 +13,14 @@ interface WeightingFieldsProps {
   onChange: (values: WeightingValues) => void;
 }
 
-/** Quiz/exam weighting (must sum to 100) and raw-mark ceilings for a NUMERIC grading system. */
+/** Midterm quiz/exam weighting (must sum to 100) and raw-mark ceilings for a NUMERIC grading system. */
 export function WeightingFields({ values, onChange }: WeightingFieldsProps) {
   const weightSum = values.quizWeight + values.examWeight;
 
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <FormField label="Quiz weight (%)" htmlFor="quiz-weight">
+        <FormField label="Midterm quiz weight (%)" htmlFor="quiz-weight">
           <Input
             id="quiz-weight"
             type="number"
@@ -44,7 +44,7 @@ export function WeightingFields({ values, onChange }: WeightingFieldsProps) {
         </FormField>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <FormField label="Quiz max mark" htmlFor="quiz-max">
+        <FormField label="Midterm quiz max mark" htmlFor="quiz-max">
           <Input
             id="quiz-max"
             type="number"
@@ -68,7 +68,7 @@ export function WeightingFields({ values, onChange }: WeightingFieldsProps) {
         </FormField>
       </div>
       {weightSum !== 100 && (
-        <p className="text-xs text-red-600">Quiz and exam weight must sum to 100 (currently {weightSum}).</p>
+        <p className="text-xs text-red-600">Midterm quiz and exam weight must sum to 100 (currently {weightSum}).</p>
       )}
     </div>
   );

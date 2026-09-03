@@ -106,7 +106,12 @@ export interface EnrollmentView {
   status: "ACTIVE" | "COMPLETED" | "WITHDRAWN";
 }
 
-/** Mirrors backend student.application.port.in.StudentTermView. */
+/**
+ * Mirrors backend student.application.port.in.StudentTermView.
+ * `resultsPublished`/`midtermPublished` are informational only here -
+ * unlike a guardian, staff see recorded results regardless of publication
+ * state.
+ */
 export interface StudentTermView {
   sessionId: string;
   sessionName: string;
@@ -118,6 +123,7 @@ export interface StudentTermView {
   className?: string;
   levelId: string;
   resultsPublished: boolean;
+  midtermPublished: boolean;
 }
 
 /** Mirrors backend student.application.port.in.StudentGuardianView. */

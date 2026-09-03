@@ -68,7 +68,7 @@ export function GradingSystemsPage() {
                 <p className="mt-2 text-sm text-slate-500">
                   {system.configured
                     ? system.assessmentMode === "NUMERIC"
-                      ? `Quiz ${system.quizWeight}% · Exam ${system.examWeight}% · ${system.boundaries.length} grade${system.boundaries.length === 1 ? "" : "s"}${system.showPosition ? "" : " · Position hidden on reports"}`
+                      ? `Midterm ${system.quizWeight}% · Exam ${system.examWeight}% · ${system.boundaries.length} grade${system.boundaries.length === 1 ? "" : "s"}${system.showPosition ? "" : " · Position hidden on reports"}${system.showMidtermGrade ? "" : " · Mid-term grade hidden"}`
                       : `${system.ratingOptions.length} rating${system.ratingOptions.length === 1 ? "" : "s"}`
                     : "Using the school default - not yet customized."}
                 </p>

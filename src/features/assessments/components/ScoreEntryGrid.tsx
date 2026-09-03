@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input } from "@/components/ui/Input";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
-import { computeFinalScore } from "@/features/assessments/finalScore";
+import { computeFinalScore, computeMidtermScore } from "@/features/assessments/finalScore";
 import { UnsavedChangesBar } from "@/features/assessments/components/UnsavedChangesBar";
 
 interface Draft {
@@ -137,7 +137,8 @@ export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
         <TableHead>
           <TableRow>
             <TableHeaderCell>Student</TableHeaderCell>
-            <TableHeaderCell numeric>Quiz (/{quizMax})</TableHeaderCell>
+            <TableHeaderCell numeric>Midterm quiz (/{quizMax})</TableHeaderCell>
+            <TableHeaderCell numeric>Midterm %</TableHeaderCell>
             <TableHeaderCell numeric>Exam (/{examMax})</TableHeaderCell>
             <TableHeaderCell numeric>Final</TableHeaderCell>
             <TableHeaderCell>Grade</TableHeaderCell>
@@ -158,6 +159,7 @@ export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
               examWeight,
               sheet.boundaries,
             );
+            const midterm = computeMidtermScore(parseScore(draft.quiz), quizMax, sheet.boundaries);
 
             return (
               <TableRow key={row.enrollmentId} className={isDirty ? "border-l-2 border-l-brand-500" : ""}>
@@ -165,14 +167,14 @@ export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
                   <span className="font-medium text-slate-900">{row.studentName}</span>
                   <span className="block text-xs text-slate-500">{row.admissionNumber}</span>
                 </TableCell>
-                <TableCell label={`Quiz (/${quizMax})`} numeric>
+                <TableCell label={`Midterm quiz (/${quizMax})`} numeric>
                   <Input
                     id={`score-${index}-quiz`}
                     type="number"
                     inputMode="decimal"
                     enterKeyHint="next"
                     step="any"
-                    aria-label={`Quiz score for ${row.studentName}`}
+                    aria-label={`Midterm quiz score for ${row.studentName}`}
                     className={`text-right tabular-nums ${isDirty ? "border-brand-400" : ""}`}
                     value={draft.quiz}
                     aria-invalid={quizError ? "true" : undefined}
@@ -180,6 +182,12 @@ export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
                     onKeyDown={(event) => handleKeyDown(event, index, "quiz")}
                   />
                   {quizError && <p className="mt-1 text-xs text-red-600">{quizError}</p>}
+                </TableCell>
+                <TableCell label="Midterm %" numeric className="tabular-nums text-slate-700">
+                  {midterm.midtermScore ?? "—"}
+                  {sheet.showMidtermGrade && midterm.grade && (
+                    <span className="ml-1 text-xs text-slate-500">({midterm.grade})</span>
+                  )}
                 </TableCell>
                 <TableCell label={`Exam (/${examMax})`} numeric>
                   <Input

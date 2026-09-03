@@ -1,7 +1,11 @@
 import type { BroadsheetView } from "@/api/assessments";
+import type { ResultScope } from "@/api/types";
+import { scoreCellText } from "@/features/assessments/finalScore";
 
 interface BroadsheetTableProps {
   broadsheet: BroadsheetView;
+  /** Defaults to "TERM" - a MIDTERM broadsheet never shows Total/Average/Position columns, since they're always null on that scope (see CLAUDE.md's ResultScope domain rule). */
+  scope?: ResultScope;
 }
 
 /**
@@ -12,9 +16,13 @@ interface BroadsheetTableProps {
  * wrapper with a sticky student column, rather than `components/ui/Table`.
  * Subject headers abbreviate to their code, with the full name in `title`.
  */
-export function BroadsheetTable({ broadsheet }: BroadsheetTableProps) {
+export function BroadsheetTable({ broadsheet, scope = "TERM" }: BroadsheetTableProps) {
   const isNumeric = broadsheet.assessmentMode === "NUMERIC";
-  const rows = isNumeric
+  // A MIDTERM result never carries a total/average/position - a checkpoint
+  // is never a term aggregate or a ranking (see CLAUDE.md's ResultScope
+  // domain rule).
+  const showsAggregates = isNumeric && scope === "TERM";
+  const rows = showsAggregates
     ? [...broadsheet.rows].sort((a, b) => (a.position ?? Infinity) - (b.position ?? Infinity))
     : broadsheet.rows;
 
@@ -41,7 +49,7 @@ export function BroadsheetTable({ broadsheet }: BroadsheetTableProps) {
                   {subject.code || subject.name}
                 </th>
               ))}
-              {isNumeric && (
+              {showsAggregates && (
                 <>
                   <th
                     scope="col"
@@ -78,14 +86,12 @@ export function BroadsheetTable({ broadsheet }: BroadsheetTableProps) {
                     const result = resultBySubject.get(subject.subjectId);
                     return (
                       <td key={subject.subjectId} className="whitespace-nowrap px-3 py-3 text-center tabular-nums text-slate-700">
-                        {isNumeric
-                          ? (result?.finalScore ?? "—")
-                          : (result?.ratingLabel ?? "—")}
+                        {isNumeric ? scoreCellText(result) : (result?.ratingLabel ?? "—")}
                         {isNumeric && result?.grade && <span className="ml-1 text-xs text-slate-500">({result.grade})</span>}
                       </td>
                     );
                   })}
-                  {isNumeric && (
+                  {showsAggregates && (
                     <>
                       <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums font-medium text-slate-900">
                         {row.total ?? "—"}

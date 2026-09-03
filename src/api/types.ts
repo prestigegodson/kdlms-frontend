@@ -2,6 +2,13 @@
 export type Role = "SYSTEM_ADMIN" | "SCHOOL_ADMIN" | "BRANCH_ADMIN" | "TEACHER" | "GUARDIAN";
 
 /**
+ * Mirrors backend shared.domain.ResultScope. Every API this widens defaults
+ * to "TERM", matching the backend's own default, so an existing caller that
+ * doesn't pass a scope keeps today's behaviour verbatim.
+ */
+export type ResultScope = "MIDTERM" | "TERM";
+
+/**
  * RFC 9457 problem details, as returned by the backend's
  * GlobalExceptionHandler for every error response.
  */

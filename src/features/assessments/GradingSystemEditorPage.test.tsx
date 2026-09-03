@@ -21,6 +21,7 @@ const NUMERIC_SYSTEM: GradingSystemView = {
   quizMax: 100,
   examMax: 100,
   showPosition: true,
+  showMidtermGrade: true,
   boundaries: [
     { grade: "A", minScore: 70, maxScore: 100, remark: "Excellent" },
     { grade: "F", minScore: 0, maxScore: 69.99, remark: "Fail" },
@@ -100,6 +101,37 @@ describe("GradingSystemEditorPage", () => {
     expect(gradingApi.saveNumericGradingSystem).toHaveBeenCalledWith(
       "level-1",
       expect.objectContaining({ showPosition: false }),
+    );
+  });
+
+  it("show grade on mid-term results defaults to checked and saves true when left alone", async () => {
+    const user = userEvent.setup();
+    vi.mocked(gradingApi.saveNumericGradingSystem).mockResolvedValue(NUMERIC_SYSTEM);
+    renderPage();
+
+    const checkbox = await screen.findByRole("checkbox", { name: /show grade on mid-term results/i });
+    expect(checkbox).toBeChecked();
+
+    await user.click(screen.getByRole("button", { name: "Save grading system" }));
+
+    expect(gradingApi.saveNumericGradingSystem).toHaveBeenCalledWith(
+      "level-1",
+      expect.objectContaining({ showMidtermGrade: true }),
+    );
+  });
+
+  it("unchecking show grade on mid-term results sends showMidtermGrade: false", async () => {
+    const user = userEvent.setup();
+    vi.mocked(gradingApi.saveNumericGradingSystem).mockResolvedValue({ ...NUMERIC_SYSTEM, showMidtermGrade: false });
+    renderPage();
+
+    const checkbox = await screen.findByRole("checkbox", { name: /show grade on mid-term results/i });
+    await user.click(checkbox);
+    await user.click(screen.getByRole("button", { name: "Save grading system" }));
+
+    expect(gradingApi.saveNumericGradingSystem).toHaveBeenCalledWith(
+      "level-1",
+      expect.objectContaining({ showMidtermGrade: false }),
     );
   });
 });

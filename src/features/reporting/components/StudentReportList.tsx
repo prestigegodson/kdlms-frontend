@@ -2,6 +2,7 @@ import { Download, Eye } from "lucide-react";
 import { useState } from "react";
 import { ApiError } from "@/api/client";
 import { downloadStudentReportPdf } from "@/api/reports";
+import type { ResultScope } from "@/api/types";
 import { Alert } from "@/components/ui/Alert";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { downloadBlob } from "@/utils/download";
@@ -15,11 +16,13 @@ export interface ReportStudentRow {
 interface StudentReportListProps {
   students: ReportStudentRow[];
   termId: string;
+  /** Defaults to "TERM". */
+  scope?: ResultScope;
   onPreview: (studentId: string) => void;
 }
 
 /** The class roster for the selected class/term - preview or download each student's report individually. */
-export function StudentReportList({ students, termId, onPreview }: StudentReportListProps) {
+export function StudentReportList({ students, termId, scope = "TERM", onPreview }: StudentReportListProps) {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,8 +30,9 @@ export function StudentReportList({ students, termId, onPreview }: StudentReport
     setDownloadingId(student.studentId);
     setError(null);
     try {
-      const blob = await downloadStudentReportPdf(student.studentId, termId);
-      downloadBlob(blob, `${student.admissionNumber || student.studentName}-result.pdf`);
+      const blob = await downloadStudentReportPdf(student.studentId, termId, scope);
+      const stem = student.admissionNumber || student.studentName;
+      downloadBlob(blob, scope === "MIDTERM" ? `${stem}-result-midterm.pdf` : `${stem}-result.pdf`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to download the report");
     } finally {

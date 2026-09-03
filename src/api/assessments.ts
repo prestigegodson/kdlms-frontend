@@ -1,5 +1,6 @@
 import { apiFetch } from "@/api/client";
 import type { AssessmentMode, GradeBoundary, RatingOption } from "@/api/gradingSystems";
+import type { ResultScope } from "@/api/types";
 
 /** Mirrors backend assessment.application.port.in.AssessmentSheetView.SheetRowView. */
 export interface SheetRow {
@@ -11,6 +12,8 @@ export interface SheetRow {
   finalScore?: number;
   grade?: string;
   remark?: string;
+  midtermRatingOptionId?: string;
+  midtermObservation?: string;
   ratingOptionId?: string;
   observation?: string;
 }
@@ -21,6 +24,8 @@ export interface SheetRow {
  * `boundaries` (NUMERIC) and `ratingOptions` (QUALITATIVE) carry the live
  * grading system alongside the roster, so ScoreEntryGrid can preview a
  * final score/grade as the teacher types, without a second request.
+ * `showMidtermGrade` rides along for the same reason - it's always `true`
+ * for QUALITATIVE.
  */
 export interface AssessmentSheetView {
   classId: string;
@@ -31,6 +36,7 @@ export interface AssessmentSheetView {
   examWeight?: number;
   quizMax?: number;
   examMax?: number;
+  showMidtermGrade: boolean;
   boundaries: GradeBoundary[];
   ratingOptions: RatingOption[];
   rows: SheetRow[];
@@ -53,16 +59,30 @@ export interface ScoreEntry {
   examScore: number | null;
 }
 
+/**
+ * Mirrors backend AssessmentRecordingController.RatingEntryRequest - either
+ * pair may be sent alone (the backend requires at least one, matching
+ * `QualitativeAssessment`'s either-rating-present rule).
+ */
 export interface RatingEntry {
   enrollmentId: string;
-  ratingOptionId: string;
+  midtermRatingOptionId: string | null;
+  midtermObservation: string | null;
+  ratingOptionId: string | null;
   observation: string | null;
 }
 
-/** Mirrors backend assessment.application.port.in.BroadsheetView.SubjectResult. */
+/**
+ * Mirrors backend assessment.application.port.in.BroadsheetView.SubjectResult.
+ * `scoreMax` is only present on a MIDTERM numeric result, where `finalScore`
+ * is the raw entered mark (e.g. a quiz score of 18) rather than a
+ * percentage - render it as `finalScore / scoreMax`. A TERM score is
+ * already out of 100 and carries no `scoreMax`.
+ */
 export interface SubjectResult {
   subjectId: string;
   finalScore?: number;
+  scoreMax?: number;
   grade?: string;
   ratingLabel?: string;
   observation?: string;
@@ -166,27 +186,39 @@ export function saveRatings(
   });
 }
 
-export function getBroadsheet(classId: string, termId: string): Promise<BroadsheetView> {
-  return apiFetch<BroadsheetView>(`/api/v1/results/broadsheet?classId=${classId}&termId=${termId}`);
+export function getBroadsheet(classId: string, termId: string, scope: ResultScope = "TERM"): Promise<BroadsheetView> {
+  return apiFetch<BroadsheetView>(`/api/v1/results/broadsheet?classId=${classId}&termId=${termId}&scope=${scope}`);
 }
 
-export function getStudentResult(studentId: string, termId: string): Promise<StudentTermResultView> {
-  return apiFetch<StudentTermResultView>(`/api/v1/results/students/${studentId}?termId=${termId}`);
+export function getStudentResult(
+  studentId: string,
+  termId: string,
+  scope: ResultScope = "TERM",
+): Promise<StudentTermResultView> {
+  return apiFetch<StudentTermResultView>(`/api/v1/results/students/${studentId}?termId=${termId}&scope=${scope}`);
 }
 
-export function getPublicationStatus(classId: string, termId: string): Promise<{ published: boolean }> {
-  return apiFetch<{ published: boolean }>(`/api/v1/results/publications?classId=${classId}&termId=${termId}`);
+export function getPublicationStatus(
+  classId: string,
+  termId: string,
+  scope: ResultScope = "TERM",
+): Promise<{ published: boolean }> {
+  return apiFetch<{ published: boolean }>(
+    `/api/v1/results/publications?classId=${classId}&termId=${termId}&scope=${scope}`,
+  );
 }
 
-export function publishResults(classId: string, termId: string): Promise<void> {
+export function publishResults(classId: string, termId: string, scope: ResultScope = "TERM"): Promise<void> {
   return apiFetch<void>("/api/v1/results/publications", {
     method: "POST",
-    body: JSON.stringify({ classId, termId }),
+    body: JSON.stringify({ classId, termId, scope }),
   });
 }
 
-export function unpublishResults(classId: string, termId: string): Promise<void> {
-  return apiFetch<void>(`/api/v1/results/publications?classId=${classId}&termId=${termId}`, { method: "DELETE" });
+export function unpublishResults(classId: string, termId: string, scope: ResultScope = "TERM"): Promise<void> {
+  return apiFetch<void>(`/api/v1/results/publications?classId=${classId}&termId=${termId}&scope=${scope}`, {
+    method: "DELETE",
+  });
 }
 
 export function getRemarksSheet(classId: string, termId: string): Promise<RemarksSheetView> {

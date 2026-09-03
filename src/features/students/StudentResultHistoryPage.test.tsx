@@ -53,6 +53,7 @@ const TERM_1: StudentTermView = {
   className: "Primary 1",
   levelId: "level-1",
   resultsPublished: true,
+  midtermPublished: true,
 };
 
 const TERM_2: StudentTermView = {
@@ -61,6 +62,7 @@ const TERM_2: StudentTermView = {
   termName: "Second Term",
   termNumber: 2,
   resultsPublished: false,
+  midtermPublished: false,
 };
 
 const OTHER_SESSION_TERM: StudentTermView = {
@@ -91,6 +93,7 @@ const GRADING_SYSTEM = {
   baseLevel: "PRIMARY" as const,
   assessmentMode: "NUMERIC" as const,
   showPosition: true,
+  showMidtermGrade: true,
   boundaries: [{ grade: "A", minScore: 70, maxScore: 100, remark: "Excellent" }],
   ratingOptions: [],
   configured: true,
@@ -146,11 +149,11 @@ describe("StudentResultHistoryPage", () => {
     renderPage();
 
     expect(await screen.findByText("Mathematics")).toBeInTheDocument();
-    expect(assessmentsApi.getStudentResult).toHaveBeenCalledWith("student-1", "term-1");
+    expect(assessmentsApi.getStudentResult).toHaveBeenCalledWith("student-1", "term-1", "TERM");
 
     await user.click(screen.getByRole("button", { name: /Second Term/ }));
 
-    expect(assessmentsApi.getStudentResult).toHaveBeenCalledWith("student-1", "term-2");
+    expect(assessmentsApi.getStudentResult).toHaveBeenCalledWith("student-1", "term-2", "TERM");
   });
 
   it("shows a 'no results recorded' empty state on a 404 rather than a raw error", async () => {

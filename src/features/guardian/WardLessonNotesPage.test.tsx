@@ -42,6 +42,7 @@ const TERM = {
   classId: "class-1",
   className: "Primary 3",
   resultsPublished: true,
+  midtermPublished: false,
 };
 
 const MATH_NOTE_SUMMARY = {

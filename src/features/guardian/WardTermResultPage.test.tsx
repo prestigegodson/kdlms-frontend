@@ -34,6 +34,7 @@ const TERM_1 = {
   classId: "class-1",
   className: "Primary 3",
   resultsPublished: true,
+  midtermPublished: true,
 };
 
 const RESULT_1 = {
@@ -57,6 +58,7 @@ const RESULT_1 = {
     baseLevel: "PRIMARY" as const,
     assessmentMode: "NUMERIC" as const,
     showPosition: true,
+    showMidtermGrade: true,
     boundaries: [{ grade: "A", minScore: 70, maxScore: 100, remark: "Excellent" }],
     ratingOptions: [],
     configured: true,
@@ -105,7 +107,7 @@ describe("WardTermResultPage (step 4 - the report)", () => {
 
     expect(await screen.findByText("Mathematics")).toBeInTheDocument();
     expect(screen.getByText("176")).toBeInTheDocument();
-    expect(wardsApi.getWardResult).toHaveBeenCalledWith("s1", "term-1");
+    expect(wardsApi.getWardResult).toHaveBeenCalledWith("s1", "term-1", "TERM");
   });
 
   it("shows 'Results not published yet' rather than a raw error on a 404", async () => {
@@ -114,5 +116,14 @@ describe("WardTermResultPage (step 4 - the report)", () => {
     renderPage();
 
     expect(await screen.findByText("Results not published yet")).toBeInTheDocument();
+  });
+
+  it("reads scope from ?scope=MIDTERM, fetches the mid-term result, and shows the mid-term empty state on 404", async () => {
+    vi.mocked(wardsApi.getWardResult).mockRejectedValue(new ApiError(404, "Not found"));
+
+    renderPage("/guardian/results/s1/sess-1/term-1?scope=MIDTERM");
+
+    expect(await screen.findByText("Mid-term results not published yet")).toBeInTheDocument();
+    expect(wardsApi.getWardResult).toHaveBeenCalledWith("s1", "term-1", "MIDTERM");
   });
 });

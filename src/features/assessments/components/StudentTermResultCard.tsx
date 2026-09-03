@@ -2,6 +2,7 @@ import type { StudentTermResultView } from "@/api/assessments";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
+import { scoreCellText } from "@/features/assessments/finalScore";
 
 interface StudentTermResultCardProps {
   result: StudentTermResultView;
@@ -49,7 +50,7 @@ export function StudentTermResultCard({ result }: StudentTermResultCardProps) {
                 {isNumeric ? (
                   <>
                     <TableCell label="Score" numeric>
-                      {subject.finalScore ?? "—"}
+                      {scoreCellText(subject)}
                     </TableCell>
                     <TableCell label="Grade">{subject.grade ?? "—"}</TableCell>
                   </>
@@ -66,7 +67,7 @@ export function StudentTermResultCard({ result }: StudentTermResultCardProps) {
           </TableBody>
         </Table>
 
-        {isNumeric && (
+        {isNumeric && (result.total != null || result.average != null) && (
           <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
             <span>
               Total: <span className="font-medium text-slate-900">{result.total ?? "—"}</span>

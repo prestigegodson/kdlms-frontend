@@ -66,6 +66,7 @@ export const REPORT_TOKENS: Array<{ key: string; description: string }> = [
   { key: "result.average", description: "Term average (NUMERIC only)" },
   { key: "result.position", description: "Class position (NUMERIC only)" },
   { key: "result.classSize", description: "Class size" },
+  { key: "result.scope", description: '"Mid-Term Assessment" or "End of Term"' },
   { key: "attendance.present", description: "Days present" },
   { key: "attendance.absent", description: "Days absent" },
   { key: "attendance.daysMarked", description: "Days a register was taken" },

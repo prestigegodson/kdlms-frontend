@@ -34,6 +34,14 @@ export interface GradingSystemView {
   examMax?: number;
   /** Whether class position is shown on the rendered report and the guardian portal. Always true for QUALITATIVE. */
   showPosition: boolean;
+  /**
+   * Whether a mid-term result carries a grade letter. Unlike `showPosition`
+   * (a report/guardian-only display toggle - staff always see position on
+   * the broadsheet regardless), this one applies to every audience
+   * including staff: its intent is "this school doesn't grade mid-terms at
+   * all", not "hide it from parents only". Always true for QUALITATIVE.
+   */
+  showMidtermGrade: boolean;
   boundaries: GradeBoundary[];
   ratingOptions: RatingOption[];
   configured: boolean;
@@ -45,6 +53,7 @@ export interface SaveNumericGradingSystemRequest {
   quizMax: number;
   examMax: number;
   showPosition: boolean;
+  showMidtermGrade: boolean;
   boundaries: GradeBoundary[];
 }
 

@@ -8,8 +8,13 @@ import { useWardResultsContext } from "@/features/guardian/WardResultsLayout";
 
 /**
  * Step 3 of the results drill-down - a session's terms in term-number
- * order. An unpublished term is listed disabled rather than hidden, so the
- * guardian can see the school simply hasn't published it yet.
+ * order, each split into its two independently-published result sets (see
+ * CLAUDE.md's ResultScope domain rule): a Mid-term row and an End of term
+ * row, either of which may be published while the other isn't. An
+ * unpublished row is listed disabled rather than hidden, so the guardian
+ * can see the school simply hasn't published it yet. The Mid-term row links
+ * to the same term route as End of term, with `?scope=MIDTERM` - the route
+ * tree itself carries no separate scope segment.
  */
 export function WardSessionTermsPage() {
   const { ward, terms } = useWardResultsContext();
@@ -49,20 +54,35 @@ export function WardSessionTermsPage() {
         ]}
       />
 
-      <div className="space-y-3">
-        {sessionTerms.map((term) =>
-          term.resultsPublished ? (
-            <DrillRow
-              key={term.termId}
-              to={`/guardian/results/${ward.studentId}/${sessionId}/${term.termId}`}
-              title={term.termName}
-              meta={term.className}
-              trailing={<Badge variant="success">Published</Badge>}
-            />
-          ) : (
-            <DrillRow key={term.termId} title={term.termName} disabled disabledReason="Not published yet" />
-          ),
-        )}
+      <div className="space-y-6">
+        {sessionTerms.map((term) => (
+          <div key={term.termId} className="space-y-2">
+            <p className="text-sm font-medium text-slate-500">
+              {term.termName}
+              {term.className ? ` · ${term.className}` : ""}
+            </p>
+            <div className="space-y-2">
+              {term.midtermPublished ? (
+                <DrillRow
+                  to={`/guardian/results/${ward.studentId}/${sessionId}/${term.termId}?scope=MIDTERM`}
+                  title="Mid-term"
+                  trailing={<Badge variant="success">Published</Badge>}
+                />
+              ) : (
+                <DrillRow title="Mid-term" disabled disabledReason="Not published yet" />
+              )}
+              {term.resultsPublished ? (
+                <DrillRow
+                  to={`/guardian/results/${ward.studentId}/${sessionId}/${term.termId}`}
+                  title="End of term"
+                  trailing={<Badge variant="success">Published</Badge>}
+                />
+              ) : (
+                <DrillRow title="End of term" disabled disabledReason="Not published yet" />
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

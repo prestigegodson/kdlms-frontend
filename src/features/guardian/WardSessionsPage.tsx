@@ -14,12 +14,17 @@ interface SessionSummary {
   publishedCount: number;
 }
 
+/** A term contributes up to two published result sets - mid-term and end-of-term publish independently. */
+function publishedSetsOf(term: WardTermView): number {
+  return (term.resultsPublished ? 1 : 0) + (term.midtermPublished ? 1 : 0);
+}
+
 function sessionsFrom(terms: WardTermView[]): SessionSummary[] {
   const bySessionId = new Map<string, SessionSummary>();
   for (const term of terms) {
     const existing = bySessionId.get(term.sessionId);
     if (existing) {
-      if (term.resultsPublished) existing.publishedCount += 1;
+      existing.publishedCount += publishedSetsOf(term);
       continue;
     }
     bySessionId.set(term.sessionId, {
@@ -27,7 +32,7 @@ function sessionsFrom(terms: WardTermView[]): SessionSummary[] {
       sessionName: term.sessionName,
       currentSession: term.currentSession,
       className: term.className,
-      publishedCount: term.resultsPublished ? 1 : 0,
+      publishedCount: publishedSetsOf(term),
     });
   }
   return [...bySessionId.values()].sort((a, b) => {

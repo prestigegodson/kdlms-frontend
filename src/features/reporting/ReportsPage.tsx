@@ -4,6 +4,7 @@ import { getBroadsheet } from "@/api/assessments";
 import { ApiError } from "@/api/client";
 import { listClasses, type SchoolClassView } from "@/api/classes";
 import { downloadClassReportsPdf, previewStudentReport } from "@/api/reports";
+import type { ResultScope } from "@/api/types";
 import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -13,6 +14,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
+import { ScopeToggle } from "@/features/assessments/components/ScopeToggle";
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
 import { useBranchScope } from "@/features/branches/useBranchScope";
 import { ReportPreviewFrame } from "@/features/reporting/components/ReportPreviewFrame";
@@ -34,6 +36,7 @@ export function ReportsPage() {
   const [classes, setClasses] = useState<SchoolClassView[] | null>(null);
   const [classId, setClassId] = useState("");
   const [termId, setTermId] = useState("");
+  const [scope, setScope] = useState<ResultScope>("TERM");
   const [students, setStudents] = useState<ReportStudentRow[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [previewStudentId, setPreviewStudentId] = useState<string | null>(null);
@@ -59,7 +62,7 @@ export function ReportsPage() {
 
   // Selection resets downstream state during render (the pattern `AdminResultsPanel`
   // documents) rather than in an effect; the effect below only fetches.
-  const selectionKey = `${classId}|${termId}`;
+  const selectionKey = `${classId}|${termId}|${scope}`;
   const [lastSelectionKey, setLastSelectionKey] = useState(selectionKey);
   if (selectionKey !== lastSelectionKey) {
     setLastSelectionKey(selectionKey);
@@ -69,7 +72,7 @@ export function ReportsPage() {
 
   useEffect(() => {
     if (!classId || !termId) return;
-    getBroadsheet(classId, termId)
+    getBroadsheet(classId, termId, scope)
       .then((broadsheet) =>
         setStudents(
           broadsheet.rows.map((row) => ({
@@ -80,14 +83,14 @@ export function ReportsPage() {
         ),
       )
       .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load results"));
-  }, [classId, termId]);
+  }, [classId, termId, scope]);
 
   async function handlePreview(studentId: string) {
     setPreviewStudentId(studentId);
     setPreviewHtml(null);
     setPreviewError(null);
     try {
-      const html = await previewStudentReport(studentId, termId);
+      const html = await previewStudentReport(studentId, termId, scope);
       setPreviewHtml(html);
     } catch (error) {
       setPreviewError(error instanceof ApiError ? error.message : "Failed to render this report");
@@ -98,8 +101,8 @@ export function ReportsPage() {
     setDownloadingClass(true);
     setClassDownloadError(null);
     try {
-      const blob = await downloadClassReportsPdf(classId, termId);
-      downloadBlob(blob, "class-results.pdf");
+      const blob = await downloadClassReportsPdf(classId, termId, scope);
+      downloadBlob(blob, scope === "MIDTERM" ? "class-results-midterm.pdf" : "class-results.pdf");
     } catch (error) {
       setClassDownloadError(error instanceof ApiError ? error.message : "Failed to download class results");
     } finally {
@@ -141,6 +144,7 @@ export function ReportsPage() {
               onTermChange={setTermId}
             />
           )}
+          <ScopeToggle scope={scope} onChange={setScope} />
         </StickySubHeader>
       )}
 
@@ -160,7 +164,7 @@ export function ReportsPage() {
         />
       )}
       {students && students.length > 0 && (
-        <StudentReportList students={students} termId={termId} onPreview={handlePreview} />
+        <StudentReportList students={students} termId={termId} scope={scope} onPreview={handlePreview} />
       )}
 
       {previewStudentId && (

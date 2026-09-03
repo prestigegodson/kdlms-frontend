@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 import { ApiError } from "@/api/client";
 import {
   downloadWardReportPdf,
@@ -33,6 +33,8 @@ import { downloadBlob } from "@/utils/download";
 export function WardTermResultPage() {
   const { ward, terms } = useWardResultsContext();
   const { sessionId, termId } = useParams<{ sessionId: string; termId: string }>();
+  const [searchParams] = useSearchParams();
+  const scope = searchParams.get("scope") === "MIDTERM" ? "MIDTERM" : "TERM";
   const [result, setResult] = useState<WardTermResultView | null>(null);
   const [notPublished, setNotPublished] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -42,12 +44,13 @@ export function WardTermResultPage() {
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
-  // A term change resets the previous term's result during render (the
+  // A term or scope change resets the previous result during render (the
   // pattern `WardResultsLayout` documents) rather than inside the effect
   // below, which only fetches.
-  const [lastTermId, setLastTermId] = useState(termId);
-  if (termId !== lastTermId) {
-    setLastTermId(termId);
+  const resultKey = `${termId}|${scope}`;
+  const [lastResultKey, setLastResultKey] = useState(resultKey);
+  if (resultKey !== lastResultKey) {
+    setLastResultKey(resultKey);
     setResult(null);
     setNotPublished(false);
     setLoadError(null);
@@ -55,7 +58,7 @@ export function WardTermResultPage() {
 
   useEffect(() => {
     if (!termId) return;
-    getWardResult(ward.studentId, termId)
+    getWardResult(ward.studentId, termId, scope)
       .then(setResult)
       .catch((error: unknown) => {
         if (error instanceof ApiError && error.status === 404) {
@@ -64,7 +67,7 @@ export function WardTermResultPage() {
         }
         setLoadError(error instanceof ApiError ? error.message : "Failed to load result");
       });
-  }, [ward.studentId, termId]);
+  }, [ward.studentId, termId, scope]);
 
   async function handlePreview() {
     if (!termId) return;
@@ -72,7 +75,7 @@ export function WardTermResultPage() {
     setPreviewHtml(null);
     setPreviewError(null);
     try {
-      const html = await previewWardReport(ward.studentId, termId);
+      const html = await previewWardReport(ward.studentId, termId, scope);
       setPreviewHtml(html);
     } catch (error) {
       setPreviewError(error instanceof ApiError ? error.message : "Failed to render this report");
@@ -84,8 +87,9 @@ export function WardTermResultPage() {
     setDownloading(true);
     setDownloadError(null);
     try {
-      const blob = await downloadWardReportPdf(ward.studentId, termId);
-      downloadBlob(blob, `${result.result.admissionNumber || result.result.studentName}-result.pdf`);
+      const blob = await downloadWardReportPdf(ward.studentId, termId, scope);
+      const stem = result.result.admissionNumber || result.result.studentName;
+      downloadBlob(blob, scope === "MIDTERM" ? `${stem}-result-midterm.pdf` : `${stem}-result.pdf`);
     } catch (error) {
       setDownloadError(error instanceof ApiError ? error.message : "Failed to download the report");
     } finally {
@@ -94,7 +98,8 @@ export function WardTermResultPage() {
   }
 
   const term = terms.find((candidate) => candidate.termId === termId);
-  const title = term ? `${term.termName} · ${term.sessionName}` : "Result";
+  const scopeSuffix = scope === "MIDTERM" ? " · Mid-term" : "";
+  const title = term ? `${term.termName} · ${term.sessionName}${scopeSuffix}` : "Result";
 
   return (
     <div className="space-y-6">
@@ -115,7 +120,7 @@ export function WardTermResultPage() {
             { label: ward.schoolName, to: "/guardian/results" },
             { label: ward.fullName, to: `/guardian/results/${ward.studentId}` },
             { label: term.sessionName, to: `/guardian/results/${ward.studentId}/${sessionId}` },
-            { label: term.termName },
+            { label: `${term.termName}${scopeSuffix}` },
           ]}
         />
       )}
@@ -124,8 +129,12 @@ export function WardTermResultPage() {
       {loadError && <Alert variant="error">{loadError}</Alert>}
       {notPublished && (
         <EmptyState
-          title="Results not published yet"
-          description="Your school hasn't published this term's results yet."
+          title={scope === "MIDTERM" ? "Mid-term results not published yet" : "Results not published yet"}
+          description={
+            scope === "MIDTERM"
+              ? "Your school hasn't published this term's mid-term results yet."
+              : "Your school hasn't published this term's results yet."
+          }
         />
       )}
 
