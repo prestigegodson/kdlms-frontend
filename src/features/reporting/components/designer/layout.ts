@@ -19,6 +19,7 @@ export const LAYOUT_VERSION = 1;
 /** Mirrors backend `reporting.domain.ReportBlock` - keep this list in exact sync with that enum. */
 export const REPORT_BLOCK_NAMES = [
   "SCHOOL_HEADER",
+  "SCHOOL_LOGO",
   "STUDENT_BIO",
   "STUDENT_PHOTO",
   "SCORE_TABLE",
@@ -66,7 +67,7 @@ interface BaseElement {
 export interface BlockElement extends BaseElement {
   type: "BLOCK";
   block: ReportBlockName;
-  /** Only meaningful (and only accepted server-side) for `STUDENT_PHOTO` - every other block's interior is entirely platform-owned. */
+  /** Only meaningful (and only accepted server-side) for a block in `SIZABLE_BLOCKS` - every other block's interior is entirely platform-owned. */
   maxWidthPx?: number;
   maxHeightPx?: number;
 }
@@ -99,7 +100,63 @@ export interface BoxElement extends BaseElement {
   elements: LayoutElement[];
 }
 
-export type LayoutElement = BlockElement | TextElement | DividerElement | SpacerElement | ImageElement | BoxElement;
+export type TableBorderStyle = "solid" | "dashed" | "dotted" | "none";
+
+/** Mirrors backend `ReportLayoutValidator`'s table border-style allowlist. */
+export const TABLE_BORDER_STYLES: readonly TableBorderStyle[] = ["solid", "dashed", "dotted", "none"];
+
+export const MAX_TABLE_ROWS = 30;
+export const MAX_TABLE_COLUMNS = 8;
+export const MAX_TABLE_CELL_TEXT_LENGTH = 500;
+export const MAX_TABLE_BORDER_WIDTH_PX = 8;
+export const MAX_TABLE_CELL_PADDING_PX = 24;
+
+export interface TableCell {
+  text: string;
+  align?: ElementAlign;
+  bold?: boolean;
+  backgroundColor?: string;
+  /** Defaults to 1. Every row's cells must span exactly the table's `columnCount`. */
+  colSpan?: number;
+}
+
+export interface TableRow {
+  id: string;
+  cells: TableCell[];
+}
+
+/**
+ * A designer-defined grid - the one element whose *content* is the
+ * designer's own free text (which may include `{{token}}`s) rather than
+ * platform-generated, unlike every semantic block. `columnWidthsPercent` is
+ * optional: absent, the emitted `table-layout:fixed` splits columns evenly;
+ * present, it must have exactly `columnCount` entries summing to 100.
+ */
+export interface TableSpec {
+  columnCount: number;
+  columnWidthsPercent?: number[];
+  headerRow?: boolean;
+  borderWidthPx?: number;
+  borderStyle?: TableBorderStyle;
+  borderColor?: string;
+  cellPaddingPx?: number;
+  headerBackgroundColor?: string;
+  rows: TableRow[];
+}
+
+export interface TableElement extends BaseElement {
+  type: "TABLE";
+  table: TableSpec;
+}
+
+export type LayoutElement =
+  | BlockElement
+  | TextElement
+  | DividerElement
+  | SpacerElement
+  | ImageElement
+  | BoxElement
+  | TableElement;
 
 export interface LayoutColumn {
   id: string;
@@ -148,6 +205,7 @@ export interface ReportLayout {
 /** The block/element labels the palette and inspector show - kept alongside the type definitions since both read from it. */
 export const BLOCK_LABELS: Record<ReportBlockName, string> = {
   SCHOOL_HEADER: "School header",
+  SCHOOL_LOGO: "School logo",
   STUDENT_BIO: "Student bio",
   STUDENT_PHOTO: "Student photo",
   SCORE_TABLE: "Score table",
@@ -170,6 +228,15 @@ export function blockFitsMode(block: ReportBlockName, mode: "NUMERIC" | "QUALITA
   if (QUALITATIVE_ONLY_BLOCKS.has(block)) return mode === "QUALITATIVE";
   return true;
 }
+
+/** The only two blocks whose interior sizing the designer controls - mirrors backend `ReportLayoutValidator`'s `SIZABLE_BLOCKS`. Every other block rejects `maxWidthPx`/`maxHeightPx` at save time. */
+export const SIZABLE_BLOCKS: ReadonlySet<ReportBlockName> = new Set(["STUDENT_PHOTO", "SCHOOL_LOGO"]);
+
+/** Seeded default size/caption for a new `SIZABLE_BLOCKS` instance - mirrors backend `TemplateRenderer`'s `DEFAULT_PHOTO_*`/`DEFAULT_LOGO_*` constants and placeholder captions. */
+export const BLOCK_DEFAULT_SIZE: Partial<Record<ReportBlockName, { maxWidthPx: number; maxHeightPx: number; caption: string }>> = {
+  STUDENT_PHOTO: { maxWidthPx: 96, maxHeightPx: 120, caption: "Photo" },
+  SCHOOL_LOGO: { maxWidthPx: 96, maxHeightPx: 96, caption: "Logo" },
+};
 
 let idCounter = 0;
 

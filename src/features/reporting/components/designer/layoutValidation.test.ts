@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isLayoutValid, validateLayout } from "@/features/reporting/components/designer/layoutValidation";
-import type { LayoutElement, ReportBlockName, ReportLayout } from "@/features/reporting/components/designer/layout";
+import type { LayoutElement, ReportBlockName, ReportLayout, TableSpec } from "@/features/reporting/components/designer/layout";
 
 function layoutWith(rows: ReportLayout["rows"]): ReportLayout {
   return { version: 1, page: { paddingPx: 24, fontFamily: "Helvetica, Arial, sans-serif", fontSizePx: 12, color: "#1a1a1a" }, rows };
@@ -99,12 +99,28 @@ describe("validateLayout", () => {
     expect(errors.some((e) => e.includes("Block max width"))).toBe(true);
   });
 
-  it("rejects a size on any block other than STUDENT_PHOTO", () => {
+  it("rejects a size on any block other than STUDENT_PHOTO/SCHOOL_LOGO", () => {
     const header: LayoutElement = { id: "el-1", type: "BLOCK", block: "SCHOOL_HEADER", maxWidthPx: 96 };
     const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [header] }] }]);
 
     const errors = validateLayout(layout, "NUMERIC");
     expect(errors.some((e) => e.includes("may not specify a size"))).toBe(true);
+  });
+
+  it("accepts a sized SCHOOL_LOGO on either mode", () => {
+    const logo: LayoutElement = { id: "el-1", type: "BLOCK", block: "SCHOOL_LOGO", maxWidthPx: 96, maxHeightPx: 96 };
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [logo] }] }]);
+
+    expect(isLayoutValid(layout, "NUMERIC")).toBe(true);
+    expect(isLayoutValid(layout, "QUALITATIVE")).toBe(true);
+  });
+
+  it("rejects a SCHOOL_LOGO size out of range", () => {
+    const logo: LayoutElement = { id: "el-1", type: "BLOCK", block: "SCHOOL_LOGO", maxWidthPx: 1200 };
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [logo] }] }]);
+
+    const errors = validateLayout(layout, "NUMERIC");
+    expect(errors.some((e) => e.includes("Block max width"))).toBe(true);
   });
 
   it("rejects an unsupported layout version", () => {
@@ -147,6 +163,73 @@ describe("validateLayout", () => {
     };
 
     expect(isLayoutValid(layout, "NUMERIC")).toBe(false);
+  });
+
+  it("accepts a well-formed table", () => {
+    const table: TableSpec = {
+      columnCount: 2,
+      headerRow: true,
+      rows: [
+        { id: "r1", cells: [{ text: "Name" }, { text: "{{student.fullName}}" }] },
+        { id: "r2", cells: [{ text: "Class" }, { text: "{{class.name}}" }] },
+      ],
+    };
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [{ id: "el-1", type: "TABLE", table }] }] }]);
+
+    expect(isLayoutValid(layout, "NUMERIC")).toBe(true);
+  });
+
+  it("rejects a table column count out of range", () => {
+    const table: TableSpec = { columnCount: 9, rows: [{ id: "r1", cells: [{ text: "a" }] }] };
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [{ id: "el-1", type: "TABLE", table }] }] }]);
+
+    const errors = validateLayout(layout, "NUMERIC");
+    expect(errors.some((e) => e.includes("Table column count"))).toBe(true);
+  });
+
+  it("rejects a table row whose colspans don't sum to the column count", () => {
+    const table: TableSpec = {
+      columnCount: 3,
+      rows: [{ id: "r1", cells: [{ text: "a", colSpan: 1 }, { text: "b", colSpan: 1 }] }],
+    };
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [{ id: "el-1", type: "TABLE", table }] }] }]);
+
+    const errors = validateLayout(layout, "NUMERIC");
+    expect(errors.some((e) => e.includes("must span exactly 3 columns"))).toBe(true);
+  });
+
+  it("rejects table column widths that don't sum to 100", () => {
+    const table: TableSpec = {
+      columnCount: 2,
+      columnWidthsPercent: [50, 40],
+      rows: [{ id: "r1", cells: [{ text: "a" }, { text: "b" }] }],
+    };
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [{ id: "el-1", type: "TABLE", table }] }] }]);
+
+    const errors = validateLayout(layout, "NUMERIC");
+    expect(errors.some((e) => e.includes("sum to 100"))).toBe(true);
+  });
+
+  it("rejects a bad table border style", () => {
+    const table: TableSpec = {
+      columnCount: 1,
+      borderStyle: "groovy" as TableSpec["borderStyle"],
+      rows: [{ id: "r1", cells: [{ text: "a" }] }],
+    };
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [{ id: "el-1", type: "TABLE", table }] }] }]);
+
+    const errors = validateLayout(layout, "NUMERIC");
+    expect(errors.some((e) => e.includes("border style"))).toBe(true);
+  });
+
+  it("rejects a table nested inside a table with a table on the wrong element type", () => {
+    // A TABLE is mode-agnostic and may sit inside a BOX - accepted on both modes.
+    const table: TableSpec = { columnCount: 1, rows: [{ id: "r1", cells: [{ text: "a" }] }] };
+    const box: LayoutElement = { id: "box-1", type: "BOX", elements: [{ id: "el-1", type: "TABLE", table }] };
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [box] }] }]);
+
+    expect(isLayoutValid(layout, "NUMERIC")).toBe(true);
+    expect(isLayoutValid(layout, "QUALITATIVE")).toBe(true);
   });
 
   it("accepts logoBackground enabled with a valid opacity", () => {

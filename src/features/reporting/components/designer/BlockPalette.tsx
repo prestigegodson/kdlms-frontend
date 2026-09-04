@@ -1,7 +1,8 @@
-import { ImageIcon, Minus, Square, Type } from "lucide-react";
+import { ImageIcon, Minus, Square, Table, Type } from "lucide-react";
 import type { DragEvent } from "react";
 import type { ReportAssessmentMode } from "@/api/resultTemplates";
-import { newElementId, type LayoutElement } from "@/features/reporting/components/designer/layout";
+import { BLOCK_DEFAULT_SIZE, newElementId, type LayoutElement } from "@/features/reporting/components/designer/layout";
+import { newTableSpec } from "@/features/reporting/components/designer/tableOps";
 import { primeDataTransfer, setCurrentDrag } from "@/features/reporting/components/designer/dragTypes";
 import { REPORT_BLOCKS } from "@/features/reporting/components/reportBlocks";
 import type { LayoutEditor } from "@/features/reporting/components/designer/useLayoutEditor";
@@ -45,10 +46,23 @@ function freeformItems(): PaletteItem[] {
       elementType: "BOX",
       factory: () => ({ id: newElementId("el"), type: "BOX", elements: [] }),
     },
+    {
+      label: "Table",
+      description: "A grid of cells - may include {{tokens}}",
+      elementType: "TABLE",
+      factory: () => ({ id: newElementId("el"), type: "TABLE", table: newTableSpec() }),
+    },
   ];
 }
 
-const ICONS: Record<string, typeof Type> = { Text: Type, Divider: Minus, Spacer: Square, Image: ImageIcon, Box: Square };
+const ICONS: Record<string, typeof Type> = {
+  Text: Type,
+  Divider: Minus,
+  Spacer: Square,
+  Image: ImageIcon,
+  Box: Square,
+  Table: Table,
+};
 
 interface BlockPaletteProps {
   mode: ReportAssessmentMode;
@@ -75,10 +89,11 @@ export function BlockPalette({ mode, editor }: BlockPaletteProps) {
         ? "Clicking a block adds it to the selected row."
         : "Clicking a block adds it to the end of the canvas.";
 
-  /** `STUDENT_PHOTO` is the one block the inspector lets a designer resize - seeded here so it opens at a size that already renders sensibly rather than 0x0. */
+  /** A block in `SIZABLE_BLOCKS` (currently `STUDENT_PHOTO`/`SCHOOL_LOGO`) is the only kind the inspector lets a designer resize - seeded here so it opens at a size that already renders sensibly rather than 0x0. */
   function blockElement(blockId: (typeof REPORT_BLOCKS)[number]["id"]): LayoutElement {
-    return blockId === "STUDENT_PHOTO"
-      ? { id: newElementId("el"), type: "BLOCK", block: blockId, maxWidthPx: 96, maxHeightPx: 120 }
+    const defaultSize = BLOCK_DEFAULT_SIZE[blockId];
+    return defaultSize
+      ? { id: newElementId("el"), type: "BLOCK", block: blockId, maxWidthPx: defaultSize.maxWidthPx, maxHeightPx: defaultSize.maxHeightPx }
       : { id: newElementId("el"), type: "BLOCK", block: blockId };
   }
 

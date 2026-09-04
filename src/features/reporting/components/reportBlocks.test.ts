@@ -27,6 +27,11 @@ describe("report block registries stay in sync", () => {
     expect(principalRemark?.mode).toBeUndefined();
   });
 
+  it("includes SCHOOL_LOGO, mode-agnostic (no `mode` field)", () => {
+    const schoolLogo = REPORT_BLOCKS.find((block) => block.id === "SCHOOL_LOGO");
+    expect(schoolLogo?.mode).toBeUndefined();
+  });
+
   it("includes the two remark tokens", () => {
     const keys = REPORT_TOKENS.map((token) => token.key);
     expect(keys).toContain("remark.classTeacher");

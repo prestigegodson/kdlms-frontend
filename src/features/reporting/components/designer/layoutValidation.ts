@@ -4,8 +4,15 @@ import {
   type LayoutColumn,
   type LayoutElement,
   type LayoutRow,
+  MAX_TABLE_CELL_TEXT_LENGTH,
+  MAX_TABLE_COLUMNS,
+  MAX_TABLE_ROWS,
   type ReportLayout,
   REPORT_BLOCK_NAMES,
+  SIZABLE_BLOCKS,
+  TABLE_BORDER_STYLES,
+  type TableCell,
+  type TableSpec,
   blockFitsMode,
 } from "@/features/reporting/components/designer/layout";
 
@@ -33,6 +40,9 @@ const MAX_PADDING_PX = 64;
 const MAX_IMAGE_DIMENSION_PX = 1000;
 const MIN_BACKGROUND_OPACITY = 1;
 const MAX_BACKGROUND_OPACITY = 100;
+const MAX_TABLE_BORDER_WIDTH_PX = 8;
+const MAX_TABLE_CELL_PADDING_PX = 24;
+const REQUIRED_TABLE_COLUMN_WIDTH_SUM = 100;
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 const ALIGNMENTS = new Set(["left", "center", "right"]);
@@ -161,12 +171,89 @@ function validateElement(element: LayoutElement, mode: AssessmentMode, insideBox
         validateElements(element.elements, mode, true, errors);
       }
       break;
+    case "TABLE":
+      validateTable(element.table, errors);
+      break;
   }
 }
 
-/** Only `STUDENT_PHOTO` may carry a size - mirrors backend `ReportLayoutValidator#validateBlockSizing`. */
+/** Mirrors backend `ReportLayoutValidator#validateTable` - a TABLE is mode-agnostic and may sit inside a BOX. */
+function validateTable(table: TableSpec, errors: string[]) {
+  requireRange(table.columnCount, 1, MAX_TABLE_COLUMNS, "Table column count", errors);
+  const columnCount = table.columnCount;
+  validateTableColumnWidths(table.columnWidthsPercent, columnCount, errors);
+  requireRange(table.borderWidthPx, 0, MAX_TABLE_BORDER_WIDTH_PX, "Table border width", errors);
+  if (table.borderStyle !== undefined && !TABLE_BORDER_STYLES.includes(table.borderStyle)) {
+    errors.push(`Table border style must be one of: ${TABLE_BORDER_STYLES.join(", ")}.`);
+  }
+  if (table.borderColor !== undefined) {
+    requireColor(table.borderColor, "Table border color", errors);
+  }
+  requireRange(table.cellPaddingPx, 0, MAX_TABLE_CELL_PADDING_PX, "Table cell padding", errors);
+  if (table.headerBackgroundColor !== undefined) {
+    requireColor(table.headerBackgroundColor, "Table header background color", errors);
+  }
+  if (!table.rows || table.rows.length === 0) {
+    errors.push("A table requires at least one row.");
+    return;
+  }
+  if (table.rows.length > MAX_TABLE_ROWS) {
+    errors.push(`A table may have at most ${MAX_TABLE_ROWS} rows.`);
+  }
+  for (const row of table.rows) {
+    validateTableRow(row.cells, columnCount, errors);
+  }
+}
+
+function validateTableColumnWidths(widths: number[] | undefined, columnCount: number, errors: string[]) {
+  if (widths === undefined) return;
+  if (widths.length !== columnCount) {
+    errors.push(`A table's column widths must have exactly ${columnCount} entries.`);
+    return;
+  }
+  let sum = 0;
+  for (const width of widths) {
+    if (!Number.isInteger(width) || width < 1 || width > 100) {
+      errors.push("A table column width must be an integer percentage between 1 and 100.");
+    } else {
+      sum += width;
+    }
+  }
+  if (sum !== REQUIRED_TABLE_COLUMN_WIDTH_SUM) {
+    errors.push(`A table's column widths must sum to 100 (got ${sum}).`);
+  }
+}
+
+function validateTableRow(cells: TableCell[], columnCount: number, errors: string[]) {
+  if (!cells || cells.length === 0) {
+    errors.push("Every table row requires at least one cell.");
+    return;
+  }
+  let spanned = 0;
+  for (const cell of cells) {
+    if (cell.text.length > MAX_TABLE_CELL_TEXT_LENGTH) {
+      errors.push(`A table cell may be at most ${MAX_TABLE_CELL_TEXT_LENGTH} characters.`);
+    }
+    if (cell.align !== undefined && !ALIGNMENTS.has(cell.align)) {
+      errors.push("Table cell alignment must be left, center, or right.");
+    }
+    if (cell.backgroundColor !== undefined) {
+      requireColor(cell.backgroundColor, "Table cell background color", errors);
+    }
+    const colSpan = cell.colSpan ?? 1;
+    if (colSpan < 1 || colSpan > columnCount) {
+      errors.push(`A table cell's colspan must be between 1 and ${columnCount}.`);
+    }
+    spanned += colSpan;
+  }
+  if (spanned !== columnCount) {
+    errors.push(`A table row's cells must span exactly ${columnCount} columns (got ${spanned}).`);
+  }
+}
+
+/** Only a block in `SIZABLE_BLOCKS` may carry a size - mirrors backend `ReportLayoutValidator#validateBlockSizing`. */
 function validateBlockSizing(element: Extract<LayoutElement, { type: "BLOCK" }>, errors: string[]) {
-  const sizable = element.block === "STUDENT_PHOTO";
+  const sizable = SIZABLE_BLOCKS.has(element.block);
   if (!sizable && (element.maxWidthPx !== undefined || element.maxHeightPx !== undefined)) {
     errors.push(`${element.block} may not specify a size.`);
   }

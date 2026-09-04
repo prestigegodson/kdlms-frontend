@@ -9,6 +9,13 @@ import type {
 
 export type Selection = { type: "page" } | { type: "row"; rowId: string } | { type: "element"; elementId: string };
 
+/** Which cell of a selected TABLE element the Inspector's per-cell section targets - view-only state, deliberately outside the undo/redo history the same way `selection` is. */
+export interface SelectedCell {
+  elementId: string;
+  row: number;
+  col: number;
+}
+
 const HISTORY_LIMIT = 50;
 
 /**
@@ -23,8 +30,20 @@ export function useLayoutEditor(initial: ReportLayout) {
   const [layout, setLayout] = useState<ReportLayout>(initial);
   const [past, setPast] = useState<ReportLayout[]>([]);
   const [future, setFuture] = useState<ReportLayout[]>([]);
-  const [selection, setSelection] = useState<Selection | null>(null);
+  const [selection, setSelectionState] = useState<Selection | null>(null);
+  const [selectedCell, setSelectedCellState] = useState<SelectedCell | null>(null);
   const [dirty, setDirty] = useState(false);
+
+  const setSelectedCell = useCallback((next: SelectedCell | null) => setSelectedCellState(next), []);
+
+  /** Wraps the raw `setSelection` state setter so switching to a different (or no) element always drops any stale `selectedCell` targeting the previous element's table. */
+  const setSelection = useCallback((next: Selection | null | ((prev: Selection | null) => Selection | null)) => {
+    setSelectionState((prev) => {
+      const resolved = typeof next === "function" ? next(prev) : next;
+      setSelectedCellState((cell) => (cell && resolved?.type === "element" && resolved.elementId === cell.elementId ? cell : null));
+      return resolved;
+    });
+  }, []);
 
   const commit = useCallback(
     (next: ReportLayout) => {
@@ -63,18 +82,19 @@ export function useLayoutEditor(initial: ReportLayout) {
     setLayout(next);
     setPast([]);
     setFuture([]);
-    setSelection(null);
+    setSelectionState(null);
+    setSelectedCellState(null);
     setDirty(opts.markDirty ?? false);
   }, []);
 
-  const clearSelection = useCallback(() => setSelection(null), []);
+  const clearSelection = useCallback(() => setSelection(null), [setSelection]);
 
   const insertElement = useCallback(
     (containerId: string, index: number, element: LayoutElement, select = true) => {
       commit(ops.insertElement(layout, containerId, index, element));
       if (select) setSelection({ type: "element", elementId: element.id });
     },
-    [layout, commit],
+    [layout, commit, setSelection],
   );
 
   const removeElement = useCallback(
@@ -82,7 +102,7 @@ export function useLayoutEditor(initial: ReportLayout) {
       commit(ops.removeElement(layout, elementId));
       setSelection((sel) => (sel?.type === "element" && sel.elementId === elementId ? null : sel));
     },
-    [layout, commit],
+    [layout, commit, setSelection],
   );
 
   const moveElement = useCallback(
@@ -111,7 +131,7 @@ export function useLayoutEditor(initial: ReportLayout) {
       commit(ops.appendToEnd(layout, element));
       setSelection({ type: "element", elementId: element.id });
     },
-    [layout, commit],
+    [layout, commit, setSelection],
   );
 
   /**
@@ -139,7 +159,7 @@ export function useLayoutEditor(initial: ReportLayout) {
       commit(ops.appendToEnd(layout, element));
       setSelection({ type: "element", elementId: element.id });
     },
-    [layout, commit, selection],
+    [layout, commit, selection, setSelection],
   );
 
   const addRow = useCallback(() => {
@@ -147,14 +167,14 @@ export function useLayoutEditor(initial: ReportLayout) {
     commit(next);
     const newRow = next.rows[next.rows.length - 1];
     setSelection({ type: "row", rowId: newRow.id });
-  }, [layout, commit]);
+  }, [layout, commit, setSelection]);
 
   const removeRow = useCallback(
     (rowId: string) => {
       commit(ops.removeRow(layout, rowId));
       setSelection((sel) => (sel?.type === "row" && sel.rowId === rowId ? null : sel));
     },
-    [layout, commit],
+    [layout, commit, setSelection],
   );
 
   const moveRow = useCallback(
@@ -190,6 +210,8 @@ export function useLayoutEditor(initial: ReportLayout) {
     selection,
     setSelection,
     clearSelection,
+    selectedCell,
+    setSelectedCell,
     dirty,
     canUndo: past.length > 0,
     canRedo: future.length > 0,

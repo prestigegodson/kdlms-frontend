@@ -1,7 +1,9 @@
 import { ChevronDown, ChevronUp, GripVertical, Trash2 } from "lucide-react";
+import { useState } from "react";
 import type { DragEvent } from "react";
 import { ElementList } from "@/features/reporting/components/designer/ElementList";
 import { ElementPreview } from "@/features/reporting/components/designer/ElementPreview";
+import { TableEditorGrid } from "@/features/reporting/components/designer/TableEditorGrid";
 import { primeDataTransfer, setCurrentDrag } from "@/features/reporting/components/designer/dragTypes";
 import type { LayoutElement } from "@/features/reporting/components/designer/layout";
 import type { LayoutEditor } from "@/features/reporting/components/designer/useLayoutEditor";
@@ -22,11 +24,14 @@ const ELEMENT_LABELS: Record<LayoutElement["type"], string> = {
   SPACER: "Spacer",
   IMAGE: "Image",
   BOX: "Box",
+  TABLE: "Table",
 };
 
 /** One selectable, draggable, reorderable element on the canvas - the up/down/delete buttons are the keyboard-accessible equivalent of the drag handle, per the designer's a11y requirement. */
 export function ElementCard({ element, index, siblingCount, editor }: ElementCardProps) {
   const selected = editor.selection?.type === "element" && editor.selection.elementId === element.id;
+  // Off while a TABLE cell's textarea is focused, so native drag doesn't hijack the cell's text selection.
+  const [inlineEditing, setInlineEditing] = useState(false);
 
   function handleDragStart(event: DragEvent<HTMLDivElement>) {
     setCurrentDrag({ kind: "move-element", elementId: element.id });
@@ -35,7 +40,7 @@ export function ElementCard({ element, index, siblingCount, editor }: ElementCar
 
   return (
     <div
-      draggable
+      draggable={!inlineEditing}
       onDragStart={handleDragStart}
       onDragEnd={() => setCurrentDrag(null)}
       onClick={(event) => {
@@ -94,6 +99,8 @@ export function ElementCard({ element, index, siblingCount, editor }: ElementCar
         <div className="rounded-control border border-dashed border-slate-300 bg-slate-50/50 p-2">
           <ElementList containerId={element.id} elements={element.elements} editor={editor} insideBox />
         </div>
+      ) : element.type === "TABLE" ? (
+        <TableEditorGrid element={element} editor={editor} onInlineEditingChange={setInlineEditing} />
       ) : (
         <ElementPreview element={element} />
       )}

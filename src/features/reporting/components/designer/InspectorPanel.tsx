@@ -4,8 +4,26 @@ import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
-import { ALLOWED_FONT_FAMILIES, type ElementStyle, type LayoutElement } from "@/features/reporting/components/designer/layout";
+import {
+  ALLOWED_FONT_FAMILIES,
+  MAX_TABLE_COLUMNS,
+  MAX_TABLE_ROWS,
+  SIZABLE_BLOCKS,
+  TABLE_BORDER_STYLES,
+  type ElementStyle,
+  type LayoutElement,
+  type TableCell,
+  type TableSpec,
+} from "@/features/reporting/components/designer/layout";
 import { findElementLocation } from "@/features/reporting/components/designer/layoutOps";
+import {
+  distributeWidthsEvenly,
+  mergeCellWithNext,
+  setCell,
+  setColumnCount,
+  setRowCount,
+  splitCell,
+} from "@/features/reporting/components/designer/tableOps";
 import type { LayoutEditor } from "@/features/reporting/components/designer/useLayoutEditor";
 import { BLOCK_LABELS } from "@/features/reporting/components/designer/layout";
 
@@ -326,19 +344,23 @@ function ElementInspector({ editor, elementId }: { editor: LayoutEditor; element
         </>
       )}
 
-      {element.type === "BLOCK" && element.block === "STUDENT_PHOTO" && (
+      {element.type === "TABLE" && (
+        <TableInspector editor={editor} elementId={elementId} table={element.table} />
+      )}
+
+      {element.type === "BLOCK" && SIZABLE_BLOCKS.has(element.block) && (
         <>
-          <FormField label="Alignment" htmlFor="photo-align">
-            <Select id="photo-align" value={style.align ?? "left"} onChange={(e) => setStyle({ align: e.target.value as ElementStyle["align"] })}>
+          <FormField label="Alignment" htmlFor="block-align">
+            <Select id="block-align" value={style.align ?? "left"} onChange={(e) => setStyle({ align: e.target.value as ElementStyle["align"] })}>
               <option value="left">Left</option>
               <option value="center">Center</option>
               <option value="right">Right</option>
             </Select>
           </FormField>
           <div className="grid grid-cols-2 gap-2">
-            <FormField label="Max width (px)" htmlFor="photo-max-width">
+            <FormField label="Max width (px)" htmlFor="block-max-width">
               <Input
-                id="photo-max-width"
+                id="block-max-width"
                 type="number"
                 min={1}
                 max={1000}
@@ -346,9 +368,9 @@ function ElementInspector({ editor, elementId }: { editor: LayoutEditor; element
                 onChange={(e) => editor.updateElement(elementId, { maxWidthPx: numberOrUndefined(e.target.value) } as Partial<LayoutElement>)}
               />
             </FormField>
-            <FormField label="Max height (px)" htmlFor="photo-max-height">
+            <FormField label="Max height (px)" htmlFor="block-max-height">
               <Input
-                id="photo-max-height"
+                id="block-max-height"
                 type="number"
                 min={1}
                 max={1000}
@@ -383,6 +405,237 @@ function ElementInspector({ editor, elementId }: { editor: LayoutEditor; element
             onChange={(e) => setStyle({ marginBottomPx: numberOrUndefined(e.target.value) })}
           />
         </FormField>
+      </div>
+    </div>
+  );
+}
+
+function TableInspector({
+  editor,
+  elementId,
+  table,
+}: {
+  editor: LayoutEditor;
+  elementId: string;
+  table: TableSpec;
+}) {
+  function set(next: typeof table) {
+    editor.updateElement(elementId, { table: next } as Partial<LayoutElement>);
+  }
+
+  const widthSum = table.columnWidthsPercent?.reduce((a, b) => a + b, 0);
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-2">
+        <FormField label="Rows" htmlFor="table-rows">
+          <Input
+            id="table-rows"
+            type="number"
+            min={1}
+            max={MAX_TABLE_ROWS}
+            value={table.rows.length}
+            onChange={(e) => set(setRowCount(table, Number(e.target.value)))}
+          />
+        </FormField>
+        <FormField label="Columns" htmlFor="table-columns">
+          <Input
+            id="table-columns"
+            type="number"
+            min={1}
+            max={MAX_TABLE_COLUMNS}
+            value={table.columnCount}
+            onChange={(e) => set(setColumnCount(table, Number(e.target.value)))}
+          />
+        </FormField>
+      </div>
+
+      <label className="flex items-center gap-2 text-sm text-slate-700">
+        <Checkbox checked={table.headerRow ?? false} onChange={(e) => set({ ...table, headerRow: e.target.checked })} />
+        First row is a header
+      </label>
+      {table.headerRow && (
+        <FormField label="Header background" htmlFor="table-header-bg">
+          <div className="flex items-center gap-2">
+            <Input
+              id="table-header-bg"
+              type="color"
+              value={table.headerBackgroundColor ?? "#f2f2f2"}
+              onChange={(e) => set({ ...table, headerBackgroundColor: e.target.value })}
+            />
+            {table.headerBackgroundColor && (
+              <button type="button" className="text-xs text-slate-500 hover:text-slate-700" onClick={() => set({ ...table, headerBackgroundColor: undefined })}>
+                Clear
+              </button>
+            )}
+          </div>
+        </FormField>
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        <FormField label="Border width (px)" htmlFor="table-border-width">
+          <Input
+            id="table-border-width"
+            type="number"
+            min={0}
+            max={8}
+            value={table.borderWidthPx ?? 1}
+            onChange={(e) => set({ ...table, borderWidthPx: Number(e.target.value) })}
+          />
+        </FormField>
+        <FormField label="Border style" htmlFor="table-border-style">
+          <Select
+            id="table-border-style"
+            value={table.borderStyle ?? "solid"}
+            onChange={(e) => set({ ...table, borderStyle: e.target.value as (typeof TABLE_BORDER_STYLES)[number] })}
+          >
+            {TABLE_BORDER_STYLES.map((style) => (
+              <option key={style} value={style}>
+                {style.charAt(0).toUpperCase() + style.slice(1)}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+      </div>
+      <FormField label="Border color" htmlFor="table-border-color">
+        <div className="flex items-center gap-2">
+          <Input
+            id="table-border-color"
+            type="color"
+            value={table.borderColor ?? "#cccccc"}
+            onChange={(e) => set({ ...table, borderColor: e.target.value })}
+          />
+          {table.borderColor && (
+            <button type="button" className="text-xs text-slate-500 hover:text-slate-700" onClick={() => set({ ...table, borderColor: undefined })}>
+              Clear
+            </button>
+          )}
+        </div>
+      </FormField>
+      <FormField label="Cell padding (px)" htmlFor="table-cell-padding">
+        <Input
+          id="table-cell-padding"
+          type="number"
+          min={0}
+          max={24}
+          value={table.cellPaddingPx ?? 4}
+          onChange={(e) => set({ ...table, cellPaddingPx: Number(e.target.value) })}
+        />
+      </FormField>
+
+      <div>
+        <div className="mb-1 flex items-center justify-between">
+          <span className="text-xs font-medium text-slate-600">Column widths</span>
+          <button type="button" className="text-xs text-brand-600 hover:text-brand-700" onClick={() => set(distributeWidthsEvenly(table))}>
+            Distribute evenly
+          </button>
+        </div>
+        <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${table.columnCount}, minmax(0, 1fr))` }}>
+          {Array.from({ length: table.columnCount }, (_, index) => (
+            <Input
+              key={index}
+              type="number"
+              min={1}
+              max={100}
+              aria-label={`Column ${index + 1} width (%)`}
+              value={table.columnWidthsPercent?.[index] ?? ""}
+              placeholder="auto"
+              onChange={(e) => {
+                const widths = table.columnWidthsPercent
+                  ? table.columnWidthsPercent.slice()
+                  : Array.from({ length: table.columnCount }, () => Math.round(100 / table.columnCount));
+                widths[index] = Number(e.target.value);
+                set({ ...table, columnWidthsPercent: widths });
+              }}
+            />
+          ))}
+        </div>
+        {widthSum !== undefined && widthSum !== 100 && (
+          <p className="mt-1 text-xs text-amber-800">Column widths must sum to 100 (currently {widthSum}).</p>
+        )}
+      </div>
+
+      {editor.selectedCell?.elementId === elementId && (
+        <SelectedCellInspector editor={editor} elementId={elementId} table={table} row={editor.selectedCell.row} col={editor.selectedCell.col} />
+      )}
+    </>
+  );
+}
+
+function SelectedCellInspector({
+  editor,
+  elementId,
+  table,
+  row,
+  col,
+}: {
+  editor: LayoutEditor;
+  elementId: string;
+  table: TableSpec;
+  row: number;
+  col: number;
+}) {
+  const cell: TableCell | undefined = table.rows[row]?.cells[col];
+  if (!cell) return null;
+
+  function setCellPatch(patch: Partial<TableCell>) {
+    editor.updateElement(elementId, { table: setCell(table, row, col, patch) } as Partial<LayoutElement>);
+  }
+
+  const colSpan = cell.colSpan ?? 1;
+  const cellsInRow = table.rows[row]?.cells.length ?? 0;
+  const canMerge = col < cellsInRow - 1;
+
+  return (
+    <div className="space-y-2 border-t border-slate-100 pt-3">
+      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        Selected cell (row {row + 1}, col {col + 1})
+      </span>
+      <FormField label="Alignment" htmlFor="table-cell-align">
+        <Select id="table-cell-align" value={cell.align ?? "left"} onChange={(e) => setCellPatch({ align: e.target.value as TableCell["align"] })}>
+          <option value="left">Left</option>
+          <option value="center">Center</option>
+          <option value="right">Right</option>
+        </Select>
+      </FormField>
+      <label className="flex items-center gap-2 text-sm text-slate-700">
+        <Checkbox checked={cell.bold ?? false} onChange={(e) => setCellPatch({ bold: e.target.checked })} />
+        Bold
+      </label>
+      <FormField label="Background color" htmlFor="table-cell-bg">
+        <div className="flex items-center gap-2">
+          <Input
+            id="table-cell-bg"
+            type="color"
+            value={cell.backgroundColor ?? "#ffffff"}
+            onChange={(e) => setCellPatch({ backgroundColor: e.target.value })}
+          />
+          {cell.backgroundColor && (
+            <button type="button" className="text-xs text-slate-500 hover:text-slate-700" onClick={() => setCellPatch({ backgroundColor: undefined })}>
+              Clear
+            </button>
+          )}
+        </div>
+      </FormField>
+      <div className="flex gap-2">
+        {colSpan > 1 && (
+          <button
+            type="button"
+            className="text-xs text-brand-600 hover:text-brand-700"
+            onClick={() => editor.updateElement(elementId, { table: splitCell(table, row, col) } as Partial<LayoutElement>)}
+          >
+            Split (colspan {colSpan} &rarr; {colSpan - 1})
+          </button>
+        )}
+        {canMerge && (
+          <button
+            type="button"
+            className="text-xs text-brand-600 hover:text-brand-700"
+            onClick={() => editor.updateElement(elementId, { table: mergeCellWithNext(table, row, col) } as Partial<LayoutElement>)}
+          >
+            Merge with next cell
+          </button>
+        )}
       </div>
     </div>
   );

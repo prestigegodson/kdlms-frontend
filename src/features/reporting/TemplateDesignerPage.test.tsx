@@ -79,6 +79,19 @@ describe("TemplateDesignerPage", () => {
     expect(screen.getByRole("button", { name: /Student photo/ })).toBeInTheDocument();
   });
 
+  it("offers the School logo block on a NUMERIC template", async () => {
+    renderPage();
+    expect(await screen.findByDisplayValue("Standard result sheet")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /School logo/ })).toBeInTheDocument();
+  });
+
+  it("offers the School logo block on a QUALITATIVE template too", async () => {
+    vi.mocked(templatesApi.getResultTemplate).mockResolvedValue(QUALITATIVE_TEMPLATE);
+    renderPage();
+    expect(await screen.findByDisplayValue("Standard result sheet")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /School logo/ })).toBeInTheDocument();
+  });
+
   it("Save sends the current layout back to the API", async () => {
     const user = userEvent.setup();
     vi.mocked(templatesApi.updateResultTemplate).mockResolvedValue(NUMERIC_TEMPLATE);
@@ -117,6 +130,26 @@ describe("TemplateDesignerPage", () => {
     await user.click(screen.getByRole("button", { name: /Attendance summary/ }));
 
     expect(screen.getByRole("button", { name: "Undo" })).not.toBeDisabled();
+  });
+
+  it("clicking the Table palette item adds an editable table, and typing in a cell updates what Save posts", async () => {
+    const user = userEvent.setup();
+    vi.mocked(templatesApi.updateResultTemplate).mockResolvedValue(NUMERIC_TEMPLATE);
+    renderPage();
+    await screen.findByDisplayValue("Standard result sheet");
+
+    await user.click(screen.getByRole("button", { name: "Table" }));
+
+    const cells = screen.getAllByPlaceholderText("Empty cell");
+    expect(cells.length).toBeGreaterThan(0);
+    await user.type(cells[0], "Hello");
+    await user.tab();
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(templatesApi.updateResultTemplate).toHaveBeenCalled());
+    const [, request] = vi.mocked(templatesApi.updateResultTemplate).mock.calls[0];
+    expect(JSON.stringify(request.layout)).toContain("Hello");
   });
 
   it("clicking a palette block with an element selected inserts it right after that element, not at the end", async () => {
