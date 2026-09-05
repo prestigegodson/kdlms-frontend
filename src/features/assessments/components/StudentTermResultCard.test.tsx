@@ -16,6 +16,7 @@ const TERM_RESULT: StudentTermResultView = {
   total: 88,
   average: 88,
   position: 1,
+  traits: [],
 };
 
 describe("StudentTermResultCard", () => {
@@ -41,5 +42,22 @@ describe("StudentTermResultCard", () => {
     expect(screen.getByText("18 / 20")).toBeInTheDocument();
     expect(screen.queryByText(/Total:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Position/)).not.toBeInTheDocument();
+  });
+
+  it("renders rated behavioural traits grouped by category", () => {
+    const resultWithTraits: StudentTermResultView = {
+      ...TERM_RESULT,
+      traits: [
+        { category: "AFFECTIVE", traitName: "Punctuality", optionValue: "5", optionLabel: "EXCELLENT" },
+        { category: "PSYCHOMOTOR", traitName: "Handwriting", optionValue: "4", optionLabel: "GOOD" },
+      ],
+    };
+    render(<StudentTermResultCard result={resultWithTraits} />);
+
+    expect(screen.getByText("Affective disposition")).toBeInTheDocument();
+    expect(screen.getByText("Punctuality")).toBeInTheDocument();
+    expect(screen.getByText("5 - EXCELLENT")).toBeInTheDocument();
+    expect(screen.getByText("Psychomotor skills")).toBeInTheDocument();
+    expect(screen.getByText("4 - GOOD")).toBeInTheDocument();
   });
 });

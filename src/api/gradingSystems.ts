@@ -58,7 +58,8 @@ export interface SaveNumericGradingSystemRequest {
 }
 
 export interface SaveQualitativeGradingSystemRequest {
-  ratingOptions: Array<{ label: string; description?: string; rank: number }>;
+  /** `id`: omit/undefined for a freshly authored option, or an existing option's id to edit it in place - see `RatingOption`'s Javadoc. */
+  ratingOptions: Array<{ id?: string; label: string; description?: string; rank: number }>;
 }
 
 const BASE = "/api/v1/grading-systems";

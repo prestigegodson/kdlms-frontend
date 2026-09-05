@@ -1,8 +1,24 @@
-import type { StudentTermResultView } from "@/api/assessments";
+import type { StudentTermResultView, TraitRatingView } from "@/api/assessments";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { scoreCellText } from "@/features/assessments/finalScore";
+
+const TRAIT_CATEGORY_LABELS: Record<TraitRatingView["category"], string> = {
+  AFFECTIVE: "Affective disposition",
+  PSYCHOMOTOR: "Psychomotor skills",
+};
+
+/** Groups `traits` by category, preserving each category's own trait order. */
+function groupTraitsByCategory(traits: TraitRatingView[]): Array<[TraitRatingView["category"], TraitRatingView[]]> {
+  const order: TraitRatingView["category"][] = ["AFFECTIVE", "PSYCHOMOTOR"];
+  return order
+    .map((category): [TraitRatingView["category"], TraitRatingView[]] => [
+      category,
+      traits.filter((trait) => trait.category === category),
+    ])
+    .filter(([, rows]) => rows.length > 0);
+}
 
 interface StudentTermResultCardProps {
   result: StudentTermResultView;
@@ -92,6 +108,28 @@ export function StudentTermResultCard({ result }: StudentTermResultCardProps) {
                 <p className="mt-1 text-sm text-slate-700">{result.principalRemark}</p>
               </div>
             )}
+          </div>
+        )}
+
+        {result.traits.length > 0 && (
+          <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+            {groupTraitsByCategory(result.traits).map(([category, traits]) => (
+              <div key={category}>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {TRAIT_CATEGORY_LABELS[category]}
+                </h3>
+                <dl className="mt-1 grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
+                  {traits.map((trait) => (
+                    <div key={trait.traitName} className="flex items-baseline justify-between gap-2 text-sm">
+                      <dt className="text-slate-600">{trait.traitName}</dt>
+                      <dd className="font-medium text-slate-900">
+                        {trait.optionValue} - {trait.optionLabel}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ))}
           </div>
         )}
       </div>

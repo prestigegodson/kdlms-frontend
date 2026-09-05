@@ -9,6 +9,7 @@ import {
   saveNumericGradingSystem,
   saveQualitativeGradingSystem,
 } from "@/api/gradingSystems";
+import { getTraitConfiguration, saveTraitConfiguration, type TraitConfigurationView } from "@/api/traits";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -17,6 +18,9 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { GradeBoundaryRows } from "@/features/assessments/components/GradeBoundaryRows";
 import { type RatingScaleRow, RatingScaleRows } from "@/features/assessments/components/RatingScaleRows";
+import { type TraitDefinitionRow } from "@/features/assessments/components/TraitDefinitionRows";
+import { TraitCategoryEditor } from "@/features/assessments/components/TraitCategoryEditor";
+import { type TraitScaleRow } from "@/features/assessments/components/TraitScaleRows";
 import { type WeightingValues, WeightingFields } from "@/features/assessments/components/WeightingFields";
 
 type LoadState = { kind: "loading" } | { kind: "loaded"; system: GradingSystemView } | { kind: "error"; message: string };
@@ -50,12 +54,53 @@ function validateRatingOptions(options: RatingScaleRow[]): string | null {
   return null;
 }
 
+/** Mirrors TraitConfiguration.requireScaleOptions/requireTraits server-side - an enabled category needs >=2 scale options and >=1 active trait. */
+function validateTraitCategory(
+  label: string,
+  enabled: boolean,
+  scaleOptions: TraitScaleRow[],
+  traits: TraitDefinitionRow[],
+): string | null {
+  if (!enabled) return null;
+  if (scaleOptions.length < 2) return `Add at least two ${label} rating scale options.`;
+  if (scaleOptions.some((option) => !option.value.trim() || !option.label.trim())) {
+    return `Every ${label} rating needs a value and a label.`;
+  }
+  const values = new Set(scaleOptions.map((option) => option.value.trim().toLowerCase()));
+  if (values.size !== scaleOptions.length) return `${label} rating values must be unique.`;
+  const labels = new Set(scaleOptions.map((option) => option.label.trim().toLowerCase()));
+  if (labels.size !== scaleOptions.length) return `${label} rating labels must be unique.`;
+  if (traits.some((trait) => !trait.name.trim())) return `Every ${label} trait needs a name.`;
+  const names = new Set(traits.map((trait) => trait.name.trim().toLowerCase()));
+  if (names.size !== traits.length) return `${label} trait names must be unique.`;
+  if (!traits.some((trait) => trait.active)) return `Add at least one active ${label} trait.`;
+  return null;
+}
+
+function toScaleRows(config: TraitConfigurationView, category: "affective" | "psychomotor"): TraitScaleRow[] {
+  return config[category].scaleOptions.map((option) => ({
+    id: option.id,
+    value: option.value,
+    label: option.label,
+    description: option.description ?? "",
+  }));
+}
+
+function toTraitRows(config: TraitConfigurationView, category: "affective" | "psychomotor"): TraitDefinitionRow[] {
+  return config[category].traits.map((trait) => ({ id: trait.id, name: trait.name, active: trait.active }));
+}
+
 /**
  * Full-page editor for one level's grading system - a mode toggle swaps
  * between the numeric editor (weightings + boundaries) and the qualitative
  * one (ordered rating scale). Lives on its own page, not a modal - this
  * app's Modal doesn't stack, and the boundary/rating row editors are too
  * involved for one.
+ * <p>
+ * The behavioural-traits section (Phase 15) sits outside the NUMERIC/
+ * QUALITATIVE ternary - it's mode-agnostic, unlike everything above it -
+ * and is backed by its own endpoint (`PUT /api/v1/levels/{id}/traits`), so
+ * one Save issues both requests in sequence.
  */
 export function GradingSystemEditorPage() {
   const { levelId } = useParams<{ levelId: string }>();
@@ -73,6 +118,14 @@ export function GradingSystemEditorPage() {
   const [showMidtermGrade, setShowMidtermGrade] = useState(true);
   const [boundaries, setBoundaries] = useState<GradeBoundary[]>([]);
   const [ratingOptions, setRatingOptions] = useState<RatingScaleRow[]>([]);
+
+  const [affectiveEnabled, setAffectiveEnabled] = useState(false);
+  const [affectiveScale, setAffectiveScale] = useState<TraitScaleRow[]>([]);
+  const [affectiveTraits, setAffectiveTraits] = useState<TraitDefinitionRow[]>([]);
+  const [psychomotorEnabled, setPsychomotorEnabled] = useState(false);
+  const [psychomotorScale, setPsychomotorScale] = useState<TraitScaleRow[]>([]);
+  const [psychomotorTraits, setPsychomotorTraits] = useState<TraitDefinitionRow[]>([]);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -92,11 +145,31 @@ export function GradingSystemEditorPage() {
         setShowPosition(system.showPosition);
         setShowMidtermGrade(system.showMidtermGrade);
         setBoundaries(system.boundaries);
-        setRatingOptions(system.ratingOptions.map((option) => ({ label: option.label, description: option.description ?? "" })));
+        setRatingOptions(
+          system.ratingOptions.map((option) => ({
+            id: option.id,
+            label: option.label,
+            description: option.description ?? "",
+          })),
+        );
       })
       .catch((err: unknown) =>
         setState({ kind: "error", message: err instanceof ApiError ? err.message : "Failed to load grading system" }),
       );
+  }, [levelId]);
+
+  useEffect(() => {
+    if (!levelId) return;
+    getTraitConfiguration(levelId)
+      .then((config) => {
+        setAffectiveEnabled(config.affectiveEnabled);
+        setAffectiveScale(toScaleRows(config, "affective"));
+        setAffectiveTraits(toTraitRows(config, "affective"));
+        setPsychomotorEnabled(config.psychomotorEnabled);
+        setPsychomotorScale(toScaleRows(config, "psychomotor"));
+        setPsychomotorTraits(toTraitRows(config, "psychomotor"));
+      })
+      .catch(() => undefined);
   }, [levelId]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -123,6 +196,22 @@ export function GradingSystemEditorPage() {
       }
     }
 
+    const affectiveError = validateTraitCategory("affective disposition", affectiveEnabled, affectiveScale, affectiveTraits);
+    if (affectiveError) {
+      setError(affectiveError);
+      return;
+    }
+    const psychomotorError = validateTraitCategory(
+      "psychomotor skills",
+      psychomotorEnabled,
+      psychomotorScale,
+      psychomotorTraits,
+    );
+    if (psychomotorError) {
+      setError(psychomotorError);
+      return;
+    }
+
     setSubmitting(true);
     try {
       if (mode === "NUMERIC") {
@@ -130,12 +219,35 @@ export function GradingSystemEditorPage() {
       } else {
         await saveQualitativeGradingSystem(levelId, {
           ratingOptions: ratingOptions.map((option, index) => ({
+            id: option.id,
             label: option.label,
             description: option.description || undefined,
             rank: index + 1,
           })),
         });
       }
+      await saveTraitConfiguration(levelId, {
+        affective: {
+          enabled: affectiveEnabled,
+          scaleOptions: affectiveScale.map((option) => ({
+            id: option.id,
+            value: option.value,
+            label: option.label,
+            description: option.description || undefined,
+          })),
+          traits: affectiveTraits.map((trait) => ({ id: trait.id, name: trait.name, active: trait.active })),
+        },
+        psychomotor: {
+          enabled: psychomotorEnabled,
+          scaleOptions: psychomotorScale.map((option) => ({
+            id: option.id,
+            value: option.value,
+            label: option.label,
+            description: option.description || undefined,
+          })),
+          traits: psychomotorTraits.map((trait) => ({ id: trait.id, name: trait.name, active: trait.active })),
+        },
+      });
       setSaved(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to save grading system");
@@ -224,6 +336,32 @@ export function GradingSystemEditorPage() {
             <RatingScaleRows options={ratingOptions} onChange={setRatingOptions} />
           </Card>
         )}
+
+        <Card>
+          <h2 className="mb-4 font-display text-base font-medium text-slate-900">Behavioural traits</h2>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <TraitCategoryEditor
+              title="Affective disposition"
+              description="e.g. punctuality, neatness, honesty - rated once per term by the class teacher."
+              enabled={affectiveEnabled}
+              onEnabledChange={setAffectiveEnabled}
+              scaleOptions={affectiveScale}
+              onScaleOptionsChange={setAffectiveScale}
+              traits={affectiveTraits}
+              onTraitsChange={setAffectiveTraits}
+            />
+            <TraitCategoryEditor
+              title="Psychomotor skills"
+              description="e.g. handwriting, sports, verbal fluency - rated once per term by the class teacher."
+              enabled={psychomotorEnabled}
+              onEnabledChange={setPsychomotorEnabled}
+              scaleOptions={psychomotorScale}
+              onScaleOptionsChange={setPsychomotorScale}
+              traits={psychomotorTraits}
+              onTraitsChange={setPsychomotorTraits}
+            />
+          </div>
+        </Card>
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={() => navigate("/school/assessments/grading")}>

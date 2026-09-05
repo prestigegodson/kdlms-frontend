@@ -16,10 +16,10 @@ interface RemarkEntryRowProps {
 /**
  * One student's remark row - a single Textarea for whichever half the
  * caller may write (`field`), plus, for the principal composer only, the
- * class teacher's own remark shown read-only alongside it for context. Its
- * own component (rather than inlined in `RemarksEntryGrid`) so Phase 15 can
- * add a trait tap-grid onto this same row without reshaping the grid around
- * it - see `remarks-plan.md`.
+ * class teacher's own remark shown read-only alongside it for context.
+ * Behavioural-trait ratings (Phase 15) render on their own tab via
+ * `TraitEntryRow` instead of as extra columns here - see
+ * `RemarksEntryGrid`'s tab switch.
  */
 export function RemarkEntryRow({ row, field, value, editable, dirty, onChange }: RemarkEntryRowProps) {
   const label = field === "classTeacher" ? "Class teacher's remark" : "Principal's remark";

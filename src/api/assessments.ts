@@ -106,6 +106,14 @@ export interface BroadsheetView {
   }>;
 }
 
+/** Mirrors backend assessment.application.port.in.StudentTermResultView.TraitRatingView - `category` is `"AFFECTIVE"`/`"PSYCHOMOTOR"`. */
+export interface TraitRatingView {
+  category: "AFFECTIVE" | "PSYCHOMOTOR";
+  traitName: string;
+  optionValue: string;
+  optionLabel: string;
+}
+
 /** Mirrors backend assessment.application.port.in.StudentTermResultView. */
 export interface StudentTermResultView {
   studentId: string;
@@ -122,6 +130,33 @@ export interface StudentTermResultView {
   position?: number;
   classTeacherRemark?: string;
   principalRemark?: string;
+  /** Empty when the level has neither behavioural-trait category enabled, or this student hasn't been rated yet. */
+  traits: TraitRatingView[];
+}
+
+/** Mirrors backend assessment.application.port.in.RemarksSheetView.TraitDefinitionSheet/ScaleOptionSheet. */
+export interface TraitDefinitionSheet {
+  id: string;
+  name: string;
+}
+export interface ScaleOptionSheet {
+  id: string;
+  value: string;
+  label: string;
+}
+
+/** Mirrors backend assessment.application.port.in.RemarksSheetView.TraitCategorySheet - `category` is `"AFFECTIVE"`/`"PSYCHOMOTOR"`. */
+export interface TraitCategorySheet {
+  category: "AFFECTIVE" | "PSYCHOMOTOR";
+  displayName: string;
+  traits: TraitDefinitionSheet[];
+  scaleOptions: ScaleOptionSheet[];
+}
+
+/** Mirrors backend assessment.application.port.in.RemarksSheetView.TraitRatingEntry - `scaleOptionId` is absent when this student hasn't been rated on this trait yet. */
+export interface TraitRatingEntry {
+  traitId: string;
+  scaleOptionId?: string;
 }
 
 /** Mirrors backend assessment.application.port.in.RemarksSheetView.RemarkRow. */
@@ -132,6 +167,7 @@ export interface RemarkSheetRow {
   classTeacherRemark?: string;
   classTeacherRemarkByName?: string;
   principalRemark?: string;
+  traits: TraitRatingEntry[];
 }
 
 /**
@@ -140,6 +176,9 @@ export interface RemarkSheetRow {
  * are the server's own truth for whether the corresponding save would
  * succeed for this exact class/term/caller (mirrors AttendanceRegisterView's
  * `editable`) - the frontend never re-derives this rule itself.
+ * `traitCategories` lists only the level's enabled behavioural-trait
+ * categories (empty when neither is configured/enabled) - each `row`'s
+ * `traits` then carries just that student's own ratings against them.
  */
 export interface RemarksSheetView {
   classId: string;
@@ -147,13 +186,21 @@ export interface RemarksSheetView {
   termId: string;
   classTeacherEditable: boolean;
   principalRemarkEditable: boolean;
+  traitCategories: TraitCategorySheet[];
   rows: RemarkSheetRow[];
 }
 
-/** One student's remark text for a save - a blank/whitespace value clears that half (see TermRemark.recordClassTeacherRemark/recordPrincipalRemark). */
+/**
+ * One student's remark text for a save - a blank/whitespace value clears
+ * that half (see TermRemark.recordClassTeacherRemark/recordPrincipalRemark).
+ * `traits` is `undefined` to leave this student's existing trait ratings
+ * untouched (the principal save never sends it at all); a present array is
+ * a full replace of every trait it names.
+ */
 export interface RemarkEntry {
   enrollmentId: string;
   remark: string | null;
+  traits?: Array<{ traitId: string; scaleOptionId: string }>;
 }
 
 export function openSheet(classId: string, subjectId: string, termId: string): Promise<AssessmentSheetView> {

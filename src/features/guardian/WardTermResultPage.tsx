@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { GradeKey } from "@/features/assessments/components/GradeKey";
 import { StudentTermResultCard } from "@/features/assessments/components/StudentTermResultCard";
+import { TraitKey } from "@/features/assessments/components/TraitKey";
 import { WardBreadcrumb } from "@/features/guardian/components/WardBreadcrumb";
 import { useWardResultsContext } from "@/features/guardian/WardResultsLayout";
 import { ReportPreviewFrame } from "@/features/reporting/components/ReportPreviewFrame";
@@ -151,6 +152,12 @@ export function WardTermResultPage() {
             <h2 className="mb-3 text-sm font-semibold text-slate-900">Grade key</h2>
             <GradeKey system={result.gradingSystem} />
           </Card>
+          {(result.traitConfiguration.affectiveEnabled || result.traitConfiguration.psychomotorEnabled) && (
+            <Card>
+              <h2 className="mb-3 text-sm font-semibold text-slate-900">Behavioural traits key</h2>
+              <TraitKey configuration={result.traitConfiguration} />
+            </Card>
+          )}
           <Button variant="secondary" onClick={handlePreview}>
             Preview report
           </Button>

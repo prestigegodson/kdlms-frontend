@@ -3,11 +3,10 @@ import { useEffect, useState } from "react";
 import { getBroadsheet } from "@/api/assessments";
 import { ApiError } from "@/api/client";
 import { listClasses, type SchoolClassView } from "@/api/classes";
-import { downloadClassReportsPdf, previewStudentReport } from "@/api/reports";
+import { previewStudentReport } from "@/api/reports";
 import type { ResultScope } from "@/api/types";
 import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
-import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -17,16 +16,17 @@ import { ClassTermPicker } from "@/features/assessments/components/ClassTermPick
 import { ScopeToggle } from "@/features/assessments/components/ScopeToggle";
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
 import { useBranchScope } from "@/features/branches/useBranchScope";
+import { ClassReportExportCard } from "@/features/reporting/components/ClassReportExportCard";
 import { ReportPreviewFrame } from "@/features/reporting/components/ReportPreviewFrame";
 import { type ReportStudentRow, StudentReportList } from "@/features/reporting/components/StudentReportList";
 import { useAuthStore } from "@/stores/authStore";
-import { downloadBlob } from "@/utils/download";
 
 /**
  * Term result reports for a class: pick a class and term, then preview or
- * download each student's report, or the whole class as one PDF. Reuses
- * `getBroadsheet` for the roster - the same visibility the results screen
- * already has, rather than a new roster endpoint.
+ * download each student's report, or queue the whole class as one bulk ZIP
+ * export (`ClassReportExportCard`, Phase 19). Reuses `getBroadsheet` for the
+ * roster - the same visibility the results screen already has, rather than a
+ * new roster endpoint.
  */
 export function ReportsPage() {
   const role = useAuthStore((state) => state.user?.role);
@@ -42,8 +42,6 @@ export function ReportsPage() {
   const [previewStudentId, setPreviewStudentId] = useState<string | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  const [downloadingClass, setDownloadingClass] = useState(false);
-  const [classDownloadError, setClassDownloadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!branchReady) return;
@@ -97,35 +95,11 @@ export function ReportsPage() {
     }
   }
 
-  async function handleDownloadClass() {
-    setDownloadingClass(true);
-    setClassDownloadError(null);
-    try {
-      const blob = await downloadClassReportsPdf(classId, termId, scope);
-      downloadBlob(blob, scope === "MIDTERM" ? "class-results-midterm.pdf" : "class-results.pdf");
-    } catch (error) {
-      setClassDownloadError(error instanceof ApiError ? error.message : "Failed to download class results");
-    } finally {
-      setDownloadingClass(false);
-    }
-  }
-
   const classOptions = (classes ?? []).map((schoolClass) => ({ id: schoolClass.id, name: schoolClass.name }));
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Reports"
-        description="Preview and download personalized result reports for a class."
-        actions={
-          students &&
-          students.length > 0 && (
-            <Button variant="accent" onClick={handleDownloadClass} loading={downloadingClass}>
-              Download class PDFs
-            </Button>
-          )
-        }
-      />
+      <PageHeader title="Reports" description="Preview and download personalized result reports for a class." />
 
       {classes === null && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -149,7 +123,6 @@ export function ReportsPage() {
       )}
 
       {loadError && <Alert variant="error">{loadError}</Alert>}
-      {classDownloadError && <Alert variant="error">{classDownloadError}</Alert>}
 
       {classId && termId && students === null && !loadError && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -164,7 +137,10 @@ export function ReportsPage() {
         />
       )}
       {students && students.length > 0 && (
-        <StudentReportList students={students} termId={termId} scope={scope} onPreview={handlePreview} />
+        <>
+          <ClassReportExportCard classId={classId} termId={termId} scope={scope} />
+          <StudentReportList students={students} termId={termId} scope={scope} onPreview={handlePreview} />
+        </>
       )}
 
       {previewStudentId && (

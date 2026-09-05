@@ -145,6 +145,7 @@ describe("AdminResultsPanel", () => {
       termId: "term-1",
       classTeacherEditable: false,
       principalRemarkEditable: true,
+      traitCategories: [],
       rows: [],
     });
   });

@@ -1,6 +1,7 @@
 import { apiFetch, apiFetchBlob, apiFetchText } from "@/api/client";
 import type { GradingSystemView } from "@/api/gradingSystems";
 import type { StudentTermResultView } from "@/api/assessments";
+import type { TraitConfigurationView } from "@/api/traits";
 import type { StudentAttendanceSummaryView } from "@/api/attendance";
 import type { StudentMedicalView } from "@/api/students";
 import type { ClassTimetableView } from "@/api/timetable";
@@ -67,6 +68,7 @@ export interface WardTermView {
 export interface WardTermResultView {
   result: StudentTermResultView;
   gradingSystem: GradingSystemView;
+  traitConfiguration: TraitConfigurationView;
 }
 
 /** Every student linked to the calling guardian. */

@@ -51,6 +51,7 @@ const RESULT_1 = {
     total: 176,
     average: 88,
     position: 1,
+    traits: [],
   },
   gradingSystem: {
     levelId: "level-1",
@@ -62,6 +63,15 @@ const RESULT_1 = {
     boundaries: [{ grade: "A", minScore: 70, maxScore: 100, remark: "Excellent" }],
     ratingOptions: [],
     configured: true,
+  },
+  traitConfiguration: {
+    levelId: "level-1",
+    levelName: "Primary",
+    affectiveEnabled: false,
+    psychomotorEnabled: false,
+    affective: { scaleOptions: [], traits: [] },
+    psychomotor: { scaleOptions: [], traits: [] },
+    configured: false,
   },
 };
 

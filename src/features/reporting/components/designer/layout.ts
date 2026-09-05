@@ -31,6 +31,9 @@ export const REPORT_BLOCK_NAMES = [
   "SIGNATURE_PRINCIPAL",
   "REMARK_CLASS_TEACHER",
   "REMARK_PRINCIPAL",
+  "AFFECTIVE_TRAITS",
+  "PSYCHOMOTOR_TRAITS",
+  "TRAIT_LEGEND",
 ] as const;
 
 export type ReportBlockName = (typeof REPORT_BLOCK_NAMES)[number];
@@ -217,6 +220,9 @@ export const BLOCK_LABELS: Record<ReportBlockName, string> = {
   SIGNATURE_PRINCIPAL: "Principal signature",
   REMARK_CLASS_TEACHER: "Class teacher's remark",
   REMARK_PRINCIPAL: "Principal's remark",
+  AFFECTIVE_TRAITS: "Affective disposition table",
+  PSYCHOMOTOR_TRAITS: "Psychomotor skills table",
+  TRAIT_LEGEND: "Behavioural traits key",
 };
 
 /** Only these four blocks are mode-specific - every other block (and every non-BLOCK element) is offered regardless of assessment mode. */

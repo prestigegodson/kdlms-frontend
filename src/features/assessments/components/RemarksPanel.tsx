@@ -94,7 +94,9 @@ export function RemarksPanel({ initialClassId }: RemarksPanelProps = {}) {
       {loadError && <Alert variant="error">{loadError}</Alert>}
 
       {sheet && !sheet.classTeacherEditable && (
-        <Alert variant="warning">Only this class's class teacher can write remarks - you can still see what's been written.</Alert>
+        <Alert variant="warning">
+          Only this class's class teacher can write remarks or behavioural-trait ratings - you can still see what's been written.
+        </Alert>
       )}
 
       {sheet && <RemarksEntryGrid sheet={sheet} field="classTeacher" onSaved={handleSaved} />}

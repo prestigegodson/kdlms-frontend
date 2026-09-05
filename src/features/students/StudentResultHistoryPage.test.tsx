@@ -6,6 +6,7 @@ import * as assessmentsApi from "@/api/assessments";
 import { ApiError } from "@/api/client";
 import * as gradingSystemsApi from "@/api/gradingSystems";
 import * as studentsApi from "@/api/students";
+import * as traitsApi from "@/api/traits";
 import type { StudentTermView, StudentView } from "@/api/students";
 import { StudentResultHistoryPage } from "@/features/students/StudentResultHistoryPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
@@ -23,6 +24,11 @@ vi.mock("@/api/assessments", async () => {
 vi.mock("@/api/gradingSystems", async () => {
   const actual = await vi.importActual<typeof import("@/api/gradingSystems")>("@/api/gradingSystems");
   return { ...actual, getGradingSystem: vi.fn() };
+});
+
+vi.mock("@/api/traits", async () => {
+  const actual = await vi.importActual<typeof import("@/api/traits")>("@/api/traits");
+  return { ...actual, getTraitConfiguration: vi.fn() };
 });
 
 vi.mock("@/api/reports", async () => {
@@ -85,6 +91,17 @@ const RESULT_1 = {
   total: 88,
   average: 88,
   position: 1,
+  traits: [],
+};
+
+const TRAIT_CONFIGURATION = {
+  levelId: "level-1",
+  levelName: "Primary",
+  affectiveEnabled: false,
+  psychomotorEnabled: false,
+  affective: { scaleOptions: [], traits: [] },
+  psychomotor: { scaleOptions: [], traits: [] },
+  configured: false,
 };
 
 const GRADING_SYSTEM = {
@@ -125,6 +142,7 @@ describe("StudentResultHistoryPage", () => {
     vi.clearAllMocks();
     vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
     vi.mocked(gradingSystemsApi.getGradingSystem).mockResolvedValue(GRADING_SYSTEM);
+    vi.mocked(traitsApi.getTraitConfiguration).mockResolvedValue(TRAIT_CONFIGURATION);
   });
 
   it("filters terms to the session in the URL, defaults to a term, and shows a published badge per term", async () => {

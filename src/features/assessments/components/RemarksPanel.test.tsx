@@ -60,11 +60,13 @@ const EDITABLE_SHEET: RemarksSheetView = {
   termId: "term-1",
   classTeacherEditable: true,
   principalRemarkEditable: false,
+  traitCategories: [],
   rows: [
     {
       enrollmentId: "enrollment-1",
       studentName: "Zara Bello",
       admissionNumber: "SCH/2026/0001",
+      traits: [],
     },
   ],
 };
@@ -113,6 +115,107 @@ describe("RemarksPanel", () => {
 
     expect(assessmentsApi.saveTeacherRemarks).toHaveBeenCalledWith("class-1", "term-1", [
       { enrollmentId: "enrollment-1", remark: "A hardworking student." },
+    ]);
+  });
+
+  it("shows a trait tab per enabled category and includes a rating in the save payload", async () => {
+    const user = userEvent.setup();
+    vi.mocked(meApi.listMyClasses).mockResolvedValue([CLASS]);
+    vi.mocked(assessmentsApi.getRemarksSheet).mockResolvedValue({
+      ...EDITABLE_SHEET,
+      traitCategories: [
+        {
+          category: "AFFECTIVE",
+          displayName: "Affective disposition",
+          traits: [{ id: "trait-1", name: "Punctuality" }],
+          scaleOptions: [
+            { id: "option-1", value: "1", label: "VERY POOR" },
+            { id: "option-2", value: "5", label: "EXCELLENT" },
+          ],
+        },
+        {
+          category: "PSYCHOMOTOR",
+          displayName: "Psychomotor skills",
+          traits: [{ id: "trait-2", name: "Handwriting" }],
+          scaleOptions: [
+            { id: "option-3", value: "1", label: "VERY POOR" },
+            { id: "option-4", value: "5", label: "EXCELLENT" },
+          ],
+        },
+      ],
+      rows: [{ ...EDITABLE_SHEET.rows[0], traits: [{ traitId: "trait-1" }, { traitId: "trait-2" }] }],
+    });
+    vi.mocked(assessmentsApi.saveTeacherRemarks).mockResolvedValue({
+      outcomes: [{ enrollmentId: "enrollment-1", success: true }],
+    });
+    renderPanel();
+
+    await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
+
+    // Remarks tab shows no trait select of either category.
+    expect(await screen.findByLabelText("Class teacher's remark for Zara Bello")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Punctuality for Zara Bello")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Affective disposition" }));
+    expect(screen.getByLabelText("Punctuality for Zara Bello")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Handwriting for Zara Bello")).not.toBeInTheDocument();
+    expect(screen.getByText("VERY POOR")).toBeInTheDocument();
+
+    const traitSelect = screen.getByLabelText("Punctuality for Zara Bello");
+    await user.selectOptions(traitSelect, "option-2");
+
+    await user.click(screen.getByRole("tab", { name: "Psychomotor skills" }));
+    expect(screen.getByLabelText("Handwriting for Zara Bello")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Punctuality for Zara Bello")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(assessmentsApi.saveTeacherRemarks).toHaveBeenCalledWith("class-1", "term-1", [
+      { enrollmentId: "enrollment-1", remark: null, traits: [{ traitId: "trait-1", scaleOptionId: "option-2" }] },
+    ]);
+  });
+
+  it("keeps a remark and a trait rating edit together across tab switches, in one save", async () => {
+    const user = userEvent.setup();
+    vi.mocked(meApi.listMyClasses).mockResolvedValue([CLASS]);
+    vi.mocked(assessmentsApi.getRemarksSheet).mockResolvedValue({
+      ...EDITABLE_SHEET,
+      traitCategories: [
+        {
+          category: "AFFECTIVE",
+          displayName: "Affective disposition",
+          traits: [{ id: "trait-1", name: "Punctuality" }],
+          scaleOptions: [
+            { id: "option-1", value: "1", label: "VERY POOR" },
+            { id: "option-2", value: "5", label: "EXCELLENT" },
+          ],
+        },
+      ],
+      rows: [{ ...EDITABLE_SHEET.rows[0], traits: [{ traitId: "trait-1" }] }],
+    });
+    vi.mocked(assessmentsApi.saveTeacherRemarks).mockResolvedValue({
+      outcomes: [{ enrollmentId: "enrollment-1", success: true }],
+    });
+    renderPanel();
+
+    await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
+
+    await user.type(screen.getByLabelText("Class teacher's remark for Zara Bello"), "A hardworking student.");
+
+    await user.click(screen.getByRole("tab", { name: "Affective disposition" }));
+    await user.selectOptions(screen.getByLabelText("Punctuality for Zara Bello"), "option-2");
+
+    await user.click(screen.getByRole("tab", { name: "Remarks" }));
+    expect(screen.getByLabelText("Class teacher's remark for Zara Bello")).toHaveValue("A hardworking student.");
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(assessmentsApi.saveTeacherRemarks).toHaveBeenCalledWith("class-1", "term-1", [
+      {
+        enrollmentId: "enrollment-1",
+        remark: "A hardworking student.",
+        traits: [{ traitId: "trait-1", scaleOptionId: "option-2" }],
+      },
     ]);
   });
 

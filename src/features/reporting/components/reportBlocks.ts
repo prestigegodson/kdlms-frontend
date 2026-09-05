@@ -46,6 +46,21 @@ export const REPORT_BLOCKS: ReportBlockDefinition[] = [
     label: "Principal's remark",
     description: "The term's holistic remark - closes up when never written for a student",
   },
+  {
+    id: "AFFECTIVE_TRAITS",
+    label: "Affective disposition table",
+    description: "Rated affective-disposition traits - closes up when the category has nothing rated",
+  },
+  {
+    id: "PSYCHOMOTOR_TRAITS",
+    label: "Psychomotor skills table",
+    description: "Rated psychomotor-skills traits - closes up when the category has nothing rated",
+  },
+  {
+    id: "TRAIT_LEGEND",
+    label: "Behavioural traits key",
+    description: "The rating scale for both trait categories - closes up when neither is enabled",
+  },
 ];
 
 /**

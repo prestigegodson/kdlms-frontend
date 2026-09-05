@@ -30,6 +30,21 @@ const NUMERIC_SYSTEM: GradingSystemView = {
   configured: true,
 };
 
+const QUALITATIVE_SYSTEM: GradingSystemView = {
+  levelId: "level-2",
+  levelName: "Nursery",
+  baseLevel: "NURSERY",
+  assessmentMode: "QUALITATIVE",
+  showPosition: true,
+  showMidtermGrade: true,
+  boundaries: [],
+  ratingOptions: [
+    { id: "option-1", label: "Needs Reinforcement", description: "", rank: 1 },
+    { id: "option-2", label: "Meets Expectation", description: "", rank: 2 },
+  ],
+  configured: true,
+};
+
 function renderPage() {
   const router = createMemoryRouter(
     [{ path: "/grading/:levelId", element: <GradingSystemEditorPage /> }],
@@ -132,6 +147,31 @@ describe("GradingSystemEditorPage", () => {
     expect(gradingApi.saveNumericGradingSystem).toHaveBeenCalledWith(
       "level-1",
       expect.objectContaining({ showMidtermGrade: false }),
+    );
+  });
+
+  it("a loaded rating option's id rides back out in the save payload, but a newly added row's does not", async () => {
+    const user = userEvent.setup();
+    vi.mocked(gradingApi.getGradingSystem).mockResolvedValue(QUALITATIVE_SYSTEM);
+    vi.mocked(gradingApi.saveQualitativeGradingSystem).mockResolvedValue(QUALITATIVE_SYSTEM);
+    renderPage();
+
+    await screen.findByText("Rating scale");
+    await user.click(screen.getByRole("button", { name: "Add rating" }));
+    const labelInputs = screen.getAllByLabelText("Label");
+    await user.type(labelInputs[labelInputs.length - 1], "Exceeds Expectation");
+
+    await user.click(screen.getByRole("button", { name: "Save grading system" }));
+
+    expect(gradingApi.saveQualitativeGradingSystem).toHaveBeenCalledWith(
+      "level-1",
+      expect.objectContaining({
+        ratingOptions: [
+          expect.objectContaining({ id: "option-1", label: "Needs Reinforcement", rank: 1 }),
+          expect.objectContaining({ id: "option-2", label: "Meets Expectation", rank: 2 }),
+          expect.objectContaining({ id: undefined, label: "Exceeds Expectation", rank: 3 }),
+        ],
+      }),
     );
   });
 });

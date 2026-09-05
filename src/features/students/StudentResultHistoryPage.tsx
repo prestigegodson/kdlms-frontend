@@ -3,6 +3,7 @@ import { useParams } from "react-router";
 import { getStudentResult, type StudentTermResultView } from "@/api/assessments";
 import { ApiError } from "@/api/client";
 import { getGradingSystem, type GradingSystemView } from "@/api/gradingSystems";
+import { getTraitConfiguration, type TraitConfigurationView } from "@/api/traits";
 import { downloadStudentReportPdf, previewStudentReport } from "@/api/reports";
 import { getStudent, listStudentTerms, type StudentTermView, type StudentView } from "@/api/students";
 import type { ResultScope } from "@/api/types";
@@ -18,6 +19,7 @@ import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { GradeKey } from "@/features/assessments/components/GradeKey";
 import { ScopeToggle } from "@/features/assessments/components/ScopeToggle";
 import { StudentTermResultCard } from "@/features/assessments/components/StudentTermResultCard";
+import { TraitKey } from "@/features/assessments/components/TraitKey";
 import { ReportPreviewFrame } from "@/features/reporting/components/ReportPreviewFrame";
 import { downloadBlob } from "@/utils/download";
 
@@ -42,6 +44,7 @@ export function StudentResultHistoryPage() {
   const [scope, setScope] = useState<ResultScope>("TERM");
   const [result, setResult] = useState<StudentTermResultView | null>(null);
   const [gradingSystem, setGradingSystem] = useState<GradingSystemView | null>(null);
+  const [traitConfiguration, setTraitConfiguration] = useState<TraitConfigurationView | null>(null);
   const [noResult, setNoResult] = useState(false);
   const [resultError, setResultError] = useState<string | null>(null);
 
@@ -101,6 +104,9 @@ export function StudentResultHistoryPage() {
     getGradingSystem(term.levelId)
       .then(setGradingSystem)
       .catch(() => setGradingSystem(null));
+    getTraitConfiguration(term.levelId)
+      .then(setTraitConfiguration)
+      .catch(() => setTraitConfiguration(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- terms is read for the current termId's levelId only, not a dependency of the fetch itself
   }, [studentId, termId, scope]);
 
@@ -217,6 +223,12 @@ export function StudentResultHistoryPage() {
                 <Card>
                   <h2 className="mb-3 text-sm font-semibold text-slate-900">Grade key</h2>
                   <GradeKey system={gradingSystem} />
+                </Card>
+              )}
+              {traitConfiguration && (traitConfiguration.affectiveEnabled || traitConfiguration.psychomotorEnabled) && (
+                <Card>
+                  <h2 className="mb-3 text-sm font-semibold text-slate-900">Behavioural traits key</h2>
+                  <TraitKey configuration={traitConfiguration} />
                 </Card>
               )}
               <Button variant="secondary" onClick={handlePreview}>

@@ -3,34 +3,34 @@ import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 
-export interface RatingScaleRow {
-  /** `undefined` for a freshly authored option not yet saved - carried through untouched so the backend can tell an edit from a replacement, matching `TraitScaleRow`. */
+export interface TraitScaleRow {
+  /** `undefined` for a freshly authored option not yet saved - carried through untouched so the backend can tell an edit from a replacement. */
   id?: string;
+  value: string;
   label: string;
   description: string;
 }
 
-interface RatingScaleRowsProps {
-  options: RatingScaleRow[];
-  onChange: (options: RatingScaleRow[]) => void;
+interface TraitScaleRowsProps {
+  options: TraitScaleRow[];
+  onChange: (options: TraitScaleRow[]) => void;
 }
 
-const BLANK_OPTION: RatingScaleRow = { label: "", description: "" };
+const BLANK_OPTION: TraitScaleRow = { value: "", label: "", description: "" };
 
 /**
- * The ordered rating-scale editor for a QUALITATIVE grading system - order
- * carries meaning (rank 1 is the lowest rating), so rows reorder via
- * up/down arrows rather than free drag, matching LevelsPage's ranked-ladder
- * pattern. Rank itself isn't a field here - it's the row's position.
- * <p>
- * Editing an existing row is a true in-place update: its `id` rides along
- * unchanged, so relabelling, re-describing, or reordering an already-rated
- * option never loses the students already rated against it - only removing
- * one still in use is refused server-side. See `TraitScaleRows`, which this
- * mirrors.
+ * The ordered rating-scale editor for one behavioural-trait category -
+ * copies `RatingScaleRows`' add/remove/up-down shape verbatim (order
+ * carries meaning, rank 1 is the lowest rating, so rows reorder via arrows
+ * rather than free drag) but adds a short **Value** field - the mark
+ * printed on the report (e.g. "1".."5") - alongside the Label, since a
+ * school may edit both independently. Unlike a `GradingSystem`'s rating
+ * scale, editing an existing row here is a true in-place update: its `id`
+ * rides along unchanged, so relabelling or re-valuing an already-rated
+ * option never loses the students already rated against it.
  */
-export function RatingScaleRows({ options, onChange }: RatingScaleRowsProps) {
-  function updateRow(index: number, patch: Partial<RatingScaleRow>) {
+export function TraitScaleRows({ options, onChange }: TraitScaleRowsProps) {
+  function updateRow(index: number, patch: Partial<TraitScaleRow>) {
     onChange(options.map((option, i) => (i === index ? { ...option, ...patch } : option)));
   }
 
@@ -71,18 +71,26 @@ export function RatingScaleRows({ options, onChange }: RatingScaleRowsProps) {
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-800">
               {index + 1}
             </span>
-            <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
-              <FormField label="Label" htmlFor={`rating-${index}-label`}>
+            <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-[5rem_1fr_1fr]">
+              <FormField label="Value" htmlFor={`trait-scale-${index}-value`}>
                 <Input
-                  id={`rating-${index}-label`}
+                  id={`trait-scale-${index}-value`}
+                  required
+                  value={option.value}
+                  onChange={(event) => updateRow(index, { value: event.target.value })}
+                />
+              </FormField>
+              <FormField label="Label" htmlFor={`trait-scale-${index}-label`}>
+                <Input
+                  id={`trait-scale-${index}-label`}
                   required
                   value={option.label}
                   onChange={(event) => updateRow(index, { label: event.target.value })}
                 />
               </FormField>
-              <FormField label="Description (optional)" htmlFor={`rating-${index}-description`}>
+              <FormField label="Description (optional)" htmlFor={`trait-scale-${index}-description`}>
                 <Input
-                  id={`rating-${index}-description`}
+                  id={`trait-scale-${index}-description`}
                   value={option.description}
                   onChange={(event) => updateRow(index, { description: event.target.value })}
                 />
