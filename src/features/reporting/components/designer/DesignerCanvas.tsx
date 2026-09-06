@@ -39,7 +39,11 @@ export function DesignerCanvas({ editor }: { editor: LayoutEditor }) {
           fontFamily: editor.layout.page.fontFamily,
           fontSize: `${editor.layout.page.fontSizePx}px`,
           color: editor.layout.page.color,
-          minHeight: "1122px", // 794 * (297/210) - true A4 aspect at this width
+          minHeight: "1122px", // 794 * (297/210) - true A4 aspect at this width.
+          // With border-box sizing, minHeight(1122) + padding(paddingPx, both sides) gives exactly
+          // the same per-page row budget the PDF now uses (LayoutHtmlEmitter emits the page inset
+          // as the @page rule's own margin, not as this div's padding) - a real match, not a
+          // coincidence, since both moved to that model together.
         }}
       >
         {editor.layout.rows.map((row, index) => (

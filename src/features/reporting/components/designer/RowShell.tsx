@@ -58,7 +58,10 @@ export function RowShell({ row, index, rowCount, editor, collapsed, onToggleColl
       }`}
       style={{
         marginTop: row.style?.marginTopPx,
-        marginBottom: row.style?.marginBottomPx,
+        // The server never emits margin-bottom on the last row (LayoutHtmlEmitter) - a trailing
+        // bottom margin can only push content past the page boundary, never do anything useful.
+        // Matched here so the canvas doesn't show a bottom gap the PDF will never actually have.
+        marginBottom: index === rowCount - 1 ? undefined : row.style?.marginBottomPx,
         backgroundColor: row.style?.backgroundColor,
       }}
     >
