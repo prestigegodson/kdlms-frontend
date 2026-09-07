@@ -419,6 +419,66 @@ export const can = {
     return entitled && role === "GUARDIAN";
   },
 
+  /**
+   * Seeing the take-home quiz list / an individual quiz - staff (admins) or a TEACHER assigned
+   * (class-teach or subject-teach) to that quiz's class, the backend
+   * `TakeHomeQuizAccessGuard.requireVisible` union - the same shape `viewLessonNotes` documents.
+   * Gated on the school's Take-home quizzes entitlement, the same full-lockout shape
+   * Messages/Timetable/Lesson notes use.
+   */
+  viewTakeHomeQuizzes(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER";
+  },
+
+  /**
+   * Authoring/editing/publishing a take-home quiz - admins (any), or a TEACHER who class-teaches
+   * or subject-teaches that class (the narrower subject-teach-only-their-own-subject rule is
+   * server data the frontend can't evaluate, so this only gates route/nav visibility; the actual
+   * save is additionally enforced server-side by `TakeHomeQuizAccessGuard.requireAuthorable`).
+   */
+  authorTakeHomeQuizzes(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER";
+  },
+
+  /**
+   * Publishing/unpublishing a quiz's results - same role set as `authorTakeHomeQuizzes`, per the
+   * permissions matrix in quiz-module.md (publish/unpublish rows).
+   */
+  publishTakeHomeQuizResults(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER";
+  },
+
+  /**
+   * Adjusting an attempt's score - TEACHER only, even when entitled. Deliberate: take-home quiz
+   * scoring is teacher-write/admin-read with no admin override path, the same rule
+   * `assessment`/`attendance` follow - an admin who needs a score changed resets the attempt or
+   * asks the teacher (quiz-module.md's permissions matrix, footnote 3).
+   */
+  adjustTakeHomeQuizScore(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && role === "TEACHER";
+  },
+
+  /**
+   * A guardian's read of their own ward's take-home quiz results - a **separate** check from
+   * `viewTakeHomeQuizzes`, not GUARDIAN added to it, the same reasoning `viewWardLessonNotes`
+   * gives: the guardian path is authorized entirely through the `shared` SPI `GuardianWards` and
+   * gated on the quiz's own `RESULTS_PUBLISHED` state, an entirely separate backend path from
+   * `TakeHomeQuizAccessGuard.requireVisible`. Gated on the school's Take-home quizzes
+   * entitlement, the same full-lockout shape every other check here uses.
+   */
+  viewWardTakeHomeQuizzes(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && role === "GUARDIAN";
+  },
+
   /** Setting the platform's own support contact details - SYSTEM_ADMIN only, outside tenant scope entirely. */
   manageSupportContact(role: Role | undefined): boolean {
     return role === "SYSTEM_ADMIN";

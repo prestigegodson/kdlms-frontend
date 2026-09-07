@@ -13,6 +13,7 @@ import {
   LifeBuoy,
   Library,
   BookOpen,
+  ListChecks,
   MessageSquare,
   NotebookPen,
   Scale,
@@ -123,6 +124,19 @@ const NAV_ITEMS: NavItem[] = [
     },
     // Admin-only badge - the review queue's pending count, mirroring Messages' unread badge.
     badge: () => usePendingLessonNotesStore.getState().count,
+  },
+  {
+    label: "Take-home quizzes",
+    href: "/school/take-home-quizzes",
+    icon: ListChecks,
+    group: "Academics",
+    // See auth/permissions.ts's viewTakeHomeQuizzes, the single source of truth - admins (any
+    // class) or a TEACHER assigned (class-teach or subject-teach) to at least one class.
+    visible: () => {
+      const role = useAuthStore.getState().user?.role;
+      const entitled = useFeatureStore.getState().takeHomeQuiz;
+      return can.viewTakeHomeQuizzes(role, entitled);
+    },
   },
   {
     label: "Assessments",
@@ -285,6 +299,7 @@ export function SchoolLayout() {
   useFeatureStore((state) => state.communication);
   useFeatureStore((state) => state.timetable);
   useFeatureStore((state) => state.lessonNotes);
+  useFeatureStore((state) => state.takeHomeQuiz);
   useUnreadMessagesStore((state) => state.count);
   usePendingLessonNotesStore((state) => state.count);
 

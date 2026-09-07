@@ -12,6 +12,7 @@ export interface MyFeaturesView {
   timetable: boolean;
   lessonNotes: boolean;
   aiLessonNotes: boolean;
+  takeHomeQuiz: boolean;
 }
 
 export function getMyFeatures(): Promise<MyFeaturesView> {

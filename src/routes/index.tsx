@@ -32,6 +32,7 @@ import { WardResultsPage } from "@/features/guardian/WardResultsPage";
 import { WardSessionsPage } from "@/features/guardian/WardSessionsPage";
 import { WardSessionTermsPage } from "@/features/guardian/WardSessionTermsPage";
 import { WardTermAttendancePage } from "@/features/guardian/WardTermAttendancePage";
+import { WardTakeHomeQuizzesPage } from "@/features/guardian/WardTakeHomeQuizzesPage";
 import { WardTermResultPage } from "@/features/guardian/WardTermResultPage";
 import { WardTimetablePage } from "@/features/guardian/WardTimetablePage";
 import { WardsPage } from "@/features/guardian/WardsPage";
@@ -52,6 +53,7 @@ import { StudentsPage } from "@/features/students/StudentsPage";
 import { SubscriptionPage } from "@/features/subscription/SubscriptionPage";
 import { AdminSupportContactPage } from "@/features/support/AdminSupportContactPage";
 import { SupportPage } from "@/features/support/SupportPage";
+import { TakeHomeQuizzesPage } from "@/features/takeHomeQuizzes/TakeHomeQuizzesPage";
 import { TeachersPage } from "@/features/teachers/TeachersPage";
 import { PeriodGridPage } from "@/features/timetable/PeriodGridPage";
 import { TimetablePage } from "@/features/timetable/TimetablePage";
@@ -62,6 +64,9 @@ import { SystemAdminLayout } from "@/layouts/SystemAdminLayout";
 import { HomeRedirect } from "@/routes/HomeRedirect";
 import { LessonNoteEditorRoute } from "@/routes/LessonNoteEditorRoute";
 import { RequireRole } from "@/routes/RequireRole";
+import { TakeHomeQuizEditorRoute } from "@/routes/TakeHomeQuizEditorRoute";
+import { TakeHomeQuizResultsRoute } from "@/routes/TakeHomeQuizResultsRoute";
+import { TakeHomeQuizRoute } from "@/routes/TakeHomeQuizRoute";
 import { TemplateDesignerRoute } from "@/routes/TemplateDesignerRoute";
 import { WardLessonNotesRoute } from "@/routes/WardLessonNotesRoute";
 
@@ -82,6 +87,7 @@ export const routes: RouteObject[] = [
       { path: "forgot-password", element: <ForgotPasswordPage /> },
       { path: "reset-password", element: <ResetPasswordPage /> },
       { path: "set-password", element: <SetInitialPasswordPage /> },
+      { path: "take-home-quiz", element: <TakeHomeQuizRoute /> },
       {
         path: "admin",
         element: (
@@ -195,6 +201,9 @@ export const routes: RouteObject[] = [
           { path: "timetable", element: <TimetablePage /> },
           { path: "lesson-notes", element: <LessonNotesPage /> },
           { path: "lesson-notes/:noteId", element: <LessonNoteEditorRoute /> },
+          { path: "take-home-quizzes", element: <TakeHomeQuizzesPage /> },
+          { path: "take-home-quizzes/:quizId", element: <TakeHomeQuizEditorRoute /> },
+          { path: "take-home-quizzes/:quizId/results", element: <TakeHomeQuizResultsRoute /> },
           {
             path: "students",
             element: (
@@ -307,6 +316,7 @@ export const routes: RouteObject[] = [
           { path: "messages", element: <WardMessagesPage /> },
           { path: "timetable", element: <WardTimetablePage /> },
           { path: "lesson-notes", element: <WardLessonNotesRoute /> },
+          { path: "take-home-quizzes", element: <WardTakeHomeQuizzesPage /> },
           { path: "settings", element: <NotificationSettingsPage /> },
         ],
       },

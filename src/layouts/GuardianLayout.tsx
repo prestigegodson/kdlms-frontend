@@ -1,4 +1,4 @@
-import { Bell, CalendarDays, ClipboardCheck, ClipboardList, MessageSquare, NotebookPen, Users } from "lucide-react";
+import { Bell, CalendarDays, ClipboardCheck, ClipboardList, FileCheck2, MessageSquare, NotebookPen, Users } from "lucide-react";
 import { useEffect } from "react";
 import { can } from "@/auth/permissions";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
@@ -40,6 +40,15 @@ const NAV_ITEMS: NavItem[] = [
     visible: () => can.viewWardLessonNotes("GUARDIAN", useFeatureStore.getState().lessonNotes),
   },
   {
+    label: "Take-home quizzes",
+    href: "/guardian/take-home-quizzes",
+    icon: FileCheck2,
+    // Overflow-only (drawer via the tab bar's More tab) - see the Timetable item's comment above
+    // for why. Gated on the school's take-home-quiz entitlement, the same full-lockout shape
+    // viewTimetable/viewWardLessonNotes use - see auth/permissions.ts's viewWardTakeHomeQuizzes.
+    visible: () => can.viewWardTakeHomeQuizzes("GUARDIAN", useFeatureStore.getState().takeHomeQuiz),
+  },
+  {
     label: "Notifications",
     href: "/guardian/settings",
     icon: Bell,
@@ -60,6 +69,7 @@ export function GuardianLayout() {
   useFeatureStore((state) => state.communication);
   useFeatureStore((state) => state.timetable);
   useFeatureStore((state) => state.lessonNotes);
+  useFeatureStore((state) => state.takeHomeQuiz);
   useUnreadMessagesStore((state) => state.count);
 
   // Deliberately no schoolBrandingStore fetch here, unlike SchoolLayout: a

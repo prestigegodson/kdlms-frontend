@@ -15,9 +15,11 @@ export interface PackageView {
   multiBranch: boolean;
   branchLimit: number;
   activeStudentLimit: number;
+  /** Also actually gates the feature (Phase 20), the same hard-lockout shape `communication`/`timetable`/`lessonNotes` use - see CLAUDE.md. */
   takeHomeQuiz: boolean;
+  /** Unlike the other flags on this record, this one remains dormant - no module built behind it yet. */
   onDemandLearning: boolean;
-  /** Unlike takeHomeQuiz/onDemandLearning, this flag actually gates the `communication` module - see CLAUDE.md. */
+  /** Also actually gates the feature, the same hard-lockout shape `takeHomeQuiz` uses - see CLAUDE.md. */
   communication: boolean;
   /** Also actually gates the feature, the same hard-lockout shape `communication` uses - see CLAUDE.md. */
   timetable: boolean;

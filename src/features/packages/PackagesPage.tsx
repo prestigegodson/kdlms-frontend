@@ -128,11 +128,11 @@ export function PackagesPage() {
                   <TableCell label="Student limit">{pkg.activeStudentLimit}</TableCell>
                   <TableCell label="Features">
                     <div className="flex flex-wrap justify-end gap-1 sm:justify-start">
-                      {pkg.takeHomeQuiz && <Badge variant="neutral">Take-home quizzes</Badge>}
                       {pkg.onDemandLearning && <Badge variant="neutral">Learning</Badge>}
                       {pkg.communication && <Badge variant="brand">Messaging</Badge>}
                       {pkg.timetable && <Badge variant="brand">Timetables</Badge>}
                       {pkg.lessonNotes && <Badge variant="brand">Lesson notes</Badge>}
+                      {pkg.takeHomeQuiz && <Badge variant="brand">Take-home quizzes</Badge>}
                       {pkg.aiLessonNotes && <Badge variant="brand">AI lesson notes</Badge>}
                     </div>
                   </TableCell>
@@ -340,7 +340,7 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
           Take-home quizzes
         </label>
         <p className="-mt-2 text-xs text-slate-500">
-          Entitlement for the future teacher-authored take-home quiz module - does not affect midterm quiz
+          Entitlement for the teacher-authored take-home quiz module - does not affect midterm quiz
           recording, which is available on every package.
         </p>
         <label className="flex items-center gap-2 text-sm text-slate-700">

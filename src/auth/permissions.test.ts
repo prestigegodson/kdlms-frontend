@@ -160,6 +160,93 @@ describe("can.viewWardLessonNotes", () => {
   });
 });
 
+describe("can.viewTakeHomeQuizzes", () => {
+  it("is true for an entitled SCHOOL_ADMIN, BRANCH_ADMIN, or TEACHER", () => {
+    expect(can.viewTakeHomeQuizzes("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.viewTakeHomeQuizzes("BRANCH_ADMIN", true)).toBe(true);
+    expect(can.viewTakeHomeQuizzes("TEACHER", true)).toBe(true);
+  });
+
+  it("is false when the school isn't entitled, even for staff roles", () => {
+    expect(can.viewTakeHomeQuizzes("SCHOOL_ADMIN", false)).toBe(false);
+    expect(can.viewTakeHomeQuizzes("TEACHER", false)).toBe(false);
+  });
+
+  it("is false for GUARDIAN, even when entitled", () => {
+    expect(can.viewTakeHomeQuizzes("GUARDIAN", true)).toBe(false);
+    expect(can.viewTakeHomeQuizzes(undefined, true)).toBe(false);
+  });
+});
+
+describe("can.authorTakeHomeQuizzes", () => {
+  it("is true for an entitled SCHOOL_ADMIN, BRANCH_ADMIN, or TEACHER", () => {
+    expect(can.authorTakeHomeQuizzes("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.authorTakeHomeQuizzes("BRANCH_ADMIN", true)).toBe(true);
+    expect(can.authorTakeHomeQuizzes("TEACHER", true)).toBe(true);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.authorTakeHomeQuizzes("TEACHER", false)).toBe(false);
+  });
+
+  it("is false for GUARDIAN, even when entitled", () => {
+    expect(can.authorTakeHomeQuizzes("GUARDIAN", true)).toBe(false);
+  });
+});
+
+describe("can.publishTakeHomeQuizResults", () => {
+  it("is true for an entitled SCHOOL_ADMIN, BRANCH_ADMIN, or TEACHER", () => {
+    expect(can.publishTakeHomeQuizResults("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.publishTakeHomeQuizResults("BRANCH_ADMIN", true)).toBe(true);
+    expect(can.publishTakeHomeQuizResults("TEACHER", true)).toBe(true);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.publishTakeHomeQuizResults("SCHOOL_ADMIN", false)).toBe(false);
+  });
+
+  it("is false for GUARDIAN, even when entitled", () => {
+    expect(can.publishTakeHomeQuizResults("GUARDIAN", true)).toBe(false);
+  });
+});
+
+describe("can.adjustTakeHomeQuizScore", () => {
+  it("is true only for an entitled TEACHER", () => {
+    expect(can.adjustTakeHomeQuizScore("TEACHER", true)).toBe(true);
+  });
+
+  it("is false when the school isn't entitled, even for TEACHER", () => {
+    expect(can.adjustTakeHomeQuizScore("TEACHER", false)).toBe(false);
+  });
+
+  it("is false for SCHOOL_ADMIN/BRANCH_ADMIN even when entitled - no admin override path", () => {
+    expect(can.adjustTakeHomeQuizScore("SCHOOL_ADMIN", true)).toBe(false);
+    expect(can.adjustTakeHomeQuizScore("BRANCH_ADMIN", true)).toBe(false);
+  });
+
+  it("is false for GUARDIAN and undefined", () => {
+    expect(can.adjustTakeHomeQuizScore("GUARDIAN", true)).toBe(false);
+    expect(can.adjustTakeHomeQuizScore(undefined, true)).toBe(false);
+  });
+});
+
+describe("can.viewWardTakeHomeQuizzes", () => {
+  it("is true only for an entitled GUARDIAN", () => {
+    expect(can.viewWardTakeHomeQuizzes("GUARDIAN", true)).toBe(true);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.viewWardTakeHomeQuizzes("GUARDIAN", false)).toBe(false);
+  });
+
+  it("is false for every staff role, even when entitled - a separate backend path from viewTakeHomeQuizzes", () => {
+    expect(can.viewWardTakeHomeQuizzes("SCHOOL_ADMIN", true)).toBe(false);
+    expect(can.viewWardTakeHomeQuizzes("BRANCH_ADMIN", true)).toBe(false);
+    expect(can.viewWardTakeHomeQuizzes("TEACHER", true)).toBe(false);
+    expect(can.viewWardTakeHomeQuizzes(undefined, true)).toBe(false);
+  });
+});
+
 describe("can.manageSupportContact", () => {
   it("is true only for SYSTEM_ADMIN", () => {
     expect(can.manageSupportContact("SYSTEM_ADMIN")).toBe(true);

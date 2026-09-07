@@ -192,3 +192,55 @@ export function mostRecentWeekdayIso(): string {
   }
   return toIso(date);
 }
+
+/**
+ * Combines a "YYYY-MM-DD" date and an "HH:mm" clock time - both in the
+ * browser's own local zone, per quiz-module.md's "Timezone handling" - into
+ * an ISO-8601 instant string the server stores as `TIMESTAMPTZ`. The server
+ * never needs to know any zone: it only ever compares stored instants
+ * against `Instant.now()`. Returns `null` if either half is missing/unparseable,
+ * so a half-filled `QuizWindowFields` never silently sends a wrong instant.
+ */
+export function toInstant(dateIso: string, clockTime: string): string | null {
+  const date = parseIsoDate(dateIso);
+  const minutes = parseClockMinutes(clockTime);
+  if (!date || minutes === null) {
+    return null;
+  }
+  const combined = new Date(date);
+  combined.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+  return combined.toISOString();
+}
+
+/** The inverse of {@link toInstant} - splits a server instant back into the local "YYYY-MM-DD" date and "HH:mm" time a `QuizWindowFields`-shaped editor needs. Returns `{ dateIso: "", clockTime: "" }` for missing/unparseable input. */
+export function splitInstant(instant: string | null | undefined): { dateIso: string; clockTime: string } {
+  if (!instant) {
+    return { dateIso: "", clockTime: "" };
+  }
+  const date = new Date(instant);
+  if (Number.isNaN(date.getTime())) {
+    return { dateIso: "", clockTime: "" };
+  }
+  return {
+    dateIso: toIso(date),
+    clockTime: `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`,
+  };
+}
+
+/** "2026-03-10T14:00:00Z" -> "10 Mar 2026, 2:00 PM", rendered in the browser's own local zone via `toLocaleString`. Returns "—" for missing/unparseable input. */
+export function formatInstant(instant: string | null | undefined): string {
+  if (!instant) {
+    return "—";
+  }
+  const date = new Date(instant);
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+  return date.toLocaleString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}

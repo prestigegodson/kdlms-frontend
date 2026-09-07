@@ -8,6 +8,7 @@ interface FeatureState {
   timetable: boolean;
   lessonNotes: boolean;
   aiLessonNotes: boolean;
+  takeHomeQuiz: boolean;
   status: FetchStatus;
   /** Fetches once per session; a repeat call while loaded/loading is a no-op. */
   fetchIfNeeded: () => Promise<void>;
@@ -16,18 +17,19 @@ interface FeatureState {
 
 /**
  * Caches the calling user's own school's gated feature flags
- * (GET /api/v1/me/features), so the Messages/Timetable/Lesson notes nav items
- * in both the school portal and the guardian portal read the same fetch
- * rather than each re-querying it. Mirrors stores/teacherScopeStore.ts's
- * shape. Both SchoolLayout and GuardianLayout trigger the fetch on mount;
- * authStore's logout() calls reset() so a later, different session in the
- * same tab never inherits a stale answer.
+ * (GET /api/v1/me/features), so the Messages/Timetable/Lesson notes/Take-home
+ * quizzes nav items in both the school portal and the guardian portal read
+ * the same fetch rather than each re-querying it. Mirrors
+ * stores/teacherScopeStore.ts's shape. Both SchoolLayout and GuardianLayout
+ * trigger the fetch on mount; authStore's logout() calls reset() so a later,
+ * different session in the same tab never inherits a stale answer.
  */
 export const useFeatureStore = create<FeatureState>((set, get) => ({
   communication: false,
   timetable: false,
   lessonNotes: false,
   aiLessonNotes: false,
+  takeHomeQuiz: false,
   status: "idle",
 
   fetchIfNeeded: async () => {
@@ -42,14 +44,30 @@ export const useFeatureStore = create<FeatureState>((set, get) => ({
         timetable: features.timetable,
         lessonNotes: features.lessonNotes,
         aiLessonNotes: features.aiLessonNotes,
+        takeHomeQuiz: features.takeHomeQuiz,
         status: "loaded",
       });
     } catch {
-      set({ communication: false, timetable: false, lessonNotes: false, aiLessonNotes: false, status: "error" });
+      set({
+        communication: false,
+        timetable: false,
+        lessonNotes: false,
+        aiLessonNotes: false,
+        takeHomeQuiz: false,
+        status: "error",
+      });
     }
   },
 
-  reset: () => set({ communication: false, timetable: false, lessonNotes: false, aiLessonNotes: false, status: "idle" }),
+  reset: () =>
+    set({
+      communication: false,
+      timetable: false,
+      lessonNotes: false,
+      aiLessonNotes: false,
+      takeHomeQuiz: false,
+      status: "idle",
+    }),
 }));
 
 /** Test helper: resets the store to its initial (unfetched) state - mirrors stores/teacherScopeStore.ts's resetTeacherScopeStore(). */
@@ -59,6 +77,7 @@ export function resetFeatureStore(): void {
     timetable: false,
     lessonNotes: false,
     aiLessonNotes: false,
+    takeHomeQuiz: false,
     status: "idle",
   });
 }

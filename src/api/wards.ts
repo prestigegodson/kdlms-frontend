@@ -152,3 +152,50 @@ export function getWardLessonNotes(studentId: string, termId: string): Promise<W
 export function getWardLessonNote(studentId: string, noteId: string): Promise<LessonNoteView> {
   return apiFetch<LessonNoteView>(`${BASE}/${studentId}/lesson-notes/${noteId}`);
 }
+
+/**
+ * Mirrors backend takehomequiz.domain.QuizType - defined fresh here rather than imported from
+ * `api/takeHomeQuizzes.ts`, the same deliberate per-surface duplication `api/publicTakeHomeQuiz.ts`
+ * already establishes for this module's public/ward-facing shapes.
+ */
+export type QuizType = "MIDTERM" | "NORMAL";
+
+/**
+ * Mirrors backend takehomequiz.application.port.in.MyWardTakeHomeQuizzesUseCase.WardTakeHomeQuizSummaryView.
+ * `score` is `null` for a non-submitter - never zero, which would misread as "scored zero".
+ * `countsTowardMidterm` is `quizType === "MIDTERM"` - only a MIDTERM quiz ever writes back to the
+ * gradebook. No per-question breakdown at v1.
+ */
+export interface WardTakeHomeQuizSummaryView {
+  id: string;
+  title: string;
+  subjectName: string;
+  quizType: QuizType;
+  score: number | null;
+  totalPoints: number;
+  submitted: boolean;
+  countsTowardMidterm: boolean;
+  closesAt: string;
+}
+
+/** Mirrors backend takehomequiz.application.port.in.MyWardTakeHomeQuizzesUseCase.WardTakeHomeQuizView. */
+export interface WardTakeHomeQuizView extends WardTakeHomeQuizSummaryView {
+  instructions: string | null;
+  className: string;
+  resultsPublishedAt: string;
+}
+
+/**
+ * Every RESULTS_PUBLISHED take-home quiz for the ward's own class in this term, narrowed to
+ * subjects applicable to the ward (mandatory ∪ their registered selectives) - deliberately gated
+ * on this module's own RESULTS_PUBLISHED state, not `resultsPublished`/`midtermPublished` like
+ * `getWardResult` is.
+ */
+export function getWardTakeHomeQuizzes(studentId: string, termId: string): Promise<WardTakeHomeQuizSummaryView[]> {
+  return apiFetch<WardTakeHomeQuizSummaryView[]>(`${BASE}/${studentId}/take-home-quizzes?termId=${termId}`);
+}
+
+/** One quiz's result in full, read-only - 404s unless it's RESULTS_PUBLISHED and applicable to this ward. */
+export function getWardTakeHomeQuiz(studentId: string, quizId: string): Promise<WardTakeHomeQuizView> {
+  return apiFetch<WardTakeHomeQuizView>(`${BASE}/${studentId}/take-home-quizzes/${quizId}`);
+}
