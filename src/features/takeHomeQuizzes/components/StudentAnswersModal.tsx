@@ -4,6 +4,8 @@ import { getStudentTakeHomeQuizResult, type StudentAttemptDetailView } from "@/a
 import { Alert } from "@/components/ui/Alert";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
+import { AuthenticatedRichImage } from "@/components/richText/AuthenticatedRichImage";
+import { RichContent } from "@/components/richText/RichContent";
 import { Check, X } from "lucide-react";
 
 interface StudentAnswersModalProps {
@@ -42,9 +44,13 @@ export function StudentAnswersModal({ quizId, studentId, studentName, onClose }:
           {detail.questions.map((question) => (
             <div key={question.questionId} className="space-y-2 border-b border-slate-100 pb-4 last:border-0">
               <div className="flex items-start justify-between gap-2">
-                <p className="font-medium text-slate-900">
-                  {question.position}. {question.prompt}
-                </p>
+                <div className="min-w-0 font-medium text-slate-900">
+                  <span className="block text-xs font-normal text-slate-500">Question {question.position}</span>
+                  <RichContent
+                    html={question.prompt}
+                    renderImage={(fileId, alt) => <AuthenticatedRichImage fileId={fileId} alt={alt} />}
+                  />
+                </div>
                 <span className="shrink-0 text-sm text-slate-500">
                   {question.awardedPoints ?? 0} / {question.points} pts
                 </span>
@@ -57,7 +63,7 @@ export function StudentAnswersModal({ quizId, studentId, studentName, onClose }:
                     return (
                       <li
                         key={option.id}
-                        className={`flex items-center gap-2 rounded-control border px-3 py-1.5 ${
+                        className={`flex items-start gap-2 rounded-control border px-3 py-1.5 ${
                           option.correct
                             ? "border-green-300 bg-green-50"
                             : selected
@@ -66,13 +72,17 @@ export function StudentAnswersModal({ quizId, studentId, studentName, onClose }:
                         }`}
                       >
                         {option.correct ? (
-                          <Check className="h-4 w-4 shrink-0 text-green-600" aria-hidden="true" />
+                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" aria-hidden="true" />
                         ) : selected ? (
-                          <X className="h-4 w-4 shrink-0 text-red-600" aria-hidden="true" />
+                          <X className="mt-0.5 h-4 w-4 shrink-0 text-red-600" aria-hidden="true" />
                         ) : (
-                          <span className="h-4 w-4 shrink-0" />
+                          <span className="mt-0.5 h-4 w-4 shrink-0" />
                         )}
-                        <span>{option.label}</span>
+                        <RichContent
+                          html={option.label}
+                          renderImage={(fileId, alt) => <AuthenticatedRichImage fileId={fileId} alt={alt} />}
+                          className="min-w-0"
+                        />
                         {selected && <span className="ml-auto text-xs text-slate-500">Selected</span>}
                       </li>
                     );

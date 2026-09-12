@@ -15,6 +15,7 @@ export type QuizAvailability = "SCHEDULED" | "OPEN" | "CLOSED";
 export interface PublicOptionView {
   id: string;
   position: number;
+  /** Sanitized HTML, the same contract as `PublicQuestionView.prompt` (Phase 20J: including images). */
   label: string;
 }
 
@@ -22,6 +23,7 @@ export interface PublicQuestionView {
   id: string;
   position: number;
   questionType: QuestionType;
+  /** Sanitized HTML - see backend `takehomequiz.domain.QuizRichText`. Render with `RichContent`, never as plain text. */
   prompt: string;
   points: number;
   options: PublicOptionView[];
@@ -72,6 +74,18 @@ export interface SubmitConfirmationView {
 
 function base(token: string): string {
   return `/api/v1/public/take-home-quiz/${encodeURIComponent(token)}`;
+}
+
+/**
+ * The `<img src>` for one image embedded in a question's sanitized `prompt`
+ * or option `label` HTML (Phase 20J) - mirrors backend
+ * `PublicTakeHomeQuizController.questionImage`. No fetch wrapper needed: the
+ * endpoint takes no Authorization header (this is the anonymous surface)
+ * and is safe to reference directly, browser-cached per its own
+ * `Cache-Control` response header.
+ */
+export function publicQuestionImageUrl(token: string, fileId: string): string {
+  return `${base(token)}/images/${encodeURIComponent(fileId)}`;
 }
 
 export function resolveTakeHomeQuiz(token: string): Promise<QuizInterstitialView> {

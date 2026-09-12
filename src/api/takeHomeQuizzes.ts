@@ -26,6 +26,7 @@ export interface TakeHomeQuizSummaryView {
 export interface TakeHomeQuizOptionView {
   id: string;
   position: number;
+  /** Sanitized HTML - see backend `takehomequiz.domain.QuizRichText`. Render with `RichContent`, never as plain text. */
   label: string;
   correct: boolean;
 }
@@ -42,6 +43,7 @@ export interface TakeHomeQuizQuestionView {
   id: string;
   position: number;
   questionType: QuestionType;
+  /** Sanitized HTML authored via `RichTextField` - see backend `takehomequiz.domain.QuizRichText`. Render with `RichContent`, never as plain text. */
   prompt: string;
   points: number;
   options: TakeHomeQuizOptionView[];
@@ -278,6 +280,7 @@ export interface AnsweredQuestionView {
   questionId: string;
   position: number;
   questionType: QuestionType;
+  /** Sanitized HTML - see backend `takehomequiz.domain.QuizRichText`. Render with `RichContent`, never as plain text. */
   prompt: string;
   points: number;
   options: TakeHomeQuizOptionView[];

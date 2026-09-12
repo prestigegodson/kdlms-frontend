@@ -308,6 +308,7 @@ export function TakeHomeQuizPublicPage() {
       {currentQuestion && (
         <div onBlur={handleBlurFlush}>
           <QuestionCard
+            token={token}
             question={currentQuestion}
             answer={answers[currentQuestion.id]}
             answered={answeredIndexes.has(currentIndex)}

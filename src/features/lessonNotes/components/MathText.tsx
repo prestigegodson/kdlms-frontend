@@ -1,6 +1,5 @@
-import katex from "katex";
-import "katex/dist/katex.min.css";
 import { Fragment } from "react";
+import { renderMathHtml } from "@/components/richText/katexHtml";
 
 /**
  * Renders a lesson-note prose string that may contain inline LaTeX, per
@@ -12,11 +11,9 @@ import { Fragment } from "react";
  * <p>
  * Only the matched maths substrings are ever handed to KaTeX -
  * surrounding prose always renders as a plain React text node, never HTML.
- * This is the first `dangerouslySetInnerHTML` in the codebase; it stays
- * safe because of that narrow scope plus KaTeX's own `trust: false`
- * (its default), which refuses `\href`/`\url`/`\htmlClass` and every other
- * HTML-emitting command. Neither of those two constraints should be
- * relaxed without re-weighing this component's safety argument.
+ * Rendering itself is `@/components/richText/katexHtml`'s `renderMathHtml` -
+ * see its doc comment for the `dangerouslySetInnerHTML` safety argument this
+ * component was the first to rely on.
  * <p>
  * A malformed expression falls back to its raw source text rather than
  * throwing or rendering blank, so a model slip degrades to today's
@@ -43,19 +40,6 @@ function MathSpan({ expression }: { expression: string }) {
   // Safe per the component-level note above: `html` is KaTeX's own output for
   // this one expression substring, rendered with `trust: false`.
   return <span dangerouslySetInnerHTML={{ __html: html }} />;
-}
-
-function renderMathHtml(expression: string): string | null {
-  try {
-    return katex.renderToString(expression, {
-      throwOnError: false,
-      trust: false,
-      strict: "ignore",
-      displayMode: false,
-    });
-  } catch {
-    return null;
-  }
 }
 
 type Segment = { type: "text" | "math"; value: string };

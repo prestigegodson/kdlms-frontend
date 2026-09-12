@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
+import { RichTextField } from "@/components/richText/RichTextField";
 import { Select } from "@/components/ui/Select";
-import { Textarea } from "@/components/ui/Textarea";
 import { ChoiceOptionsField } from "@/features/takeHomeQuizzes/components/ChoiceOptionsField";
 import { FillInTheGapField } from "@/features/takeHomeQuizzes/components/FillInTheGapField";
 import { blankQuestion, type EditableQuestion } from "@/features/takeHomeQuizzes/editableQuestion";
@@ -145,12 +145,13 @@ export function QuestionEditor({ questions, onChange, disabled = false }: Questi
           </div>
 
           <FormField label="Prompt" htmlFor={`question-prompt-${question.key}`}>
-            <Textarea
+            <RichTextField
               id={`question-prompt-${question.key}`}
-              rows={2}
               value={question.prompt}
-              onChange={(event) => updateAt(index, { prompt: event.target.value })}
+              onChange={(prompt) => updateAt(index, { prompt })}
+              allowImages
               disabled={disabled}
+              ariaLabel={`Question ${index + 1} prompt`}
             />
           </FormField>
 

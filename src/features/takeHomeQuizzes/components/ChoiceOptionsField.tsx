@@ -2,7 +2,7 @@ import { Plus, X } from "lucide-react";
 import type { QuestionType } from "@/api/takeHomeQuizzes";
 import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
-import { Input } from "@/components/ui/Input";
+import { RichTextField } from "@/components/richText/RichTextField";
 import type { EditableOption } from "@/features/takeHomeQuizzes/editableQuestion";
 
 interface ChoiceOptionsFieldProps {
@@ -57,7 +57,7 @@ export function ChoiceOptionsField({
     <FormField label="Options">
       <div className="space-y-2">
         {options.map((option, index) => (
-          <div key={option.key} className="flex items-center gap-2">
+          <div key={option.key} className="flex items-start gap-2">
             <input
               type={inputType}
               name={questionType === "SINGLE_CHOICE" ? `correct-option-${groupName}` : undefined}
@@ -65,22 +65,25 @@ export function ChoiceOptionsField({
               checked={option.correct}
               onChange={(event) => toggleCorrect(index, event.target.checked)}
               disabled={disabled}
-              className="h-4 w-4 shrink-0 border-slate-300 text-brand-500"
+              className="mt-3 h-4 w-4 shrink-0 border-slate-300 text-brand-500"
             />
-            <Input
-              aria-label={`Option ${index + 1} label`}
-              placeholder={`Option ${index + 1}`}
-              value={option.label}
-              onChange={(event) => updateAt(index, { label: event.target.value })}
-              disabled={disabled}
-              className="flex-1"
-            />
+            <div className="flex-1">
+              <RichTextField
+                value={option.label}
+                onChange={(label) => updateAt(index, { label })}
+                singleLine
+                allowImages
+                disabled={disabled}
+                ariaLabel={`Option ${index + 1} label`}
+              />
+            </div>
             {!disabled && (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 aria-label={`Remove option ${index + 1}`}
+                className="mt-1"
                 onClick={() => removeAt(index)}
               >
                 <X className="h-4 w-4" aria-hidden="true" />

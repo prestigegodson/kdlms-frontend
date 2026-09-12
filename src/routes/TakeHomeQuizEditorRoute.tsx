@@ -4,9 +4,9 @@ import { Spinner } from "@/components/ui/Spinner";
 // Lazy-loaded the same way `LessonNoteEditorRoute` is - kept in its own file
 // so `routes/index.tsx` can keep exporting the non-component `routes`/
 // `router` values, which Fast Refresh can't mix with a component
-// definition. No KaTeX-sized dependency here yet, but the question/option
-// builder is already the largest component tree in this feature and only
-// grows across 20C-20F, so it's lazy from the start rather than migrated
+// definition. The question/option builder pulls in `RichTextField` (TipTap +
+// KaTeX) via `QuestionEditor`/`ChoiceOptionsField`, the largest dependency
+// this feature carries, so it stays lazy from the start rather than migrated
 // later.
 const TakeHomeQuizEditorPage = lazy(() =>
   import("@/features/takeHomeQuizzes/TakeHomeQuizEditorPage").then((module) => ({
