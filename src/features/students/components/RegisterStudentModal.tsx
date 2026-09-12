@@ -50,6 +50,7 @@ export function RegisterStudentModal({
   const [gender, setGender] = useState<"FEMALE" | "MALE">("FEMALE");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [admissionDate, setAdmissionDate] = useState("");
+  const [address, setAddress] = useState("");
   const [manualAdmissionNumber, setManualAdmissionNumber] = useState(false);
   const [admissionNumber, setAdmissionNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -70,6 +71,7 @@ export function RegisterStudentModal({
         gender,
         dateOfBirth: dateOfBirth || undefined,
         admissionDate: admissionDate || undefined,
+        address: address || undefined,
       });
       onSaved();
     } catch (err) {
@@ -164,6 +166,9 @@ export function RegisterStudentModal({
             />
           </FormField>
         </div>
+        <FormField label="Address" htmlFor="register-address">
+          <Input id="register-address" value={address} onChange={(event) => setAddress(event.target.value)} />
+        </FormField>
         <div>
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <Checkbox checked={manualAdmissionNumber} onChange={(event) => setManualAdmissionNumber(event.target.checked)} />

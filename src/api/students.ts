@@ -26,6 +26,7 @@ export interface StudentView {
   currentLevelId?: string;
   currentLevelName?: string;
   currentSessionId?: string;
+  address?: string;
 }
 
 export interface RegisterStudentRequest {
@@ -41,6 +42,7 @@ export interface RegisterStudentRequest {
   dateOfBirth?: string;
   /** Omitted defaults to today server-side. */
   admissionDate?: string;
+  address?: string;
 }
 
 export interface UpdateStudentRequest {
@@ -50,6 +52,7 @@ export interface UpdateStudentRequest {
   gender: Gender;
   dateOfBirth?: string;
   admissionDate: string;
+  address?: string;
 }
 
 export type BloodGroup =

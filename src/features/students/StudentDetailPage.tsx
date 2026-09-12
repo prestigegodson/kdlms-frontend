@@ -224,6 +224,10 @@ export function StudentDetailPage() {
                 <dt className="text-slate-500">Admission date</dt>
                 <dd className="text-slate-900">{formatLongDate(student.admissionDate)}</dd>
               </div>
+              <div className="col-span-2">
+                <dt className="text-slate-500">Address</dt>
+                <dd className="text-slate-900">{student.address ?? "—"}</dd>
+              </div>
               {student.otherName && (
                 <div className="col-span-2">
                   <dt className="text-slate-500">Other name</dt>
@@ -322,6 +326,7 @@ function EditStudentModal({ student, onClose, onSaved }: EditStudentModalProps) 
   const [gender, setGender] = useState<"FEMALE" | "MALE">(student.gender);
   const [dateOfBirth, setDateOfBirth] = useState(student.dateOfBirth ?? "");
   const [admissionDate, setAdmissionDate] = useState(student.admissionDate);
+  const [address, setAddress] = useState(student.address ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -337,6 +342,7 @@ function EditStudentModal({ student, onClose, onSaved }: EditStudentModalProps) 
         gender,
         dateOfBirth: dateOfBirth || undefined,
         admissionDate,
+        address: address || undefined,
       });
       onSaved();
     } catch (err) {
@@ -399,6 +405,9 @@ function EditStudentModal({ student, onClose, onSaved }: EditStudentModalProps) 
             value={admissionDate}
             onChange={setAdmissionDate}
           />
+        </FormField>
+        <FormField label="Address" htmlFor="edit-address">
+          <Input id="edit-address" value={address} onChange={(event) => setAddress(event.target.value)} />
         </FormField>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
