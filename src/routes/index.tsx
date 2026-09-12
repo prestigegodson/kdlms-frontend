@@ -23,6 +23,7 @@ import { AdminDashboardPage } from "@/features/dashboard/AdminDashboardPage";
 import { SchoolDashboardPage } from "@/features/dashboard/SchoolDashboardPage";
 import { NotificationSettingsPage } from "@/features/guardian/NotificationSettingsPage";
 import { WardAttendanceLayout } from "@/features/guardian/WardAttendanceLayout";
+import { WardBillsPage } from "@/features/guardian/WardBillsPage";
 import { WardAttendancePage } from "@/features/guardian/WardAttendancePage";
 import { WardAttendanceSessionsPage } from "@/features/guardian/WardAttendanceSessionsPage";
 import { WardAttendanceSessionTermsPage } from "@/features/guardian/WardAttendanceSessionTermsPage";
@@ -61,6 +62,7 @@ import { GuardianLayout } from "@/layouts/GuardianLayout";
 import { RootLayout } from "@/layouts/RootLayout";
 import { SchoolLayout } from "@/layouts/SchoolLayout";
 import { SystemAdminLayout } from "@/layouts/SystemAdminLayout";
+import { BillingRoute } from "@/routes/BillingRoute";
 import { HomeRedirect } from "@/routes/HomeRedirect";
 import { LessonNoteEditorRoute } from "@/routes/LessonNoteEditorRoute";
 import { RequireRole } from "@/routes/RequireRole";
@@ -272,6 +274,14 @@ export const routes: RouteObject[] = [
               </RequireRole>
             ),
           },
+          {
+            path: "billing",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
+                <BillingRoute />
+              </RequireRole>
+            ),
+          },
         ],
       },
       {
@@ -317,6 +327,7 @@ export const routes: RouteObject[] = [
           { path: "timetable", element: <WardTimetablePage /> },
           { path: "lesson-notes", element: <WardLessonNotesRoute /> },
           { path: "take-home-quizzes", element: <WardTakeHomeQuizzesPage /> },
+          { path: "bills", element: <WardBillsPage /> },
           { path: "settings", element: <NotificationSettingsPage /> },
         ],
       },

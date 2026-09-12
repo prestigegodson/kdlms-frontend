@@ -49,6 +49,7 @@ export interface SubscriptionSummaryView {
   lessonNotes: boolean;
   aiLessonNotes: boolean;
   aiGenerationLimit: number;
+  billing: boolean;
 }
 
 function adminBase(schoolId: string): string {

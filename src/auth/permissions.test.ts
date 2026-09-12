@@ -312,3 +312,144 @@ describe("can.manageAiSettings", () => {
     expect(can.manageAiSettings(undefined)).toBe(false);
   });
 });
+
+describe("can.viewBilling", () => {
+  it("is true for an entitled SCHOOL_ADMIN or BRANCH_ADMIN", () => {
+    expect(can.viewBilling("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.viewBilling("BRANCH_ADMIN", true)).toBe(true);
+  });
+
+  it("is false for TEACHER, even when entitled - fees are not academic information", () => {
+    expect(can.viewBilling("TEACHER", true)).toBe(false);
+  });
+
+  it("is false when the school isn't entitled, even for staff roles", () => {
+    expect(can.viewBilling("SCHOOL_ADMIN", false)).toBe(false);
+    expect(can.viewBilling("BRANCH_ADMIN", false)).toBe(false);
+  });
+
+  it("is false for GUARDIAN, even when entitled", () => {
+    expect(can.viewBilling("GUARDIAN", true)).toBe(false);
+    expect(can.viewBilling(undefined, true)).toBe(false);
+  });
+});
+
+describe("can.manageFees", () => {
+  it("is true only for an entitled SCHOOL_ADMIN", () => {
+    expect(can.manageFees("SCHOOL_ADMIN", true)).toBe(true);
+  });
+
+  it("is false for BRANCH_ADMIN - read-only on fee definitions", () => {
+    expect(can.manageFees("BRANCH_ADMIN", true)).toBe(false);
+  });
+
+  it("is false for TEACHER and GUARDIAN, even when entitled", () => {
+    expect(can.manageFees("TEACHER", true)).toBe(false);
+    expect(can.manageFees("GUARDIAN", true)).toBe(false);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.manageFees("SCHOOL_ADMIN", false)).toBe(false);
+  });
+});
+
+describe("can.manageFeePrices", () => {
+  it("is true for an entitled SCHOOL_ADMIN or BRANCH_ADMIN", () => {
+    expect(can.manageFeePrices("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.manageFeePrices("BRANCH_ADMIN", true)).toBe(true);
+  });
+
+  it("is false for TEACHER and GUARDIAN, even when entitled", () => {
+    expect(can.manageFeePrices("TEACHER", true)).toBe(false);
+    expect(can.manageFeePrices("GUARDIAN", true)).toBe(false);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.manageFeePrices("SCHOOL_ADMIN", false)).toBe(false);
+    expect(can.manageFeePrices("BRANCH_ADMIN", false)).toBe(false);
+  });
+});
+
+describe("can.editStudentBills", () => {
+  it("is true for an entitled SCHOOL_ADMIN or BRANCH_ADMIN", () => {
+    expect(can.editStudentBills("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.editStudentBills("BRANCH_ADMIN", true)).toBe(true);
+  });
+
+  it("is false for TEACHER and GUARDIAN, even when entitled", () => {
+    expect(can.editStudentBills("TEACHER", true)).toBe(false);
+    expect(can.editStudentBills("GUARDIAN", true)).toBe(false);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.editStudentBills("SCHOOL_ADMIN", false)).toBe(false);
+    expect(can.editStudentBills("BRANCH_ADMIN", false)).toBe(false);
+  });
+});
+
+describe("can.manageAdvanceBills", () => {
+  it("is true for an entitled SCHOOL_ADMIN or BRANCH_ADMIN", () => {
+    expect(can.manageAdvanceBills("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.manageAdvanceBills("BRANCH_ADMIN", true)).toBe(true);
+  });
+
+  it("is false for TEACHER and GUARDIAN, even when entitled", () => {
+    expect(can.manageAdvanceBills("TEACHER", true)).toBe(false);
+    expect(can.manageAdvanceBills("GUARDIAN", true)).toBe(false);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.manageAdvanceBills("SCHOOL_ADMIN", false)).toBe(false);
+    expect(can.manageAdvanceBills("BRANCH_ADMIN", false)).toBe(false);
+  });
+});
+
+describe("can.manageBillingSettings", () => {
+  it("is true only for an entitled SCHOOL_ADMIN", () => {
+    expect(can.manageBillingSettings("SCHOOL_ADMIN", true)).toBe(true);
+  });
+
+  it("is false for BRANCH_ADMIN, TEACHER, and GUARDIAN, even when entitled", () => {
+    expect(can.manageBillingSettings("BRANCH_ADMIN", true)).toBe(false);
+    expect(can.manageBillingSettings("TEACHER", true)).toBe(false);
+    expect(can.manageBillingSettings("GUARDIAN", true)).toBe(false);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.manageBillingSettings("SCHOOL_ADMIN", false)).toBe(false);
+  });
+});
+
+describe("can.publishBills", () => {
+  it("is true for an entitled SCHOOL_ADMIN or BRANCH_ADMIN", () => {
+    expect(can.publishBills("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.publishBills("BRANCH_ADMIN", true)).toBe(true);
+  });
+
+  it("is false for TEACHER and GUARDIAN, even when entitled", () => {
+    expect(can.publishBills("TEACHER", true)).toBe(false);
+    expect(can.publishBills("GUARDIAN", true)).toBe(false);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.publishBills("SCHOOL_ADMIN", false)).toBe(false);
+    expect(can.publishBills("BRANCH_ADMIN", false)).toBe(false);
+  });
+});
+
+describe("can.viewWardBills", () => {
+  it("is true only for an entitled GUARDIAN", () => {
+    expect(can.viewWardBills("GUARDIAN", true)).toBe(true);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.viewWardBills("GUARDIAN", false)).toBe(false);
+  });
+
+  it("is false for every staff role, even when entitled - a separate backend path from viewBilling", () => {
+    expect(can.viewWardBills("SCHOOL_ADMIN", true)).toBe(false);
+    expect(can.viewWardBills("BRANCH_ADMIN", true)).toBe(false);
+    expect(can.viewWardBills("TEACHER", true)).toBe(false);
+    expect(can.viewWardBills(undefined, true)).toBe(false);
+  });
+});

@@ -9,6 +9,7 @@ interface FeatureState {
   lessonNotes: boolean;
   aiLessonNotes: boolean;
   takeHomeQuiz: boolean;
+  billing: boolean;
   status: FetchStatus;
   /** Fetches once per session; a repeat call while loaded/loading is a no-op. */
   fetchIfNeeded: () => Promise<void>;
@@ -18,8 +19,8 @@ interface FeatureState {
 /**
  * Caches the calling user's own school's gated feature flags
  * (GET /api/v1/me/features), so the Messages/Timetable/Lesson notes/Take-home
- * quizzes nav items in both the school portal and the guardian portal read
- * the same fetch rather than each re-querying it. Mirrors
+ * quizzes/Billing nav items in both the school portal and the guardian portal
+ * read the same fetch rather than each re-querying it. Mirrors
  * stores/teacherScopeStore.ts's shape. Both SchoolLayout and GuardianLayout
  * trigger the fetch on mount; authStore's logout() calls reset() so a later,
  * different session in the same tab never inherits a stale answer.
@@ -30,6 +31,7 @@ export const useFeatureStore = create<FeatureState>((set, get) => ({
   lessonNotes: false,
   aiLessonNotes: false,
   takeHomeQuiz: false,
+  billing: false,
   status: "idle",
 
   fetchIfNeeded: async () => {
@@ -45,6 +47,7 @@ export const useFeatureStore = create<FeatureState>((set, get) => ({
         lessonNotes: features.lessonNotes,
         aiLessonNotes: features.aiLessonNotes,
         takeHomeQuiz: features.takeHomeQuiz,
+        billing: features.billing,
         status: "loaded",
       });
     } catch {
@@ -54,6 +57,7 @@ export const useFeatureStore = create<FeatureState>((set, get) => ({
         lessonNotes: false,
         aiLessonNotes: false,
         takeHomeQuiz: false,
+        billing: false,
         status: "error",
       });
     }
@@ -66,6 +70,7 @@ export const useFeatureStore = create<FeatureState>((set, get) => ({
       lessonNotes: false,
       aiLessonNotes: false,
       takeHomeQuiz: false,
+      billing: false,
       status: "idle",
     }),
 }));
@@ -78,6 +83,7 @@ export function resetFeatureStore(): void {
     lessonNotes: false,
     aiLessonNotes: false,
     takeHomeQuiz: false,
+    billing: false,
     status: "idle",
   });
 }

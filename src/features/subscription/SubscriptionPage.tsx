@@ -100,6 +100,9 @@ export function SubscriptionPage() {
               <Badge variant={state.summary.aiLessonNotes ? "success" : "neutral"}>
                 {state.summary.aiLessonNotes ? "AI lesson notes included" : "No AI lesson notes"}
               </Badge>
+              <Badge variant={state.summary.billing ? "success" : "neutral"}>
+                {state.summary.billing ? "Fees & bills included" : "No fees & bills"}
+              </Badge>
             </div>
           </Card>
 

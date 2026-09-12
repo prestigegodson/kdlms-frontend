@@ -32,6 +32,8 @@ export interface PackageView {
   aiLessonNotes: boolean;
   /** Per-school AI lesson-note generations allowed per calendar month. 0 = none (also the effective value whenever aiLessonNotes is false). */
   aiGenerationLimit: number;
+  /** Also actually gates the feature, the same hard-lockout shape `communication`/`timetable`/`lessonNotes` use - see CLAUDE.md. Never confuse with the SaaS operator's own billing of the school (this package's own `price`/`billingCycle`). */
+  billing: boolean;
   status: PackageStatus;
 }
 
@@ -51,6 +53,7 @@ export interface SavePackageRequest {
   lessonNotes: boolean;
   aiLessonNotes: boolean;
   aiGenerationLimit: number;
+  billing: boolean;
 }
 
 const BASE = "/api/v1/admin/packages";

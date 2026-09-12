@@ -2,13 +2,13 @@ import { X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 
-type Size = "md" | "lg" | "xl";
+type Size = "md" | "lg" | "xl" | "xxl";
 
 interface ModalProps {
   open: boolean;
   onClose: () => void;
   title?: string;
-  /** Panel width: md (default form), lg (wider form, e.g. a repeating term grid), xl (dense multi-column content). */
+  /** Panel width: md (default form), lg (wider form, e.g. a repeating term grid), xl (dense multi-column content), xxl (extra extra large). */
   size?: Size;
   children: ReactNode;
 }
@@ -17,6 +17,7 @@ const SIZE_CLASSES: Record<Size, string> = {
   md: "max-w-md",
   lg: "max-w-lg",
   xl: "max-w-2xl",
+  xxl: "max-w-3xl",
 };
 
 const FOCUSABLE_SELECTOR =

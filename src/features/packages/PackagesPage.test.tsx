@@ -34,6 +34,7 @@ const STARTER_PACKAGE: PackageView = {
   lessonNotes: false,
   aiLessonNotes: false,
   aiGenerationLimit: 0,
+  billing: false,
   status: "ACTIVE",
 };
 

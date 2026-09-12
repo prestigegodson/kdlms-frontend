@@ -498,4 +498,123 @@ export const can = {
   manageAiSettings(role: Role | undefined): boolean {
     return role === "SYSTEM_ADMIN";
   },
+
+  /**
+   * Seeing the "Fees & Bills" screen at all - SCHOOL_ADMIN or BRANCH_ADMIN (read-only on fee
+   * definitions/settings; own-branch pricing/publication land in later phases), gated on the
+   * school's Billing package entitlement, the same full-lockout shape Messages/Timetable/Lesson
+   * notes/Take-home quizzes use. Deliberately **not** TEACHER - fees are not academic information
+   * the class-teach/subject-teach model applies to, per `billing.application.service.
+   * BillingAccessGuard`'s own Javadoc (unlike every other gated module, TEACHER has no access at
+   * all here). A guardian's own read of their ward's published bills (Phase 21G) gets its own,
+   * separate predicate rather than GUARDIAN appended here - the `viewWards`/`viewWardLessonNotes`
+   * precedent: that path is authorized entirely through the `shared` SPI `GuardianWards`, an
+   * entirely different backend path from `BillingAccessGuard`, which
+   * `BillingAccessGuardTest` asserts refuses a GUARDIAN caller outright.
+   */
+  viewBilling(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /**
+   * Creating/editing/deleting a fee definition - SCHOOL_ADMIN only; BRANCH_ADMIN reads the
+   * catalogue via `viewBilling` but gets a real 403 on a write here (not this module's usual
+   * 404-not-403 shape - see `FeeController`'s Javadoc: fee definitions are school-wide, not
+   * something a BRANCH_ADMIN partially owns, unlike branch-scoped pricing/publication).
+   */
+  manageFees(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN";
+  },
+
+  /**
+   * Saving a branch's fee price grid, or copying prices from another session - SCHOOL_ADMIN (any
+   * branch) or BRANCH_ADMIN (own branch, enforced server-side by `BillingAccessGuard.
+   * requireBranchWritable` - 404, not 403, this module's usual shape, unlike `manageFees`/
+   * `manageBillingSettings` which stay SCHOOL_ADMIN-only).
+   */
+  manageFeePrices(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /**
+   * The school-bus fee's routes, fares, and rider assignment (Phase 22) - `manageFeePrices`'s
+   * body exactly, since all three are the same branch-scoped write `BillingAccessGuard.
+   * requireBranchWritable` grants: SCHOOL_ADMIN (any branch) or BRANCH_ADMIN (own branch).
+   */
+  manageTransport(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /**
+   * Saving a branch+session's advance-bill plan (which class bills at which level before
+   * promotion), or copying it from another session (Phase 24) - `manageFeePrices`'s body
+   * exactly, since it's the same branch-scoped write `BillingAccessGuard.requireBranchWritable`
+   * grants: SCHOOL_ADMIN (any branch) or BRANCH_ADMIN (own branch).
+   */
+  manageAdvanceBills(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /** Editing billing settings (currency, bank accounts, instructions) - SCHOOL_ADMIN only, mirrors `manageFees`. */
+  manageBillingSettings(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN";
+  },
+
+  /**
+   * Publishing/unpublishing a branch's term bills, or issuing missing deliveries to newly-joined
+   * students - SCHOOL_ADMIN (any branch) or BRANCH_ADMIN (own branch, enforced server-side by
+   * `BillingAccessGuard.requireBranchWritable`), the `manageFeePrices` shape exactly.
+   */
+  publishBills(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /**
+   * Editing one student's optional-fee opt-ins, per-fee overrides, and custom charges (Phase 25) -
+   * `manageFeePrices`'s body exactly, the same branch-scoped write `BillingAccessGuard.
+   * requireBranchWritable` grants against the student's own resolved class/branch: SCHOOL_ADMIN
+   * (any branch) or BRANCH_ADMIN (own branch). Deliberately not TEACHER, matching every other
+   * write in this module.
+   */
+  editStudentBills(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /**
+   * A guardian's read of their own ward's published, billable bills - a **separate** check from
+   * `viewBilling`, not GUARDIAN added to it, the `viewWardLessonNotes`/`viewWardTakeHomeQuizzes`
+   * precedent `viewBilling`'s own Javadoc-style comment above pre-announced: the guardian path
+   * (`MyWardBillsUseCase`/`GET /api/v1/me/wards/{id}/bills`) is authorized entirely through the
+   * `shared` SPI `GuardianWards`, an entirely separate backend path from `BillingAccessGuard`
+   * (which `viewBilling` names, and which `BillingAccessGuardTest` asserts refuses a GUARDIAN
+   * caller outright). Gated on the school's Billing entitlement, the same full-lockout shape
+   * every other check here uses.
+   */
+  viewWardBills(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && role === "GUARDIAN";
+  },
 };

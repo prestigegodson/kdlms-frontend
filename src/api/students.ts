@@ -17,6 +17,8 @@ export interface StudentView {
   fullName: string;
   gender: Gender;
   dateOfBirth?: string;
+  /** When this student first joined this school - distinct from enrollment (per-session). */
+  admissionDate: string;
   photoFileId?: string;
   status: StudentStatus;
   currentClassId?: string;
@@ -37,6 +39,8 @@ export interface RegisterStudentRequest {
   otherName?: string;
   gender: Gender;
   dateOfBirth?: string;
+  /** Omitted defaults to today server-side. */
+  admissionDate?: string;
 }
 
 export interface UpdateStudentRequest {
@@ -45,6 +49,7 @@ export interface UpdateStudentRequest {
   otherName?: string;
   gender: Gender;
   dateOfBirth?: string;
+  admissionDate: string;
 }
 
 export type BloodGroup =

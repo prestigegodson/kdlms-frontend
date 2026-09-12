@@ -1,4 +1,14 @@
-import { Bell, CalendarDays, ClipboardCheck, ClipboardList, FileCheck2, MessageSquare, NotebookPen, Users } from "lucide-react";
+import {
+  Bell,
+  CalendarDays,
+  ClipboardCheck,
+  ClipboardList,
+  FileCheck2,
+  MessageSquare,
+  NotebookPen,
+  ReceiptText,
+  Users,
+} from "lucide-react";
 import { useEffect } from "react";
 import { can } from "@/auth/permissions";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
@@ -49,6 +59,17 @@ const NAV_ITEMS: NavItem[] = [
     visible: () => can.viewWardTakeHomeQuizzes("GUARDIAN", useFeatureStore.getState().takeHomeQuiz),
   },
   {
+    label: "Bills",
+    href: "/guardian/bills",
+    icon: ReceiptText,
+    // Overflow-only (drawer via the tab bar's More tab) - see the Timetable item's comment above
+    // for why (the tab bar's four-destination limit is already spent on My Wards/Results/
+    // Attendance/Messages). Gated on the school's Billing entitlement, the same full-lockout
+    // shape viewTimetable/viewWardLessonNotes/viewWardTakeHomeQuizzes use - see
+    // auth/permissions.ts's viewWardBills.
+    visible: () => can.viewWardBills("GUARDIAN", useFeatureStore.getState().billing),
+  },
+  {
     label: "Notifications",
     href: "/guardian/settings",
     icon: Bell,
@@ -70,6 +91,7 @@ export function GuardianLayout() {
   useFeatureStore((state) => state.timetable);
   useFeatureStore((state) => state.lessonNotes);
   useFeatureStore((state) => state.takeHomeQuiz);
+  useFeatureStore((state) => state.billing);
   useUnreadMessagesStore((state) => state.count);
 
   // Deliberately no schoolBrandingStore fetch here, unlike SchoolLayout: a

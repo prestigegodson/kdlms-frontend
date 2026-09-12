@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { routes } from "@/routes";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetFeatureStore } from "@/stores/featureStore";
 import { resetTeacherScopeStore } from "@/stores/teacherScopeStore";
 import { resetWardStore } from "@/stores/wardStore";
 
@@ -131,6 +132,13 @@ describe("router", () => {
       expect(screen.queryByText("Branches")).not.toBeInTheDocument();
     });
 
+    it("hides Fees & Bills from the sidebar, redirecting the billing route to the dashboard - TEACHER has no billing access at all", async () => {
+      renderAt("/school/billing");
+
+      expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+      expect(screen.queryByText("Fees & Bills")).not.toBeInTheDocument();
+    });
+
     it("hides Attendance from the sidebar until capabilities load, then shows it only for a class teacher", async () => {
       vi.stubGlobal(
         "fetch",
@@ -257,6 +265,49 @@ describe("router", () => {
       renderAt("/school");
 
       expect(await screen.findByRole("heading", { name: "My Wards" })).toBeInTheDocument();
+    });
+
+    it("shows the Bills nav item once billing is entitled, but never as a tab-bar primary", async () => {
+      // The feature store is a module-level singleton that caches its fetch across tests
+      // (fetchIfNeeded is a no-op once "loaded") - reset it so this test's own billing:true
+      // stub is actually consulted rather than an earlier test's cached answer.
+      resetFeatureStore();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((url: string) => {
+          if (url.includes("/api/v1/me/wards")) {
+            return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
+          }
+          if (url.includes("/api/v1/me/features")) {
+            return Promise.resolve({
+              ok: true,
+              status: 200,
+              json: () =>
+                Promise.resolve({
+                  communication: false,
+                  timetable: false,
+                  lessonNotes: false,
+                  aiLessonNotes: false,
+                  takeHomeQuiz: false,
+                  billing: true,
+                }),
+            });
+          }
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 }),
+          });
+        }),
+      );
+
+      renderAt("/guardian");
+
+      expect(await screen.findByRole("heading", { name: "My Wards" })).toBeInTheDocument();
+      // Reaches the sidebar/drawer only - never MobileTabBar, since Bills carries no `primary`
+      // (the tab bar's four-destination cap is already spent on My Wards/Results/Attendance/
+      // Messages - see GuardianLayout.tsx).
+      await waitFor(() => expect(screen.getAllByText("Bills")).toHaveLength(1));
     });
   });
 });

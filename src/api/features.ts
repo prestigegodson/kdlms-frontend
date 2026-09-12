@@ -13,6 +13,7 @@ export interface MyFeaturesView {
   lessonNotes: boolean;
   aiLessonNotes: boolean;
   takeHomeQuiz: boolean;
+  billing: boolean;
 }
 
 export function getMyFeatures(): Promise<MyFeaturesView> {

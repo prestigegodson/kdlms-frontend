@@ -16,6 +16,7 @@ import {
   ListChecks,
   MessageSquare,
   NotebookPen,
+  Receipt,
   Scale,
   School,
   Settings,
@@ -261,6 +262,21 @@ const NAV_ITEMS: NavItem[] = [
     // Read-only for both - see auth/permissions.ts's viewSupportContact.
     roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"],
   },
+  {
+    label: "Fees & Bills",
+    href: "/school/billing",
+    icon: Receipt,
+    group: "Administration",
+    // SCHOOL_ADMIN/BRANCH_ADMIN (read-only fee catalogue for BRANCH_ADMIN), gated on the
+    // school's Billing package entitlement - not TEACHER, fees are not academic information the
+    // class-teach/subject-teach model applies to. See auth/permissions.ts's viewBilling, the
+    // single source of truth.
+    visible: () => {
+      const role = useAuthStore.getState().user?.role;
+      const entitled = useFeatureStore.getState().billing;
+      return can.viewBilling(role, entitled);
+    },
+  },
 ];
 
 export function SchoolLayout() {
@@ -300,6 +316,7 @@ export function SchoolLayout() {
   useFeatureStore((state) => state.timetable);
   useFeatureStore((state) => state.lessonNotes);
   useFeatureStore((state) => state.takeHomeQuiz);
+  useFeatureStore((state) => state.billing);
   useUnreadMessagesStore((state) => state.count);
   usePendingLessonNotesStore((state) => state.count);
 

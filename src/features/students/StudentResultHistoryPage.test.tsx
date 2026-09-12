@@ -45,6 +45,7 @@ const STUDENT_VIEW: StudentView = {
   lastName: "Obi",
   fullName: "Ada Obi",
   gender: "FEMALE",
+  admissionDate: "2025-09-01",
   status: "ACTIVE",
 };
 

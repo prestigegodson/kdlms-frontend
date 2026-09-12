@@ -49,6 +49,7 @@ export function RegisterStudentModal({
   const [otherName, setOtherName] = useState("");
   const [gender, setGender] = useState<"FEMALE" | "MALE">("FEMALE");
   const [dateOfBirth, setDateOfBirth] = useState("");
+  const [admissionDate, setAdmissionDate] = useState("");
   const [manualAdmissionNumber, setManualAdmissionNumber] = useState(false);
   const [admissionNumber, setAdmissionNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -68,6 +69,7 @@ export function RegisterStudentModal({
         otherName: otherName || undefined,
         gender,
         dateOfBirth: dateOfBirth || undefined,
+        admissionDate: admissionDate || undefined,
       });
       onSaved();
     } catch (err) {
@@ -149,9 +151,19 @@ export function RegisterStudentModal({
             </Select>
           </FormField>
         </div>
-        <FormField label="Date of birth" htmlFor="register-dob">
-          <DateInput id="register-dob" max={todayIso()} value={dateOfBirth} onChange={setDateOfBirth} />
-        </FormField>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField label="Date of birth" htmlFor="register-dob">
+            <DateInput id="register-dob" max={todayIso()} value={dateOfBirth} onChange={setDateOfBirth} />
+          </FormField>
+          <FormField label="Admission date" htmlFor="register-admission-date">
+            <DateInput
+              id="register-admission-date"
+              max={todayIso()}
+              value={admissionDate}
+              onChange={setAdmissionDate}
+            />
+          </FormField>
+        </div>
         <div>
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <Checkbox checked={manualAdmissionNumber} onChange={(event) => setManualAdmissionNumber(event.target.checked)} />

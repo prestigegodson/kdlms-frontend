@@ -134,6 +134,7 @@ export function PackagesPage() {
                       {pkg.lessonNotes && <Badge variant="brand">Lesson notes</Badge>}
                       {pkg.takeHomeQuiz && <Badge variant="brand">Take-home quizzes</Badge>}
                       {pkg.aiLessonNotes && <Badge variant="brand">AI lesson notes</Badge>}
+                      {pkg.billing && <Badge variant="brand">Fees & bills</Badge>}
                     </div>
                   </TableCell>
                   <TableCell label="Status">
@@ -226,6 +227,7 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
   const [aiGenerationLimit, setAiGenerationLimit] = useState(
     initial ? String(initial.aiGenerationLimit) : "0",
   );
+  const [billing, setBilling] = useState(initial?.billing ?? false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -250,6 +252,7 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
         lessonNotes,
         aiLessonNotes,
         aiGenerationLimit: aiLessonNotes ? Number(aiGenerationLimit) : 0,
+        billing,
       });
       onSaved();
     } catch (err) {
@@ -400,6 +403,16 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
             onChange={(event) => setAiGenerationLimit(event.target.value)}
           />
         </FormField>
+
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <Checkbox checked={billing} onChange={(event) => setBilling(event.target.checked)} />
+          Fees & bills
+        </label>
+        <p className="-mt-2 text-xs text-slate-500">
+          Entitlement for the per-term parent billing module - a school without it loses the Fees &
+          Bills screen entirely, for staff and guardians alike. Never confuse with this package's own
+          price/billing cycle above, which is the SaaS operator billing the school.
+        </p>
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
