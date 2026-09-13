@@ -2,6 +2,7 @@ import { useState } from "react";
 import { can } from "@/auth/permissions";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Tabs } from "@/components/ui/Tabs";
+import { AdvanceBillsTab } from "@/features/billing/pages/AdvanceBillsTab";
 import { BillsTab } from "@/features/billing/pages/BillsTab";
 import { FeesTab } from "@/features/billing/pages/FeesTab";
 import { PricesTab } from "@/features/billing/pages/PricesTab";
@@ -10,11 +11,14 @@ import { TransportTab } from "@/features/billing/pages/TransportTab";
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
 
-// Bills | Fees | Prices | Transport | Settings - the documented order (billing-module.md);
-// 21B/21C shipped only the tabs they actually built rather than a disabled placeholder, and 21D
-// fills Bills in first per that same convention. Transport (Phase 22) sits after Prices since it
-// is itself a pricing screen, just for the school-bus fee's own axis.
-type Tab = "bills" | "fees" | "prices" | "transport" | "settings";
+// Bills | Advance bills | Fees | Prices | Transport | Settings - the documented order
+// (billing-module.md); 21B/21C shipped only the tabs they actually built rather than a disabled
+// placeholder, and 21D fills Bills in first per that same convention. Advance bills (Phase 27)
+// sits right after Bills since it's the same task - generating bills - just for a session ahead
+// of promotion, and it now owns its own end-to-end flow (plan -> preview -> publish) rather than
+// a summary card buried inside Bills. Transport (Phase 22) sits after Prices since it is itself a
+// pricing screen, just for the school-bus fee's own axis.
+type Tab = "bills" | "advance" | "fees" | "prices" | "transport" | "settings";
 
 /**
  * The school's fee catalogue and billing configuration - one page, tabbed,
@@ -32,6 +36,7 @@ export function BillingPage() {
   const entitled = useFeatureStore((state) => state.billing);
   const [tab, setTab] = useState<Tab>("bills");
 
+  const canManageAdvanceBills = can.manageAdvanceBills(role, entitled);
   const canManagePrices = can.manageFeePrices(role, entitled);
   const canManageTransport = can.manageTransport(role, entitled);
   const canManageSettings = can.manageBillingSettings(role, entitled);
@@ -46,6 +51,7 @@ export function BillingPage() {
         onChange={setTab}
         items={[
           { value: "bills", label: "Bills" },
+          ...(canManageAdvanceBills ? [{ value: "advance" as const, label: "Advance bills" }] : []),
           { value: "fees", label: "Fees" },
           ...(canManagePrices ? [{ value: "prices" as const, label: "Prices" }] : []),
           ...(canManageTransport ? [{ value: "transport" as const, label: "Transport" }] : []),
@@ -54,6 +60,7 @@ export function BillingPage() {
       />
 
       {tab === "bills" && <BillsTab />}
+      {tab === "advance" && canManageAdvanceBills && <AdvanceBillsTab />}
       {tab === "fees" && <FeesTab />}
       {tab === "prices" && canManagePrices && <PricesTab />}
       {tab === "transport" && canManageTransport && <TransportTab />}

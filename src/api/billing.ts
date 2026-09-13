@@ -382,12 +382,11 @@ export interface StudentBillTransportRouteOption {
 
 /**
  * Mirrors backend billing.application.port.in.ManageStudentBillAdjustmentsUseCase.TransportView
- * (Phase 26) - this student's own school-bus assignment, if any, and the routes available to
- * assign. `assignable` is `false` when the student has no enrollment in the billed term's own
- * session yet (an advance-billed or not-yet-promoted student) - assigning a route in that case
- * would silently misattribute the rider to the wrong session, so the section is disabled and
- * `unassignableReason` explains why. `routeId`/`direction`/`amount` are all `null` when the
- * student isn't currently a rider.
+ * (Phase 26, re-keyed in Phase 29) - this student's own school-bus assignment, if any, and the
+ * routes available to assign. `assignable` is `false` only when this branch has no active route
+ * priced at all for the billed term's session yet - an advance-billed student is assignable
+ * exactly like a real one, once routes are priced for the session they're being billed in advance
+ * for. `routeId`/`direction`/`amount` are all `null` when the student isn't currently a rider.
  */
 export interface StudentBillTransportView {
   assignable: boolean;
@@ -400,11 +399,15 @@ export interface StudentBillTransportView {
 
 /**
  * Mirrors backend billing.application.port.in.ManageStudentBillAdjustmentsUseCase.
- * StudentBillAdjustmentsView (Phase 25, Phase 26) - one student's editable per-fee opt-ins/
- * overrides, custom charges, and school-bus assignment for one term. `fees` covers every active,
- * level-applicable STANDARD fee - compulsory rows included (editable amount, no selection toggle)
- * alongside optional ones (selection toggle plus editable amount). The school bus is a separate
- * `transport` field, not a `FeeRow` - a TRANSPORT fee is priced per route, not per level.
+ * StudentBillAdjustmentsView (Phase 25, Phase 26, Phase 28) - one student's editable per-fee opt-
+ * ins/overrides, custom charges, and school-bus assignment for one term. `fees` covers every
+ * active, level-applicable STANDARD fee - compulsory rows included (editable amount, no selection
+ * toggle) alongside optional ones (selection toggle plus editable amount). The school bus is a
+ * separate `transport` field, not a `FeeRow` - a TRANSPORT fee is priced per route, not per level.
+ * `classId`/`className` are always the student's own current class, but `levelId`/`levelName` are
+ * the level the bill is actually *priced* at - the student's own class level, unless `advance` is
+ * `true`, in which case it's the matching advance-bill plan's billing level - `fees`/`billable`
+ * are resolved against that same level, never the class's own.
  */
 export interface StudentBillAdjustmentsView {
   studentId: string;
@@ -422,6 +425,7 @@ export interface StudentBillAdjustmentsView {
   currency: string | null;
   billable: boolean;
   published: boolean;
+  advance: boolean;
   fees: StudentBillFeeRow[];
   extras: StudentBillExtraRow[];
   transport: StudentBillTransportView;
@@ -451,8 +455,9 @@ export function getStudentBillAdjustments(studentId: string, termId: string): Pr
 /**
  * Full replace - `fees` omits any fee with no desired adjustment; `extras` is the
  * applicable-this-term set in display order. `transportRouteId`/`transportDirection` both `null`
- * clears any existing school-bus assignment (Phase 26); either supplied alone, or either supplied
- * while `StudentBillTransportView.assignable` is `false`, is rejected (422).
+ * clears any existing school-bus assignment for the billed term's session (Phase 26), and never
+ * touches an assignment the student carries for any other session; either field supplied alone is
+ * rejected (422).
  */
 export function saveStudentBillAdjustments(
   studentId: string,
@@ -470,11 +475,12 @@ export function saveStudentBillAdjustments(
 }
 
 /**
- * A bulk class bill export job - see `ClassBillExportView` (backend) and `BillExportCard`. The
+ * A bulk bill export job - see `BillExportView` (backend) and `BillExportCard`. The
  * `api/reports.ts` `ClassReportExportView` shape, minus the `ResultScope` axis (a bill has no
- * mid-term/end-of-term split).
+ * mid-term/end-of-term split). Class-scoped since Phase 21E; Phase 30 added the level-scoped
+ * target (the Advance bills tab's own export) sharing this same job shape - see `BillExportTarget`.
  */
-export interface ClassBillExportView {
+export interface BillExportView {
   id: string;
   status: "QUEUED" | "RUNNING" | "READY" | "FAILED";
   totalStudents: number;
@@ -488,17 +494,33 @@ export interface ClassBillExportView {
   updatedAt: string;
 }
 
-/** Creates a fresh export job, or regenerates/returns the existing one for this class+term. */
-export function createClassBillExport(classId: string, termId: string): Promise<ClassBillExportView> {
-  return apiFetch<ClassBillExportView>(`${BILLING_BASE}/classes/${classId}/exports?termId=${termId}`, {
-    method: "POST",
-  });
+/**
+ * What a bill export renders (Phase 30) - one class+term (`BillsTab`), or one branch's one
+ * advance-bill source level+term (`AdvanceBillsTab`). `branchId` on the level target is optional
+ * for a `BRANCH_ADMIN` (their own branch is derived server-side); a `SCHOOL_ADMIN` must supply it.
+ */
+export type BillExportTarget =
+  | { kind: "class"; classId: string }
+  | { kind: "level"; levelId: string; branchId?: string };
+
+function billExportPath(target: BillExportTarget, termId: string): string {
+  if (target.kind === "class") {
+    return `${BILLING_BASE}/classes/${target.classId}/exports?termId=${termId}`;
+  }
+  const params = new URLSearchParams({ termId });
+  if (target.branchId) params.set("branchId", target.branchId);
+  return `${BILLING_BASE}/levels/${target.levelId}/exports?${params}`;
 }
 
-/** The export job's current status, for polling - `null` when none has ever been requested for this class+term. */
-export async function getClassBillExport(classId: string, termId: string): Promise<ClassBillExportView | null> {
+/** Creates a fresh export job, or regenerates/returns the existing one for this target+term. */
+export function createBillExport(target: BillExportTarget, termId: string): Promise<BillExportView> {
+  return apiFetch<BillExportView>(billExportPath(target, termId), { method: "POST" });
+}
+
+/** The export job's current status, for polling - `null` when none has ever been requested for this target+term. */
+export async function getBillExport(target: BillExportTarget, termId: string): Promise<BillExportView | null> {
   try {
-    return await apiFetch<ClassBillExportView>(`${BILLING_BASE}/classes/${classId}/exports?termId=${termId}`);
+    return await apiFetch<BillExportView>(billExportPath(target, termId));
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       return null;
@@ -508,8 +530,8 @@ export async function getClassBillExport(classId: string, termId: string): Promi
 }
 
 /** The finished ZIP archive - only call once the job is `READY`. */
-export function downloadClassBillExport(classId: string, termId: string): Promise<Blob> {
-  return apiFetchBlob(`${BILLING_BASE}/classes/${classId}/exports/download?termId=${termId}`);
+export function downloadBillExport(target: BillExportTarget, termId: string): Promise<Blob> {
+  return apiFetchBlob(billExportPath(target, termId).replace("/exports?", "/exports/download?"));
 }
 
 /** Mirrors backend billing.application.port.in.BillPublicationView.DeliveryCounters. */
@@ -550,10 +572,9 @@ export interface UnpricedTransportRoute {
   affectedStudents: number;
 }
 
-/** Mirrors backend billing.application.port.in.BillPublicationPreflightView.UnplannedClass (Phase 24) - a class with active, not-yet-enrolled students but no advance-bill plan row for this session. Only ever populated when the session has at least one plan row elsewhere. */
-export interface UnplannedClass {
-  classId: string;
-  className: string;
+/** Mirrors backend billing.application.port.in.BillPublicationPreflightView.UnplannedLevel (Phase 24, re-keyed to the level in Phase 27) - a level with active, not-yet-enrolled students but no advance-bill plan row for this session. Only ever populated when the session has at least one plan row elsewhere. */
+export interface UnplannedLevel {
+  levelId: string;
   levelName: string;
   activeStudents: number;
 }
@@ -574,7 +595,7 @@ export interface BillPublicationPreflightView {
   unpricedSelectedFees: UnpricedGap[];
   unpricedTransportRoutes: UnpricedTransportRoute[];
   advanceStudents: number;
-  unplannedClasses: UnplannedClass[];
+  unplannedLevels: UnplannedLevel[];
 }
 
 /** Mirrors backend billing.application.port.in.PublishBillsUseCase.IssueMissingResult. */
@@ -840,10 +861,11 @@ export function saveTransportRiders(
 }
 
 // ============================================================================
-// Advance bills (Phase 24) - a school bills next session's fees before
-// promotion runs, by mapping an existing class to the level its students will
-// be billed at. One small plan per branch per session: absence of a row means
-// a class is excluded from advance billing entirely.
+// Advance bills (Phase 24, re-keyed to the level and given its own tab in
+// Phase 27) - a school bills next session's fees before promotion runs, by
+// mapping a LEVEL to the level its students will be billed at. One small plan
+// per branch per session: absence of a row means a level is excluded from
+// advance billing entirely.
 // ============================================================================
 
 /** Mirrors backend billing.application.port.in.AdvanceBillPlanView.LevelOption - the billing-level picker's own candidate list. */
@@ -853,20 +875,20 @@ export interface AdvanceBillLevelOption {
 }
 
 /**
- * Mirrors backend billing.application.port.in.AdvanceBillPlanView.ClassRow. `billingLevelId`/
- * `billingLevelName` are null when this class has no plan row for `sessionId` - excluded from
- * advance billing. `activeStudents` is this class's current active roster (any session);
- * `alreadyEnrolled` is how many of those already hold a real enrollment in `sessionId` (already
- * promoted, billed at their real level regardless of this row) - the difference is how many
- * students this class's plan would actually advance-bill.
+ * Mirrors backend billing.application.port.in.AdvanceBillPlanView.LevelRow. `billingLevelId`/
+ * `billingLevelName` are null when this level has no plan row for `sessionId` - excluded from
+ * advance billing. `classCount` is how many of this branch's classes sit at this level.
+ * `activeStudents` sums those classes' current active rosters (any session); `alreadyEnrolled` is
+ * how many of those already hold a real enrollment in `sessionId` (already promoted, billed at
+ * their real level regardless of this row) - the difference is how many students this level's
+ * plan would actually advance-bill.
  */
-export interface AdvanceBillPlanClassRow {
-  classId: string;
-  className: string;
-  currentLevelId: string;
-  currentLevelName: string;
+export interface AdvanceBillPlanLevelRow {
+  sourceLevelId: string;
+  sourceLevelName: string;
   billingLevelId: string | null;
   billingLevelName: string | null;
+  classCount: number;
   activeStudents: number;
   alreadyEnrolled: number;
 }
@@ -878,18 +900,18 @@ export interface AdvanceBillPlanView {
   sessionId: string;
   sessionName: string;
   levels: AdvanceBillLevelOption[];
-  classes: AdvanceBillPlanClassRow[];
+  rows: AdvanceBillPlanLevelRow[];
 }
 
-/** A null levelId excludes classId from sessionId's advance-bill plan - the fee-price grid's own null-clears idiom. */
+/** A null billingLevelId excludes sourceLevelId from sessionId's advance-bill plan - the fee-price grid's own null-clears idiom. */
 export interface SaveAdvanceBillPlanRow {
-  classId: string;
-  levelId: string | null;
+  sourceLevelId: string;
+  billingLevelId: string | null;
 }
 
-/** Mirrors backend ManageAdvanceBillPlansUseCase.RowOutcome - keyed by classId, not a row id. */
+/** Mirrors backend ManageAdvanceBillPlansUseCase.RowOutcome - keyed by sourceLevelId, not a row id. */
 export interface AdvanceBillPlanRowOutcome {
-  classId: string;
+  sourceLevelId: string;
   success: boolean;
   message: string | null;
 }
@@ -898,7 +920,7 @@ export interface SaveAdvanceBillPlanResult {
   outcomes: AdvanceBillPlanRowOutcome[];
 }
 
-/** Mirrors backend ManageAdvanceBillPlansUseCase.BranchCopyOutcome - copied/skipped count plan rows, not classes. */
+/** Mirrors backend ManageAdvanceBillPlansUseCase.BranchCopyOutcome - copied/skipped count plan rows (levels), not classes. */
 export interface AdvanceBillPlanBranchCopyOutcome {
   branchId: string;
   branchName: string | null;
@@ -910,6 +932,28 @@ export interface AdvanceBillPlanBranchCopyOutcome {
 
 export interface CopyAdvanceBillPlansResult {
   outcomes: AdvanceBillPlanBranchCopyOutcome[];
+}
+
+/**
+ * Mirrors backend billing.application.port.in.AdvanceBillPreviewView - the bills one source
+ * level's plan would generate for one term of the planned session, the Advance bills tab's own
+ * read. `billingLevelId`/`billingLevelName` are null when the source level has no plan row at all
+ * - `students` is then always empty. `students` reuses `BillSummaryView` verbatim, every row here
+ * carrying `advance: true`.
+ */
+export interface AdvanceBillPreviewView {
+  branchId: string;
+  termId: string;
+  termName: string;
+  sourceLevelId: string;
+  sourceLevelName: string;
+  billingLevelId: string | null;
+  billingLevelName: string | null;
+  currency: string;
+  billableStudents: number;
+  studentsWithoutBill: number;
+  expectedTotal: number;
+  students: BillSummaryView[];
 }
 
 const ADVANCE_BILL_PLANS_BASE = "/api/v1/billing/advance-plans";
@@ -943,4 +987,16 @@ export function copyAdvanceBillPlans(
     method: "POST",
     body: JSON.stringify({ sourceSessionId, targetSessionId, branchIds }),
   });
+}
+
+/** branchId is optional for a BRANCH_ADMIN - their own branch is derived server-side; a SCHOOL_ADMIN must supply one. */
+export function getAdvanceBillPreview(
+  sessionId: string,
+  termId: string,
+  sourceLevelId: string,
+  branchId?: string,
+): Promise<AdvanceBillPreviewView> {
+  const params = new URLSearchParams({ sessionId, termId, sourceLevelId });
+  if (branchId) params.set("branchId", branchId);
+  return apiFetch<AdvanceBillPreviewView>(`${ADVANCE_BILL_PLANS_BASE}/preview?${params}`);
 }

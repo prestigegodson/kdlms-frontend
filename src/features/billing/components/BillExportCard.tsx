@@ -1,4 +1,5 @@
 import { Download, FileArchive } from "lucide-react";
+import type { BillExportTarget } from "@/api/billing";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -7,24 +8,42 @@ import { RegisterProgress } from "@/features/attendance/components/RegisterProgr
 import { useBillExport } from "@/features/billing/useBillExport";
 
 interface BillExportCardProps {
-  classId: string;
+  target: BillExportTarget;
   termId: string;
 }
 
+const COPY = {
+  class: {
+    heading: "Class bills",
+    description: "Render every billable student's bill for this class and download them as one ZIP file.",
+    generate: "Generate class bills",
+  },
+  level: {
+    heading: "Level bills",
+    description:
+      "Render every bill for students at this level — advance bills for those not yet promoted, plus ordinary " +
+      "bills for anyone already promoted into this session — and download them as one ZIP file.",
+    generate: "Generate level bills",
+  },
+} as const;
+
 /**
- * Owns the bulk "Generate class bills" flow - a queued export job the UI polls via {@link
- * useBillExport}, rendered per {@code ClassBillExportView.status}: no job yet, {@code QUEUED},
- * {@code RUNNING} (a live progress bar), {@code READY} (download + regenerate), or {@code FAILED}
- * (the error plus a retry). The `ClassReportExportCard` shape verbatim, for bills. Its own actions
- * are `primary`, deliberately not `accent` - once `PublishBillsCard` joined `BillsTab` (Phase
- * 21F), its Publish button became the screen's one accent (style_guide.md's one-amber-per-view
- * rule), since publishing is the more consequential of the two actions.
+ * Owns the bulk "Generate bills" flow - a queued export job the UI polls via {@link
+ * useBillExport}, rendered per {@code BillExportView.status}: no job yet, {@code QUEUED}, {@code
+ * RUNNING} (a live progress bar), {@code READY} (download + regenerate), or {@code FAILED} (the
+ * error plus a retry). The `ClassReportExportCard` shape verbatim, for bills. Class-scoped since
+ * Phase 21E (`BillsTab`); Phase 30 added the level target for `AdvanceBillsTab` - the ZIP it
+ * renders is deliberately wider than that tab's own "Bills to be generated" preview above it,
+ * which is why the copy below says so. Its own actions are `primary`, deliberately not `accent` -
+ * once `PublishBillsCard` joined both tabs, its Publish button became the screen's one accent
+ * (style_guide.md's one-amber-per-view rule), since publishing is the more consequential action.
  */
-export function BillExportCard({ classId, termId }: BillExportCardProps) {
+export function BillExportCard({ target, termId }: BillExportCardProps) {
   const { job, loading, error, generating, generate, downloading, downloadError, download } = useBillExport(
-    classId,
+    target,
     termId,
   );
+  const copy = COPY[target.kind];
 
   return (
     <Card>
@@ -32,10 +51,8 @@ export function BillExportCard({ classId, termId }: BillExportCardProps) {
         <FileArchive className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
         <div className="min-w-0 flex-1 space-y-3">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">Class bills</h2>
-            <p className="text-sm text-slate-500">
-              Render every billable student&apos;s bill for this class and download them as one ZIP file.
-            </p>
+            <h2 className="text-sm font-semibold text-slate-900">{copy.heading}</h2>
+            <p className="text-sm text-slate-500">{copy.description}</p>
           </div>
 
           {error && <Alert variant="error">{error}</Alert>}
@@ -49,7 +66,7 @@ export function BillExportCard({ classId, termId }: BillExportCardProps) {
 
           {!loading && !job && (
             <Button variant="primary" onClick={generate} loading={generating}>
-              Generate class bills
+              {copy.generate}
             </Button>
           )}
 

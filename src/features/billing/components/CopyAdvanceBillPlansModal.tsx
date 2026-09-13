@@ -22,10 +22,10 @@ interface CopyAdvanceBillPlansModalProps {
 
 /**
  * Lets an admin pick a source session and one or more branches, then copies each selected
- * branch's advance-bill plan (which class bills at which level) from that session into the
+ * branch's advance-bill plan (which level bills at which level) from that session into the
  * currently-configured (target) session in one action - `ManageAdvanceBillPlansUseCase.
  * copyFromSession`'s bulk contract. Mirrors `CopyPricesModal`/`CopyFaresModal` verbatim, with a
- * plan row (a class) copied rather than a price cell or a fare.
+ * plan row (a level) copied rather than a price cell or a fare.
  */
 export function CopyAdvanceBillPlansModal({ open, onClose, targetSessionId, onCopied }: CopyAdvanceBillPlansModalProps) {
   const role = useAuthStore((state) => state.user?.role);
@@ -108,7 +108,7 @@ export function CopyAdvanceBillPlansModal({ open, onClose, targetSessionId, onCo
                   {outcome.success ? (
                     <span className="text-slate-600">
                       {" "}
-                      &mdash; {outcome.copied} class{outcome.copied === 1 ? "" : "es"} copied
+                      &mdash; {outcome.copied} level{outcome.copied === 1 ? "" : "s"} copied
                       {outcome.skipped > 0 ? `, ${outcome.skipped} already planned skipped` : ""}
                     </span>
                   ) : (

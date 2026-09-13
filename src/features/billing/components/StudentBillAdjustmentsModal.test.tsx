@@ -26,6 +26,7 @@ const VIEW: StudentBillAdjustmentsView = {
   currency: "NGN",
   billable: true,
   published: false,
+  advance: false,
   fees: [
     {
       feeId: "fee-1",
@@ -94,6 +95,20 @@ describe("StudentBillAdjustmentsModal", () => {
     renderModal({ published: true });
 
     expect(screen.getByText("This term's bills are already published")).toBeInTheDocument();
+  });
+
+  it("shows an advance-bill note naming the billing level and session when the view is an advance bill", () => {
+    renderModal({ advance: true, levelName: "Junior Secondary", sessionName: "2027/2028" });
+
+    expect(screen.getByText("Advance bill")).toBeInTheDocument();
+    expect(screen.getByText(/2027\/2028/)).toBeInTheDocument();
+    expect(screen.getByText(/Junior Secondary/)).toBeInTheDocument();
+  });
+
+  it("shows no advance-bill note for an ordinary bill", () => {
+    renderModal();
+
+    expect(screen.queryByText("Advance bill")).not.toBeInTheDocument();
   });
 
   it("selecting an optional fee and saving submits it as a standing selection", async () => {
@@ -215,11 +230,11 @@ describe("StudentBillAdjustmentsModal", () => {
     expect(billingApi.saveStudentBillAdjustments).not.toHaveBeenCalled();
   });
 
-  it("shows the unassignable reason instead of the picker when the student isn't enrolled this session", () => {
+  it("shows the unassignable reason instead of the picker when no route is priced for this session yet", () => {
     renderModal({
       transport: {
         assignable: false,
-        unassignableReason: "Not enrolled in this session yet.",
+        unassignableReason: "No school-bus route is priced for this session yet.",
         routeId: null,
         direction: null,
         amount: null,
@@ -227,7 +242,7 @@ describe("StudentBillAdjustmentsModal", () => {
       },
     });
 
-    expect(screen.getByText("Not enrolled in this session yet.")).toBeInTheDocument();
+    expect(screen.getByText("No school-bus route is priced for this session yet.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Route")).not.toBeInTheDocument();
   });
 

@@ -294,16 +294,16 @@ export function PublishBillsCard({ branchId, termId, currency = "NGN" }: Publish
                   </ul>
                 </Alert>
               )}
-              {preflight.unplannedClasses.length > 0 && (
-                <Alert variant="info" title="Some classes have unpromoted students but no advance-bill plan">
+              {preflight.unplannedLevels.length > 0 && (
+                <Alert variant="info" title="Some levels have unpromoted students but no advance-bill plan">
                   <p className="mb-1">
-                    This never blocks publishing - these students simply won't get a bill until their class is
-                    mapped on the Advance bills card above.
+                    This never blocks publishing - these students simply won't get a bill until their level
+                    is mapped on the Advance bills tab.
                   </p>
                   <ul className="list-inside list-disc space-y-1">
-                    {preflight.unplannedClasses.map((unplanned) => (
-                      <li key={unplanned.classId}>
-                        {unplanned.className} ({unplanned.levelName}) - {unplanned.activeStudents}{" "}
+                    {preflight.unplannedLevels.map((unplanned) => (
+                      <li key={unplanned.levelId}>
+                        {unplanned.levelName} - {unplanned.activeStudents}{" "}
                         {unplanned.activeStudents === 1 ? "student" : "students"}
                       </li>
                     ))}

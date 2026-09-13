@@ -80,13 +80,20 @@ function toExtraDrafts(view: StudentBillAdjustmentsView): ExtraDraft[] {
  * direction, per this phase's locked decision - it only flips once the admin actually touches the
  * row, never merely from re-rendering the server's resolved state.
  * <p>
- * The school bus (Phase 26) is a separate route + direction picker, not a fee row - a TRANSPORT
- * fee is priced per route, not per level, so it's never one of `view.fees`. The route select
- * offers every route in `view.transport.routes`; the direction select narrows to whichever
- * legs that route actually prices, the `TransportRidersTable` pattern. The resolved fare folds
- * into the running total exactly like an extra. When `view.transport.assignable` is `false` (the
- * student has no enrollment in the billed term's own session yet), the picker is replaced by
- * `unassignableReason` and nothing is submitted for it.
+ * The school bus (Phase 26, re-keyed off enrollment id in Phase 29) is a separate route +
+ * direction picker, not a fee row - a TRANSPORT fee is priced per route, not per level, so it's
+ * never one of `view.fees`. The route select offers every route in `view.transport.routes`; the
+ * direction select narrows to whichever legs that route actually prices, the
+ * `TransportRidersTable` pattern. The resolved fare folds into the running total exactly like an
+ * extra. When `view.transport.assignable` is `false` - this branch has no active route priced at
+ * all for the billed session yet - the picker is replaced by `unassignableReason` and nothing is
+ * submitted for it. An advance bill is otherwise assignable exactly like a real one, once its
+ * session has priced routes.
+ * <p>
+ * `view.advance` (Phase 28) means this is an advance bill - `view.fees`/`view.levelId`/
+ * `view.levelName` are already resolved against the advance-bill plan's billing level, not the
+ * student's own current class's level, so the fee table needs no special casing here; only the
+ * banner above it differs.
  */
 export function StudentBillAdjustmentsModal({
   studentId,
@@ -228,6 +235,13 @@ export function StudentBillAdjustmentsModal({
   return (
     <Modal open onClose={onClose} title={`Edit bill · ${view.studentName}`} size="xl">
       <div className="space-y-4">
+        {view.advance && (
+          <Alert variant="info" title="Advance bill">
+            This student isn't enrolled in {view.sessionName ?? "this session"} yet - they're being billed in
+            advance at {view.levelName}, the level their class is planned to bill at, not their current class's own
+            level.
+          </Alert>
+        )}
         {view.published && (
           <Alert variant="warning" title="This term's bills are already published">
             Guardians may already have been emailed a bill for {view.termName}. Changing these adjustments changes

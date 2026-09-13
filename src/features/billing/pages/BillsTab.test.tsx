@@ -135,6 +135,7 @@ const ADJUSTMENTS: billingApi.StudentBillAdjustmentsView = {
   currency: "NGN",
   billable: true,
   published: false,
+  advance: false,
   fees: [
     {
       feeId: "fee-1",
@@ -256,12 +257,6 @@ describe("BillsTab", () => {
     expect(billingApi.getStudentBill).toHaveBeenCalledWith("student-1", "term-1");
     expect(await screen.findByText(/SCH\/2026\/0001-T1/)).toBeInTheDocument();
     expect(screen.getByText("Tuition")).toBeInTheDocument();
-  });
-
-  it("renders the Advance bills card for a role that can manage advance-bill plans", async () => {
-    render(<BillsTab />);
-
-    expect(await screen.findByLabelText("Session to advance-bill")).toBeInTheDocument();
   });
 
   it("shows an Advance badge for a roster row billed against an advance plan", async () => {

@@ -44,7 +44,7 @@ const CLEAN_PREFLIGHT: BillPublicationPreflightView = {
   unpricedSelectedFees: [],
   unpricedTransportRoutes: [],
   advanceStudents: 0,
-  unplannedClasses: [],
+  unplannedLevels: [],
 };
 
 const GAPPY_PREFLIGHT: BillPublicationPreflightView = {
@@ -57,7 +57,7 @@ const GAPPY_PREFLIGHT: BillPublicationPreflightView = {
   unpricedSelectedFees: [],
   unpricedTransportRoutes: [],
   advanceStudents: 0,
-  unplannedClasses: [],
+  unplannedLevels: [],
 };
 
 function signIn(role: "SCHOOL_ADMIN" | "BRANCH_ADMIN" | "TEACHER" = "BRANCH_ADMIN") {
@@ -132,12 +132,12 @@ describe("PublishBillsCard", () => {
     expect(confirmButton).toBeEnabled();
   });
 
-  it("mentions advance bills in the summary and names an unplanned class, neither blocking confirmation", async () => {
+  it("mentions advance bills in the summary and names an unplanned level, neither blocking confirmation", async () => {
     vi.mocked(billingApi.getBillPublication).mockResolvedValue(UNPUBLISHED);
     vi.mocked(billingApi.getBillPublicationPreflight).mockResolvedValue({
       ...CLEAN_PREFLIGHT,
       advanceStudents: 3,
-      unplannedClasses: [{ classId: "class-1", className: "Primary 6B", levelName: "Primary", activeStudents: 1 }],
+      unplannedLevels: [{ levelId: "level-2", levelName: "Junior Secondary", activeStudents: 1 }],
     });
     const user = userEvent.setup();
     render(<PublishBillsCard branchId="branch-1" termId="term-1" currency="NGN" />);
@@ -145,7 +145,7 @@ describe("PublishBillsCard", () => {
     await user.click(await screen.findByRole("button", { name: "Publish bills" }));
 
     expect(await screen.findByText(/3 of these are advance bills for students not yet promoted/)).toBeInTheDocument();
-    expect(screen.getByText(/Primary 6B \(Primary\) - 1 student/)).toBeInTheDocument();
+    expect(screen.getByText(/Junior Secondary - 1 student/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Publish" })).toBeEnabled();
   });
 
