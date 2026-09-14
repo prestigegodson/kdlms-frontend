@@ -223,11 +223,12 @@ export interface BillView {
   advance: boolean;
 }
 
-/** Mirrors backend billing.application.port.in.BillSummaryView - one class roster row. A non-billable student shows as "No bill" rather than being omitted. `advance` (Phase 24) mirrors BillView's own field. */
+/** Mirrors backend billing.application.port.in.BillSummaryView - one level roster row. A non-billable student shows as "No bill" rather than being omitted. `className` (Phase 31) disambiguates rows when the level spans more than one class. `advance` (Phase 24) mirrors BillView's own field. */
 export interface BillSummaryView {
   studentId: string;
   studentName: string;
   admissionNumber: string;
+  className: string;
   billable: boolean;
   total: number;
   currency: string;
@@ -319,10 +320,11 @@ export function getStudentBill(studentId: string, termId: string): Promise<BillV
   return apiFetch<BillView>(`${BILLING_BASE}/students/${studentId}/bill?${params}`);
 }
 
-/** One class's whole roster for one term - every student, a non-billable one shown as "No bill". */
-export function getClassBills(classId: string, termId: string): Promise<BillSummaryView[]> {
+/** One branch's one level's whole roster for one term - every student, a non-billable one shown as "No bill". branchId optional for a BRANCH_ADMIN (own branch derived server-side); a SCHOOL_ADMIN must supply one. */
+export function getLevelBills(levelId: string, termId: string, branchId?: string): Promise<BillSummaryView[]> {
   const params = new URLSearchParams({ termId });
-  return apiFetch<BillSummaryView[]>(`${BILLING_BASE}/classes/${classId}/bills?${params}`);
+  if (branchId) params.set("branchId", branchId);
+  return apiFetch<BillSummaryView[]>(`${BILLING_BASE}/levels/${levelId}/bills?${params}`);
 }
 
 /** branchId is optional for a BRANCH_ADMIN - their own branch is derived server-side; a SCHOOL_ADMIN must supply one. */
@@ -477,8 +479,8 @@ export function saveStudentBillAdjustments(
 /**
  * A bulk bill export job - see `BillExportView` (backend) and `BillExportCard`. The
  * `api/reports.ts` `ClassReportExportView` shape, minus the `ResultScope` axis (a bill has no
- * mid-term/end-of-term split). Class-scoped since Phase 21E; Phase 30 added the level-scoped
- * target (the Advance bills tab's own export) sharing this same job shape - see `BillExportTarget`.
+ * mid-term/end-of-term split). Level-scoped throughout (Phase 31) - one branch's one advance-bill
+ * source level+term, rendering every billable student currently at that level.
  */
 export interface BillExportView {
   id: string;
@@ -494,33 +496,26 @@ export interface BillExportView {
   updatedAt: string;
 }
 
-/**
- * What a bill export renders (Phase 30) - one class+term (`BillsTab`), or one branch's one
- * advance-bill source level+term (`AdvanceBillsTab`). `branchId` on the level target is optional
- * for a `BRANCH_ADMIN` (their own branch is derived server-side); a `SCHOOL_ADMIN` must supply it.
- */
-export type BillExportTarget =
-  | { kind: "class"; classId: string }
-  | { kind: "level"; levelId: string; branchId?: string };
-
-function billExportPath(target: BillExportTarget, termId: string): string {
-  if (target.kind === "class") {
-    return `${BILLING_BASE}/classes/${target.classId}/exports?termId=${termId}`;
-  }
+/** `branchId` is optional for a `BRANCH_ADMIN` (their own branch is derived server-side); a `SCHOOL_ADMIN` must supply it. */
+function billExportPath(levelId: string, termId: string, branchId: string | undefined): string {
   const params = new URLSearchParams({ termId });
-  if (target.branchId) params.set("branchId", target.branchId);
-  return `${BILLING_BASE}/levels/${target.levelId}/exports?${params}`;
+  if (branchId) params.set("branchId", branchId);
+  return `${BILLING_BASE}/levels/${levelId}/exports?${params}`;
 }
 
-/** Creates a fresh export job, or regenerates/returns the existing one for this target+term. */
-export function createBillExport(target: BillExportTarget, termId: string): Promise<BillExportView> {
-  return apiFetch<BillExportView>(billExportPath(target, termId), { method: "POST" });
+/** Creates a fresh export job, or regenerates/returns the existing one for this level+term. */
+export function createBillExport(levelId: string, termId: string, branchId?: string): Promise<BillExportView> {
+  return apiFetch<BillExportView>(billExportPath(levelId, termId, branchId), { method: "POST" });
 }
 
-/** The export job's current status, for polling - `null` when none has ever been requested for this target+term. */
-export async function getBillExport(target: BillExportTarget, termId: string): Promise<BillExportView | null> {
+/** The export job's current status, for polling - `null` when none has ever been requested for this level+term. */
+export async function getBillExport(
+  levelId: string,
+  termId: string,
+  branchId?: string,
+): Promise<BillExportView | null> {
   try {
-    return await apiFetch<BillExportView>(billExportPath(target, termId));
+    return await apiFetch<BillExportView>(billExportPath(levelId, termId, branchId));
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       return null;
@@ -530,8 +525,8 @@ export async function getBillExport(target: BillExportTarget, termId: string): P
 }
 
 /** The finished ZIP archive - only call once the job is `READY`. */
-export function downloadBillExport(target: BillExportTarget, termId: string): Promise<Blob> {
-  return apiFetchBlob(billExportPath(target, termId).replace("/exports?", "/exports/download?"));
+export function downloadBillExport(levelId: string, termId: string, branchId?: string): Promise<Blob> {
+  return apiFetchBlob(billExportPath(levelId, termId, branchId).replace("/exports?", "/exports/download?"));
 }
 
 /** Mirrors backend billing.application.port.in.BillPublicationView.DeliveryCounters. */

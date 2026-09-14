@@ -8,8 +8,6 @@ import {
   saveAdvanceBillPlans,
 } from "@/api/billing";
 import { ApiError } from "@/api/client";
-import { listLevels, type LevelView } from "@/api/levels";
-import { type AcademicSessionView, listSessions, listTerms, type TermView } from "@/api/sessions";
 import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -19,10 +17,11 @@ import { FormField } from "@/components/ui/FormField";
 import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { StatTile } from "@/components/ui/StatTile";
-import { StickySubHeader, useFilterChip } from "@/components/ui/StickySubHeader";
+import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { BillExportCard } from "@/features/billing/components/BillExportCard";
 import { CopyAdvanceBillPlansModal } from "@/features/billing/components/CopyAdvanceBillPlansModal";
+import { LevelTermPicker } from "@/features/billing/components/LevelTermPicker";
 import { PublishBillsCard } from "@/features/billing/components/PublishBillsCard";
 import { StudentBillModals } from "@/features/billing/components/StudentBillModals";
 import { useStudentBillEditing } from "@/features/billing/useStudentBillEditing";
@@ -41,9 +40,9 @@ import { formatMoney } from "@/utils/currency";
  * pick a level, pick a session ahead, say what level it bills at, pick a term, see the roster and
  * total that would be generated, then publish right here.
  *
- * The Level/Session/Term picker deliberately does NOT default Session to the current one (the
- * `AdvanceBillPlanCard` precedent) - advance billing exists specifically for a session that isn't
- * current yet.
+ * The `LevelTermPicker` here is used with `defaultCurrentSession` omitted (false) - it deliberately
+ * does NOT default Session to the current one (the `AdvanceBillPlanCard` precedent) - advance
+ * billing exists specifically for a session that isn't current yet.
  */
 export function AdvanceBillsTab() {
   const { ready: branchReady, branchId } = useBranchScope();
@@ -51,37 +50,9 @@ export function AdvanceBillsTab() {
   const entitled = useFeatureStore((state) => state.billing);
   const canEditStudentBills = can.editStudentBills(role, entitled);
 
-  const [levels, setLevels] = useState<LevelView[]>([]);
   const [sourceLevelId, setSourceLevelId] = useState("");
-  useEffect(() => {
-    listLevels().then((all) => setLevels(all.filter((level) => level.status === "ACTIVE")));
-  }, []);
-
-  const [sessions, setSessions] = useState<AcademicSessionView[]>([]);
   const [sessionId, setSessionId] = useState("");
-  useEffect(() => {
-    listSessions(0, 50).then((page) => setSessions(page.content));
-  }, []);
-
-  const [terms, setTerms] = useState<TermView[]>([]);
   const [termId, setTermId] = useState("");
-  // A session change clears terms/termId during render (the BranchFilter/AdminResultsPanel
-  // idiom) rather than inside the effect below, so a cleared session never briefly shows the
-  // previous session's terms before the fetch (or the "no session" empty state) takes over.
-  const [lastTermsSessionId, setLastTermsSessionId] = useState(sessionId);
-  if (sessionId !== lastTermsSessionId) {
-    setLastTermsSessionId(sessionId);
-    setTerms([]);
-    setTermId("");
-  }
-  useEffect(() => {
-    if (!sessionId) return;
-    listTerms(sessionId).then(setTerms);
-  }, [sessionId]);
-
-  useFilterChip("level", levels.find((level) => level.id === sourceLevelId)?.displayName);
-  useFilterChip("session", sessions.find((session) => session.id === sessionId)?.name);
-  useFilterChip("term", terms.find((term) => term.id === termId)?.name);
 
   // A branch/session change clears the plan during render (the AdminResultsPanel idiom) - stale
   // data from the previous branch/session would otherwise flash before the fetch lands. Level is
@@ -181,49 +152,16 @@ export function AdvanceBillsTab() {
     <div className="space-y-6">
       <StickySubHeader collapsible>
         <BranchFilter id="advance-bills-branch" />
-        <FormField label="Level" htmlFor="advance-bills-level" className="min-w-0 flex-1 lg:max-w-[14rem]">
-          <Select
-            id="advance-bills-level"
-            value={sourceLevelId}
-            onChange={(event) => setSourceLevelId(event.target.value)}
-          >
-            <option value="">Select a level…</option>
-            {levels.map((level) => (
-              <option key={level.id} value={level.id}>
-                {level.displayName}
-              </option>
-            ))}
-          </Select>
-        </FormField>
-        <FormField
-          label="Session to advance-bill"
-          htmlFor="advance-bills-session"
-          className="min-w-0 flex-1 lg:max-w-[14rem]"
-        >
-          <Select id="advance-bills-session" value={sessionId} onChange={(event) => setSessionId(event.target.value)}>
-            <option value="">Select a session…</option>
-            {sessions.map((session) => (
-              <option key={session.id} value={session.id}>
-                {session.name}
-              </option>
-            ))}
-          </Select>
-        </FormField>
-        <FormField label="Term" htmlFor="advance-bills-term" className="min-w-0 flex-1 lg:max-w-[14rem]">
-          <Select
-            id="advance-bills-term"
-            value={termId}
-            onChange={(event) => setTermId(event.target.value)}
-            disabled={!sessionId}
-          >
-            <option value="">Select a term…</option>
-            {terms.map((term) => (
-              <option key={term.id} value={term.id}>
-                {term.name}
-              </option>
-            ))}
-          </Select>
-        </FormField>
+        <LevelTermPicker
+          levelId={sourceLevelId}
+          onLevelChange={setSourceLevelId}
+          sessionId={sessionId}
+          onSessionChange={setSessionId}
+          termId={termId}
+          onTermChange={setTermId}
+          sessionLabel="Session to advance-bill"
+          idPrefix="advance-bills"
+        />
       </StickySubHeader>
 
       {!sourceLevelId || !sessionId ? (
@@ -345,6 +283,7 @@ export function AdvanceBillsTab() {
                             <TableHead>
                               <TableRow>
                                 <TableHeaderCell>Student</TableHeaderCell>
+                                <TableHeaderCell>Class</TableHeaderCell>
                                 <TableHeaderCell>Admission no.</TableHeaderCell>
                                 <TableHeaderCell numeric>Total</TableHeaderCell>
                                 {canEditStudentBills && <TableHeaderCell>{/* Edit bill */}</TableHeaderCell>}
@@ -354,6 +293,7 @@ export function AdvanceBillsTab() {
                               {preview.students.map((row) => (
                                 <TableRow key={row.studentId} onClick={() => editing.openPreview(row.studentId)}>
                                   <TableCell label="Student">{row.studentName}</TableCell>
+                                  <TableCell label="Class">{row.className}</TableCell>
                                   <TableCell label="Admission no.">{row.admissionNumber}</TableCell>
                                   <TableCell label="Total" numeric>
                                     {row.billable ? formatMoney(row.total, row.currency) : "—"}
@@ -392,7 +332,7 @@ export function AdvanceBillsTab() {
                 students at every planned level, plus ordinary bills for anyone already enrolled.
               </p>
               <PublishBillsCard branchId={branchId} termId={termId} currency={preview?.currency} />
-              <BillExportCard target={{ kind: "level", levelId: sourceLevelId, branchId }} termId={termId} />
+              <BillExportCard levelId={sourceLevelId} branchId={branchId} termId={termId} />
             </>
           )}
         </>

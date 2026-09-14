@@ -1,7 +1,6 @@
 import { Pencil, Receipt } from "lucide-react";
 import { useEffect, useState } from "react";
-import { type BillSummaryView, type BranchBillingSummaryView, getBillingSummary, getClassBills } from "@/api/billing";
-import { listClasses } from "@/api/classes";
+import { type BillSummaryView, type BranchBillingSummaryView, getBillingSummary, getLevelBills } from "@/api/billing";
 import { ApiError } from "@/api/client";
 import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
@@ -12,8 +11,8 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { StatTile } from "@/components/ui/StatTile";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
-import { type ClassOption, ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
 import { BillExportCard } from "@/features/billing/components/BillExportCard";
+import { LevelTermPicker } from "@/features/billing/components/LevelTermPicker";
 import { PublishBillsCard } from "@/features/billing/components/PublishBillsCard";
 import { StudentBillModals } from "@/features/billing/components/StudentBillModals";
 import { useStudentBillEditing } from "@/features/billing/useStudentBillEditing";
@@ -23,15 +22,21 @@ import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
 import { formatMoney } from "@/utils/currency";
 
-/** A branch's derived bills for one class + term - roster + summary. Mirrors AdminResultsPanel's shape (branch/session/term/class selection, StickySubHeader collapsible). */
+/**
+ * A branch's derived bills for one level + term - roster + summary. Level-scoped throughout
+ * (Phase 31, replacing the original class picker) since a bill is priced off the student's level,
+ * never their class - a level spanning several classes shows every one of them in one roster, each
+ * row carrying its own `className` to disambiguate. Mirrors AdminResultsPanel's shape (branch/
+ * session/term/level selection, StickySubHeader collapsible).
+ */
 export function BillsTab() {
   const { ready: branchReady, branchId } = useBranchScope();
   const role = useAuthStore((state) => state.user?.role);
   const entitled = useFeatureStore((state) => state.billing);
   const canEditStudentBills = can.editStudentBills(role, entitled);
 
-  const [classes, setClasses] = useState<ClassOption[] | null>(null);
-  const [classId, setClassId] = useState("");
+  const [levelId, setLevelId] = useState("");
+  const [sessionId, setSessionId] = useState("");
   const [termId, setTermId] = useState("");
 
   const [summary, setSummary] = useState<BranchBillingSummaryView | null>(null);
@@ -39,27 +44,20 @@ export function BillsTab() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const editing = useStudentBillEditing(termId, () => {
-    if (classId) {
-      getClassBills(classId, termId).then(setRoster).catch(() => undefined);
+    if (levelId) {
+      getLevelBills(levelId, termId, branchId).then(setRoster).catch(() => undefined);
     }
   });
 
-  useEffect(() => {
-    if (!branchReady) return;
-    listClasses(branchId, undefined, 0, 200)
-      .then((page) => setClasses(page.content.map((c) => ({ id: c.id, name: c.name }))))
-      .catch(() => setClasses([]));
-  }, [branchReady, branchId]);
-
-  // A branch change clears the class selection during render (the AdminResultsPanel idiom) - a
-  // class from the previous branch would otherwise 404 once the class list has re-fetched.
+  // A branch change clears the level selection during render (the AdminResultsPanel idiom) - a
+  // level's roster from the previous branch would otherwise 404 once the branch has re-scoped.
   const [lastBranchId, setLastBranchId] = useState(branchId);
   if (branchId !== lastBranchId) {
     setLastBranchId(branchId);
-    setClassId("");
+    setLevelId("");
   }
 
-  const selectionKey = `${classId}|${termId}`;
+  const selectionKey = `${branchId ?? ""}|${levelId}|${termId}`;
   const [lastSelectionKey, setLastSelectionKey] = useState(selectionKey);
   if (selectionKey !== lastSelectionKey) {
     setLastSelectionKey(selectionKey);
@@ -73,30 +71,30 @@ export function BillsTab() {
     getBillingSummary(termId, branchId)
       .then(setSummary)
       .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load billing summary"));
-    if (classId) {
-      getClassBills(classId, termId)
+    if (levelId) {
+      getLevelBills(levelId, termId, branchId)
         .then(setRoster)
-        .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load class bills"));
+        .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load level bills"));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- branchId is read for the summary fetch, not a re-trigger of its own
-  }, [classId, termId]);
-
-  const classOptions = classes ?? [];
-  const showsBranchFilter = classes !== null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- branchId is read for the summary/roster fetch, not a re-trigger of its own
+  }, [levelId, termId]);
 
   return (
     <div className="space-y-6">
-      {classes === null && <Skeleton className="h-10 w-full" />}
-
-      {classes !== null && (
+      {!branchReady ? (
+        <Skeleton className="h-10 w-full" />
+      ) : (
         <StickySubHeader collapsible>
           <BranchFilter id="bills-branch" />
-          <ClassTermPicker
-            classes={classOptions}
-            classId={classId}
-            onClassChange={setClassId}
+          <LevelTermPicker
+            levelId={levelId}
+            onLevelChange={setLevelId}
+            sessionId={sessionId}
+            onSessionChange={setSessionId}
             termId={termId}
             onTermChange={setTermId}
+            defaultCurrentSession
+            idPrefix="bills"
           />
         </StickySubHeader>
       )}
@@ -104,11 +102,11 @@ export function BillsTab() {
       {loadError && <Alert variant="error">{loadError}</Alert>}
 
       {!termId ? (
-        showsBranchFilter && (
+        branchReady && (
           <EmptyState
             icon={Receipt}
-            title="Select a class and term"
-            description="Pick a branch, session, term, and class to see its bills."
+            title="Select a level and term"
+            description="Pick a branch, session, term, and level to see its bills."
           />
         )
       ) : (
@@ -133,19 +131,20 @@ export function BillsTab() {
             </div>
           )}
 
-          {classId &&
+          {levelId &&
             (roster === null ? (
               <div className="space-y-2">
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
               </div>
             ) : roster.length === 0 ? (
-              <EmptyState icon={Receipt} title="No students on this class's roster" />
+              <EmptyState icon={Receipt} title="No students at this level in this branch" />
             ) : (
               <Table>
                 <TableHead>
                   <TableRow>
                     <TableHeaderCell>Student</TableHeaderCell>
+                    <TableHeaderCell>Class</TableHeaderCell>
                     <TableHeaderCell>Admission no.</TableHeaderCell>
                     <TableHeaderCell>Status</TableHeaderCell>
                     <TableHeaderCell numeric>Total</TableHeaderCell>
@@ -156,6 +155,7 @@ export function BillsTab() {
                   {roster.map((row) => (
                     <TableRow key={row.studentId} onClick={() => editing.openPreview(row.studentId)}>
                       <TableCell label="Student">{row.studentName}</TableCell>
+                      <TableCell label="Class">{row.className}</TableCell>
                       <TableCell label="Admission no.">{row.admissionNumber}</TableCell>
                       <TableCell label="Status">
                         <div className="flex flex-wrap gap-1">
@@ -191,7 +191,7 @@ export function BillsTab() {
 
           <PublishBillsCard branchId={branchId} termId={termId} currency={summary?.currency} />
 
-          {classId && <BillExportCard target={{ kind: "class", classId }} termId={termId} />}
+          {levelId && <BillExportCard levelId={levelId} branchId={branchId} termId={termId} />}
         </>
       )}
 

@@ -137,6 +137,7 @@ const PREVIEW_WITH_STUDENTS: AdvanceBillPreviewView = {
       studentId: "student-1",
       studentName: "Ada Obi",
       admissionNumber: "SCH/2026/0001",
+      className: "Primary 6A",
       billable: true,
       total: 20000,
       currency: "NGN",
@@ -276,8 +277,12 @@ describe("AdvanceBillsTab", () => {
 
   async function selectLevelAndSession(user: ReturnType<typeof userEvent.setup>) {
     render(<AdvanceBillsTab />);
-    await user.selectOptions(await screen.findByLabelText("Level"), "level-primary");
-    await user.selectOptions(await screen.findByLabelText("Session to advance-bill"), "session-2");
+    // Both selects exist immediately; their options populate once the async listLevels/
+    // listSessions fetches resolve - wait for an actual option before selecting it.
+    await within(screen.getByLabelText("Level")).findByText("Primary");
+    await user.selectOptions(screen.getByLabelText("Level"), "level-primary");
+    await within(screen.getByLabelText("Session to advance-bill")).findByText("2027/2028");
+    await user.selectOptions(screen.getByLabelText("Session to advance-bill"), "session-2");
   }
 
   it("prompts to select a level and a session before showing anything else", async () => {
@@ -354,10 +359,7 @@ describe("AdvanceBillsTab", () => {
     // branchId is undefined for a BRANCH_ADMIN - the server derives their branch from the token,
     // the same `useBranchScope` contract every other call in this tab already follows.
     await waitFor(() =>
-      expect(billingApi.getBillExport).toHaveBeenCalledWith(
-        { kind: "level", levelId: "level-primary", branchId: undefined },
-        "term-1",
-      ),
+      expect(billingApi.getBillExport).toHaveBeenCalledWith("level-primary", "term-1", undefined),
     );
   });
 
@@ -444,6 +446,8 @@ describe("AdvanceBillsTab", () => {
     await user.selectOptions(await screen.findByLabelText("Term"), "term-1");
 
     expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
+    // Each row carries its own class - a level can span more than one.
+    expect(screen.getByText("Primary 6A")).toBeInTheDocument();
     // Appears twice - once as the "Expected total" stat tile, once as the roster row's own total.
     expect(screen.getAllByText("₦20,000.00")).toHaveLength(2);
     expect(await screen.findByText("Bill publication")).toBeInTheDocument();

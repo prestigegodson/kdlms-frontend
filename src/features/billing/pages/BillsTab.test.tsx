@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as billingApi from "@/api/billing";
 import type { BillSummaryView, BillView, BranchBillingSummaryView } from "@/api/billing";
-import * as classesApi from "@/api/classes";
+import * as levelsApi from "@/api/levels";
+import type { LevelView } from "@/api/levels";
 import * as sessionsApi from "@/api/sessions";
 import type { AcademicSessionView, TermView } from "@/api/sessions";
 import { BillsTab } from "@/features/billing/pages/BillsTab";
@@ -16,7 +17,7 @@ vi.mock("@/api/billing", async () => {
   return {
     ...actual,
     getBillingSummary: vi.fn(),
-    getClassBills: vi.fn(),
+    getLevelBills: vi.fn(),
     getStudentBill: vi.fn(),
     getBillPublication: vi.fn(),
     getStudentBillAdjustments: vi.fn(),
@@ -24,9 +25,9 @@ vi.mock("@/api/billing", async () => {
   };
 });
 
-vi.mock("@/api/classes", async () => {
-  const actual = await vi.importActual<typeof import("@/api/classes")>("@/api/classes");
-  return { ...actual, listClasses: vi.fn() };
+vi.mock("@/api/levels", async () => {
+  const actual = await vi.importActual<typeof import("@/api/levels")>("@/api/levels");
+  return { ...actual, listLevels: vi.fn() };
 });
 
 vi.mock("@/api/sessions", async () => {
@@ -54,13 +55,15 @@ const TERM: TermView = {
   current: true,
 };
 
-const CLASS_1 = {
-  id: "class-1",
-  schoolId: "school-1",
-  branchId: "branch-1",
-  levelId: "level-1",
-  name: "Primary 1A",
-  status: "ACTIVE" as const,
+const LEVEL_1: LevelView = {
+  id: "level-1",
+  baseLevel: "PRIMARY",
+  displayName: "Primary",
+  rank: 1,
+  status: "ACTIVE",
+  subjectCount: 0,
+  classCount: 2,
+  subjectGroupCount: 0,
 };
 
 const SUMMARY: BranchBillingSummaryView = {
@@ -78,6 +81,7 @@ const ROSTER: BillSummaryView[] = [
     studentId: "student-1",
     studentName: "Ada Obi",
     admissionNumber: "SCH/2026/0001",
+    className: "Primary 1A",
     billable: true,
     total: 5000,
     currency: "NGN",
@@ -87,6 +91,7 @@ const ROSTER: BillSummaryView[] = [
     studentId: "student-2",
     studentName: "Bola Ade",
     admissionNumber: "SCH/2026/0002",
+    className: "Primary 1B",
     billable: false,
     total: 0,
     currency: "NGN",
@@ -195,13 +200,7 @@ describe("BillsTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     signIn();
-    vi.mocked(classesApi.listClasses).mockResolvedValue({
-      content: [CLASS_1],
-      totalElements: 1,
-      totalPages: 1,
-      number: 0,
-      size: 200,
-    });
+    vi.mocked(levelsApi.listLevels).mockResolvedValue([LEVEL_1]);
     vi.mocked(sessionsApi.listSessions).mockResolvedValue({
       content: [SESSION],
       totalElements: 1,
@@ -211,7 +210,7 @@ describe("BillsTab", () => {
     });
     vi.mocked(sessionsApi.listTerms).mockResolvedValue([TERM]);
     vi.mocked(billingApi.getBillingSummary).mockResolvedValue(SUMMARY);
-    vi.mocked(billingApi.getClassBills).mockResolvedValue(ROSTER);
+    vi.mocked(billingApi.getLevelBills).mockResolvedValue(ROSTER);
     vi.mocked(billingApi.getStudentBill).mockResolvedValue(BILL);
     vi.mocked(billingApi.getStudentBillAdjustments).mockResolvedValue(ADJUSTMENTS);
     vi.mocked(billingApi.getBillPublication).mockResolvedValue({
@@ -225,11 +224,11 @@ describe("BillsTab", () => {
     });
   });
 
-  it("renders the roster and the summary tiles once a class is selected", async () => {
+  it("renders the roster and the summary tiles once a level is selected", async () => {
     const user = userEvent.setup();
     render(<BillsTab />);
 
-    await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
+    await user.selectOptions(await screen.findByLabelText("Level"), "level-1");
 
     expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
     expect(screen.getByText("Bola Ade")).toBeInTheDocument();
@@ -237,11 +236,21 @@ describe("BillsTab", () => {
     expect(await screen.findAllByText("₦5,000.00")).toHaveLength(2);
   });
 
+  it("shows each roster row's own class, since a level can span more than one", async () => {
+    const user = userEvent.setup();
+    render(<BillsTab />);
+
+    await user.selectOptions(await screen.findByLabelText("Level"), "level-1");
+
+    expect(await screen.findByText("Primary 1A")).toBeInTheDocument();
+    expect(screen.getByText("Primary 1B")).toBeInTheDocument();
+  });
+
   it("shows a non-billable student as 'No bill' rather than omitting the row", async () => {
     const user = userEvent.setup();
     render(<BillsTab />);
 
-    await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
+    await user.selectOptions(await screen.findByLabelText("Level"), "level-1");
 
     expect(await screen.findByText("No bill")).toBeInTheDocument();
     expect(screen.getByText("Billed")).toBeInTheDocument();
@@ -251,7 +260,7 @@ describe("BillsTab", () => {
     const user = userEvent.setup();
     render(<BillsTab />);
 
-    await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
+    await user.selectOptions(await screen.findByLabelText("Level"), "level-1");
     await user.click(await screen.findByText("Ada Obi"));
 
     expect(billingApi.getStudentBill).toHaveBeenCalledWith("student-1", "term-1");
@@ -261,10 +270,10 @@ describe("BillsTab", () => {
 
   it("shows an Advance badge for a roster row billed against an advance plan", async () => {
     const user = userEvent.setup();
-    vi.mocked(billingApi.getClassBills).mockResolvedValue([{ ...ROSTER[0], advance: true }]);
+    vi.mocked(billingApi.getLevelBills).mockResolvedValue([{ ...ROSTER[0], advance: true }]);
     render(<BillsTab />);
 
-    await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
+    await user.selectOptions(await screen.findByLabelText("Level"), "level-1");
 
     expect(await screen.findByText("Advance")).toBeInTheDocument();
   });
@@ -273,7 +282,7 @@ describe("BillsTab", () => {
     const user = userEvent.setup();
     render(<BillsTab />);
 
-    await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
+    await user.selectOptions(await screen.findByLabelText("Level"), "level-1");
     await user.click((await screen.findAllByRole("button", { name: "Edit bill" }))[0]);
 
     expect(billingApi.getStudentBillAdjustments).toHaveBeenCalledWith("student-1", "term-1");

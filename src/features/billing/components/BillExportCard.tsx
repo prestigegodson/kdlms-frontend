@@ -1,5 +1,4 @@
 import { Download, FileArchive } from "lucide-react";
-import type { BillExportTarget } from "@/api/billing";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -8,42 +7,37 @@ import { RegisterProgress } from "@/features/attendance/components/RegisterProgr
 import { useBillExport } from "@/features/billing/useBillExport";
 
 interface BillExportCardProps {
-  target: BillExportTarget;
+  levelId: string;
+  branchId?: string;
   termId: string;
 }
 
 const COPY = {
-  class: {
-    heading: "Class bills",
-    description: "Render every billable student's bill for this class and download them as one ZIP file.",
-    generate: "Generate class bills",
-  },
-  level: {
-    heading: "Level bills",
-    description:
-      "Render every bill for students at this level — advance bills for those not yet promoted, plus ordinary " +
-      "bills for anyone already promoted into this session — and download them as one ZIP file.",
-    generate: "Generate level bills",
-  },
+  heading: "Level bills",
+  description:
+    "Render every bill for students at this level — advance bills for those not yet promoted, plus ordinary " +
+    "bills for anyone already promoted into this session — and download them as one ZIP file.",
+  generate: "Generate level bills",
 } as const;
 
 /**
  * Owns the bulk "Generate bills" flow - a queued export job the UI polls via {@link
  * useBillExport}, rendered per {@code BillExportView.status}: no job yet, {@code QUEUED}, {@code
  * RUNNING} (a live progress bar), {@code READY} (download + regenerate), or {@code FAILED} (the
- * error plus a retry). The `ClassReportExportCard` shape verbatim, for bills. Class-scoped since
- * Phase 21E (`BillsTab`); Phase 30 added the level target for `AdvanceBillsTab` - the ZIP it
- * renders is deliberately wider than that tab's own "Bills to be generated" preview above it,
- * which is why the copy below says so. Its own actions are `primary`, deliberately not `accent` -
- * once `PublishBillsCard` joined both tabs, its Publish button became the screen's one accent
- * (style_guide.md's one-amber-per-view rule), since publishing is the more consequential action.
+ * error plus a retry). The `ClassReportExportCard` shape verbatim, for bills, level-scoped
+ * throughout (Phase 31) - the ZIP it renders is deliberately wider than the Advance bills tab's
+ * own "Bills to be generated" preview above it (advance bills for those not yet promoted, plus
+ * ordinary bills for anyone already promoted), which is why the copy below says so. Its own
+ * actions are `primary`, deliberately not `accent` - `PublishBillsCard`'s Publish button is the
+ * screen's one accent (style_guide.md's one-amber-per-view rule), since publishing is the more
+ * consequential action.
  */
-export function BillExportCard({ target, termId }: BillExportCardProps) {
+export function BillExportCard({ levelId, branchId, termId }: BillExportCardProps) {
   const { job, loading, error, generating, generate, downloading, downloadError, download } = useBillExport(
-    target,
+    levelId,
     termId,
+    branchId,
   );
-  const copy = COPY[target.kind];
 
   return (
     <Card>
@@ -51,8 +45,8 @@ export function BillExportCard({ target, termId }: BillExportCardProps) {
         <FileArchive className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
         <div className="min-w-0 flex-1 space-y-3">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">{copy.heading}</h2>
-            <p className="text-sm text-slate-500">{copy.description}</p>
+            <h2 className="text-sm font-semibold text-slate-900">{COPY.heading}</h2>
+            <p className="text-sm text-slate-500">{COPY.description}</p>
           </div>
 
           {error && <Alert variant="error">{error}</Alert>}
@@ -66,7 +60,7 @@ export function BillExportCard({ target, termId }: BillExportCardProps) {
 
           {!loading && !job && (
             <Button variant="primary" onClick={generate} loading={generating}>
-              {copy.generate}
+              {COPY.generate}
             </Button>
           )}
 

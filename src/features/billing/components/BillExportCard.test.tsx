@@ -45,11 +45,18 @@ describe("BillExportCard", () => {
     vi.useRealTimers();
   });
 
-  it("shows a Generate button when no export has ever been requested", async () => {
+  it("shows the level-scoped heading, copy, and Generate button, and requests it with the branch and level ids", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     vi.mocked(billingApi.getBillExport).mockResolvedValue(null);
-    render(<BillExportCard target={{ kind: "class", classId: "class-1" }} termId="term-1" />);
+    vi.mocked(billingApi.createBillExport).mockResolvedValue(job({ status: "QUEUED" }));
+    render(<BillExportCard levelId="level-1" branchId="branch-1" termId="term-1" />);
 
-    expect(await screen.findByRole("button", { name: "Generate class bills" })).toBeInTheDocument();
+    expect(await screen.findByText("Level bills")).toBeInTheDocument();
+    expect(screen.getByText(/advance bills for those not yet promoted/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Generate level bills" }));
+
+    expect(billingApi.createBillExport).toHaveBeenCalledWith("level-1", "term-1", "branch-1");
   });
 
   it("creates a job and shows the running progress bar once RUNNING", async () => {
@@ -62,10 +69,10 @@ describe("BillExportCard", () => {
       vi.mocked(billingApi.getBillExport).mockResolvedValue(queued);
       return queued;
     });
-    render(<BillExportCard target={{ kind: "class", classId: "class-1" }} termId="term-1" />);
+    render(<BillExportCard levelId="level-1" branchId="branch-1" termId="term-1" />);
 
-    await user.click(await screen.findByRole("button", { name: "Generate class bills" }));
-    expect(billingApi.createBillExport).toHaveBeenCalledWith({ kind: "class", classId: "class-1" }, "term-1");
+    await user.click(await screen.findByRole("button", { name: "Generate level bills" }));
+    expect(billingApi.createBillExport).toHaveBeenCalledWith("level-1", "term-1", "branch-1");
     expect(await screen.findByText("Queued…")).toBeInTheDocument();
 
     vi.mocked(billingApi.getBillExport).mockResolvedValue(
@@ -78,9 +85,9 @@ describe("BillExportCard", () => {
 
   it("shows Download/Regenerate once READY, and stops polling", async () => {
     vi.mocked(billingApi.getBillExport).mockResolvedValue(
-      job({ status: "READY", totalStudents: 3, renderedCount: 3, fileName: "class-bills.zip", sizeBytes: 2048 }),
+      job({ status: "READY", totalStudents: 3, renderedCount: 3, fileName: "level-bills.zip", sizeBytes: 2048 }),
     );
-    render(<BillExportCard target={{ kind: "class", classId: "class-1" }} termId="term-1" />);
+    render(<BillExportCard levelId="level-1" branchId="branch-1" termId="term-1" />);
 
     expect(await screen.findByRole("button", { name: /Download ZIP/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Regenerate" })).toBeInTheDocument();
@@ -96,46 +103,30 @@ describe("BillExportCard", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const blob = new Blob(["zip-bytes"]);
     vi.mocked(billingApi.getBillExport).mockResolvedValue(
-      job({ status: "READY", totalStudents: 1, renderedCount: 1, fileName: "primary-1-first-term-bills.zip" }),
+      job({ status: "READY", totalStudents: 1, renderedCount: 1, fileName: "primary-first-term-bills.zip" }),
     );
     vi.mocked(billingApi.downloadBillExport).mockResolvedValue(blob);
-    render(<BillExportCard target={{ kind: "class", classId: "class-1" }} termId="term-1" />);
+    render(<BillExportCard levelId="level-1" branchId="branch-1" termId="term-1" />);
 
     await user.click(await screen.findByRole("button", { name: /Download ZIP/ }));
 
-    await waitFor(() => expect(downloadBlob).toHaveBeenCalledWith(blob, "primary-1-first-term-bills.zip"));
+    await waitFor(() => expect(downloadBlob).toHaveBeenCalledWith(blob, "primary-first-term-bills.zip"));
   });
 
   it("shows the error and a retry action once FAILED", async () => {
     vi.mocked(billingApi.getBillExport).mockResolvedValue(
-      job({ status: "FAILED", lastError: "No billable students in this class for this term." }),
+      job({ status: "FAILED", lastError: "No billable students at this level for this term." }),
     );
-    render(<BillExportCard target={{ kind: "class", classId: "class-1" }} termId="term-1" />);
+    render(<BillExportCard levelId="level-1" branchId="branch-1" termId="term-1" />);
 
-    expect(await screen.findByText("No billable students in this class for this term.")).toBeInTheDocument();
+    expect(await screen.findByText("No billable students at this level for this term.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
 
-  it("shows level-scoped heading, copy, and button label for a level target", async () => {
+  it("polls with an omitted branchId for a BRANCH_ADMIN, whose branch the server derives", async () => {
     vi.mocked(billingApi.getBillExport).mockResolvedValue(null);
-    render(<BillExportCard target={{ kind: "level", levelId: "level-1", branchId: "branch-1" }} termId="term-1" />);
+    render(<BillExportCard levelId="level-1" termId="term-1" />);
 
-    expect(await screen.findByText("Level bills")).toBeInTheDocument();
-    expect(screen.getByText(/advance bills for those not yet promoted/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Generate level bills" })).toBeInTheDocument();
-  });
-
-  it("requests a level export with the branch and level ids", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    vi.mocked(billingApi.getBillExport).mockResolvedValue(null);
-    vi.mocked(billingApi.createBillExport).mockResolvedValue(job({ status: "QUEUED" }));
-    render(<BillExportCard target={{ kind: "level", levelId: "level-1", branchId: "branch-1" }} termId="term-1" />);
-
-    await user.click(await screen.findByRole("button", { name: "Generate level bills" }));
-
-    expect(billingApi.createBillExport).toHaveBeenCalledWith(
-      { kind: "level", levelId: "level-1", branchId: "branch-1" },
-      "term-1",
-    );
+    await waitFor(() => expect(billingApi.getBillExport).toHaveBeenCalledWith("level-1", "term-1", undefined));
   });
 });
