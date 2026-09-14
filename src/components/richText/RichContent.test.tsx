@@ -87,4 +87,51 @@ describe("RichContent", () => {
     expect(container.querySelector("a")).toBeNull();
     expect(container).toHaveTextContent("before link text after");
   });
+
+  // ---- lesson-note document mode vocabulary (Phase 16G) ----
+
+  it("renders headings", () => {
+    const { container } = render(<RichContent html="<h2>Section</h2><h3>Sub</h3><h4>Detail</h4>" />);
+
+    expect(container.querySelector("h2")).toHaveTextContent("Section");
+    expect(container.querySelector("h3")).toHaveTextContent("Sub");
+    expect(container.querySelector("h4")).toHaveTextContent("Detail");
+  });
+
+  it("renders a blockquote and a horizontal rule", () => {
+    const { container } = render(<RichContent html="<blockquote><p>Quoted</p></blockquote><hr>" />);
+
+    expect(container.querySelector("blockquote")).toHaveTextContent("Quoted");
+    expect(container.querySelector("hr")).not.toBeNull();
+  });
+
+  it("renders a table with colspan and rowspan intact", () => {
+    const html =
+      "<table><thead><tr><th colspan=\"2\">Step</th></tr></thead>" +
+      '<tbody><tr><td rowspan="2">Teacher</td><td>Learner</td></tr></tbody></table>';
+    const { container } = render(<RichContent html={html} />);
+
+    expect(container.querySelector("table")).not.toBeNull();
+    const th = container.querySelector("th");
+    expect(th).toHaveTextContent("Step");
+    expect(th?.getAttribute("colspan")).toBe("2");
+    const firstTd = container.querySelector("td");
+    expect(firstTd).toHaveTextContent("Teacher");
+    expect(firstTd?.getAttribute("rowspan")).toBe("2");
+  });
+
+  it("renders a well-formed block-math div as centred KaTeX markup", () => {
+    const { container } = render(
+      <RichContent html='<div data-type="block-math" data-latex="\\sum_{i=1}^{n} x_i"></div>' />,
+    );
+
+    expect(container.querySelectorAll(".katex-display")).toHaveLength(1);
+  });
+
+  it("unwraps a div that isn't shaped like the block-math node, keeping its text", () => {
+    const { container } = render(<RichContent html='<div class="whatever">plain text</div>' />);
+
+    expect(container.querySelectorAll(".katex")).toHaveLength(0);
+    expect(container).toHaveTextContent("plain text");
+  });
 });

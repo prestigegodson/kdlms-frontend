@@ -1,22 +1,12 @@
 import { EditorContent, useEditor } from "@tiptap/react";
-import {
-  Bold,
-  ImageIcon,
-  Italic,
-  List,
-  ListOrdered,
-  Sigma,
-  Strikethrough,
-  Subscript as SubscriptIcon,
-  Superscript as SuperscriptIcon,
-  Underline as UnderlineIcon,
-} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "@/api/client";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, uploadFile } from "@/api/files";
 import { Alert } from "@/components/ui/Alert";
 import { MathDialog } from "@/components/richText/MathDialog";
+import { PastedImageUpload } from "@/components/richText/pastedImageUpload";
 import { richTextExtensions } from "@/components/richText/richTextExtensions";
+import { RichTextToolbar } from "@/components/richText/RichTextToolbar";
 
 interface RichTextFieldProps {
   id?: string;
@@ -26,6 +16,13 @@ interface RichTextFieldProps {
   allowImages?: boolean;
   /** A choice option's label - no lists, and Enter is swallowed rather than starting a new line. */
   singleLine?: boolean;
+  /** The lesson-note document editor's widened vocabulary (Phase 16G) - every flag defaults `false`, so a quiz field is unaffected. */
+  allowHeadings?: boolean;
+  allowTables?: boolean;
+  allowBlockMath?: boolean;
+  allowBlockquote?: boolean;
+  /** Total images this field may hold across every paste and every image-button insert combined - required whenever `allowImages` is on. */
+  maxImages?: number;
   disabled?: boolean;
   ariaLabel?: string;
 }
@@ -35,18 +32,22 @@ interface MathDialogState {
   latex: string;
   /** The clicked node's position when editing an existing expression - `null` when inserting a new one. */
   pos: number | null;
+  /** Which command family the dialog's Insert/Update button should drive. */
+  target: "inline" | "block";
 }
 
-const CLOSED_MATH_DIALOG: MathDialogState = { open: false, latex: "", pos: null };
+const CLOSED_MATH_DIALOG: MathDialogState = { open: false, latex: "", pos: null, target: "inline" };
 
 /**
- * The WYSIWYG editor a take-home quiz question's prompt and choice options
- * are authored in - TipTap over the tiny vocabulary `richTextExtensions`
- * builds, so nothing this editor can produce falls outside what the backend
- * `QuizRichText` sanitizer allows. Mirrors `ImageUploadField`'s own
- * upload-immediately-hand-off-the-fileId contract for its image button,
- * and `MathText`/`katexHtml.ts`'s KaTeX safety argument for its maths
- * button - see `MathDialog`.
+ * The WYSIWYG editor a take-home quiz question's prompt/choice options and,
+ * since Phase 16G, a lesson note's free-form document body are authored in -
+ * TipTap over the closed vocabulary `richTextExtensions` builds, so nothing
+ * this editor can produce falls outside what the matching backend sanitizer
+ * allows (`takehomequiz.domain.QuizRichText` or `lessonnote.domain.LessonNoteRichText`).
+ * Mirrors `ImageUploadField`'s own upload-immediately-hand-off-the-fileId
+ * contract for its image button (and, for a pasted image, `pastedImageUpload.ts`'s
+ * upload-then-rewrite contract), and `MathText`/`katexHtml.ts`'s KaTeX safety
+ * argument for its maths buttons - see `MathDialog`.
  */
 export function RichTextField({
   id,
@@ -54,21 +55,47 @@ export function RichTextField({
   onChange,
   allowImages = false,
   singleLine = false,
+  allowHeadings = false,
+  allowTables = false,
+  allowBlockMath = false,
+  allowBlockquote = false,
+  maxImages,
   disabled = false,
   ariaLabel,
 }: RichTextFieldProps) {
   const [mathDialog, setMathDialog] = useState<MathDialogState>(CLOSED_MATH_DIALOG);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [pasteStatus, setPasteStatus] = useState<{ uploading: number } | null>(null);
+  const [droppedImageCount, setDroppedImageCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor(
     {
-      extensions: richTextExtensions({
-        allowLists: !singleLine,
-        allowImages,
-        onMathClick: (latex, pos) => setMathDialog({ open: true, latex, pos }),
-      }),
+      extensions: [
+        ...richTextExtensions({
+          allowLists: !singleLine,
+          allowImages,
+          allowHeadings,
+          allowTables,
+          allowBlockMath,
+          allowBlockquote,
+          onMathClick: (latex, pos) => setMathDialog({ open: true, latex, pos, target: "inline" }),
+          onBlockMathClick: (latex, pos) => setMathDialog({ open: true, latex, pos, target: "block" }),
+        }),
+        ...(allowImages
+          ? [
+              PastedImageUpload.configure({
+                uploadFile,
+                maxUploadBytes: MAX_UPLOAD_BYTES,
+                maxImages: () => maxImages ?? Number.POSITIVE_INFINITY,
+                onUploadStart: (count) => setPasteStatus({ uploading: count }),
+                onUploadEnd: () => setPasteStatus(null),
+                onDropped: (count) => setDroppedImageCount(count),
+              }),
+            ]
+          : []),
+      ],
       content: value || "<p></p>",
       editable: !disabled,
       immediatelyRender: false,
@@ -85,7 +112,7 @@ export function RichTextField({
     },
     // Recreated only when the field's shape changes - see richTextExtensions.ts's
     // note on why a fresh onMathClick closure each render is still safe here.
-    [singleLine, allowImages],
+    [singleLine, allowImages, allowHeadings, allowTables, allowBlockMath, allowBlockquote],
   );
 
   // Keeps the editor in sync with an externally-driven `value` (loading a
@@ -112,7 +139,13 @@ export function RichTextField({
 
   function submitMath(latex: string) {
     if (!editor) return;
-    if (mathDialog.pos !== null) {
+    if (mathDialog.target === "block") {
+      if (mathDialog.pos !== null) {
+        editor.chain().focus().updateBlockMath({ latex, pos: mathDialog.pos }).run();
+      } else {
+        editor.chain().focus().insertBlockMath({ latex }).run();
+      }
+    } else if (mathDialog.pos !== null) {
       editor.chain().focus().updateInlineMath({ latex, pos: mathDialog.pos }).run();
     } else {
       editor.chain().focus().insertInlineMath({ latex }).run();
@@ -143,44 +176,19 @@ export function RichTextField({
   return (
     <div className={`rounded-control border border-slate-300 bg-white ${disabled ? "bg-slate-100" : ""}`}>
       {!disabled && (
-        <div className="flex flex-wrap items-center gap-0.5 border-b border-slate-200 p-1">
-          <ToolbarButton label="Bold" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>
-            <Bold className="h-4 w-4" aria-hidden="true" />
-          </ToolbarButton>
-          <ToolbarButton label="Italic" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}>
-            <Italic className="h-4 w-4" aria-hidden="true" />
-          </ToolbarButton>
-          <ToolbarButton label="Underline" active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()}>
-            <UnderlineIcon className="h-4 w-4" aria-hidden="true" />
-          </ToolbarButton>
-          <ToolbarButton label="Strikethrough" active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()}>
-            <Strikethrough className="h-4 w-4" aria-hidden="true" />
-          </ToolbarButton>
-          <ToolbarButton label="Subscript" active={editor.isActive("subscript")} onClick={() => editor.chain().focus().toggleSubscript().run()}>
-            <SubscriptIcon className="h-4 w-4" aria-hidden="true" />
-          </ToolbarButton>
-          <ToolbarButton label="Superscript" active={editor.isActive("superscript")} onClick={() => editor.chain().focus().toggleSuperscript().run()}>
-            <SuperscriptIcon className="h-4 w-4" aria-hidden="true" />
-          </ToolbarButton>
-          {!singleLine && (
-            <>
-              <ToolbarButton label="Bullet list" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()}>
-                <List className="h-4 w-4" aria-hidden="true" />
-              </ToolbarButton>
-              <ToolbarButton label="Numbered list" active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
-                <ListOrdered className="h-4 w-4" aria-hidden="true" />
-              </ToolbarButton>
-            </>
-          )}
-          <ToolbarButton label="Insert maths" onClick={() => setMathDialog({ open: true, latex: "", pos: null })}>
-            <Sigma className="h-4 w-4" aria-hidden="true" />
-          </ToolbarButton>
-          {allowImages && (
-            <ToolbarButton label="Insert image" onClick={() => fileInputRef.current?.click()} loading={uploading}>
-              <ImageIcon className="h-4 w-4" aria-hidden="true" />
-            </ToolbarButton>
-          )}
-        </div>
+        <RichTextToolbar
+          editor={editor}
+          singleLine={singleLine}
+          allowImages={allowImages}
+          allowHeadings={allowHeadings}
+          allowTables={allowTables}
+          allowBlockMath={allowBlockMath}
+          allowBlockquote={allowBlockquote}
+          uploading={uploading}
+          onInsertImageClick={() => fileInputRef.current?.click()}
+          onInsertMathClick={() => setMathDialog({ open: true, latex: "", pos: null, target: "inline" })}
+          onInsertBlockMathClick={() => setMathDialog({ open: true, latex: "", pos: null, target: "block" })}
+        />
       )}
       {allowImages && (
         <input
@@ -196,6 +204,27 @@ export function RichTextField({
           <Alert variant="error">{uploadError}</Alert>
         </div>
       )}
+      {pasteStatus && (
+        <div className="px-2 pt-2 text-xs text-slate-500">
+          Uploading {pasteStatus.uploading} image{pasteStatus.uploading === 1 ? "" : "s"}…
+        </div>
+      )}
+      {droppedImageCount > 0 && (
+        <div className="flex items-start gap-2 px-2 pt-2">
+          <Alert variant="warning" className="flex-1">
+            {droppedImageCount} pasted image{droppedImageCount === 1 ? "" : "s"} couldn't be brought across. Use the
+            image button to add {droppedImageCount === 1 ? "it" : "them"} instead.
+          </Alert>
+          <button
+            type="button"
+            aria-label="Dismiss"
+            onClick={() => setDroppedImageCount(0)}
+            className="mt-1 text-xs text-slate-400 hover:text-slate-600"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       <EditorContent editor={editor} />
       <MathDialog
         open={mathDialog.open}
@@ -204,36 +233,5 @@ export function RichTextField({
         onClose={() => setMathDialog(CLOSED_MATH_DIALOG)}
       />
     </div>
-  );
-}
-
-function ToolbarButton({
-  label,
-  active = false,
-  loading = false,
-  onClick,
-  children,
-}: {
-  label: string;
-  active?: boolean;
-  loading?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      aria-pressed={active}
-      title={label}
-      disabled={loading}
-      onMouseDown={(event) => event.preventDefault()}
-      onClick={onClick}
-      className={`flex h-8 w-8 items-center justify-center rounded-control text-slate-600 hover:bg-slate-100 disabled:opacity-50 mobile:h-11 mobile:w-11 ${
-        active ? "bg-brand-50 text-brand-600" : ""
-      }`}
-    >
-      {children}
-    </button>
   );
 }

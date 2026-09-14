@@ -68,6 +68,8 @@ const NOTE_DETAIL: LessonNoteView = {
   weekNumber: 1,
   topic: "Whole numbers",
   content: {
+    mode: "STRUCTURED",
+    body: null,
     subTopic: "Counting",
     duration: "40 minutes",
     averageAge: "8 years",
@@ -164,5 +166,27 @@ describe("WardLessonNotesPage", () => {
 
     expect(await screen.findByText("Counting")).toBeInTheDocument();
     expect(screen.getByText("Ask learners to count to 50.")).toBeInTheDocument();
+  });
+
+  it("renders a document-mode note's body through RichContent, with images silently dropped (Phase 16G)", async () => {
+    vi.mocked(wardsApi.listMyWards).mockResolvedValue([WARD]);
+    vi.mocked(wardsApi.getWardLessonNote).mockResolvedValue({
+      ...NOTE_DETAIL,
+      content: {
+        ...NOTE_DETAIL.content,
+        mode: "DOCUMENT",
+        body: '<h2>Whole numbers</h2><p>Count to <strong>100</strong></p><img data-file-id="11111111-1111-1111-1111-111111111111">',
+      },
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText(/Week 1 · Whole numbers/);
+    await user.click(screen.getByText(/Week 1 · Whole numbers/));
+
+    expect(await screen.findByRole("heading", { name: "Whole numbers", level: 2 })).toBeInTheDocument();
+    expect(screen.getByText("100").tagName).toBe("STRONG");
+    // No renderImage passed for a guardian caller - the picture is silently dropped, not a broken <img>.
+    expect(document.querySelector("img")).toBeNull();
   });
 });

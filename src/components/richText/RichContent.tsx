@@ -10,20 +10,23 @@ export interface RichContentProps {
 }
 
 /**
- * Read-only counterpart to `RichTextField` - renders the identical tiny
- * vocabulary the backend `QuizRichText` sanitizer allows (`p`/`ul`/`ol`/`li`,
- * `strong`/`em`/`u`/`s`/`code`/`sub`/`sup`/`br`, an inline-math span, and an
- * image referenced by `data-file-id`), built by walking a `DOMParser` tree
- * into explicit React elements rather than trusting the string. The only
- * `dangerouslySetInnerHTML` here is KaTeX's own render output for one
- * `data-latex` value at a time (see `katexHtml.ts`'s safety argument) -
- * every other node is either an allow-listed React element or is dropped.
+ * Read-only counterpart to `RichTextField` - renders the tiny vocabulary a
+ * backend sanitizer allows (`takehomequiz.domain.QuizRichText`'s
+ * `p`/`ul`/`ol`/`li`/`strong`/`em`/`u`/`s`/`code`/`sub`/`sup`/`br`, an
+ * inline-math span, and an image referenced by `data-file-id`; Phase 16G's
+ * `lessonnote.domain.LessonNoteRichText` additionally allows
+ * `h2`/`h3`/`h4`, `blockquote`, `hr`, a table, and a block-math `div`),
+ * built by walking a `DOMParser` tree into explicit React elements rather
+ * than trusting the string. The only `dangerouslySetInnerHTML` here is
+ * KaTeX's own render output for one `data-latex` value at a time (see
+ * `katexHtml.ts`'s safety argument) - every other node is either an
+ * allow-listed React element or is dropped.
  * <p>
  * Deliberately imports nothing from `@tiptap/*`: the anonymous take-home
- * quiz page renders through this component and must not pull ProseMirror
- * into its bundle (see the take-home quiz plan's poor-connectivity note) -
- * `RichTextField`, the authoring editor, is the only place that dependency
- * is paid.
+ * quiz page and the guardian ward lesson-note view both render through this
+ * component and must not pull ProseMirror into their bundle (see the
+ * take-home quiz plan's poor-connectivity note) - `RichTextField`, the
+ * authoring editor, is the only place that dependency is paid.
  */
 export function RichContent({ html, renderImage, className }: RichContentProps) {
   const body = useMemo(() => new DOMParser().parseFromString(html, "text/html").body, [html]);
@@ -71,8 +74,52 @@ function renderNode(node: Node, renderImage?: RichContentProps["renderImage"]): 
       return <sub>{children()}</sub>;
     case "SUP":
       return <sup>{children()}</sup>;
+    case "H2":
+      return <h2 className="text-lg font-semibold text-slate-900">{children()}</h2>;
+    case "H3":
+      return <h3 className="text-base font-semibold text-slate-900">{children()}</h3>;
+    case "H4":
+      return <h4 className="text-sm font-semibold text-slate-900">{children()}</h4>;
+    case "BLOCKQUOTE":
+      return <blockquote className="border-l-2 border-slate-300 pl-3 text-slate-600">{children()}</blockquote>;
+    case "HR":
+      return <hr className="border-slate-200" />;
+    case "TABLE":
+      return (
+        <div className="overflow-x-auto">
+          <table className="border-collapse border border-slate-300">{children()}</table>
+        </div>
+      );
+    case "THEAD":
+      return <thead>{children()}</thead>;
+    case "TBODY":
+      return <tbody>{children()}</tbody>;
+    case "TR":
+      return <tr>{children()}</tr>;
+    case "TH":
+      return (
+        <th
+          className="border border-slate-300 bg-slate-50 px-2 py-1 text-left font-medium"
+          colSpan={attrNumber(element, "colspan")}
+          rowSpan={attrNumber(element, "rowspan")}
+        >
+          {children()}
+        </th>
+      );
+    case "TD":
+      return (
+        <td
+          className="border border-slate-300 px-2 py-1 align-top"
+          colSpan={attrNumber(element, "colspan")}
+          rowSpan={attrNumber(element, "rowspan")}
+        >
+          {children()}
+        </td>
+      );
     case "SPAN":
       return renderMathSpan(element);
+    case "DIV":
+      return renderBlockMathDiv(element);
     case "IMG":
       return renderImageElement(element, renderImage);
     case "SCRIPT":
@@ -103,6 +150,26 @@ function renderMathSpan(element: Element): ReactNode {
   // Safe per katexHtml.ts's doc comment: KaTeX's own output for this one
   // expression, rendered with trust: false.
   return <span dangerouslySetInnerHTML={{ __html: rendered }} />;
+}
+
+/** The block-math counterpart to {@link renderMathSpan} - a `<div data-type="block-math" data-latex="...">`, KaTeX's own centred layout (`displayMode: true`). */
+function renderBlockMathDiv(element: Element): ReactNode {
+  if (element.getAttribute("data-type") !== "block-math" || !element.hasAttribute("data-latex")) {
+    return renderChildren(element);
+  }
+  const latex = element.getAttribute("data-latex") ?? "";
+  const rendered = renderMathHtml(latex, true);
+  if (rendered === null) {
+    return <div className="my-1">{latex}</div>;
+  }
+  // Safe per katexHtml.ts's doc comment: KaTeX's own output for this one expression, rendered with trust: false.
+  return <div className="my-1" dangerouslySetInnerHTML={{ __html: rendered }} />;
+}
+
+/** `colspan`/`rowspan` as a React `colSpan`/`rowSpan` number - `undefined` (not rendered) rather than `NaN` for a missing or malformed attribute. */
+function attrNumber(element: Element, name: string): number | undefined {
+  const value = Number(element.getAttribute(name));
+  return Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
 function renderImageElement(element: Element, renderImage?: RichContentProps["renderImage"]): ReactNode {

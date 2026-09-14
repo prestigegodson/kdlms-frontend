@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import { renderMathHtml } from "@/components/richText/katexHtml";
+import { splitMathSegments } from "@/components/richText/mathSegments";
 
 /**
  * Renders a lesson-note prose string that may contain inline LaTeX, per
@@ -13,7 +14,11 @@ import { renderMathHtml } from "@/components/richText/katexHtml";
  * surrounding prose always renders as a plain React text node, never HTML.
  * Rendering itself is `@/components/richText/katexHtml`'s `renderMathHtml` -
  * see its doc comment for the `dangerouslySetInnerHTML` safety argument this
- * component was the first to rely on.
+ * component was the first to rely on. The delimiter scan itself
+ * (`splitMathSegments`) has moved to `@/components/richText/mathSegments` so
+ * `lessonNoteContentToHtml.ts` (Phase 16G) can reuse the identical contract
+ * when converting a structured note's plain-text prose into document-mode
+ * HTML - this component's own behaviour is unchanged.
  * <p>
  * A malformed expression falls back to its raw source text rather than
  * throwing or rendering blank, so a model slip degrades to today's
@@ -40,57 +45,4 @@ function MathSpan({ expression }: { expression: string }) {
   // Safe per the component-level note above: `html` is KaTeX's own output for
   // this one expression substring, rendered with `trust: false`.
   return <span dangerouslySetInnerHTML={{ __html: html }} />;
-}
-
-type Segment = { type: "text" | "math"; value: string };
-
-const DELIMITER_PAIRS: Array<[string, string]> = [
-  ["\\(", "\\)"],
-  ["\\[", "\\]"],
-  ["$$", "$$"],
-];
-
-/** Splits on the first-found delimiter pair at each position - a plain scan, not a regex, so nested/unbalanced input degrades to plain text rather than misparsing. */
-function splitMathSegments(text: string): Segment[] {
-  const segments: Segment[] = [];
-  let cursor = 0;
-  let textStart = 0;
-
-  while (cursor < text.length) {
-    const match = findNextDelimiter(text, cursor);
-    if (!match) {
-      break;
-    }
-    const closeIndex = text.indexOf(match.close, match.index + match.open.length);
-    if (closeIndex < 0) {
-      cursor = match.index + match.open.length;
-      continue;
-    }
-    if (match.index > textStart) {
-      segments.push({ type: "text", value: text.slice(textStart, match.index) });
-    }
-    const expression = text.slice(match.index + match.open.length, closeIndex);
-    segments.push({ type: "math", value: expression });
-    cursor = closeIndex + match.close.length;
-    textStart = cursor;
-  }
-
-  if (textStart < text.length) {
-    segments.push({ type: "text", value: text.slice(textStart) });
-  }
-  return segments;
-}
-
-function findNextDelimiter(
-  text: string,
-  from: number,
-): { index: number; open: string; close: string } | null {
-  let best: { index: number; open: string; close: string } | null = null;
-  for (const [open, close] of DELIMITER_PAIRS) {
-    const index = text.indexOf(open, from);
-    if (index >= 0 && (best === null || index < best.index)) {
-      best = { index, open, close };
-    }
-  }
-  return best;
 }

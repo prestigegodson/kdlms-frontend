@@ -219,6 +219,10 @@ export function WardLessonNotesPage() {
         {noteDetail && (
           <div className="space-y-3">
             <p className="text-base font-semibold text-slate-900">{noteDetail.topic}</p>
+            {/* No renderImage: GET /api/v1/files/{id} only authorizes staff roles and a GUARDIAN's
+                token carries no schoolId to scope a read by (CLAUDE.md's cross-school guardian
+                rule) - a document-mode note's pictures are silently dropped for a guardian reader,
+                per RichContent's own contract, rather than 403ing the whole note. */}
             <LessonNoteReadView content={noteDetail.content} />
           </div>
         )}

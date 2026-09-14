@@ -1,4 +1,4 @@
-import { Eye, Pencil, Sparkles } from "lucide-react";
+import { Eye, FileText, ListTree, Pencil, Sparkles, Wand2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { can } from "@/auth/permissions";
@@ -19,21 +19,25 @@ import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
-import { Textarea } from "@/components/ui/Textarea";
+import { AuthenticatedRichImage } from "@/components/richText/AuthenticatedRichImage";
+import { richTextIsBlank } from "@/components/richText/richTextIsBlank";
 import { UnsavedChangesBar } from "@/features/assessments/components/UnsavedChangesBar";
 import { AiGenerateSheet } from "@/features/lessonNotes/components/AiGenerateSheet";
+import { LessonNoteDocumentEditor } from "@/features/lessonNotes/components/LessonNoteDocumentEditor";
+import { lessonNoteContentToHtml } from "@/features/lessonNotes/components/lessonNoteContentToHtml";
 import { LessonNoteReadView } from "@/features/lessonNotes/components/LessonNoteReadView";
 import { LessonNoteStatusBadge } from "@/features/lessonNotes/components/LessonNoteStatusBadge";
 import { MathText } from "@/features/lessonNotes/components/MathText";
-import { PresentationStepsField } from "@/features/lessonNotes/components/PresentationStepsField";
+import { StructuredLessonNoteForm } from "@/features/lessonNotes/components/StructuredLessonNoteForm";
 import { ReviewDecisionModal } from "@/features/lessonNotes/components/ReviewDecisionModal";
-import { StringListField } from "@/features/lessonNotes/components/StringListField";
 import { LESSON_NOTE_FIELD_HELP } from "@/features/lessonNotes/lessonNoteFieldHelp";
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
 import { usePendingLessonNotesStore } from "@/stores/pendingLessonNotesStore";
 
 const EMPTY_CONTENT: LessonNoteContentView = {
+  mode: "STRUCTURED",
+  body: "",
   subTopic: "",
   duration: "",
   averageAge: "",
@@ -47,6 +51,40 @@ const EMPTY_CONTENT: LessonNoteContentView = {
   assignment: "",
 };
 
+function renderStaffImage(fileId: string, alt: string) {
+  return <AuthenticatedRichImage fileId={fileId} alt={alt} />;
+}
+
+/**
+ * Normalizes a content snapshot for dirty-tracking and comparison -
+ * `richTextIsBlank` maps every shape TipTap's empty document can take
+ * (`""`, `"<p></p>"`, ...) to the same `""`, so loading a saved
+ * `STRUCTURED` note (whose `body` is always empty) or freshly switching to
+ * `DOCUMENT` mode never reads as a spurious unsaved change.
+ */
+function normalizeForCompare(topic: string, content: LessonNoteContentView) {
+  return { topic, content: { ...content, body: richTextIsBlank(content.body) ? "" : content.body } };
+}
+
+/** `true` once any structured field carries real content - the "Convert to document" prompt's own gate, so it never offers to convert nothing. */
+function structuredHasContent(content: LessonNoteContentView): boolean {
+  return Boolean(
+    content.subTopic?.trim() ||
+      content.duration?.trim() ||
+      content.averageAge?.trim() ||
+      content.entryBehaviour?.trim() ||
+      content.evaluation?.trim() ||
+      content.conclusion?.trim() ||
+      content.assignment?.trim() ||
+      content.objectives.some((value) => value.trim() !== "") ||
+      content.instructionalMaterials.some((value) => value.trim() !== "") ||
+      content.references.some((value) => value.trim() !== "") ||
+      content.presentation.some(
+        (step) => step.label.trim() !== "" || step.teacherActivity.trim() !== "" || step.learnerActivity.trim() !== "",
+      ),
+  );
+}
+
 /**
  * Author/edit/review one week's lesson note - addressed either by a real
  * `noteId` (an existing note, hydrated via `getLessonNote`) or the literal
@@ -57,6 +95,13 @@ const EMPTY_CONTENT: LessonNoteContentView = {
  * the form is editable - this page never re-derives the status table
  * itself, the same `canReply`/`canEdit` precedent `communication`'s
  * `ThreadView`/`MessageView` set.
+ * <p>
+ * Phase 16G added a second authoring mode: `content.mode` picks between the
+ * original `StructuredLessonNoteForm` (the twelve-field NERDC form) and the
+ * new `LessonNoteDocumentEditor` (one free-form rich-text canvas a teacher
+ * types into or pastes a Word lesson plan into). Both halves of `content`
+ * persist regardless of which is active, so the toggle below is
+ * non-destructive - switching back and forth never loses either half.
  */
 export function LessonNoteEditorPage() {
   const { noteId } = useParams<{ noteId: string }>();
@@ -72,9 +117,7 @@ export function LessonNoteEditorPage() {
   const [topic, setTopic] = useState("");
   const [content, setContent] = useState<LessonNoteContentView>(EMPTY_CONTENT);
   const [aiGenerated, setAiGenerated] = useState(false);
-  const [snapshot, setSnapshot] = useState(() =>
-    JSON.stringify({ topic: "", content: EMPTY_CONTENT }),
-  );
+  const [snapshot, setSnapshot] = useState(() => JSON.stringify(normalizeForCompare("", EMPTY_CONTENT)));
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -95,11 +138,12 @@ export function LessonNoteEditorPage() {
   // a new note has nothing to fetch, so it never enters the loading state.
   const loading = !isNew && !note && !loadError;
   const readOnly = note ? !note.actions.canEdit : false;
-  // A textarea can't render maths, so any non-editable view - a reviewer/guardian-equivalent
-  // reading a submitted/approved note, or a teacher previewing their own draft mid-edit - swaps
-  // to `LessonNoteReadView` (MathText-rendered) instead. Preview is meaningless once the form
-  // itself is already read-only.
-  const showReadView = readOnly || previewMode;
+  // A structured-mode textarea can't render maths, so any non-editable view - a reviewer/
+  // guardian-equivalent reading a submitted/approved note, or a teacher previewing their own draft
+  // mid-edit - swaps to `LessonNoteReadView` (MathText-rendered) instead. Preview is meaningless
+  // once the form itself is already read-only, and document mode is already its own WYSIWYG
+  // canvas, so the toggle is offered only for a structured, editable note.
+  const showReadView = readOnly || (previewMode && content.mode === "STRUCTURED");
 
   useEffect(() => {
     if (isNew || !noteId) {
@@ -112,14 +156,14 @@ export function LessonNoteEditorPage() {
       );
   }, [isNew, noteId]);
 
-  const dirty = JSON.stringify({ topic, content }) !== snapshot;
+  const dirty = JSON.stringify(normalizeForCompare(topic, content)) !== snapshot;
 
   function applyNote(loaded: LessonNoteView) {
     setNote(loaded);
     setTopic(loaded.topic);
     setContent(loaded.content);
     setAiGenerated(loaded.aiGenerated);
-    setSnapshot(JSON.stringify({ topic: loaded.topic, content: loaded.content }));
+    setSnapshot(JSON.stringify(normalizeForCompare(loaded.topic, loaded.content)));
   }
 
   function discard() {
@@ -133,20 +177,31 @@ export function LessonNoteEditorPage() {
       setAiGenerated(false);
     }
     setSnapshot(
-      JSON.stringify({
-        topic: note ? note.topic : "",
-        content: note ? note.content : EMPTY_CONTENT,
-      }),
+      JSON.stringify(normalizeForCompare(note ? note.topic : "", note ? note.content : EMPTY_CONTENT)),
     );
   }
 
-  /** Applies an AI-generated result (Phase 16E's `AiGenerateSheet`) to the form - the teacher still reviews and saves it themselves. */
+  /**
+   * Applies an AI-generated result (Phase 16E's `AiGenerateSheet`) to the form - the teacher still
+   * reviews and saves it themselves. The AI wire contract itself is always `STRUCTURED` (see
+   * `GenerateLessonNoteService.toContentView`'s Javadoc); a note already in document mode gets the
+   * result converted to HTML client-side (`lessonNoteContentToHtml`) rather than silently switching
+   * the note back to the structured form.
+   */
   function applyGenerated(generatedTopic: string, generatedContent: LessonNoteContentView) {
     if (generatedTopic) {
       setTopic(generatedTopic);
     }
-    setContent(generatedContent);
+    if (content.mode === "DOCUMENT") {
+      setContent({ ...content, body: lessonNoteContentToHtml(generatedContent) });
+    } else {
+      setContent(generatedContent);
+    }
     setAiGenerated(true);
+  }
+
+  function convertStructuredToDocument() {
+    setContent({ ...content, mode: "DOCUMENT", body: lessonNoteContentToHtml(content) });
   }
 
   async function save() {
@@ -249,6 +304,8 @@ export function LessonNoteEditorPage() {
     !!subjectId &&
     !!termId &&
     weekNumber > 0;
+  const showConvertPrompt =
+    !readOnly && content.mode === "DOCUMENT" && richTextIsBlank(content.body) && structuredHasContent(content);
 
   return (
     <div className="space-y-6 pb-24">
@@ -259,7 +316,7 @@ export function LessonNoteEditorPage() {
         actions={
           (canGenerateWithAi || note || !readOnly) && (
             <div className="flex flex-wrap items-center gap-2">
-              {!readOnly && (
+              {!readOnly && content.mode === "STRUCTURED" && (
                 <Button
                   type="button"
                   variant="secondary"
@@ -358,6 +415,35 @@ export function LessonNoteEditorPage() {
         </p>
       )}
 
+      {!readOnly && (
+        <div
+          role="radiogroup"
+          aria-label="Lesson note format"
+          className="inline-flex rounded-control border border-slate-300 bg-white p-0.5"
+        >
+          <Button
+            type="button"
+            variant={content.mode === "STRUCTURED" ? "secondary" : "ghost"}
+            size="sm"
+            aria-pressed={content.mode === "STRUCTURED"}
+            onClick={() => setContent({ ...content, mode: "STRUCTURED" })}
+          >
+            <ListTree className="h-4 w-4" aria-hidden="true" />
+            Structured form
+          </Button>
+          <Button
+            type="button"
+            variant={content.mode === "DOCUMENT" ? "secondary" : "ghost"}
+            size="sm"
+            aria-pressed={content.mode === "DOCUMENT"}
+            onClick={() => setContent({ ...content, mode: "DOCUMENT" })}
+          >
+            <FileText className="h-4 w-4" aria-hidden="true" />
+            Free-form document
+          </Button>
+        </div>
+      )}
+
       {showReadView ? (
         <div className="space-y-5">
           <div>
@@ -366,7 +452,7 @@ export function LessonNoteEditorPage() {
               <MathText text={topic} />
             </p>
           </div>
-          <LessonNoteReadView content={content} />
+          <LessonNoteReadView content={content} renderImage={renderStaffImage} />
         </div>
       ) : (
         <>
@@ -385,127 +471,27 @@ export function LessonNoteEditorPage() {
             />
           </FormField>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField
-              label="Sub-topic"
-              htmlFor="lesson-note-subtopic"
-              description={LESSON_NOTE_FIELD_HELP.subTopic}
-            >
-              <Input
-                id="lesson-note-subtopic"
-                value={content.subTopic ?? ""}
-                onChange={(event) => setContent({ ...content, subTopic: event.target.value })}
-                aria-describedby="lesson-note-subtopic-description"
+          {content.mode === "DOCUMENT" ? (
+            <div className="space-y-3">
+              {showConvertPrompt && (
+                <Alert variant="info">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span>Your structured content hasn't been copied into this document yet.</span>
+                    <Button type="button" variant="secondary" size="sm" onClick={convertStructuredToDocument}>
+                      <Wand2 className="h-4 w-4" aria-hidden="true" />
+                      Convert now
+                    </Button>
+                  </div>
+                </Alert>
+              )}
+              <LessonNoteDocumentEditor
+                body={content.body ?? ""}
+                onChange={(body) => setContent({ ...content, body })}
               />
-            </FormField>
-            <FormField
-              label="Duration"
-              htmlFor="lesson-note-duration"
-              description={LESSON_NOTE_FIELD_HELP.duration}
-            >
-              <Input
-                id="lesson-note-duration"
-                placeholder="e.g. 40 minutes"
-                value={content.duration ?? ""}
-                onChange={(event) => setContent({ ...content, duration: event.target.value })}
-                aria-describedby="lesson-note-duration-description"
-              />
-            </FormField>
-            <FormField
-              label="Average age"
-              htmlFor="lesson-note-average-age"
-              description={LESSON_NOTE_FIELD_HELP.averageAge}
-            >
-              <Input
-                id="lesson-note-average-age"
-                placeholder="e.g. 12 years"
-                value={content.averageAge ?? ""}
-                onChange={(event) => setContent({ ...content, averageAge: event.target.value })}
-                aria-describedby="lesson-note-average-age-description"
-              />
-            </FormField>
-          </div>
-
-          <FormField
-            label="Entry behaviour"
-            htmlFor="lesson-note-entry-behaviour"
-            description={LESSON_NOTE_FIELD_HELP.entryBehaviour}
-          >
-            <Textarea
-              id="lesson-note-entry-behaviour"
-              rows={2}
-              value={content.entryBehaviour ?? ""}
-              onChange={(event) => setContent({ ...content, entryBehaviour: event.target.value })}
-              aria-describedby="lesson-note-entry-behaviour-description"
-            />
-          </FormField>
-
-          <StringListField
-            label="Behavioural objectives"
-            description={LESSON_NOTE_FIELD_HELP.objectives}
-            values={content.objectives}
-            onChange={(objectives) => setContent({ ...content, objectives })}
-          />
-          <StringListField
-            label="Instructional materials"
-            description={LESSON_NOTE_FIELD_HELP.instructionalMaterials}
-            values={content.instructionalMaterials}
-            onChange={(instructionalMaterials) =>
-              setContent({ ...content, instructionalMaterials })
-            }
-          />
-          <StringListField
-            label="References"
-            description={LESSON_NOTE_FIELD_HELP.references}
-            values={content.references}
-            onChange={(references) => setContent({ ...content, references })}
-          />
-
-          <PresentationStepsField
-            description={LESSON_NOTE_FIELD_HELP.presentation}
-            steps={content.presentation}
-            onChange={(presentation) => setContent({ ...content, presentation })}
-          />
-
-          <FormField
-            label="Evaluation"
-            htmlFor="lesson-note-evaluation"
-            description={LESSON_NOTE_FIELD_HELP.evaluation}
-          >
-            <Textarea
-              id="lesson-note-evaluation"
-              rows={3}
-              value={content.evaluation ?? ""}
-              onChange={(event) => setContent({ ...content, evaluation: event.target.value })}
-              aria-describedby="lesson-note-evaluation-description"
-            />
-          </FormField>
-          <FormField
-            label="Conclusion"
-            htmlFor="lesson-note-conclusion"
-            description={LESSON_NOTE_FIELD_HELP.conclusion}
-          >
-            <Textarea
-              id="lesson-note-conclusion"
-              rows={2}
-              value={content.conclusion ?? ""}
-              onChange={(event) => setContent({ ...content, conclusion: event.target.value })}
-              aria-describedby="lesson-note-conclusion-description"
-            />
-          </FormField>
-          <FormField
-            label="Assignment"
-            htmlFor="lesson-note-assignment"
-            description={LESSON_NOTE_FIELD_HELP.assignment}
-          >
-            <Textarea
-              id="lesson-note-assignment"
-              rows={2}
-              value={content.assignment ?? ""}
-              onChange={(event) => setContent({ ...content, assignment: event.target.value })}
-              aria-describedby="lesson-note-assignment-description"
-            />
-          </FormField>
+            </div>
+          ) : (
+            <StructuredLessonNoteForm content={content} onChange={setContent} />
+          )}
         </>
       )}
 

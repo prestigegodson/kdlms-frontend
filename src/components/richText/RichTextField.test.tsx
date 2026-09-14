@@ -1,7 +1,7 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import * as filesApi from "@/api/files";
 import { RichTextField } from "@/components/richText/RichTextField";
 
@@ -31,17 +31,40 @@ vi.mock("@/api/files", async () => {
 // on the serialized contract (what a save would actually send) rather than
 // the live editing DOM, which for an atomic node like `quizImage` is a
 // `ReactNodeViewRenderer` preview - never the same markup `getHTML()` emits.
-function Field({ singleLine = false, allowImages = false }: { singleLine?: boolean; allowImages?: boolean } = {}) {
+function Field({
+  singleLine = false,
+  allowImages = false,
+  allowTables = false,
+  maxImages,
+}: {
+  singleLine?: boolean;
+  allowImages?: boolean;
+  allowTables?: boolean;
+  maxImages?: number;
+} = {}) {
   const [value, setValue] = useState("<p></p>");
   return (
     <>
-      <RichTextField value={value} onChange={setValue} allowImages={allowImages} singleLine={singleLine} ariaLabel="Prompt" />
+      <RichTextField
+        value={value}
+        onChange={setValue}
+        allowImages={allowImages}
+        allowTables={allowTables}
+        maxImages={maxImages}
+        singleLine={singleLine}
+        ariaLabel="Prompt"
+      />
       <div data-testid="html-output">{value}</div>
     </>
   );
 }
 
 describe("RichTextField", () => {
+  beforeEach(() => {
+    vi.mocked(filesApi.uploadFile).mockClear();
+    vi.mocked(filesApi.downloadFile).mockClear();
+  });
+
   it("applies bold to newly typed text after toggling the mark on", async () => {
     const user = userEvent.setup();
     render(<Field />);
@@ -134,5 +157,63 @@ describe("RichTextField", () => {
 
     await waitFor(() => expect(editable.querySelectorAll("p")).toHaveLength(1));
     expect(editable).toHaveTextContent("onetwo");
+  });
+
+  it("inserts a table via the table toolbar button (Phase 16G)", async () => {
+    const user = userEvent.setup();
+    render(<Field allowTables />);
+
+    await user.click(screen.getByRole("button", { name: "Insert table" }));
+
+    const editable = screen.getByLabelText("Prompt");
+    await waitFor(() => expect(editable.querySelector("table")).not.toBeNull());
+    expect(editable.querySelectorAll("tr").length).toBeGreaterThan(0);
+  });
+
+  it("uploads a pasted Word image and rewrites it to a data-file-id reference with no src (Phase 16G)", async () => {
+    vi.mocked(filesApi.uploadFile).mockResolvedValue({
+      fileId: "44444444-4444-4444-4444-444444444444",
+      fileName: "pasted-image",
+      contentType: "image/png",
+      sizeBytes: 4,
+    });
+    vi.mocked(filesApi.downloadFile).mockResolvedValue(new Blob());
+
+    render(<Field allowImages maxImages={30} />);
+    const editable = screen.getByLabelText("Prompt");
+
+    const html = '<p>Hello <img src="data:image/png;base64,AAAA"></p>';
+    fireEvent.paste(editable, {
+      clipboardData: {
+        getData: (type: string) => (type === "text/html" ? html : ""),
+        files: [] as File[],
+      },
+    });
+
+    await waitFor(() => expect(filesApi.uploadFile).toHaveBeenCalledTimes(1));
+    await waitFor(() => {
+      const outputHtml = screen.getByTestId("html-output").textContent ?? "";
+      expect(outputHtml).toContain('data-file-id="44444444-4444-4444-4444-444444444444"');
+    });
+    const outputHtml = screen.getByTestId("html-output").textContent ?? "";
+    expect(outputHtml).not.toMatch(/<img[^>]*\bsrc=/);
+  });
+
+  it("drops a pasted image it can't fetch (a file:/cross-origin src) and reports the count (Phase 16G)", async () => {
+    render(<Field allowImages maxImages={30} />);
+    const editable = screen.getByLabelText("Prompt");
+
+    const html = '<p>Hello <img src="https://evil.example/x.png"></p>';
+    fireEvent.paste(editable, {
+      clipboardData: {
+        getData: (type: string) => (type === "text/html" ? html : ""),
+        files: [] as File[],
+      },
+    });
+
+    await waitFor(() => expect(screen.getByText(/couldn't be brought across/)).not.toBeNull());
+    expect(filesApi.uploadFile).not.toHaveBeenCalled();
+    const outputHtml = screen.getByTestId("html-output").textContent ?? "";
+    expect(outputHtml).not.toMatch(/<img/);
   });
 });

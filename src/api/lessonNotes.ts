@@ -32,8 +32,21 @@ export interface PresentationStep {
   learnerActivity: string;
 }
 
-/** Mirrors backend lessonnote.application.port.in.LessonNoteView.ContentView. */
+/** Mirrors backend lessonnote.domain.LessonNoteContent.ContentMode - which half of a `LessonNoteContentView` is authoritative. */
+export type LessonNoteContentMode = "STRUCTURED" | "DOCUMENT";
+
+/**
+ * Mirrors backend lessonnote.application.port.in.LessonNoteView.ContentView.
+ * Phase 16G's `mode`/`body` are the free-form document half - `body` is
+ * sanitized HTML rendered through `RichContent`, present only when
+ * `mode` is `"DOCUMENT"`; the eleven fields below are the original
+ * structured NERDC form, present only when `mode` is `"STRUCTURED"`. Both
+ * halves persist regardless of which is active, so switching mode in the
+ * editor is non-destructive.
+ */
 export interface LessonNoteContentView {
+  mode: LessonNoteContentMode;
+  body: string | null;
   subTopic: string | null;
   duration: string | null;
   averageAge: string | null;

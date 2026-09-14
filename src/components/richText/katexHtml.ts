@@ -18,13 +18,18 @@ import "katex/dist/katex.min.css";
  * scoping should be relaxed without re-weighing this safety argument at both
  * call sites.
  */
-export function renderMathHtml(latex: string): string | null {
+/**
+ * `displayMode` (Phase 16G) switches KaTeX's own centred/block layout for a
+ * lesson note's displayed maths (`data-type="block-math"`) - `trust` stays
+ * `false` either way.
+ */
+export function renderMathHtml(latex: string, displayMode = false): string | null {
   try {
     return katex.renderToString(latex, {
       throwOnError: false,
       trust: false,
       strict: "ignore",
-      displayMode: false,
+      displayMode,
     });
   } catch {
     return null;
