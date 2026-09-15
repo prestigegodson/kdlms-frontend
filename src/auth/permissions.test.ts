@@ -453,3 +453,54 @@ describe("can.viewWardBills", () => {
     expect(can.viewWardBills(undefined, true)).toBe(false);
   });
 });
+
+describe("can.viewInventory", () => {
+  it("is true for SCHOOL_ADMIN, BRANCH_ADMIN, and INVENTORY_MANAGER alike - the module's own entry gate", () => {
+    expect(can.viewInventory("SCHOOL_ADMIN")).toBe(true);
+    expect(can.viewInventory("BRANCH_ADMIN")).toBe(true);
+    expect(can.viewInventory("INVENTORY_MANAGER")).toBe(true);
+  });
+
+  it("is false for TEACHER and GUARDIAN - no entitlement check either way, this module is ungated", () => {
+    expect(can.viewInventory("TEACHER")).toBe(false);
+    expect(can.viewInventory("GUARDIAN")).toBe(false);
+    expect(can.viewInventory(undefined)).toBe(false);
+  });
+});
+
+describe("can.manageInventoryCatalogue", () => {
+  it("is true only for SCHOOL_ADMIN - a real 403 for BRANCH_ADMIN/INVENTORY_MANAGER, not a 404", () => {
+    expect(can.manageInventoryCatalogue("SCHOOL_ADMIN")).toBe(true);
+    expect(can.manageInventoryCatalogue("BRANCH_ADMIN")).toBe(false);
+    expect(can.manageInventoryCatalogue("INVENTORY_MANAGER")).toBe(false);
+  });
+});
+
+describe("can.manageInventoryStock", () => {
+  it("is true for SCHOOL_ADMIN/BRANCH_ADMIN but false for INVENTORY_MANAGER - raising a requisition isn't moving stock", () => {
+    expect(can.manageInventoryStock("SCHOOL_ADMIN")).toBe(true);
+    expect(can.manageInventoryStock("BRANCH_ADMIN")).toBe(true);
+    expect(can.manageInventoryStock("INVENTORY_MANAGER")).toBe(false);
+  });
+});
+
+describe("can.manageRequisitions vs can.reviewRequisitions", () => {
+  it("INVENTORY_MANAGER may raise a requisition but never review one - the seam this role exists to express", () => {
+    expect(can.manageRequisitions("INVENTORY_MANAGER")).toBe(true);
+    expect(can.reviewRequisitions("INVENTORY_MANAGER")).toBe(false);
+  });
+
+  it("SCHOOL_ADMIN and BRANCH_ADMIN may both raise and review, own-branch scoped server-side", () => {
+    expect(can.manageRequisitions("SCHOOL_ADMIN")).toBe(true);
+    expect(can.reviewRequisitions("SCHOOL_ADMIN")).toBe(true);
+    expect(can.manageRequisitions("BRANCH_ADMIN")).toBe(true);
+    expect(can.reviewRequisitions("BRANCH_ADMIN")).toBe(true);
+  });
+
+  it("is false for TEACHER and GUARDIAN on both", () => {
+    expect(can.manageRequisitions("TEACHER")).toBe(false);
+    expect(can.reviewRequisitions("TEACHER")).toBe(false);
+    expect(can.manageRequisitions("GUARDIAN")).toBe(false);
+    expect(can.reviewRequisitions("GUARDIAN")).toBe(false);
+  });
+});

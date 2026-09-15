@@ -46,7 +46,9 @@ export function StudentsPage() {
     return <TeacherRoster />;
   }
 
-  return <AdminStudents isBranchScoped={role === "BRANCH_ADMIN"} />;
+  // INVENTORY_MANAGER is branch-confined server-side exactly like BRANCH_ADMIN (see
+  // AuthenticatedUser.branchScope()) - hide the branch picker for the same reason.
+  return <AdminStudents isBranchScoped={role === "BRANCH_ADMIN" || role === "INVENTORY_MANAGER"} />;
 }
 
 type HasGuardianFilter = "" | "true" | "false";
@@ -255,7 +257,11 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
               </TableHead>
               <TableBody>
                 {state.page.content.map((student) => (
-                  <TableRow key={student.id} to={`/school/students/${student.id}`}>
+                  // Row link is admin-only - an INVENTORY_MANAGER's read-only registry has no
+                  // detail screen to open (StudentDetailPage fetches medical/guardians/subjects,
+                  // all of which 403 for this role), so `to` is omitted rather than navigating
+                  // into a page that would just fail to load.
+                  <TableRow key={student.id} to={canManage ? `/school/students/${student.id}` : undefined}>
                     <TableCell label="Name" className="font-medium text-slate-900">
                       {student.fullName}
                     </TableCell>

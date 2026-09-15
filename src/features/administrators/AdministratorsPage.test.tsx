@@ -15,7 +15,8 @@ vi.mock("@/api/users", async () => {
     ...actual,
     listAdmins: vi.fn(),
     createBranchAdmin: vi.fn(),
-    updateBranchAdmin: vi.fn(),
+    createInventoryManager: vi.fn(),
+    updateAdministrator: vi.fn(),
     disableUser: vi.fn(),
     enableUser: vi.fn(),
   };
@@ -55,6 +56,19 @@ const BRANCH_ADMIN: SchoolUserView = {
   branchName: "Main Branch",
   status: "ACTIVE",
   createdAt: "2026-01-02T00:00:00Z",
+};
+
+const INVENTORY_MANAGER: SchoolUserView = {
+  id: "inventory-manager-1",
+  email: "ige@school.example",
+  firstName: "Ige",
+  lastName: "K",
+  phone: "082",
+  role: "INVENTORY_MANAGER",
+  branchId: "branch-1",
+  branchName: "Main Branch",
+  status: "ACTIVE",
+  createdAt: "2026-01-03T00:00:00Z",
 };
 
 function mockAdmins(admins: SchoolUserView[]) {
@@ -120,9 +134,10 @@ describe("AdministratorsPage", () => {
     renderAsSchoolAdmin();
     await screen.findByText("admin@school.example");
 
-    await user.click(screen.getByRole("button", { name: "Add branch admin" }));
+    await user.click(screen.getByRole("button", { name: "Add administrator" }));
     const dialog = await screen.findByRole("dialog");
 
+    // Branch admin is the role select's default - no need to touch it for this case.
     await user.type(within(dialog).getByLabelText("First name"), "Bola");
     await user.type(within(dialog).getByLabelText("Last name"), "B");
     await user.type(within(dialog).getByLabelText("Email"), "bola@school.example");
@@ -136,6 +151,7 @@ describe("AdministratorsPage", () => {
         branchId: "branch-1",
       }),
     );
+    expect(usersApi.createInventoryManager).not.toHaveBeenCalled();
 
     const confirmDialog = await screen.findByRole("dialog");
     expect(within(confirmDialog).getByText(/welcome email has been sent/)).toBeInTheDocument();
@@ -145,9 +161,44 @@ describe("AdministratorsPage", () => {
     expect(within(confirmDialog).getByText("Xk4p-9Fmz")).toBeInTheDocument();
   });
 
-  it("edits a branch admin with a prefilled form and no branch field, then refreshes the list", async () => {
+  it("creates an inventory manager once the Role select is switched", async () => {
+    mockAdmins([SELF]);
+    const created: CreateUserResult = {
+      user: { id: "inventory-manager-1", email: "ige@school.example", firstName: "Ige", lastName: "K", role: "INVENTORY_MANAGER" },
+      temporaryPassword: "Zp8q-2Ktw",
+    };
+    vi.mocked(usersApi.createInventoryManager).mockResolvedValue(created);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("admin@school.example");
+
+    await user.click(screen.getByRole("button", { name: "Add administrator" }));
+    const dialog = await screen.findByRole("dialog");
+
+    await user.selectOptions(within(dialog).getByLabelText("Role"), "INVENTORY_MANAGER");
+    await user.type(within(dialog).getByLabelText("First name"), "Ige");
+    await user.type(within(dialog).getByLabelText("Last name"), "K");
+    await user.type(within(dialog).getByLabelText("Email"), "ige@school.example");
+    await user.click(within(dialog).getByRole("button", { name: "Create inventory manager" }));
+
+    expect(usersApi.createInventoryManager).toHaveBeenCalledWith(
+      expect.objectContaining({
+        firstName: "Ige",
+        lastName: "K",
+        email: "ige@school.example",
+        branchId: "branch-1",
+      }),
+    );
+    expect(usersApi.createBranchAdmin).not.toHaveBeenCalled();
+
+    const confirmDialog = await screen.findByRole("dialog", { name: "Inventory manager created" });
+    expect(within(confirmDialog).getByText(/welcome email has been sent/)).toBeInTheDocument();
+  });
+
+  it("edits a branch admin with a prefilled form and no branch/role field, then refreshes the list", async () => {
     mockAdmins([SELF, BRANCH_ADMIN]);
-    vi.mocked(usersApi.updateBranchAdmin).mockResolvedValue({ ...BRANCH_ADMIN, lastName: "Balogun", phone: "081" });
+    vi.mocked(usersApi.updateAdministrator).mockResolvedValue({ ...BRANCH_ADMIN, lastName: "Balogun", phone: "081" });
     const user = userEvent.setup();
 
     renderAsSchoolAdmin();
@@ -160,6 +211,7 @@ describe("AdministratorsPage", () => {
     expect(within(dialog).getByLabelText("Email")).toHaveValue("bola@school.example");
     expect(within(dialog).getByLabelText("Phone")).toHaveValue("080");
     expect(within(dialog).queryByLabelText("Branch")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Role")).not.toBeInTheDocument();
 
     await user.clear(within(dialog).getByLabelText("Last name"));
     await user.type(within(dialog).getByLabelText("Last name"), "Balogun");
@@ -167,7 +219,7 @@ describe("AdministratorsPage", () => {
     await user.type(within(dialog).getByLabelText("Phone"), "081");
     await user.click(within(dialog).getByRole("button", { name: "Save changes" }));
 
-    expect(usersApi.updateBranchAdmin).toHaveBeenCalledWith(
+    expect(usersApi.updateAdministrator).toHaveBeenCalledWith(
       "branch-admin-1",
       expect.objectContaining({
         firstName: "Bola",
@@ -177,8 +229,25 @@ describe("AdministratorsPage", () => {
       }),
     );
     expect(usersApi.listAdmins).toHaveBeenCalledTimes(2);
-    await screen.findByRole("button", { name: "Add branch admin" });
+    await screen.findByRole("button", { name: "Add administrator" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("edits an inventory manager the same way a branch admin is edited", async () => {
+    mockAdmins([SELF, INVENTORY_MANAGER]);
+    vi.mocked(usersApi.updateAdministrator).mockResolvedValue({ ...INVENTORY_MANAGER, phone: "083" });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("ige@school.example");
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Edit administrator" });
+    await user.clear(within(dialog).getByLabelText("Phone"));
+    await user.type(within(dialog).getByLabelText("Phone"), "083");
+    await user.click(within(dialog).getByRole("button", { name: "Save changes" }));
+
+    expect(usersApi.updateAdministrator).toHaveBeenCalledWith("inventory-manager-1", expect.objectContaining({ phone: "083" }));
   });
 
   it("disables a branch admin through a confirmation dialog", async () => {

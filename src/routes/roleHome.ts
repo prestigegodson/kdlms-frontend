@@ -8,6 +8,7 @@ export function homePathForRole(role: Role): string {
     case "SCHOOL_ADMIN":
     case "BRANCH_ADMIN":
     case "TEACHER":
+    case "INVENTORY_MANAGER":
       return "/school";
     case "GUARDIAN":
       return "/guardian";

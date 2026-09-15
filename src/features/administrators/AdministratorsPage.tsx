@@ -3,10 +3,11 @@ import type { BranchView } from "@/api/branches";
 import { ApiError } from "@/api/client";
 import {
   createBranchAdmin,
+  createInventoryManager,
   disableUser,
   enableUser,
   listAdmins,
-  updateBranchAdmin,
+  updateAdministrator,
   type CreateUserResult,
   type SchoolUserView,
 } from "@/api/users";
@@ -42,10 +43,11 @@ const STATUS_VARIANT: Record<SchoolUserView["status"], "success" | "neutral"> = 
 
 /**
  * The school's own admin directory: its SCHOOL_ADMIN(s) plus every
- * BRANCH_ADMIN. Provisioning, editing, and enabling/disabling is
- * BRANCH_ADMIN-only - a peer SCHOOL_ADMIN can only be created by
- * SYSTEM_ADMIN at onboarding, and password reset for either role stays a
- * SYSTEM_ADMIN support action (see CLAUDE.md's Roles table).
+ * BRANCH_ADMIN and INVENTORY_MANAGER. Provisioning, editing, and
+ * enabling/disabling those two roles is SCHOOL_ADMIN-only - a peer
+ * SCHOOL_ADMIN can only be created by SYSTEM_ADMIN at onboarding, and
+ * password reset for any of these roles stays a SYSTEM_ADMIN support
+ * action (see CLAUDE.md's Roles table).
  */
 export function AdministratorsPage() {
   const role = useAuthStore((state) => state.user?.role);
@@ -99,8 +101,8 @@ export function AdministratorsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Administrators"
-        description="School and branch admins for your school."
-        actions={canManage && <Button onClick={() => setCreateOpen(true)}>Add branch admin</Button>}
+        description="School admins, branch admins, and inventory managers for your school."
+        actions={canManage && <Button onClick={() => setCreateOpen(true)}>Add administrator</Button>}
       />
 
       {state.kind === "loading" && (
@@ -110,7 +112,7 @@ export function AdministratorsPage() {
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {state.kind === "loaded" && state.admins.length === 0 && (
-        <EmptyState icon={ShieldCheck} title="No administrators yet" description="Add a branch admin to get started." />
+        <EmptyState icon={ShieldCheck} title="No administrators yet" description="Add an administrator to get started." />
       )}
       {state.kind === "loaded" && state.admins.length > 0 && (
         <Card className="p-0">
@@ -127,7 +129,10 @@ export function AdministratorsPage() {
             </TableHead>
             <TableBody>
               {state.admins.map((admin) => {
-                const isBranchAdmin = admin.role === "BRANCH_ADMIN";
+                // Editable from here: BRANCH_ADMIN and INVENTORY_MANAGER, mirroring
+                // updateAdministrator's own role check server-side - a peer SCHOOL_ADMIN is
+                // display-only, editable only by SYSTEM_ADMIN at onboarding.
+                const isEditableAdministrator = admin.role === "BRANCH_ADMIN" || admin.role === "INVENTORY_MANAGER";
                 const isSelf = admin.id === currentUserId;
                 return (
                   <TableRow key={admin.id}>
@@ -137,13 +142,13 @@ export function AdministratorsPage() {
                     <TableCell label="Email">{admin.email}</TableCell>
                     <TableCell label="Branch">{branchName(admin.branchId)}</TableCell>
                     <TableCell label="Role">
-                      <Badge variant={isBranchAdmin ? "neutral" : "brand"}>{admin.role}</Badge>
+                      <Badge variant={isEditableAdministrator ? "neutral" : "brand"}>{admin.role}</Badge>
                     </TableCell>
                     <TableCell label="Status">
                       <Badge variant={STATUS_VARIANT[admin.status]}>{admin.status}</Badge>
                     </TableCell>
                     <TableCell label="Actions">
-                      {canManage && isBranchAdmin && (
+                      {canManage && isEditableAdministrator && (
                         <div className="flex justify-end gap-3 sm:justify-start">
                           <button
                             type="button"
@@ -222,8 +227,16 @@ interface AdminFormValues {
   branchId?: string;
 }
 
+/** The two roles this form can create/edit - a peer SCHOOL_ADMIN is created only at onboarding, by SYSTEM_ADMIN. */
+type CreatableAdministratorRole = "BRANCH_ADMIN" | "INVENTORY_MANAGER";
+
+const CREATABLE_ROLE_LABEL: Record<CreatableAdministratorRole, string> = {
+  BRANCH_ADMIN: "Branch admin",
+  INVENTORY_MANAGER: "Inventory manager",
+};
+
 interface AdminFormModalProps {
-  /** Present when editing an existing branch admin; absent when creating one. */
+  /** Present when editing an existing branch admin/inventory manager; absent when creating one. */
   initial?: SchoolUserView;
   branches: BranchView[];
   onClose: () => void;
@@ -232,14 +245,17 @@ interface AdminFormModalProps {
 }
 
 /**
- * Shared Add/Edit branch admin form. Creating continues on to a one-time
- * temporary-password reveal after saving; editing closes immediately since
- * there's nothing new to show. The branch field only ever appears when
- * creating - a branch admin's branch isn't editable, mirroring the teacher
- * directory's form.
+ * Shared Add/Edit administrator form, for both BRANCH_ADMIN and
+ * INVENTORY_MANAGER. Creating continues on to a one-time temporary-password
+ * reveal after saving; editing closes immediately since there's nothing new
+ * to show. The role and branch fields only ever appear when creating -
+ * neither is editable afterward, mirroring the teacher directory's form.
  */
 function AdminFormModal({ initial, branches, onClose, onSaved }: AdminFormModalProps) {
   const isEdit = initial != null;
+  const [role, setRole] = useState<CreatableAdministratorRole>(
+    initial?.role === "INVENTORY_MANAGER" ? "INVENTORY_MANAGER" : "BRANCH_ADMIN",
+  );
   const [firstName, setFirstName] = useState(initial?.firstName ?? "");
   const [lastName, setLastName] = useState(initial?.lastName ?? "");
   const [email, setEmail] = useState(initial?.email ?? "");
@@ -262,11 +278,15 @@ function AdminFormModal({ initial, branches, onClose, onSaved }: AdminFormModalP
         branchId: !isEdit ? branchId : undefined,
       };
       if (isEdit) {
-        await updateBranchAdmin(initial.id, values);
+        await updateAdministrator(initial.id, values);
         onSaved();
         onClose();
       } else {
-        const result = await createBranchAdmin({ ...values, branchId: values.branchId ?? "" });
+        const createRequest = { ...values, branchId: values.branchId ?? "" };
+        const result =
+          role === "INVENTORY_MANAGER"
+            ? await createInventoryManager(createRequest)
+            : await createBranchAdmin(createRequest);
         onSaved();
         setCreated(result);
       }
@@ -281,7 +301,7 @@ function AdminFormModal({ initial, branches, onClose, onSaved }: AdminFormModalP
 
   if (created) {
     return (
-      <Modal open onClose={onClose} title="Branch admin created">
+      <Modal open onClose={onClose} title={`${CREATABLE_ROLE_LABEL[role]} created`}>
         <div className="space-y-4">
           <Alert variant="success">
             {created.user.firstName} {created.user.lastName} can now sign in with {created.user.email}. A welcome
@@ -299,9 +319,25 @@ function AdminFormModal({ initial, branches, onClose, onSaved }: AdminFormModalP
   }
 
   return (
-    <Modal open onClose={onClose} title={isEdit ? "Edit administrator" : "Add branch admin"}>
+    <Modal open onClose={onClose} title={isEdit ? "Edit administrator" : "Add administrator"}>
       <form className="space-y-4" onSubmit={handleSubmit}>
         {error && <Alert variant="error">{error}</Alert>}
+        {!isEdit && (
+          <FormField label="Role" htmlFor="admin-role">
+            <Select
+              id="admin-role"
+              required
+              value={role}
+              onChange={(event) => setRole(event.target.value as CreatableAdministratorRole)}
+            >
+              {Object.entries(CREATABLE_ROLE_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="First name" htmlFor="admin-first-name">
             <Input
@@ -358,7 +394,7 @@ function AdminFormModal({ initial, branches, onClose, onSaved }: AdminFormModalP
             Cancel
           </Button>
           <Button type="submit" disabled={submitting}>
-            {submitting ? "Saving…" : isEdit ? "Save changes" : "Create branch admin"}
+            {submitting ? "Saving…" : isEdit ? "Save changes" : `Create ${CREATABLE_ROLE_LABEL[role].toLowerCase()}`}
           </Button>
         </div>
       </form>

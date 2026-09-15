@@ -33,6 +33,14 @@ export interface CreateBranchAdminRequest {
   branchId: string;
 }
 
+export interface CreateInventoryManagerRequest {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  branchId: string;
+}
+
 /** {@code temporaryPassword} is generated server-side and returned exactly once. */
 export interface CreateUserResult {
   user: UserSummary;
@@ -76,20 +84,29 @@ export function createBranchAdmin(request: CreateBranchAdminRequest): Promise<Cr
   });
 }
 
-/** The caller's own school's SCHOOL_ADMIN/BRANCH_ADMIN users (teachers/guardians excluded) - the school portal's own Administrators screen. */
+/** The {@code inventory} module's branch-scoped store-keeper account - see the backend's {@code User#createInventoryManager}. */
+export function createInventoryManager(request: CreateInventoryManagerRequest): Promise<CreateUserResult> {
+  return apiFetch<CreateUserResult>("/api/v1/users/inventory-managers", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+/** The caller's own school's SCHOOL_ADMIN/BRANCH_ADMIN/INVENTORY_MANAGER users (teachers/guardians excluded) - the school portal's own Administrators screen. */
 export function listAdmins(page = 0, size = 20): Promise<Page<SchoolUserView>> {
   return apiFetch<Page<SchoolUserView>>(`/api/v1/users?page=${page}&size=${size}`);
 }
 
-/** {@code branchId} isn't here - a branch admin's branch isn't editable, see the backend's {@code User#updateDetails}. */
-export interface UpdateBranchAdminRequest {
+/** {@code branchId} isn't here - an administrator's branch isn't editable, see the backend's {@code User#updateDetails}. */
+export interface UpdateAdministratorRequest {
   email: string;
   firstName: string;
   lastName: string;
   phone?: string;
 }
 
-export function updateBranchAdmin(userId: string, request: UpdateBranchAdminRequest): Promise<SchoolUserView> {
+/** Edits a BRANCH_ADMIN or INVENTORY_MANAGER - see the backend's {@code ManageUsersUseCase#updateAdministrator}. */
+export function updateAdministrator(userId: string, request: UpdateAdministratorRequest): Promise<SchoolUserView> {
   return apiFetch<SchoolUserView>(`/api/v1/users/${userId}`, {
     method: "PUT",
     body: JSON.stringify(request),

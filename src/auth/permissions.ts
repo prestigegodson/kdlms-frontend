@@ -97,9 +97,15 @@ export const can = {
   /**
    * The student registry (registration + browsing). A TEACHER gets their own
    * read-only class roster instead, via `GET /api/v1/me/classes/{id}/students`.
+   * An INVENTORY_MANAGER gets the same read-only registry browsing as a
+   * TEACHER - the only student access that role has (see `manageStudents`,
+   * which stays SCHOOL_ADMIN/BRANCH_ADMIN-only, so registration/edit/medical/
+   * guardians/transfer stay hidden).
    */
   viewStudents(role: Role | undefined): boolean {
-    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER";
+    return (
+      role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER" || role === "INVENTORY_MANAGER"
+    );
   },
 
   /** Bulk promotion and search-and-place - SCHOOL_ADMIN and BRANCH_ADMIN only. */
@@ -616,5 +622,49 @@ export const can = {
    */
   viewWardBills(role: Role | undefined, entitled: boolean): boolean {
     return entitled && role === "GUARDIAN";
+  },
+
+  /**
+   * The inventory module's own entry gate - SCHOOL_ADMIN, BRANCH_ADMIN, or INVENTORY_MANAGER, no
+   * TEACHER access anywhere in this module (the `billing` shape). Deliberately **no `entitled`
+   * parameter**, unlike `viewBilling` - inventory is ungated, every school gets it regardless of
+   * package.
+   */
+  viewInventory(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "INVENTORY_MANAGER";
+  },
+
+  /** Item-type/item catalogue writes - SCHOOL_ADMIN only, a real 403 for BRANCH_ADMIN/INVENTORY_MANAGER (the `manageFees` shape): the catalogue is school-wide, not something either partially owns. */
+  manageInventoryCatalogue(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN";
+  },
+
+  /**
+   * Receiving/adjusting a branch's stock - SCHOOL_ADMIN (any branch) or BRANCH_ADMIN (own branch,
+   * enforced server-side by `InventoryAccessGuard.requireBranchWritable`). Deliberately excludes
+   * INVENTORY_MANAGER, who may raise a requisition (`manageRequisitions`) but not move stock.
+   */
+  manageInventoryStock(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /**
+   * Raising/editing/submitting/withdrawing/cancelling a requisition - SCHOOL_ADMIN/BRANCH_ADMIN
+   * (own branch) or INVENTORY_MANAGER (own branch, own requisitions only, enforced server-side by
+   * `InventoryAccessGuard.requireBranchAccess`). Unlike `manageInventoryStock`, this admits
+   * INVENTORY_MANAGER - the module's one raise-only capability.
+   */
+  manageRequisitions(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "INVENTORY_MANAGER";
+  },
+
+  /**
+   * Approving/rejecting/issuing a requisition - SCHOOL_ADMIN/BRANCH_ADMIN only, enforced
+   * server-side by `InventoryAccessGuard.requireBranchWritable`. Deliberately excludes
+   * INVENTORY_MANAGER even for a requisition they raised themselves - the review/write gate stays
+   * admin-only.
+   */
+  reviewRequisitions(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
   },
 };

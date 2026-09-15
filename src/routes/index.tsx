@@ -64,6 +64,7 @@ import { SchoolLayout } from "@/layouts/SchoolLayout";
 import { SystemAdminLayout } from "@/layouts/SystemAdminLayout";
 import { BillingRoute } from "@/routes/BillingRoute";
 import { HomeRedirect } from "@/routes/HomeRedirect";
+import { InventoryRoute } from "@/routes/InventoryRoute";
 import { LessonNoteEditorRoute } from "@/routes/LessonNoteEditorRoute";
 import { RequireRole } from "@/routes/RequireRole";
 import { TakeHomeQuizEditorRoute } from "@/routes/TakeHomeQuizEditorRoute";
@@ -111,7 +112,7 @@ export const routes: RouteObject[] = [
       {
         path: "school",
         element: (
-          <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER"]}>
+          <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER", "INVENTORY_MANAGER"]}>
             <SchoolLayout />
           </RequireRole>
         ),
@@ -209,7 +210,7 @@ export const routes: RouteObject[] = [
           {
             path: "students",
             element: (
-              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER"]}>
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER", "INVENTORY_MANAGER"]}>
                 <StudentsPage />
               </RequireRole>
             ),
@@ -279,6 +280,14 @@ export const routes: RouteObject[] = [
             element: (
               <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
                 <BillingRoute />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "inventory",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN", "INVENTORY_MANAGER"]}>
+                <InventoryRoute />
               </RequireRole>
             ),
           },

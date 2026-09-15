@@ -34,6 +34,7 @@ function renderPage() {
       { path: "/school/academics/classes", element: <div>Classes page</div> },
       { path: "/school/attendance", element: <div>Attendance page</div> },
       { path: "/school/academics/classes/:classId", element: <div>Class detail page</div> },
+      { path: "/school/inventory", element: <div>Inventory page</div> },
     ],
     { initialEntries: ["/"] },
   );
@@ -441,5 +442,91 @@ describe("SchoolDashboardPage", () => {
     expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
     expect(screen.getByText("Upcoming birthdays")).toBeInTheDocument();
     expect(screen.getByText("Ada Obi").closest("a")).toBeNull();
+  });
+
+  describe("INVENTORY_MANAGER", () => {
+    it("renders the stock band tiles and requisition worklists", async () => {
+      vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
+        inventory: {
+          outOfStockItems: 1,
+          lowStockItems: 2,
+          approachingReorderItems: 1,
+          stockPreview: [
+            {
+              itemId: "item-1",
+              itemName: "Blue Uniform (Size 4)",
+              itemTypeName: "School Uniform",
+              unit: "piece",
+              onHand: 0,
+              reorderLevel: 10,
+              band: "OUT_OF_STOCK",
+            },
+          ],
+          draftRequisitions: 1,
+          awaitingReviewRequisitions: 1,
+          approvedNotIssuedRequisitions: 1,
+          rejectedRequisitions: 0,
+          requisitionPreview: [
+            {
+              requisitionId: "req-draft",
+              reference: "REQ/2026/0001",
+              status: "DRAFT",
+              neededBy: "2026-10-01",
+              lineCount: 2,
+              createdAt: "2026-09-01T00:00:00Z",
+            },
+            {
+              requisitionId: "req-submitted",
+              reference: "REQ/2026/0002",
+              status: "SUBMITTED",
+              neededBy: null,
+              lineCount: 1,
+              createdAt: "2026-09-05T00:00:00Z",
+            },
+          ],
+        },
+      });
+
+      renderPage();
+
+      // "Out of stock" appears twice: the stat tile label and the stock preview's own band
+      // badge on the flagged item, both driven by the same word.
+      expect(await screen.findAllByText("Out of stock")).toHaveLength(2);
+      expect(screen.getByText("Low stock")).toBeInTheDocument();
+      expect(screen.getByText("Approaching reorder")).toBeInTheDocument();
+      expect(screen.getByText("Awaiting review")).toBeInTheDocument();
+      expect(screen.getByText("Blue Uniform (Size 4)")).toBeInTheDocument();
+      expect(screen.getByText("Needs your attention")).toBeInTheDocument();
+      expect(screen.getByText("Waiting on an approver")).toBeInTheDocument();
+      expect(screen.getByText("REQ/2026/0001")).toBeInTheDocument();
+      expect(screen.getByText("REQ/2026/0002")).toBeInTheDocument();
+
+      // The stat tile (not the badge) links into the Inventory page's Stock tab.
+      const outOfStockTile = screen.getAllByText("Out of stock").find((el) => el.closest("a"));
+      expect(outOfStockTile?.closest("a")).toHaveAttribute("href", "/school/inventory?tab=stock");
+    });
+
+    it("shows the stock card's empty state when nothing is flagged", async () => {
+      vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
+        inventory: {
+          outOfStockItems: 0,
+          lowStockItems: 0,
+          approachingReorderItems: 0,
+          stockPreview: [],
+          draftRequisitions: 0,
+          awaitingReviewRequisitions: 0,
+          approvedNotIssuedRequisitions: 0,
+          rejectedRequisitions: 0,
+          requisitionPreview: [],
+        },
+      });
+
+      renderPage();
+
+      expect(await screen.findByText("Stock needing attention")).toBeInTheDocument();
+      expect(screen.getByText("Nothing flagged")).toBeInTheDocument();
+      expect(screen.getByText("Nothing to submit or re-raise.")).toBeInTheDocument();
+      expect(screen.getByText("Nothing pending review right now.")).toBeInTheDocument();
+    });
   });
 });

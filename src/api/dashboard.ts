@@ -90,12 +90,50 @@ export interface DashboardNextTerm {
   startDate: string;
 }
 
+/** Mirrors backend dashboard.application.port.in.SchoolDashboardView.StockLevelRow - one flagged item on the inventory tile's stock preview. */
+export interface DashboardLowStockItem {
+  itemId: string;
+  itemName: string;
+  itemTypeName: string;
+  unit: string;
+  onHand: number;
+  reorderLevel: number;
+  band: "OUT_OF_STOCK" | "LOW" | "APPROACHING";
+}
+
+/** Mirrors backend dashboard.application.port.in.SchoolDashboardView.RequisitionRow - one of the caller's own still-open requisitions. */
+export interface DashboardRequisitionRow {
+  requisitionId: string;
+  reference: string;
+  status: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
+  neededBy: string | null;
+  lineCount: number;
+  createdAt: string;
+}
+
+/**
+ * Mirrors backend dashboard.application.port.in.SchoolDashboardView.InventorySection -
+ * INVENTORY_MANAGER only. `stockPreview`/`requisitionPreview` are each capped previews
+ * (most-urgent/most-recent first) - the Inventory page itself is the full list.
+ */
+export interface SchoolDashboardInventorySection {
+  outOfStockItems: number;
+  lowStockItems: number;
+  approachingReorderItems: number;
+  stockPreview: DashboardLowStockItem[];
+  draftRequisitions: number;
+  awaitingReviewRequisitions: number;
+  approvedNotIssuedRequisitions: number;
+  rejectedRequisitions: number;
+  requisitionPreview: DashboardRequisitionRow[];
+}
+
 /**
  * Mirrors backend dashboard.application.port.in.SchoolDashboardView - the
  * school portal landing page, shaped server-side by caller role. Exactly
- * one of `admin`/`teacher` is present (the other is omitted entirely, per
- * the backend's non-null Jackson inclusion setting - never sent as
- * `null`), matching the caller's role.
+ * one of `admin`/`teacher`/`inventory` is present (the others are omitted
+ * entirely, per the backend's non-null Jackson inclusion setting - never
+ * sent as `null`), matching the caller's role.
  */
 export interface SchoolDashboardView {
   currentSessionName?: string;
@@ -104,6 +142,7 @@ export interface SchoolDashboardView {
   nextTerm?: DashboardNextTerm;
   admin?: SchoolDashboardAdminSection;
   teacher?: SchoolDashboardTeacherSection;
+  inventory?: SchoolDashboardInventorySection;
 }
 
 export function getAdminDashboard(): Promise<AdminDashboardView> {

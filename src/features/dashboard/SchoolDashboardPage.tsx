@@ -13,6 +13,7 @@ import { StatTile } from "@/components/ui/StatTile";
 import { StatTileSkeleton } from "@/components/ui/StatTileSkeleton";
 import { AttendanceTodayCard } from "@/features/attendance/components/AttendanceTodayCard";
 import { RegisterProgress } from "@/features/attendance/components/RegisterProgress";
+import { InventoryDashboardSection } from "@/features/dashboard/components/InventoryDashboardSection";
 import { NeedsAttentionCard } from "@/features/dashboard/components/NeedsAttentionCard";
 import { TermProgressCard } from "@/features/dashboard/components/TermProgressCard";
 import { AgeDistributionCard } from "@/features/students/components/AgeDistributionCard";
@@ -81,6 +82,9 @@ export function SchoolDashboardPage() {
         <AdminDashboard admin={state.view.admin} currentTerm={state.view.currentTerm} nextTerm={state.view.nextTerm} />
       )}
       {state.kind === "loaded" && state.view.teacher && <TeacherDashboard teacher={state.view.teacher} />}
+      {state.kind === "loaded" && state.view.inventory && (
+        <InventoryDashboardSection inventory={state.view.inventory} />
+      )}
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
   ListChecks,
   MessageSquare,
   NotebookPen,
+  Package,
   Receipt,
   Scale,
   School,
@@ -38,7 +39,8 @@ import { useUnreadMessagesStore } from "@/stores/unreadMessagesStore";
 
 // Tab-bar order below `lg` follows this array, capped at 4 per role
 // (NavItem.primary): both admin roles get Dashboard, Assessments, Messages,
-// Students; TEACHER gets Dashboard, Assessments, Attendance, Messages.
+// Students; TEACHER gets Dashboard, Assessments, Attendance, Messages;
+// INVENTORY_MANAGER gets Dashboard, Students, Inventory - its whole nav.
 // Attendance is deliberately not an admin primary - it's read-only for
 // admins (CLAUDE.md's class-teacher-write rule), so it isn't one of their
 // everyday destinations.
@@ -47,7 +49,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Dashboard",
     href: "/school",
     icon: LayoutDashboard,
-    primary: ["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER"],
+    primary: ["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER", "INVENTORY_MANAGER"],
   },
   {
     label: "Sessions & Terms",
@@ -66,8 +68,23 @@ const NAV_ITEMS: NavItem[] = [
     // School-wide, not branch-scoped - see auth/permissions.ts's manageLevels.
     roles: ["SCHOOL_ADMIN"],
   },
-  { label: "Subjects", href: "/school/academics/subjects", icon: BookOpen, group: "Academics" },
-  { label: "Classes", href: "/school/academics/classes", icon: Library, group: "Academics" },
+  {
+    label: "Subjects",
+    href: "/school/academics/subjects",
+    icon: BookOpen,
+    group: "Academics",
+    // Explicit, unlike most of this section, so INVENTORY_MANAGER (who has no
+    // "roles" list elsewhere to fall back on) doesn't leak in via the
+    // no-roles-means-everyone default.
+    roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER"],
+  },
+  {
+    label: "Classes",
+    href: "/school/academics/classes",
+    icon: Library,
+    group: "Academics",
+    roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER"],
+  },
   {
     label: "Grading systems",
     href: "/school/assessments/grading",
@@ -144,6 +161,8 @@ const NAV_ITEMS: NavItem[] = [
     href: "/school/assessments",
     icon: ClipboardCheck,
     group: "Academics",
+    // Explicit `roles`, not just `primary` - INVENTORY_MANAGER has no assessment access at all.
+    roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER"],
     primary: ["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER"],
   },
   {
@@ -170,6 +189,8 @@ const NAV_ITEMS: NavItem[] = [
     group: "Academics",
     // Same visibility as Assessments/broadsheets - admins (branch-scoped for
     // BRANCH_ADMIN), a teacher's own classes - see auth/permissions.ts's viewReports.
+    // Explicit, so INVENTORY_MANAGER doesn't leak in via the no-roles default.
+    roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER"],
   },
   {
     label: "Messages",
@@ -207,7 +228,11 @@ const NAV_ITEMS: NavItem[] = [
     href: "/school/students",
     icon: GraduationCap,
     group: "People",
-    primary: ["SCHOOL_ADMIN", "BRANCH_ADMIN"],
+    // Explicit `roles` (unlike most of this array) - INVENTORY_MANAGER gets the read-only
+    // registry (can.viewStudents/manageStudents split inside StudentsPage itself), TEACHER gets
+    // their own class roster reads.
+    roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER", "INVENTORY_MANAGER"],
+    primary: ["SCHOOL_ADMIN", "BRANCH_ADMIN", "INVENTORY_MANAGER"],
   },
   {
     label: "Guardians",
@@ -277,6 +302,18 @@ const NAV_ITEMS: NavItem[] = [
       return can.viewBilling(role, entitled);
     },
   },
+  {
+    label: "Inventory",
+    href: "/school/inventory",
+    icon: Package,
+    group: "Administration",
+    // SCHOOL_ADMIN/BRANCH_ADMIN/INVENTORY_MANAGER - not TEACHER, the same billing carve-out (a
+    // requisition is a staff-internal request against the school store, not academic
+    // information). Deliberately ungated - no entitlement check, unlike Fees & Bills - see
+    // auth/permissions.ts's viewInventory, the single source of truth.
+    visible: () => can.viewInventory(useAuthStore.getState().user?.role),
+    primary: ["INVENTORY_MANAGER"],
+  },
 ];
 
 export function SchoolLayout() {
@@ -328,6 +365,9 @@ export function SchoolLayout() {
       fetchAcademicContext();
       fetchPendingLessonNotes();
     }
+    // INVENTORY_MANAGER matches neither branch, deliberately - it has no academic context, no
+    // teacher scope, and no lesson-note/message badges to fetch; only the school-wide calls below
+    // (settings/features/branding) run for it.
     fetchSchoolSettings();
     fetchFeatures();
     fetchSchoolBranding();
