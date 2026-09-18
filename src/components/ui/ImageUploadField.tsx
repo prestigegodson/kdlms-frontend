@@ -1,7 +1,7 @@
 import { ImagePlus, X } from "lucide-react";
 import { type ChangeEvent, useId, useRef, useState } from "react";
 import { ApiError } from "@/api/client";
-import { downloadFile, MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, uploadFile } from "@/api/files";
+import { downloadFile, MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_LABEL, uploadFile } from "@/api/files";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
@@ -34,8 +34,8 @@ export function ImageUploadField({ label, fileId, onChange }: ImageUploadFieldPr
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
-    if (file.size > MAX_UPLOAD_BYTES) {
-      setError(`Image is larger than ${MAX_UPLOAD_LABEL}. Please choose a smaller file.`);
+    if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
+      setError(`Image is larger than ${MAX_IMAGE_UPLOAD_LABEL}. Please choose a smaller file.`);
       return;
     }
     setUploading(true);
@@ -86,7 +86,7 @@ export function ImageUploadField({ label, fileId, onChange }: ImageUploadFieldPr
         )}
       </div>
       <p id={hintId} className="mt-1 text-xs text-slate-500">
-        PNG, JPEG or WebP · max {MAX_UPLOAD_LABEL}
+        PNG, JPEG or WebP · max {MAX_IMAGE_UPLOAD_LABEL}
       </p>
     </div>
   );

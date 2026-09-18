@@ -11,6 +11,7 @@ function renderGuarded(roles: Role[]) {
       { path: "/login", element: <div>Login page</div> },
       { path: "/admin", element: <div>Admin home</div> },
       { path: "/school", element: <div>School home</div> },
+      { path: "/student", element: <div>Student home</div> },
       { path: "/set-password", element: <div>Set password page</div> },
       {
         path: "/protected",
@@ -58,6 +59,31 @@ describe("RequireRole", () => {
     });
 
     renderGuarded(["SYSTEM_ADMIN"]);
+
+    expect(await screen.findByText("Protected content")).toBeInTheDocument();
+  });
+
+  it("redirects a STUDENT to their own home when their role isn't allowed here", async () => {
+    useAuthStore.setState({
+      user: { id: "1", email: "grace-kdl24001", firstName: "Grace", lastName: "Ward", role: "STUDENT" },
+      accessToken: "t",
+      refreshToken: "r",
+    });
+
+    renderGuarded(["SYSTEM_ADMIN"]);
+
+    expect(await screen.findByText("Student home")).toBeInTheDocument();
+    expect(screen.queryByText("Login page")).not.toBeInTheDocument();
+  });
+
+  it("renders the protected content for a STUDENT when the route allows it", async () => {
+    useAuthStore.setState({
+      user: { id: "1", email: "grace-kdl24001", firstName: "Grace", lastName: "Ward", role: "STUDENT" },
+      accessToken: "t",
+      refreshToken: "r",
+    });
+
+    renderGuarded(["STUDENT"]);
 
     expect(await screen.findByText("Protected content")).toBeInTheDocument();
   });

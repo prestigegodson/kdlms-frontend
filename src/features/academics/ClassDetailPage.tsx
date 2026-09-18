@@ -22,6 +22,7 @@ import { can } from "@/auth/permissions";
 import { BookOpen, UserCheck, Users } from "lucide-react";
 import { ClassRosterPanel } from "@/features/academics/components/ClassRosterPanel";
 import { SubjectTeachersPanel } from "@/features/academics/components/SubjectTeachersPanel";
+import { ProvisionClassLoginsModal } from "@/features/students/components/ProvisionClassLoginsModal";
 import { RegisterStudentModal } from "@/features/students/components/RegisterStudentModal";
 import { UpcomingBirthdaysCard } from "@/features/students/components/UpcomingBirthdaysCard";
 import { Accordion } from "@/components/ui/Accordion";
@@ -36,6 +37,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { StatTile } from "@/components/ui/StatTile";
 import { TableSkeleton } from "@/components/ui/TableSkeleton";
 import { useAuthStore } from "@/stores/authStore";
+import { useFeatureStore } from "@/stores/featureStore";
 import { useLevelStore } from "@/stores/levelStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 
@@ -61,6 +63,8 @@ export function ClassDetailPage() {
   const canManageSubjectRegistrations = can.manageStudentSubjects(role, teacherCapabilities);
   const showAttendanceLink = can.viewAttendance(role, teacherCapabilities);
   const showResultsLink = can.viewResults(role);
+  const studentLoginsEntitled = useFeatureStore((state) => state.studentLogins);
+  const canProvisionLogins = can.manageStudentLogins(role, teacherCapabilities, studentLoginsEntitled);
   // Branch name is only fetched for a SCHOOL_ADMIN (the one role that spans
   // branches) - a BRANCH_ADMIN/TEACHER already knows they're confined to a
   // single branch, the same reasoning StudentsPage hides the branch filter
@@ -79,6 +83,7 @@ export function ClassDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [unassigningTeacher, setUnassigningTeacher] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [provisionLoginsOpen, setProvisionLoginsOpen] = useState(false);
 
   function fetchClass() {
     if (!classId) return;
@@ -252,7 +257,7 @@ export function ClassDetailPage() {
         <StatTile label="Class teacher" value={schoolClass.classTeacherName ?? "Unassigned"} icon={UserCheck} />
       </div>
 
-      {(showAttendanceLink || showResultsLink) && (
+      {(showAttendanceLink || showResultsLink || canProvisionLogins) && (
         <div className="flex flex-wrap justify-end gap-2">
           {showAttendanceLink && (
             <Button
@@ -270,6 +275,11 @@ export function ClassDetailPage() {
               onClick={() => navigate(`/school/assessments?classId=${schoolClass.id}`)}
             >
               Results & broadsheet
+            </Button>
+          )}
+          {canProvisionLogins && (
+            <Button variant="secondary" size="sm" onClick={() => setProvisionLoginsOpen(true)}>
+              Provision portal logins
             </Button>
           )}
         </div>
@@ -377,6 +387,15 @@ export function ClassDetailPage() {
           }}
         />
       )}
+
+      <ProvisionClassLoginsModal
+        open={provisionLoginsOpen}
+        onClose={() => setProvisionLoginsOpen(false)}
+        classId={schoolClass.id}
+        onProvisioned={() => {
+          /* no roster reload needed - login status isn't shown on this page's roster */
+        }}
+      />
     </div>
   );
 }

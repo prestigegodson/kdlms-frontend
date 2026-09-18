@@ -14,6 +14,7 @@ vi.mock("@/api/takeHomeQuizzes", async () => {
     reissueTakeHomeQuizLink: vi.fn(),
     issueMissingTakeHomeQuizLinks: vi.fn(),
     exportTakeHomeQuizLinks: vi.fn(),
+    revokeSupersededTakeHomeQuizLinks: vi.fn(),
   };
 });
 
@@ -25,6 +26,7 @@ const ISSUED_LINK: StudentLinkView = {
   admissionNumber: "SCH/2026/0001",
   url: "https://app.kdlms.com/take-home-quiz?token=abc123",
   issuedAt: "2026-03-01T00:00:00Z",
+  portalStudent: false,
 };
 
 const MISSING_LINK: StudentLinkView = {
@@ -33,6 +35,25 @@ const MISSING_LINK: StudentLinkView = {
   admissionNumber: "SCH/2026/0002",
   url: null,
   issuedAt: null,
+  portalStudent: false,
+};
+
+const PORTAL_LINK: StudentLinkView = {
+  studentId: "student-3",
+  fullName: "Chiamaka Eze",
+  admissionNumber: "SCH/2026/0003",
+  url: null,
+  issuedAt: null,
+  portalStudent: true,
+};
+
+const SUPERSEDED_LINK: StudentLinkView = {
+  studentId: "student-4",
+  fullName: "Dapo Bello",
+  admissionNumber: "SCH/2026/0004",
+  url: "https://app.kdlms.com/take-home-quiz?token=stale",
+  issuedAt: "2026-03-01T00:00:00Z",
+  portalStudent: true,
 };
 
 beforeEach(() => {
@@ -102,5 +123,30 @@ describe("StudentLinksPanel", () => {
     await waitFor(() =>
       expect(takeHomeQuizzesApi.reissueTakeHomeQuizLink).toHaveBeenCalledWith("quiz-1", "student-1"),
     );
+  });
+
+  it("shows a portal student as available in the portal, not missing a link", async () => {
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizLinks).mockResolvedValue([ISSUED_LINK, PORTAL_LINK]);
+    render(<StudentLinksPanel quizId="quiz-1" refreshToken={0} />);
+
+    expect(await screen.findByText("Available in the student portal")).toBeInTheDocument();
+    expect(screen.queryByText(/no link yet/i)).not.toBeInTheDocument();
+  });
+
+  it("revokes superseded links after confirmation and reports the outcome", async () => {
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizLinks).mockResolvedValue([ISSUED_LINK, SUPERSEDED_LINK]);
+    vi.mocked(takeHomeQuizzesApi.revokeSupersededTakeHomeQuizLinks).mockResolvedValue({
+      revoked: 1,
+      skippedInProgress: 0,
+    });
+    render(<StudentLinksPanel quizId="quiz-1" refreshToken={0} />);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /Revoke superseded links \(1\)/ }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Revoke" }));
+
+    await waitFor(() => expect(takeHomeQuizzesApi.revokeSupersededTakeHomeQuizLinks).toHaveBeenCalledWith("quiz-1"));
+    expect(await screen.findByText(/Revoked 1 link/)).toBeInTheDocument();
   });
 });

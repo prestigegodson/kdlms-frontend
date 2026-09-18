@@ -1,7 +1,7 @@
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "@/api/client";
-import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, uploadFile } from "@/api/files";
+import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_LABEL, uploadFile } from "@/api/files";
 import { Alert } from "@/components/ui/Alert";
 import { MathDialog } from "@/components/richText/MathDialog";
 import { PastedImageUpload } from "@/components/richText/pastedImageUpload";
@@ -87,7 +87,7 @@ export function RichTextField({
           ? [
               PastedImageUpload.configure({
                 uploadFile,
-                maxUploadBytes: MAX_UPLOAD_BYTES,
+                maxUploadBytes: MAX_IMAGE_UPLOAD_BYTES,
                 maxImages: () => maxImages ?? Number.POSITIVE_INFINITY,
                 onUploadStart: (count) => setPasteStatus({ uploading: count }),
                 onUploadEnd: () => setPasteStatus(null),
@@ -157,8 +157,8 @@ export function RichTextField({
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || !editor) return;
-    if (file.size > MAX_UPLOAD_BYTES) {
-      setUploadError(`Image is larger than ${MAX_UPLOAD_LABEL}. Please choose a smaller file.`);
+    if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
+      setUploadError(`Image is larger than ${MAX_IMAGE_UPLOAD_LABEL}. Please choose a smaller file.`);
       return;
     }
     setUploading(true);

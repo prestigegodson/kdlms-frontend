@@ -1,16 +1,25 @@
+import { type ReactNode } from "react";
 import { Check } from "lucide-react";
-import { publicQuestionImageUrl, type PublicAnswerView, type PublicQuestionView } from "@/api/publicTakeHomeQuiz";
+import { type PublicAnswerView, type PublicQuestionView } from "@/api/publicTakeHomeQuiz";
 import { RichContent } from "@/components/richText/RichContent";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 
 interface QuestionCardProps {
-  /** The student's own tokenised link - threaded down only to build a question image's `<img src>` (`publicQuestionImageUrl`); never sent anywhere else from this component. */
-  token: string;
   question: PublicQuestionView;
   answer: PublicAnswerView | undefined;
   answered: boolean;
   onChange: (answer: PublicAnswerView) => void;
+  /**
+   * Renders one embedded image by its `data-file-id` (Phase 35I - was a bare `token: string` prop
+   * that built a public `<img src>` directly). Now a render-prop so the portal transport can
+   * fetch through its own authenticated endpoint (`useObjectUrl`, the `AuthenticatedRichImage`
+   * shape) while the public transport still passes a plain `<img src={publicQuestionImageUrl(...)}>` -
+   * the portal's image endpoint needs a Bearer header a bare `<img src>` can't carry. `size`
+   * preserves the prompt-vs-option sizing this component always applied (max-h-60 vs max-h-32);
+   * the transport's own `<img>`/component is expected to size itself to fill its container.
+   */
+  renderImage: (fileId: string, alt: string, size: "prompt" | "option") => ReactNode;
 }
 
 /**
@@ -22,18 +31,11 @@ interface QuestionCardProps {
  * never the only signal for answered/unanswered (the checkmark carries it
  * too).
  */
-export function QuestionCard({ token, question, answer, answered, onChange }: QuestionCardProps) {
+export function QuestionCard({ question, answer, answered, onChange, renderImage }: QuestionCardProps) {
   const selected = new Set(answer?.selectedOptionIds ?? []);
 
   function renderOptionImage(fallbackAlt: string) {
-    return (fileId: string, alt: string) => (
-      <img
-        src={publicQuestionImageUrl(token, fileId)}
-        alt={alt || fallbackAlt}
-        loading="lazy"
-        className="my-1 max-h-32 rounded-control border border-slate-200"
-      />
-    );
+    return (fileId: string, alt: string) => renderImage(fileId, alt || fallbackAlt, "option");
   }
 
   return (
@@ -49,14 +51,7 @@ export function QuestionCard({ token, question, answer, answered, onChange }: Qu
           <span className="sr-only">Question {question.position}:</span>
           <RichContent
             html={question.prompt}
-            renderImage={(fileId, alt) => (
-              <img
-                src={publicQuestionImageUrl(token, fileId)}
-                alt={alt}
-                loading="lazy"
-                className="my-1 max-h-60 rounded-control border border-slate-200"
-              />
-            )}
+            renderImage={(fileId, alt) => renderImage(fileId, alt, "prompt")}
             className="min-w-0 break-words font-display text-base font-semibold text-slate-900"
           />
         </span>

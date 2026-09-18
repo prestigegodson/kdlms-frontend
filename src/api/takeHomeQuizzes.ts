@@ -164,13 +164,26 @@ export interface PublishOutcomeView {
   perStudent: TakeHomeQuizRowOutcome[];
 }
 
-/** Mirrors backend takehomequiz.application.port.in.StudentLinkView - `url`/`issuedAt` are null for a roster student with no live link yet. */
+/**
+ * Mirrors backend takehomequiz.application.port.in.StudentLinkView - `url`/`issuedAt` are null for
+ * a roster student with no live link yet. `portalStudent` (Phase 35I.1) is true when this student
+ * currently holds an active student-portal login - such a student is never minted a token in the
+ * first place, so `url == null && portalStudent` means "takes this quiz in the portal", not "still
+ * needs a link".
+ */
 export interface StudentLinkView {
   studentId: string;
   fullName: string;
   admissionNumber: string;
   url: string | null;
   issuedAt: string | null;
+  portalStudent: boolean;
+}
+
+/** Mirrors backend PublishTakeHomeQuizUseCase.RevokeSupersededLinksOutcome (Phase 35I.4). */
+export interface RevokeSupersededLinksOutcome {
+  revoked: number;
+  skippedInProgress: number;
 }
 
 const BASE = "/api/v1/take-home-quizzes";
@@ -237,6 +250,11 @@ export function reissueTakeHomeQuizLink(quizId: string, studentId: string): Prom
 
 export function issueMissingTakeHomeQuizLinks(quizId: string): Promise<PublishOutcomeView> {
   return apiFetch<PublishOutcomeView>(`${BASE}/${quizId}/links/issue-missing`, { method: "POST" });
+}
+
+/** Revokes only live tokens belonging to a student who now has a portal login and hasn't started an attempt yet (Phase 35I.4). */
+export function revokeSupersededTakeHomeQuizLinks(quizId: string): Promise<RevokeSupersededLinksOutcome> {
+  return apiFetch<RevokeSupersededLinksOutcome>(`${BASE}/${quizId}/links/revoke-superseded`, { method: "POST" });
 }
 
 export function exportTakeHomeQuizLinks(quizId: string): Promise<Blob> {

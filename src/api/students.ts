@@ -363,3 +363,57 @@ export interface AgeDistribution {
 export function getStudentAgeDistribution(): Promise<AgeDistribution> {
   return apiFetch<AgeDistribution>(`${BASE}/age-distribution`);
 }
+
+/**
+ * Mirrors backend student.application.port.in.ManageStudentLoginsUseCase.StudentLoginView
+ * (Phase 35B). `loginId` is undefined for a student with no login.
+ * `temporaryPassword` is present only right after a provision/reset call, for the one-time
+ * on-screen reveal - never returned by a plain status read.
+ */
+export interface StudentLoginView {
+  studentId: string;
+  studentName: string;
+  loginId?: string;
+  active: boolean;
+  mustChangePassword: boolean;
+  temporaryPassword?: string;
+}
+
+/** Mirrors backend ManageStudentLoginsUseCase.StudentLoginRow - one row of a bulk class provisioning result. */
+export interface StudentLoginRow {
+  studentId: string;
+  studentName: string;
+  loginId?: string;
+  success: boolean;
+  notified: boolean;
+  temporaryPassword?: string;
+  message?: string;
+}
+
+/** Mirrors backend ManageStudentLoginsUseCase.ProvisioningResult. */
+export interface ProvisioningResult {
+  provisioned: number;
+  guardiansNotified: number;
+  rows: StudentLoginRow[];
+}
+
+export function getStudentCredentials(studentId: string): Promise<StudentLoginView> {
+  return apiFetch<StudentLoginView>(`${BASE}/${studentId}/credentials`);
+}
+
+export function provisionStudentCredentials(studentId: string): Promise<StudentLoginView> {
+  return apiFetch<StudentLoginView>(`${BASE}/${studentId}/credentials`, { method: "POST" });
+}
+
+export function resetStudentCredentials(studentId: string): Promise<StudentLoginView> {
+  return apiFetch<StudentLoginView>(`${BASE}/${studentId}/credentials/reset`, { method: "POST" });
+}
+
+export function revokeStudentCredentials(studentId: string): Promise<void> {
+  return apiFetch<void>(`${BASE}/${studentId}/credentials`, { method: "DELETE" });
+}
+
+/** Bulk-provisions logins for every active student of one class's current-term roster who doesn't already have one. */
+export function provisionClassCredentials(classId: string): Promise<ProvisioningResult> {
+  return apiFetch<ProvisioningResult>(`/api/v1/classes/${classId}/credentials`, { method: "POST" });
+}

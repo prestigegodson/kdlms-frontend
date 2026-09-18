@@ -12,6 +12,8 @@ export function homePathForRole(role: Role): string {
       return "/school";
     case "GUARDIAN":
       return "/guardian";
+    case "STUDENT":
+      return "/student";
     default:
       return "/login";
   }

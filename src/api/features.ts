@@ -14,6 +14,12 @@ export interface MyFeaturesView {
   aiLessonNotes: boolean;
   takeHomeQuiz: boolean;
   billing: boolean;
+  /** Phase 35A - live once the `learning` module (35E) ships. */
+  onDemandLearning: boolean;
+  /** Phase 35A - live once uploaded mp3/mp4 resources ship (35F). Layered on top of `onDemandLearning`. */
+  learningMedia: boolean;
+  /** Phase 35A - live once student credential provisioning ships (35B). */
+  studentLogins: boolean;
 }
 
 export function getMyFeatures(): Promise<MyFeaturesView> {

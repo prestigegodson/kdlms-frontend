@@ -135,6 +135,8 @@ export function PackagesPage() {
                       {pkg.takeHomeQuiz && <Badge variant="brand">Take-home quizzes</Badge>}
                       {pkg.aiLessonNotes && <Badge variant="brand">AI lesson notes</Badge>}
                       {pkg.billing && <Badge variant="brand">Fees & bills</Badge>}
+                      {pkg.learningMedia && <Badge variant="neutral">Learning media</Badge>}
+                      {pkg.studentLogins && <Badge variant="neutral">Student logins</Badge>}
                     </div>
                   </TableCell>
                   <TableCell label="Status">
@@ -228,6 +230,8 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
     initial ? String(initial.aiGenerationLimit) : "0",
   );
   const [billing, setBilling] = useState(initial?.billing ?? false);
+  const [learningMedia, setLearningMedia] = useState(initial?.learningMedia ?? false);
+  const [studentLogins, setStudentLogins] = useState(initial?.studentLogins ?? false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -253,6 +257,8 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
         aiLessonNotes,
         aiGenerationLimit: aiLessonNotes ? Number(aiGenerationLimit) : 0,
         billing,
+        learningMedia,
+        studentLogins,
       });
       onSaved();
     } catch (err) {
@@ -353,6 +359,29 @@ function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: Packag
           />
           On-demand learning
         </label>
+        <p className="-mt-2 text-xs text-slate-500">
+          Entitlement for the learning-resources module (PDF, rich text, YouTube) - live once that
+          module ships (Phase 35E); currently dormant.
+        </p>
+
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <Checkbox checked={learningMedia} onChange={(event) => setLearningMedia(event.target.checked)} />
+          Learning media (mp3/mp4)
+        </label>
+        <p className="-mt-2 text-xs text-slate-500">
+          A second, independent gate on top of On-demand learning for uploaded audio/video only - a
+          school can have the module without the storage-heavy media types. Live once Phase 35F ships.
+        </p>
+
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <Checkbox checked={studentLogins} onChange={(event) => setStudentLogins(event.target.checked)} />
+          Student logins
+        </label>
+        <p className="-mt-2 text-xs text-slate-500">
+          Entitlement for the student portal and student credential provisioning - live once Phase 35B
+          ships; currently dormant. Deliberately not checked at the login endpoint itself, so a
+          downgrade can never strand an already-signed-in student.
+        </p>
 
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <Checkbox

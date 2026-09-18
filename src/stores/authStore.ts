@@ -9,6 +9,7 @@ import { useFeatureStore } from "@/stores/featureStore";
 import { usePendingLessonNotesStore } from "@/stores/pendingLessonNotesStore";
 import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
+import { useStudentStore } from "@/stores/studentStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 import { useUnreadMessagesStore } from "@/stores/unreadMessagesStore";
 import { useWardStore } from "@/stores/wardStore";
@@ -45,7 +46,7 @@ interface AuthState {
     accessToken: string;
     refreshToken: string;
   }) => void;
-  login: (email: string, password: string, subdomain?: string | null) => Promise<AuthenticatedUser>;
+  login: (identifier: string, password: string, subdomain?: string | null) => Promise<AuthenticatedUser>;
   logout: () => void;
   refreshSession: () => Promise<boolean>;
   setHydrated: () => void;
@@ -62,10 +63,10 @@ export const useAuthStore = create<AuthState>()(
 
       setSession: ({ user, accessToken, refreshToken }) => set({ user, accessToken, refreshToken }),
 
-      login: async (email, password, subdomain) => {
+      login: async (identifier, password, subdomain) => {
         set({ status: "authenticating" });
         try {
-          const session = await authApi.login(email, password, subdomain);
+          const session = await authApi.login(identifier, password, subdomain);
           set({
             user: session.user,
             accessToken: session.accessToken,
@@ -82,12 +83,13 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, accessToken: null, refreshToken: null });
         // So a different user signing in next in this tab never inherits
         // the previous one's cached class/subject-teacher capabilities,
-        // current-session/term label, linked wards, school settings, gated
-        // feature flags, brand mark, unread-messages count, pending-lesson-note
-        // count, or selected branch.
+        // current-session/term label, linked wards, own student profile,
+        // school settings, gated feature flags, brand mark, unread-messages
+        // count, pending-lesson-note count, or selected branch.
         useTeacherScopeStore.getState().reset();
         useAcademicContextStore.getState().reset();
         useWardStore.getState().reset();
+        useStudentStore.getState().reset();
         useSchoolSettingsStore.getState().reset();
         useFeatureStore.getState().reset();
         useSchoolBrandingStore.getState().reset();

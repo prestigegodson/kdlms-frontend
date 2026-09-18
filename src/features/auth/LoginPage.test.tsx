@@ -47,13 +47,44 @@ describe("LoginPage", () => {
     render(<RouterProvider router={router} />);
     const user = userEvent.setup();
 
-    await user.type(screen.getByLabelText("Email"), "admin@kdlms.com");
+    await user.type(screen.getByLabelText("Email or student ID"), "admin@kdlms.com");
     await user.type(screen.getByLabelText("Password"), "ChangeMe123!");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(await screen.findByRole("heading", { name: "Schools" })).toBeInTheDocument();
     // Third arg is the resolved school subdomain - null on jsdom's default "localhost" host.
     expect(authApi.login).toHaveBeenCalledWith("admin@kdlms.com", "ChangeMe123!", null);
+  });
+
+  it("accepts a non-email-shaped student-login-id and posts it verbatim", async () => {
+    // Proves the field itself doesn't block a hyphenated, '@'-free value the
+    // way a native type="email" input would (see LoginPage's own comment on
+    // the field) and that it reaches authApi.login unaltered; api/auth.test.ts
+    // proves the wire body's key is actually `identifier`, since authApi.login
+    // is mocked here.
+    vi.mocked(authApi.login).mockResolvedValue({
+      accessToken: "access",
+      refreshToken: "refresh",
+      user: {
+        id: "1",
+        email: "admin@kdlms.com",
+        firstName: "Sys",
+        lastName: "Admin",
+        role: "SYSTEM_ADMIN",
+      },
+    });
+
+    const router = createMemoryRouter(routes, { initialEntries: ["/login"] });
+    render(<RouterProvider router={router} />);
+    const user = userEvent.setup();
+
+    const identifierField = screen.getByLabelText("Email or student ID");
+    expect(identifierField).toHaveAttribute("type", "text");
+    await user.type(identifierField, "grace-kdl24001");
+    await user.type(screen.getByLabelText("Password"), "TempPass123");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    expect(authApi.login).toHaveBeenCalledWith("grace-kdl24001", "TempPass123", null);
   });
 
   it("redirects to /set-password instead of the role home when the account still must change a temporary password", async () => {
@@ -74,7 +105,7 @@ describe("LoginPage", () => {
     render(<RouterProvider router={router} />);
     const user = userEvent.setup();
 
-    await user.type(screen.getByLabelText("Email"), "new-admin@kdlms.com");
+    await user.type(screen.getByLabelText("Email or student ID"), "new-admin@kdlms.com");
     await user.type(screen.getByLabelText("Password"), "TempPass123");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
@@ -82,17 +113,17 @@ describe("LoginPage", () => {
   });
 
   it("shows an error message on failed login and stays on the login page", async () => {
-    vi.mocked(authApi.login).mockRejectedValue(new ApiError(401, "Invalid email or password."));
+    vi.mocked(authApi.login).mockRejectedValue(new ApiError(401, "Invalid login or password."));
 
     const router = createMemoryRouter(routes, { initialEntries: ["/login"] });
     render(<RouterProvider router={router} />);
     const user = userEvent.setup();
 
-    await user.type(screen.getByLabelText("Email"), "admin@kdlms.com");
+    await user.type(screen.getByLabelText("Email or student ID"), "admin@kdlms.com");
     await user.type(screen.getByLabelText("Password"), "wrong-password");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
-    expect(await screen.findByText("Invalid email or password.")).toBeInTheDocument();
+    expect(await screen.findByText("Invalid login or password.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
   });
 
@@ -105,7 +136,7 @@ describe("LoginPage", () => {
     render(<RouterProvider router={router} />);
     const user = userEvent.setup();
 
-    await user.type(screen.getByLabelText("Email"), "admin@suspended-school.example");
+    await user.type(screen.getByLabelText("Email or student ID"), "admin@suspended-school.example");
     await user.type(screen.getByLabelText("Password"), "ChangeMe123!");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
@@ -160,7 +191,7 @@ describe("LoginPage", () => {
     render(<RouterProvider router={router} />);
     const user = userEvent.setup();
 
-    await user.type(screen.getByLabelText("Email"), "someone@another-school.example");
+    await user.type(screen.getByLabelText("Email or student ID"), "someone@another-school.example");
     await user.type(screen.getByLabelText("Password"), "ChangeMe123!");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
@@ -169,17 +200,17 @@ describe("LoginPage", () => {
   });
 
   it("does not show the platform-host link for an ordinary login failure", async () => {
-    vi.mocked(authApi.login).mockRejectedValue(new ApiError(401, "Invalid email or password."));
+    vi.mocked(authApi.login).mockRejectedValue(new ApiError(401, "Invalid login or password."));
 
     const router = createMemoryRouter(routes, { initialEntries: ["/login"] });
     render(<RouterProvider router={router} />);
     const user = userEvent.setup();
 
-    await user.type(screen.getByLabelText("Email"), "admin@kdlms.com");
+    await user.type(screen.getByLabelText("Email or student ID"), "admin@kdlms.com");
     await user.type(screen.getByLabelText("Password"), "wrong-password");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
-    expect(await screen.findByText("Invalid email or password.")).toBeInTheDocument();
+    expect(await screen.findByText("Invalid login or password.")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Sign in at the main site instead" })).not.toBeInTheDocument();
   });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { can } from "@/auth/permissions";
+import type { Role } from "@/api/types";
+import { can, type TeacherScope } from "@/auth/permissions";
 
 describe("can.viewMessages", () => {
   it("is false for every role when the school isn't entitled, regardless of role or scope", () => {
@@ -454,6 +455,50 @@ describe("can.viewWardBills", () => {
   });
 });
 
+describe("can.viewStudentPortal", () => {
+  it("is true only for STUDENT", () => {
+    expect(can.viewStudentPortal("STUDENT")).toBe(true);
+  });
+
+  it("is false for every other role", () => {
+    expect(can.viewStudentPortal("GUARDIAN")).toBe(false);
+    expect(can.viewStudentPortal("SCHOOL_ADMIN")).toBe(false);
+    expect(can.viewStudentPortal("BRANCH_ADMIN")).toBe(false);
+    expect(can.viewStudentPortal("TEACHER")).toBe(false);
+    expect(can.viewStudentPortal("INVENTORY_MANAGER")).toBe(false);
+    expect(can.viewStudentPortal(undefined)).toBe(false);
+  });
+});
+
+describe("can.viewStudentResults", () => {
+  it("is true only for STUDENT", () => {
+    expect(can.viewStudentResults("STUDENT")).toBe(true);
+  });
+
+  it("is false for every other role", () => {
+    expect(can.viewStudentResults("GUARDIAN")).toBe(false);
+    expect(can.viewStudentResults("SCHOOL_ADMIN")).toBe(false);
+    expect(can.viewStudentResults(undefined)).toBe(false);
+  });
+});
+
+describe("can.viewStudentTimetable", () => {
+  it("is true only for an entitled STUDENT", () => {
+    expect(can.viewStudentTimetable("STUDENT", true)).toBe(true);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.viewStudentTimetable("STUDENT", false)).toBe(false);
+  });
+
+  it("is false for every staff/guardian role, even when entitled", () => {
+    expect(can.viewStudentTimetable("GUARDIAN", true)).toBe(false);
+    expect(can.viewStudentTimetable("SCHOOL_ADMIN", true)).toBe(false);
+    expect(can.viewStudentTimetable("TEACHER", true)).toBe(false);
+    expect(can.viewStudentTimetable(undefined, true)).toBe(false);
+  });
+});
+
 describe("can.viewInventory", () => {
   it("is true for SCHOOL_ADMIN, BRANCH_ADMIN, and INVENTORY_MANAGER alike - the module's own entry gate", () => {
     expect(can.viewInventory("SCHOOL_ADMIN")).toBe(true);
@@ -502,5 +547,205 @@ describe("can.manageRequisitions vs can.reviewRequisitions", () => {
     expect(can.reviewRequisitions("TEACHER")).toBe(false);
     expect(can.manageRequisitions("GUARDIAN")).toBe(false);
     expect(can.reviewRequisitions("GUARDIAN")).toBe(false);
+  });
+});
+
+describe("can.manageStudentLogins", () => {
+  it("is true for an entitled SCHOOL_ADMIN or BRANCH_ADMIN regardless of scope", () => {
+    expect(can.manageStudentLogins("SCHOOL_ADMIN", null, true)).toBe(true);
+    expect(can.manageStudentLogins("BRANCH_ADMIN", null, true)).toBe(true);
+  });
+
+  it("is true for an entitled class-teaching TEACHER, false for a subject-teacher-only one", () => {
+    expect(can.manageStudentLogins("TEACHER", { isClassTeacher: true }, true)).toBe(true);
+    expect(can.manageStudentLogins("TEACHER", { isClassTeacher: false }, true)).toBe(false);
+    expect(can.manageStudentLogins("TEACHER", null, true)).toBe(false);
+  });
+
+  it("is false when the school isn't entitled, even for SCHOOL_ADMIN", () => {
+    expect(can.manageStudentLogins("SCHOOL_ADMIN", null, false)).toBe(false);
+    expect(can.manageStudentLogins("TEACHER", { isClassTeacher: true }, false)).toBe(false);
+  });
+
+  it("is false for GUARDIAN and INVENTORY_MANAGER, even when entitled", () => {
+    expect(can.manageStudentLogins("GUARDIAN", null, true)).toBe(false);
+    expect(can.manageStudentLogins("INVENTORY_MANAGER", null, true)).toBe(false);
+    expect(can.manageStudentLogins(undefined, null, true)).toBe(false);
+  });
+});
+
+describe("can.viewLearningResources", () => {
+  it("is true for an entitled SCHOOL_ADMIN, BRANCH_ADMIN, or TEACHER", () => {
+    expect(can.viewLearningResources("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.viewLearningResources("BRANCH_ADMIN", true)).toBe(true);
+    expect(can.viewLearningResources("TEACHER", true)).toBe(true);
+  });
+
+  it("is false when the school isn't entitled, even for staff roles", () => {
+    expect(can.viewLearningResources("SCHOOL_ADMIN", false)).toBe(false);
+    expect(can.viewLearningResources("TEACHER", false)).toBe(false);
+  });
+
+  it("is false for GUARDIAN or STUDENT, even when entitled", () => {
+    expect(can.viewLearningResources("GUARDIAN", true)).toBe(false);
+    expect(can.viewLearningResources("STUDENT", true)).toBe(false);
+    expect(can.viewLearningResources(undefined, true)).toBe(false);
+  });
+});
+
+describe("can.authorLearningResources", () => {
+  it("is true for an entitled SCHOOL_ADMIN, BRANCH_ADMIN, or TEACHER", () => {
+    expect(can.authorLearningResources("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.authorLearningResources("BRANCH_ADMIN", true)).toBe(true);
+    expect(can.authorLearningResources("TEACHER", true)).toBe(true);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.authorLearningResources("TEACHER", false)).toBe(false);
+  });
+
+  it("is false for GUARDIAN or STUDENT, even when entitled", () => {
+    expect(can.authorLearningResources("GUARDIAN", true)).toBe(false);
+    expect(can.authorLearningResources("STUDENT", true)).toBe(false);
+  });
+});
+
+describe("can.authorLearningMedia", () => {
+  it("is true for an authoring role only when both onDemandLearning and learningMedia hold", () => {
+    expect(can.authorLearningMedia("SCHOOL_ADMIN", true, true)).toBe(true);
+    expect(can.authorLearningMedia("BRANCH_ADMIN", true, true)).toBe(true);
+    expect(can.authorLearningMedia("TEACHER", true, true)).toBe(true);
+  });
+
+  it("is false when learningMedia is off even though onDemandLearning is on", () => {
+    expect(can.authorLearningMedia("SCHOOL_ADMIN", true, false)).toBe(false);
+    expect(can.authorLearningMedia("TEACHER", true, false)).toBe(false);
+  });
+
+  it("is false when onDemandLearning is off even though learningMedia is on", () => {
+    expect(can.authorLearningMedia("SCHOOL_ADMIN", false, true)).toBe(false);
+  });
+
+  it("is false for a non-authoring role regardless of either flag", () => {
+    expect(can.authorLearningMedia("GUARDIAN", true, true)).toBe(false);
+    expect(can.authorLearningMedia("STUDENT", true, true)).toBe(false);
+    expect(can.authorLearningMedia(undefined, true, true)).toBe(false);
+  });
+});
+
+describe("can.viewLearningCompletions", () => {
+  it("follows authorLearningResources exactly, for every role", () => {
+    const roles: (Role | undefined)[] = [
+      "SYSTEM_ADMIN",
+      "SCHOOL_ADMIN",
+      "BRANCH_ADMIN",
+      "TEACHER",
+      "INVENTORY_MANAGER",
+      "GUARDIAN",
+      "STUDENT",
+      undefined,
+    ];
+    for (const entitled of [true, false]) {
+      for (const role of roles) {
+        expect(can.viewLearningCompletions(role, entitled)).toBe(can.authorLearningResources(role, entitled));
+      }
+    }
+  });
+
+  it("is true for an authoring role when entitled, false for a STUDENT even when entitled", () => {
+    expect(can.viewLearningCompletions("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.viewLearningCompletions("TEACHER", true)).toBe(true);
+    expect(can.viewLearningCompletions("STUDENT", true)).toBe(false);
+    expect(can.viewLearningCompletions("SCHOOL_ADMIN", false)).toBe(false);
+  });
+});
+
+/**
+ * Phase 35J: a `STUDENT` is denied every capability that isn't its own
+ * (`viewStudentPortal`/`viewStudentResults`/`viewStudentTimetable`/
+ * `viewStudentResources`/`viewStudentQuizzes`) or the one STUDENT-only write
+ * (`postLearningComments`) - a sweep over the rest of the `can` object with
+ * every gate deliberately forced open (`entitled`/`scope`/`onDemandLearning`/
+ * `learningMedia` all `true`), so a future capability added to this file
+ * without an explicit role check fails this test loudly rather than silently
+ * admitting STUDENT.
+ */
+describe("can - a STUDENT is denied every staff/guardian capability", () => {
+  const classTeacherScope: TeacherScope = { isClassTeacher: true };
+
+  const staffAndGuardianChecks: Record<string, () => boolean> = {
+    manageAcademics: () => can.manageAcademics("STUDENT"),
+    viewSubjectCatalogue: () => can.viewSubjectCatalogue("STUDENT"),
+    manageTeachers: () => can.manageTeachers("STUDENT"),
+    manageBranches: () => can.manageBranches("STUDENT"),
+    manageBranchAdmins: () => can.manageBranchAdmins("STUDENT"),
+    selectBranch: () => can.selectBranch("STUDENT"),
+    manageLevels: () => can.manageLevels("STUDENT"),
+    deleteSubjects: () => can.deleteSubjects("STUDENT"),
+    viewAttendance: () => can.viewAttendance("STUDENT", classTeacherScope),
+    markAttendance: () => can.markAttendance("STUDENT", classTeacherScope),
+    manageStudents: () => can.manageStudents("STUDENT"),
+    viewStudents: () => can.viewStudents("STUDENT"),
+    managePromotions: () => can.managePromotions("STUDENT"),
+    manageGuardians: () => can.manageGuardians("STUDENT"),
+    manageStudentSubjects: () => can.manageStudentSubjects("STUDENT", classTeacherScope),
+    manageStudentLogins: () => can.manageStudentLogins("STUDENT", classTeacherScope, true),
+    viewBirthdays: () => can.viewBirthdays("STUDENT", classTeacherScope),
+    viewClassBirthdays: () => can.viewClassBirthdays("STUDENT", true),
+    manageGradingSystems: () => can.manageGradingSystems("STUDENT"),
+    recordAssessments: () => can.recordAssessments("STUDENT"),
+    viewResults: () => can.viewResults("STUDENT"),
+    recordRemarks: () => can.recordRemarks("STUDENT", classTeacherScope),
+    recordPrincipalRemark: () => can.recordPrincipalRemark("STUDENT"),
+    publishResults: () => can.publishResults("STUDENT"),
+    manageResultTemplates: () => can.manageResultTemplates("STUDENT"),
+    manageReportSettings: () => can.manageReportSettings("STUDENT"),
+    manageSchoolSettings: () => can.manageSchoolSettings("STUDENT"),
+    viewReportSettings: () => can.viewReportSettings("STUDENT"),
+    viewReports: () => can.viewReports("STUDENT"),
+    viewWards: () => can.viewWards("STUDENT"),
+    viewMessages: () => can.viewMessages("STUDENT", classTeacherScope, true),
+    composeMessages: () => can.composeMessages("STUDENT", classTeacherScope, true),
+    manageMyNotifications: () => can.manageMyNotifications("STUDENT", true),
+    managePeriodGrid: () => can.managePeriodGrid("STUDENT", true),
+    viewPeriodGrid: () => can.viewPeriodGrid("STUDENT", true),
+    manageTimetable: () => can.manageTimetable("STUDENT", true),
+    viewTimetable: () => can.viewTimetable("STUDENT", classTeacherScope, true),
+    viewLessonNotes: () => can.viewLessonNotes("STUDENT", true),
+    authorLessonNotes: () => can.authorLessonNotes("STUDENT", true),
+    reviewLessonNotes: () => can.reviewLessonNotes("STUDENT", true),
+    generateLessonNotesWithAi: () => can.generateLessonNotesWithAi("STUDENT", true),
+    viewWardLessonNotes: () => can.viewWardLessonNotes("STUDENT", true),
+    viewTakeHomeQuizzes: () => can.viewTakeHomeQuizzes("STUDENT", true),
+    authorTakeHomeQuizzes: () => can.authorTakeHomeQuizzes("STUDENT", true),
+    viewLearningResources: () => can.viewLearningResources("STUDENT", true),
+    authorLearningResources: () => can.authorLearningResources("STUDENT", true),
+    authorLearningMedia: () => can.authorLearningMedia("STUDENT", true, true),
+    moderateLearningComments: () => can.moderateLearningComments("STUDENT", true),
+    viewLearningCompletions: () => can.viewLearningCompletions("STUDENT", true),
+    publishTakeHomeQuizResults: () => can.publishTakeHomeQuizResults("STUDENT", true),
+    adjustTakeHomeQuizScore: () => can.adjustTakeHomeQuizScore("STUDENT", true),
+    viewWardTakeHomeQuizzes: () => can.viewWardTakeHomeQuizzes("STUDENT", true),
+    manageSupportContact: () => can.manageSupportContact("STUDENT"),
+    viewSupportContact: () => can.viewSupportContact("STUDENT"),
+    manageAiSettings: () => can.manageAiSettings("STUDENT"),
+    viewBilling: () => can.viewBilling("STUDENT", true),
+    manageFees: () => can.manageFees("STUDENT", true),
+    manageFeePrices: () => can.manageFeePrices("STUDENT", true),
+    manageTransport: () => can.manageTransport("STUDENT", true),
+    manageAdvanceBills: () => can.manageAdvanceBills("STUDENT", true),
+    manageBillingSettings: () => can.manageBillingSettings("STUDENT", true),
+    publishBills: () => can.publishBills("STUDENT", true),
+    editStudentBills: () => can.editStudentBills("STUDENT", true),
+    viewWardBills: () => can.viewWardBills("STUDENT", true),
+    viewInventory: () => can.viewInventory("STUDENT"),
+    manageInventoryCatalogue: () => can.manageInventoryCatalogue("STUDENT"),
+    manageInventoryStock: () => can.manageInventoryStock("STUDENT"),
+    manageRequisitions: () => can.manageRequisitions("STUDENT"),
+    reviewRequisitions: () => can.reviewRequisitions("STUDENT"),
+  };
+
+  it.each(Object.entries(staffAndGuardianChecks))("%s is false for STUDENT", (_name, check) => {
+    expect(check()).toBe(false);
   });
 });

@@ -5,7 +5,7 @@ import { type StoredFileView } from "@/api/files";
 export interface PastedImageUploadOptions {
   /** Uploads one image file, returning the stored `fileId` - `api/files.ts#uploadFile` in every real caller. */
   uploadFile: (file: File) => Promise<StoredFileView>;
-  /** A single file over this size is dropped rather than uploaded - mirrors `MAX_UPLOAD_BYTES`. */
+  /** A single file over this size is dropped rather than uploaded - mirrors `MAX_IMAGE_UPLOAD_BYTES`. */
   maxUploadBytes: number;
   /** The note's total image budget across every paste and every image-button insert combined - mirrors `LessonNoteRichText.MAX_IMAGES_PER_NOTE`; the server enforces the real limit regardless. */
   maxImages: () => number;

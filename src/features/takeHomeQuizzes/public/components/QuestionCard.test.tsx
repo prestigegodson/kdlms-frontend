@@ -5,6 +5,11 @@ import { QuestionCard } from "@/features/takeHomeQuizzes/public/components/Quest
 
 const onChange = vi.fn();
 
+/** Mirrors the public transport's own renderImage - see TakeHomeQuizPublicPage. */
+function renderImage(fileId: string, alt: string) {
+  return <img src={`/api/v1/public/take-home-quiz/tok123/images/${fileId}`} alt={alt} />;
+}
+
 function questionWithOptions(options: PublicQuestionView["options"]): PublicQuestionView {
   return {
     id: "q1",
@@ -17,14 +22,20 @@ function questionWithOptions(options: PublicQuestionView["options"]): PublicQues
 }
 
 describe("QuestionCard", () => {
-  it("renders an option's embedded image via the public per-token image endpoint (Phase 20J)", () => {
+  it("renders an option's embedded image via the transport-supplied renderImage callback (Phase 35I)", () => {
     const question = questionWithOptions([
       { id: "opt-a", position: 1, label: '<img data-file-id="11111111-1111-1111-1111-111111111111" alt="triangle">' },
       { id: "opt-b", position: 2, label: '<img data-file-id="22222222-2222-2222-2222-222222222222" alt="square">' },
     ]);
 
     render(
-      <QuestionCard token="tok123" question={question} answer={undefined} answered={false} onChange={onChange} />,
+      <QuestionCard
+        question={question}
+        answer={undefined}
+        answered={false}
+        onChange={onChange}
+        renderImage={renderImage}
+      />,
     );
 
     const image = screen.getByAltText("triangle") as HTMLImageElement;
@@ -38,7 +49,13 @@ describe("QuestionCard", () => {
     ]);
 
     render(
-      <QuestionCard token="tok123" question={question} answer={undefined} answered={false} onChange={onChange} />,
+      <QuestionCard
+        question={question}
+        answer={undefined}
+        answered={false}
+        onChange={onChange}
+        renderImage={renderImage}
+      />,
     );
 
     expect(screen.getByRole("radio", { name: "Option 1" })).toBeInTheDocument();

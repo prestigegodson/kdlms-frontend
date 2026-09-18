@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { routes } from "@/routes";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import { resetFeatureStore } from "@/stores/featureStore";
+import { resetStudentStore } from "@/stores/studentStore";
 import { resetTeacherScopeStore } from "@/stores/teacherScopeStore";
 import { resetWardStore } from "@/stores/wardStore";
 
@@ -18,6 +19,7 @@ describe("router", () => {
     resetAuthStore();
     resetTeacherScopeStore();
     resetWardStore();
+    resetStudentStore();
     vi.stubGlobal(
       "fetch",
       vi.fn((url: string) => {
@@ -308,6 +310,107 @@ describe("router", () => {
       // (the tab bar's four-destination cap is already spent on My Wards/Results/Attendance/
       // Messages - see GuardianLayout.tsx).
       await waitFor(() => expect(screen.getAllByText("Bills")).toHaveLength(1));
+    });
+  });
+
+  describe("as a STUDENT", () => {
+    beforeEach(() => {
+      useAuthStore.setState({
+        user: {
+          id: "student-1",
+          email: "grace-kdl24001",
+          firstName: "Grace",
+          lastName: "Ward",
+          role: "STUDENT",
+          schoolId: "school-1",
+          branchId: "branch-1",
+        },
+        accessToken: "access",
+        refreshToken: "refresh",
+      });
+      // The generic catch-all stub returns a Page-shaped body, but
+      // GET /api/v1/me/student and /api/v1/me/terms return their own bare shapes -
+      // override both so StudentDashboardPage doesn't crash rendering them.
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((url: string) => {
+          if (url.includes("/api/v1/me/student")) {
+            return Promise.resolve({
+              ok: true,
+              status: 200,
+              json: () =>
+                Promise.resolve({
+                  studentId: "student-1",
+                  fullName: "Grace Ward",
+                  admissionNumber: "KDL/24/001",
+                  gender: "FEMALE",
+                  hasPhoto: false,
+                  classId: "class-1",
+                  className: "Primary 1",
+                  levelName: "Primary",
+                  sessionId: "session-1",
+                  sessionName: "2026/2027",
+                  currentTermId: "term-1",
+                  currentTermName: "First Term",
+                  branchId: "branch-1",
+                  schoolId: "school-1",
+                  schoolName: "Portal School",
+                }),
+            });
+          }
+          if (url.includes("/api/v1/me/terms")) {
+            return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
+          }
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 }),
+          });
+        }),
+      );
+    });
+
+    it("shows the student nav and lands on Home", async () => {
+      renderAt("/student");
+
+      expect(await screen.findByRole("heading", { name: "Home" })).toBeInTheDocument();
+      expect(await screen.findByText("Grace Ward")).toBeInTheDocument();
+      // Two occurrences each: the sidebar/drawer link and MobileTabBar's own copy - Home/Results
+      // are always tab-primary (see StudentLayout.tsx).
+      expect(screen.getAllByText("Results")).toHaveLength(2);
+    });
+
+    it("is redirected away from /school to its own portal home", async () => {
+      renderAt("/school");
+
+      expect(await screen.findByRole("heading", { name: "Home" })).toBeInTheDocument();
+    });
+
+    it("is redirected away from /guardian to its own portal home", async () => {
+      renderAt("/guardian");
+
+      expect(await screen.findByRole("heading", { name: "Home" })).toBeInTheDocument();
+    });
+
+    it("sends a still-flagged student to /set-password, not the student portal", async () => {
+      useAuthStore.setState({
+        user: {
+          id: "student-1",
+          email: "grace-kdl24001",
+          firstName: "Grace",
+          lastName: "Ward",
+          role: "STUDENT",
+          schoolId: "school-1",
+          branchId: "branch-1",
+          mustChangePassword: true,
+        },
+        accessToken: "access",
+        refreshToken: "refresh",
+      });
+
+      renderAt("/student");
+
+      expect(await screen.findByRole("heading", { name: "Set your password" })).toBeInTheDocument();
     });
   });
 });

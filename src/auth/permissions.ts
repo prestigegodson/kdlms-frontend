@@ -133,6 +133,24 @@ export const can = {
   },
 
   /**
+   * Provision/reset/revoke a student's portal login, individually or in bulk for a whole
+   * class - SCHOOL_ADMIN, BRANCH_ADMIN, and a TEACHER who class-teaches at least one class
+   * (the `manageStudentSubjects` scoping; a subject-teacher-only account gets nothing). Gated
+   * on the school's Student logins entitlement, the same full-lockout shape
+   * Messages/Timetable/Lesson notes use. The real per-student/per-class scoping is still
+   * enforced server-side - this only gates whether the UI offers the control at all.
+   */
+  manageStudentLogins(role: Role | undefined, scope: TeacherScope | null, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    if (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN") {
+      return true;
+    }
+    return role === "TEACHER" && (scope?.isClassTeacher ?? false);
+  },
+
+  /**
    * The school dashboard's upcoming-birthdays card - admins school/branch-wide,
    * a TEACHER only if they class-teach at least one class (mirrors
    * `markAttendance`'s scoping; a subject-teacher-only account gets nothing).
@@ -453,6 +471,70 @@ export const can = {
   },
 
   /**
+   * Seeing the learning-resource list / an individual resource - staff (admins) or a TEACHER
+   * assigned (class-teach or subject-teach) to that resource's class, the backend
+   * `LearningResourceAccessGuard.requireVisible` union - the `viewTakeHomeQuizzes` shape. Gated on
+   * the school's On-demand learning entitlement, the same full-lockout shape
+   * Messages/Timetable/Lesson notes/Take-home quizzes use.
+   */
+  viewLearningResources(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER";
+  },
+
+  /**
+   * Authoring/editing/publishing a learning resource - same role set as `viewLearningResources`
+   * (the narrower subject-teach-only-their-own-subject rule is server data the frontend can't
+   * evaluate, so this only gates route/nav visibility; the actual save is additionally enforced
+   * server-side by `LearningResourceAccessGuard.requireAuthorable`).
+   */
+  authorLearningResources(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER";
+  },
+
+  /**
+   * Authoring an `AUDIO`/`VIDEO` learning resource specifically (Phase 35F) - a second,
+   * independent flag (`learningMedia`) layered on top of `onDemandLearning`/`authorLearningResources`,
+   * so both must hold. The first `can.*` predicate in this file to take two feature flags.
+   */
+  authorLearningMedia(role: Role | undefined, onDemandLearning: boolean, learningMedia: boolean): boolean {
+    return can.authorLearningResources(role, onDemandLearning) && learningMedia;
+  },
+
+  /**
+   * Posting into a learning resource's class-wide discussion (Phase 35G) - STUDENT only, the
+   * only posting path this phase; a teacher/admin moderates instead (`moderateLearningComments`
+   * below). Per-comment `canEdit` still comes from the server, never re-derived here - this only
+   * gates whether the composer itself is reachable.
+   */
+  postLearningComments(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && role === "STUDENT";
+  },
+
+  /**
+   * Hiding/unhiding/deleting a comment, or toggling a resource's `comments_enabled` switch - the
+   * same role set as `authorLearningResources`, since moderation is a resource-authoring-adjacent
+   * capability, not a separate one.
+   */
+  moderateLearningComments(role: Role | undefined, entitled: boolean): boolean {
+    return can.authorLearningResources(role, entitled);
+  },
+
+  /**
+   * Seeing a resource's per-student completion roster (Phase 35H) - the same role set as
+   * `authorLearningResources`/`moderateLearningComments`, since it's an authoring-adjacent read
+   * rather than a separate capability.
+   */
+  viewLearningCompletions(role: Role | undefined, entitled: boolean): boolean {
+    return can.authorLearningResources(role, entitled);
+  },
+
+  /**
    * Publishing/unpublishing a quiz's results - same role set as `authorTakeHomeQuizzes`, per the
    * permissions matrix in quiz-module.md (publish/unpublish rows).
    */
@@ -666,5 +748,49 @@ export const can = {
    */
   reviewRequisitions(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /**
+   * Whether the calling STUDENT may reach the student portal at all - the `viewWards` shape for
+   * the fourth portal (Phase 35C). Ungated on any subscription flag here, matching
+   * `StudentLayout`'s route guard: `SubscriptionFeature.STUDENT_LOGINS` is enforced server-side,
+   * inside `shared.application.port.out.StudentIdentity#resolve` (see CLAUDE.md's Domain Rules),
+   * not client-side by this predicate - a downgraded school's student still lands on `/student`
+   * and sees a 403 from the API, not a route bounce.
+   */
+  viewStudentPortal(role: Role | undefined): boolean {
+    return role === "STUDENT";
+  },
+
+  /** The student portal's own Results tab - the `viewWards` shape, ungated for the same reason `viewStudentPortal` is. */
+  viewStudentResults(role: Role | undefined): boolean {
+    return role === "STUDENT";
+  },
+
+  /**
+   * The student portal's own Timetable tab - gated on the school's Timetables package
+   * entitlement, the `viewWardBills`/`viewTimetable` shape.
+   */
+  viewStudentTimetable(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && role === "STUDENT";
+  },
+
+  /**
+   * The student portal's own Resources tab (Phase 35E) - gated on the school's On-demand learning
+   * entitlement, the `viewStudentTimetable` shape.
+   */
+  viewStudentResources(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && role === "STUDENT";
+  },
+
+  /**
+   * The student portal's own Quizzes tab (Phase 35I.3) - gated on the school's Take-home quizzes
+   * entitlement, the `viewStudentTimetable`/`viewStudentResources` shape. A separate predicate
+   * from `viewTakeHomeQuizzes` (staff) and `viewWardTakeHomeQuizzes` (guardian) - the
+   * `viewWardTakeHomeQuizzes` convention: the backend path is entirely different per role, so each
+   * gets its own predicate rather than widening one to admit every role.
+   */
+  viewStudentQuizzes(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && role === "STUDENT";
   },
 };

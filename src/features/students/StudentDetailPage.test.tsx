@@ -20,6 +20,7 @@ import type {
 import { StudentDetailPage } from "@/features/students/StudentDetailPage";
 import { resetAppBarStore, useAppBarStore } from "@/stores/appBarStore";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetFeatureStore, useFeatureStore } from "@/stores/featureStore";
 
 vi.mock("@/api/students", async () => {
   const actual = await vi.importActual<typeof import("@/api/students")>("@/api/students");
@@ -35,6 +36,10 @@ vi.mock("@/api/students", async () => {
     getStudentSubjects: vi.fn(),
     replaceStudentSubjects: vi.fn(),
     updateStudentPhoto: vi.fn(),
+    getStudentCredentials: vi.fn(),
+    provisionStudentCredentials: vi.fn(),
+    resetStudentCredentials: vi.fn(),
+    revokeStudentCredentials: vi.fn(),
   };
 });
 
@@ -164,6 +169,7 @@ describe("StudentDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetAppBarStore();
+    resetFeatureStore();
     vi.mocked(sessionsApi.listSessions).mockResolvedValue({
       content: [SESSION_VIEW],
       totalElements: 1,
@@ -425,5 +431,86 @@ describe("StudentDetailPage", () => {
     expect(await screen.findByText("Chidi Obi")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByText("Failed to link guardian")).not.toBeInTheDocument();
+  });
+
+  describe("portal access card", () => {
+    it("is hidden when the school isn't entitled to student logins", async () => {
+      vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+      vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+      vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+      useFeatureStore.setState({ studentLogins: false, status: "loaded" });
+
+      renderAsSchoolAdmin();
+      await screen.findByRole("heading", { name: "Ada Obi" });
+
+      expect(screen.queryByText("Portal access")).not.toBeInTheDocument();
+      expect(studentsApi.getStudentCredentials).not.toHaveBeenCalled();
+    });
+
+    it("shows no-login state and provisions a login, revealing the temporary password", async () => {
+      vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+      vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+      vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+      vi.mocked(studentsApi.getStudentCredentials).mockResolvedValue({
+        studentId: "student-1",
+        studentName: "Ada Obi",
+        active: false,
+        mustChangePassword: false,
+      });
+      vi.mocked(studentsApi.provisionStudentCredentials).mockResolvedValue({
+        studentId: "student-1",
+        studentName: "Ada Obi",
+        loginId: "ada-bfa20260001",
+        active: true,
+        mustChangePassword: true,
+        temporaryPassword: "Temp1234Pass",
+      });
+      useFeatureStore.setState({ studentLogins: true, status: "loaded" });
+      const user = userEvent.setup();
+
+      renderAsSchoolAdmin();
+      await screen.findByRole("heading", { name: "Ada Obi" });
+      expect(await screen.findByText("No portal login")).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Provision login" }));
+
+      expect(await screen.findByText("ada-bfa20260001")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: /show credentials/i }));
+      expect(await screen.findByText("Temp1234Pass")).toBeInTheDocument();
+    });
+
+    it("revokes a login after confirmation", async () => {
+      vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+      vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+      vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+      vi.mocked(studentsApi.getStudentCredentials)
+        .mockResolvedValueOnce({
+          studentId: "student-1",
+          studentName: "Ada Obi",
+          loginId: "ada-bfa20260001",
+          active: true,
+          mustChangePassword: true,
+        })
+        .mockResolvedValueOnce({
+          studentId: "student-1",
+          studentName: "Ada Obi",
+          active: false,
+          mustChangePassword: false,
+        });
+      vi.mocked(studentsApi.revokeStudentCredentials).mockResolvedValue(undefined);
+      useFeatureStore.setState({ studentLogins: true, status: "loaded" });
+      const user = userEvent.setup();
+
+      renderAsSchoolAdmin();
+      await screen.findByRole("heading", { name: "Ada Obi" });
+      await screen.findByText("ada-bfa20260001");
+
+      await user.click(screen.getByRole("button", { name: "Revoke" }));
+      const dialog = await screen.findByRole("dialog");
+      await user.click(within(dialog).getByRole("button", { name: "Revoke" }));
+
+      expect(studentsApi.revokeStudentCredentials).toHaveBeenCalledWith("student-1");
+      expect(await screen.findByText("No portal login")).toBeInTheDocument();
+    });
   });
 });

@@ -15,6 +15,7 @@ import {
   BookOpen,
   ListChecks,
   MessageSquare,
+  MonitorPlay,
   NotebookPen,
   Package,
   Receipt,
@@ -154,6 +155,19 @@ const NAV_ITEMS: NavItem[] = [
       const role = useAuthStore.getState().user?.role;
       const entitled = useFeatureStore.getState().takeHomeQuiz;
       return can.viewTakeHomeQuizzes(role, entitled);
+    },
+  },
+  {
+    label: "Learning resources",
+    href: "/school/learning-resources",
+    icon: MonitorPlay,
+    group: "Academics",
+    // See auth/permissions.ts's viewLearningResources, the single source of truth - admins (any
+    // class) or a TEACHER assigned (class-teach or subject-teach) to at least one class.
+    visible: () => {
+      const role = useAuthStore.getState().user?.role;
+      const entitled = useFeatureStore.getState().onDemandLearning;
+      return can.viewLearningResources(role, entitled);
     },
   },
   {
@@ -353,6 +367,7 @@ export function SchoolLayout() {
   useFeatureStore((state) => state.timetable);
   useFeatureStore((state) => state.lessonNotes);
   useFeatureStore((state) => state.takeHomeQuiz);
+  useFeatureStore((state) => state.onDemandLearning);
   useFeatureStore((state) => state.billing);
   useUnreadMessagesStore((state) => state.count);
   usePendingLessonNotesStore((state) => state.count);

@@ -38,6 +38,8 @@ import { WardTermResultPage } from "@/features/guardian/WardTermResultPage";
 import { WardTimetablePage } from "@/features/guardian/WardTimetablePage";
 import { WardsPage } from "@/features/guardian/WardsPage";
 import { GuardiansPage } from "@/features/guardians/GuardiansPage";
+import { LearningResourcePreviewPage } from "@/features/learning/LearningResourcePreviewPage";
+import { LearningResourcesPage } from "@/features/learning/LearningResourcesPage";
 import { LessonNotesPage } from "@/features/lessonNotes/LessonNotesPage";
 import { PackagesPage } from "@/features/packages/PackagesPage";
 import { ReportSettingsPage } from "@/features/reporting/ReportSettingsPage";
@@ -47,6 +49,14 @@ import { SchoolProfilePage } from "@/features/school/SchoolProfilePage";
 import { SchoolSettingsPage } from "@/features/school/SchoolSettingsPage";
 import { SchoolDetailPage } from "@/features/schools/SchoolDetailPage";
 import { SchoolsPage } from "@/features/schools/SchoolsPage";
+import { StudentDashboardPage } from "@/features/student/StudentDashboardPage";
+import { StudentQuizPage } from "@/features/student/StudentQuizPage";
+import { StudentQuizzesPage } from "@/features/student/StudentQuizzesPage";
+import { StudentResourceDetailPage } from "@/features/student/StudentResourceDetailPage";
+import { StudentResourcesPage } from "@/features/student/StudentResourcesPage";
+import { StudentResultsPage } from "@/features/student/StudentResultsPage";
+import { StudentTermResultPage } from "@/features/student/StudentTermResultPage";
+import { StudentTimetablePage } from "@/features/student/StudentTimetablePage";
 import { PromotionPage } from "@/features/students/PromotionPage";
 import { StudentDetailPage } from "@/features/students/StudentDetailPage";
 import { StudentResultHistoryPage } from "@/features/students/StudentResultHistoryPage";
@@ -61,6 +71,7 @@ import { TimetablePage } from "@/features/timetable/TimetablePage";
 import { GuardianLayout } from "@/layouts/GuardianLayout";
 import { RootLayout } from "@/layouts/RootLayout";
 import { SchoolLayout } from "@/layouts/SchoolLayout";
+import { StudentLayout } from "@/layouts/StudentLayout";
 import { SystemAdminLayout } from "@/layouts/SystemAdminLayout";
 import { BillingRoute } from "@/routes/BillingRoute";
 import { HomeRedirect } from "@/routes/HomeRedirect";
@@ -207,6 +218,8 @@ export const routes: RouteObject[] = [
           { path: "take-home-quizzes", element: <TakeHomeQuizzesPage /> },
           { path: "take-home-quizzes/:quizId", element: <TakeHomeQuizEditorRoute /> },
           { path: "take-home-quizzes/:quizId/results", element: <TakeHomeQuizResultsRoute /> },
+          { path: "learning-resources", element: <LearningResourcesPage /> },
+          { path: "learning-resources/:resourceId", element: <LearningResourcePreviewPage /> },
           {
             path: "students",
             element: (
@@ -338,6 +351,24 @@ export const routes: RouteObject[] = [
           { path: "take-home-quizzes", element: <WardTakeHomeQuizzesPage /> },
           { path: "bills", element: <WardBillsPage /> },
           { path: "settings", element: <NotificationSettingsPage /> },
+        ],
+      },
+      {
+        path: "student",
+        element: (
+          <RequireRole roles={["STUDENT"]}>
+            <StudentLayout />
+          </RequireRole>
+        ),
+        children: [
+          { index: true, element: <StudentDashboardPage /> },
+          { path: "results", element: <StudentResultsPage /> },
+          { path: "results/:sessionId/:termId", element: <StudentTermResultPage /> },
+          { path: "resources", element: <StudentResourcesPage /> },
+          { path: "resources/:resourceId", element: <StudentResourceDetailPage /> },
+          { path: "quizzes", element: <StudentQuizzesPage /> },
+          { path: "quizzes/:quizId", element: <StudentQuizPage /> },
+          { path: "timetable", element: <StudentTimetablePage /> },
         ],
       },
       { path: "*", element: <NotFoundPage /> },

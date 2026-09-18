@@ -10,11 +10,26 @@ interface FeatureState {
   aiLessonNotes: boolean;
   takeHomeQuiz: boolean;
   billing: boolean;
+  onDemandLearning: boolean;
+  learningMedia: boolean;
+  studentLogins: boolean;
   status: FetchStatus;
   /** Fetches once per session; a repeat call while loaded/loading is a no-op. */
   fetchIfNeeded: () => Promise<void>;
   reset: () => void;
 }
+
+const UNFETCHED_FLAGS = {
+  communication: false,
+  timetable: false,
+  lessonNotes: false,
+  aiLessonNotes: false,
+  takeHomeQuiz: false,
+  billing: false,
+  onDemandLearning: false,
+  learningMedia: false,
+  studentLogins: false,
+} as const;
 
 /**
  * Caches the calling user's own school's gated feature flags
@@ -26,12 +41,7 @@ interface FeatureState {
  * different session in the same tab never inherits a stale answer.
  */
 export const useFeatureStore = create<FeatureState>((set, get) => ({
-  communication: false,
-  timetable: false,
-  lessonNotes: false,
-  aiLessonNotes: false,
-  takeHomeQuiz: false,
-  billing: false,
+  ...UNFETCHED_FLAGS,
   status: "idle",
 
   fetchIfNeeded: async () => {
@@ -48,42 +58,20 @@ export const useFeatureStore = create<FeatureState>((set, get) => ({
         aiLessonNotes: features.aiLessonNotes,
         takeHomeQuiz: features.takeHomeQuiz,
         billing: features.billing,
+        onDemandLearning: features.onDemandLearning,
+        learningMedia: features.learningMedia,
+        studentLogins: features.studentLogins,
         status: "loaded",
       });
     } catch {
-      set({
-        communication: false,
-        timetable: false,
-        lessonNotes: false,
-        aiLessonNotes: false,
-        takeHomeQuiz: false,
-        billing: false,
-        status: "error",
-      });
+      set({ ...UNFETCHED_FLAGS, status: "error" });
     }
   },
 
-  reset: () =>
-    set({
-      communication: false,
-      timetable: false,
-      lessonNotes: false,
-      aiLessonNotes: false,
-      takeHomeQuiz: false,
-      billing: false,
-      status: "idle",
-    }),
+  reset: () => set({ ...UNFETCHED_FLAGS, status: "idle" }),
 }));
 
 /** Test helper: resets the store to its initial (unfetched) state - mirrors stores/teacherScopeStore.ts's resetTeacherScopeStore(). */
 export function resetFeatureStore(): void {
-  useFeatureStore.setState({
-    communication: false,
-    timetable: false,
-    lessonNotes: false,
-    aiLessonNotes: false,
-    takeHomeQuiz: false,
-    billing: false,
-    status: "idle",
-  });
+  useFeatureStore.setState({ ...UNFETCHED_FLAGS, status: "idle" });
 }

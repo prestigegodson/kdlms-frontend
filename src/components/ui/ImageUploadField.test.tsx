@@ -11,7 +11,7 @@ vi.mock("@/api/files", async () => {
 
 function oversizeFile(): File {
   const file = new File(["fake-bytes"], "big.png", { type: "image/png" });
-  Object.defineProperty(file, "size", { value: filesApi.MAX_UPLOAD_BYTES + 1 });
+  Object.defineProperty(file, "size", { value: filesApi.MAX_IMAGE_UPLOAD_BYTES + 1 });
   return file;
 }
 

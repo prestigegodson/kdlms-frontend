@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as authApi from "@/api/auth";
 import { apiFetch } from "@/api/client";
 import { initAuth, resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { useStudentStore } from "@/stores/studentStore";
 
 vi.mock("@/api/auth");
 
@@ -75,6 +76,30 @@ describe("authStore", () => {
 
     expect(ok).toBe(false);
     expect(authApi.refresh).not.toHaveBeenCalled();
+  });
+
+  it("logout resets the student store, so a different session in the same tab never inherits a stale profile", () => {
+    vi.mocked(authApi.logout).mockResolvedValue(undefined);
+    useAuthStore.setState({ user: { ...USER, role: "STUDENT" }, accessToken: "access", refreshToken: "refresh" });
+    useStudentStore.setState({
+      me: {
+        studentId: "s1",
+        fullName: "Grace Ward",
+        admissionNumber: "KDL/24/001",
+        gender: "FEMALE",
+        hasPhoto: false,
+        branchId: "b1",
+        schoolId: "sch1",
+        schoolName: "Portal School",
+      },
+      status: "loaded",
+    });
+
+    useAuthStore.getState().logout();
+
+    expect(useAuthStore.getState().user).toBeNull();
+    expect(useStudentStore.getState().me).toBeNull();
+    expect(useStudentStore.getState().status).toBe("idle");
   });
 
   describe("apiFetch integration (single-flight refresh)", () => {

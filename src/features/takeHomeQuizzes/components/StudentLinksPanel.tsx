@@ -5,6 +5,8 @@ import {
   getTakeHomeQuizLinks,
   issueMissingTakeHomeQuizLinks,
   reissueTakeHomeQuizLink,
+  revokeSupersededTakeHomeQuizLinks,
+  type RevokeSupersededLinksOutcome,
   type StudentLinkView,
 } from "@/api/takeHomeQuizzes";
 import { Alert } from "@/components/ui/Alert";
@@ -12,7 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { downloadBlob } from "@/utils/download";
-import { Copy, Download } from "lucide-react";
+import { Copy, Download, ShieldOff } from "lucide-react";
 
 interface StudentLinksPanelProps {
   quizId: string;
@@ -36,6 +38,8 @@ export function StudentLinksPanel({ quizId, refreshToken }: StudentLinksPanelPro
   const [downloading, setDownloading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const [confirmingRevoke, setConfirmingRevoke] = useState(false);
+  const [revokeOutcome, setRevokeOutcome] = useState<RevokeSupersededLinksOutcome | null>(null);
 
   const load = useCallback(() => {
     getTakeHomeQuizLinks(quizId)
@@ -96,6 +100,13 @@ export function StudentLinksPanel({ quizId, refreshToken }: StudentLinksPanelPro
     }
   }
 
+  async function revokeSuperseded() {
+    const outcome = await revokeSupersededTakeHomeQuizLinks(quizId);
+    setRevokeOutcome(outcome);
+    setConfirmingRevoke(false);
+    setReloadToken((token) => token + 1);
+  }
+
   if (error) {
     return <Alert variant="error">{error}</Alert>;
   }
@@ -103,23 +114,43 @@ export function StudentLinksPanel({ quizId, refreshToken }: StudentLinksPanelPro
     return null;
   }
 
-  const missingCount = links.filter((link) => !link.url).length;
+  // A portalStudent row is never "missing a link" - it takes the quiz signed in, not via a link
+  // (Phase 35I.1), so it must not trip the Issue-links warning below.
+  const missingCount = links.filter((link) => !link.url && !link.portalStudent).length;
+  // The catch-up sweep for StudentLoginProvisionedEvent's automatic listener (Phase 35I.4) - a
+  // portal student who still holds a live link, minted before the listener ran or before they had
+  // a login at all.
+  const revokeCount = links.filter((link) => link.portalStudent && link.url).length;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-display text-lg font-medium text-slate-900">Student links</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button type="button" variant="secondary" size="sm" onClick={copyAll}>
             <Copy className="h-4 w-4" aria-hidden="true" /> Copy all
           </Button>
           <Button type="button" variant="secondary" size="sm" loading={downloading} onClick={download}>
             <Download className="h-4 w-4" aria-hidden="true" /> Download CSV
           </Button>
+          {revokeCount > 0 && (
+            <Button type="button" variant="secondary" size="sm" onClick={() => setConfirmingRevoke(true)}>
+              <ShieldOff className="h-4 w-4" aria-hidden="true" /> Revoke superseded links ({revokeCount})
+            </Button>
+          )}
         </div>
       </div>
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
+
+      {revokeOutcome && (
+        <Alert variant="info">
+          Revoked {revokeOutcome.revoked} link{revokeOutcome.revoked === 1 ? "" : "s"}
+          {revokeOutcome.skippedInProgress > 0
+            ? ` - left ${revokeOutcome.skippedInProgress} untouched (already in progress).`
+            : "."}
+        </Alert>
+      )}
 
       {missingCount > 0 && (
         <Alert variant="warning">
@@ -152,6 +183,8 @@ export function StudentLinksPanel({ quizId, refreshToken }: StudentLinksPanelPro
               <TableCell label="Link">
                 {link.url ? (
                   <span className="text-slate-500">Issued</span>
+                ) : link.portalStudent ? (
+                  <span className="text-slate-400">Available in the student portal</span>
                 ) : (
                   <span className="text-slate-400">No link yet</span>
                 )}
@@ -182,6 +215,16 @@ export function StudentLinksPanel({ quizId, refreshToken }: StudentLinksPanelPro
           confirmLabel="Reissue"
           onConfirm={handleReissue}
           onClose={() => setReissueTarget(null)}
+        />
+      )}
+
+      {confirmingRevoke && (
+        <ConfirmDialog
+          title="Revoke superseded links?"
+          message={`${revokeCount} student${revokeCount === 1 ? "" : "s"} now sign${revokeCount === 1 ? "s" : ""} in to the student portal but still ${revokeCount === 1 ? "holds" : "hold"} a link for this quiz. Revoking leaves every other student untouched, and skips anyone with an attempt already in progress.`}
+          confirmLabel="Revoke"
+          onConfirm={revokeSuperseded}
+          onClose={() => setConfirmingRevoke(false)}
         />
       )}
     </div>

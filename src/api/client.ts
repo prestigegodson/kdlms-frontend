@@ -168,6 +168,51 @@ export async function apiFetchBlob(path: string, options: RequestOptions = {}): 
   return response.blob();
 }
 
+/** A download's progress so far - `totalBytes` is `null` until the response declares a `Content-Length`. */
+export interface DownloadProgress {
+  loadedBytes: number;
+  totalBytes: number | null;
+}
+
+/**
+ * Like {@link apiFetchBlob}, but reports download progress via `onProgress` as chunks arrive -
+ * for a large mp3/mp4 learning resource (Phase 35F) whose player wants a determinate progress bar
+ * rather than an indeterminate spinner for the whole transfer. Falls back to a single, non-
+ * reporting `response.blob()` when the runtime exposes no readable stream body (jsdom in tests,
+ * or an older browser) - the caller still gets a `Blob` either way, just with no progress calls.
+ */
+export async function apiFetchBlobWithProgress(
+  path: string,
+  onProgress: (progress: DownloadProgress) => void,
+  options: RequestOptions = {},
+): Promise<Blob> {
+  const response = await fetchWithAuth(path, withDefaultAccept(options, "*/*"));
+  const contentType = response.headers.get("Content-Type") ?? "application/octet-stream";
+  const contentLengthHeader = response.headers.get("Content-Length");
+  const totalBytes = contentLengthHeader ? Number(contentLengthHeader) : null;
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    return response.blob();
+  }
+
+  const chunks: Uint8Array[] = [];
+  let loadedBytes = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    chunks.push(value);
+    loadedBytes += value.byteLength;
+    onProgress({ loadedBytes, totalBytes });
+  }
+  // Cast needed because `reader.read()`'s `Uint8Array<ArrayBufferLike>` isn't assignable to
+  // `BlobPart`'s stricter `ArrayBufferView<ArrayBuffer>` under the current TS DOM lib - the
+  // runtime value is always a real, non-shared `ArrayBuffer`-backed view.
+  return new Blob(chunks as BlobPart[], { type: contentType });
+}
+
 /**
  * Like {@link apiFetch}, but for a plain-text/HTML response (a template/report
  * preview) rather than JSON. Also accepts `application/problem+json` - the

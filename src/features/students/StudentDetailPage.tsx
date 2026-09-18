@@ -14,14 +14,19 @@ import { listSessions, type AcademicSessionView } from "@/api/sessions";
 import {
   type EnrollmentView,
   getStudent,
+  getStudentCredentials,
   getStudentMedical,
   getStudentSubjects,
   graduateStudent,
   listStudentEnrollments,
   listStudentGuardians,
+  provisionStudentCredentials,
   reinstateStudent,
   replaceStudentSubjects,
+  resetStudentCredentials,
+  revokeStudentCredentials,
   type StudentGuardianView,
+  type StudentLoginView,
   type StudentMedicalView,
   type StudentSubjectsView,
   transferStudentClass,
@@ -62,6 +67,8 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { useAuthStore } from "@/stores/authStore";
+import { useFeatureStore } from "@/stores/featureStore";
+import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 import { formatLongDate, todayIso } from "@/utils/date";
 
 type LoadState =
@@ -76,6 +83,9 @@ export function StudentDetailPage() {
   const { studentId } = useParams<{ studentId: string }>();
   const role = useAuthStore((state) => state.user?.role);
   const canManage = can.manageStudents(role);
+  const teacherCapabilities = useTeacherScopeStore((state) => state.capabilities);
+  const studentLoginsEntitled = useFeatureStore((state) => state.studentLogins);
+  const canManageLogins = can.manageStudentLogins(role, teacherCapabilities, studentLoginsEntitled);
 
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [actionError, setActionError] = useState<string | null>(null);
@@ -256,6 +266,10 @@ export function StudentDetailPage() {
       <MedicalCard studentId={student.id} canManage={canManage} onActionError={setActionError} />
 
       <SubjectsCard student={student} canManage={canManage} onActionError={setActionError} />
+
+      {studentLoginsEntitled && canManageLogins && (
+        <PortalAccessCard studentId={student.id} onActionError={setActionError} />
+      )}
 
       <StudentAttendanceCard studentId={student.id} variant="accordion" />
 
@@ -717,6 +731,145 @@ function MedicalCard({ studentId, canManage, onActionError }: MedicalCardProps) 
             setMedical(updated);
             setEditing(false);
           }}
+        />
+      )}
+    </>
+  );
+}
+
+interface PortalAccessCardProps {
+  studentId: string;
+  onActionError: (message: string) => void;
+}
+
+/**
+ * A student's portal login (Phase 35B) - status, Provision/Reset/Revoke. Rendered only for a
+ * caller who is both entitled (the school's `studentLogins` package flag) and authorized
+ * (`can.manageStudentLogins`) - the backend's own `GET` is gated by the identical
+ * `requireCredentialWritable` guard as every write here, so there is no read-only view to fall
+ * back to for a caller who fails either check.
+ */
+function PortalAccessCard({ studentId, onActionError }: PortalAccessCardProps) {
+  const [login, setLogin] = useState<StudentLoginView | null>(null);
+  const [confirmingRevoke, setConfirmingRevoke] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  function fetchCredentials() {
+    getStudentCredentials(studentId)
+      .then(setLogin)
+      .catch((error: unknown) =>
+        onActionError(error instanceof ApiError ? error.message : "Failed to load portal access"),
+      );
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- onActionError is a stable setState setter
+  useEffect(fetchCredentials, [studentId]);
+
+  async function handleProvision() {
+    setBusy(true);
+    try {
+      const result = await provisionStudentCredentials(studentId);
+      setLogin(result);
+    } catch (error) {
+      onActionError(error instanceof ApiError ? error.message : "Failed to provision a login");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleReset() {
+    setBusy(true);
+    try {
+      const result = await resetStudentCredentials(studentId);
+      setLogin(result);
+    } catch (error) {
+      onActionError(error instanceof ApiError ? error.message : "Failed to reset the password");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmRevoke() {
+    setBusy(true);
+    try {
+      await revokeStudentCredentials(studentId);
+      setConfirmingRevoke(false);
+      fetchCredentials();
+    } catch (error) {
+      onActionError(error instanceof ApiError ? error.message : "Failed to revoke the login");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <Accordion title="Portal access">
+        {login === null && (
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <Spinner /> Loading…
+          </div>
+        )}
+        {login !== null && !login.loginId && (
+          <div className="space-y-3">
+            <EmptyState
+              title="No portal login"
+              description="This student has no student-portal login yet."
+            />
+            <Button type="button" variant="secondary" disabled={busy} onClick={handleProvision}>
+              Provision login
+            </Button>
+          </div>
+        )}
+        {login !== null && login.loginId && (
+          <div className="space-y-3">
+            <dl className="grid grid-cols-1 gap-x-4 gap-y-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-slate-500">Login ID</dt>
+                <dd className="text-slate-900">
+                  <code className="rounded bg-slate-100 px-1.5 py-0.5">{login.loginId}</code>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">Status</dt>
+                <dd>
+                  <Badge variant={login.active ? "success" : "neutral"}>
+                    {login.active ? "Active" : "Disabled"}
+                  </Badge>
+                  {login.mustChangePassword && (
+                    <span className="ml-2 text-xs text-slate-500">Password change required</span>
+                  )}
+                </dd>
+              </div>
+            </dl>
+            {login.temporaryPassword && (
+              <CredentialsReveal email={login.loginId} temporaryPassword={login.temporaryPassword} />
+            )}
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" disabled={busy} onClick={handleReset}>
+                Reset password
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => setConfirmingRevoke(true)}
+              >
+                Revoke
+              </Button>
+            </div>
+          </div>
+        )}
+      </Accordion>
+
+      {confirmingRevoke && (
+        <ConfirmDialog
+          title="Revoke this student's portal login?"
+          message="Their login id is released for reuse and they will no longer be able to sign in. This can't be undone from here - provisioning again generates a new login id."
+          confirmLabel="Revoke"
+          variant="danger"
+          onConfirm={confirmRevoke}
+          onClose={() => setConfirmingRevoke(false)}
         />
       )}
     </>

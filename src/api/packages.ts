@@ -17,7 +17,7 @@ export interface PackageView {
   activeStudentLimit: number;
   /** Also actually gates the feature (Phase 20), the same hard-lockout shape `communication`/`timetable`/`lessonNotes` use - see CLAUDE.md. */
   takeHomeQuiz: boolean;
-  /** Unlike the other flags on this record, this one remains dormant - no module built behind it yet. */
+  /** Live once the `learning` module ships (Phase 35E) - the same hard-lockout shape as the other gating flags. */
   onDemandLearning: boolean;
   /** Also actually gates the feature, the same hard-lockout shape `takeHomeQuiz` uses - see CLAUDE.md. */
   communication: boolean;
@@ -34,6 +34,10 @@ export interface PackageView {
   aiGenerationLimit: number;
   /** Also actually gates the feature, the same hard-lockout shape `communication`/`timetable`/`lessonNotes` use - see CLAUDE.md. Never confuse with the SaaS operator's own billing of the school (this package's own `price`/`billingCycle`). */
   billing: boolean;
+  /** A second, independent gate layered on top of onDemandLearning for uploaded mp3/mp4 resources only - live once Phase 35F ships. */
+  learningMedia: boolean;
+  /** Entitlement for the student portal and credential provisioning - live once Phase 35B ships. */
+  studentLogins: boolean;
   status: PackageStatus;
 }
 
@@ -54,6 +58,8 @@ export interface SavePackageRequest {
   aiLessonNotes: boolean;
   aiGenerationLimit: number;
   billing: boolean;
+  learningMedia: boolean;
+  studentLogins: boolean;
 }
 
 const BASE = "/api/v1/admin/packages";

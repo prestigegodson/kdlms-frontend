@@ -1,5 +1,12 @@
 /** Mirrors backend com.kdlms.identity's role model (see CLAUDE.md). */
-export type Role = "SYSTEM_ADMIN" | "SCHOOL_ADMIN" | "BRANCH_ADMIN" | "TEACHER" | "INVENTORY_MANAGER" | "GUARDIAN";
+export type Role =
+  | "SYSTEM_ADMIN"
+  | "SCHOOL_ADMIN"
+  | "BRANCH_ADMIN"
+  | "TEACHER"
+  | "INVENTORY_MANAGER"
+  | "GUARDIAN"
+  | "STUDENT";
 
 /**
  * Mirrors backend shared.domain.ResultScope. Every API this widens defaults

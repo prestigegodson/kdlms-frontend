@@ -10,14 +10,16 @@ import type { RosterStudentView, SchoolClassView } from "@/api/classes";
 import * as levelsApi from "@/api/levels";
 import type { LevelView } from "@/api/levels";
 import * as meApi from "@/api/me";
+import * as studentsApi from "@/api/students";
+import type { StudentMedicalView } from "@/api/students";
 import * as subjectsApi from "@/api/subjects";
 import type { SubjectView } from "@/api/subjects";
-import type { StudentMedicalView } from "@/api/students";
 import * as usersApi from "@/api/users";
 import { ClassDetailPage } from "@/features/academics/ClassDetailPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetFeatureStore, useFeatureStore } from "@/stores/featureStore";
 import { resetLevelStore } from "@/stores/levelStore";
-import { resetTeacherScopeStore } from "@/stores/teacherScopeStore";
+import { resetTeacherScopeStore, useTeacherScopeStore } from "@/stores/teacherScopeStore";
 
 vi.mock("@/api/classes", async () => {
   const actual = await vi.importActual<typeof import("@/api/classes")>("@/api/classes");
@@ -61,6 +63,11 @@ vi.mock("@/api/levels", async () => {
 vi.mock("@/api/birthdays", async () => {
   const actual = await vi.importActual<typeof import("@/api/birthdays")>("@/api/birthdays");
   return { ...actual, listClassBirthdays: vi.fn() };
+});
+
+vi.mock("@/api/students", async () => {
+  const actual = await vi.importActual<typeof import("@/api/students")>("@/api/students");
+  return { ...actual, provisionClassCredentials: vi.fn() };
 });
 
 const TEACHER: UserSummary = {
@@ -425,5 +432,125 @@ describe("ClassDetailPage - upcoming birthdays", () => {
     await screen.findByText("Enrolled students (0)");
     expect(screen.queryByText("Upcoming birthdays")).not.toBeInTheDocument();
     expect(birthdaysApi.listClassBirthdays).not.toHaveBeenCalled();
+  });
+});
+
+describe("ClassDetailPage - provision portal logins", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetLevelStore();
+    resetFeatureStore();
+    vi.mocked(usersApi.listTeachers).mockResolvedValue({
+      content: [TEACHER],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 200,
+    });
+    vi.mocked(subjectsApi.listSubjects).mockResolvedValue({
+      content: [],
+      totalElements: 0,
+      totalPages: 1,
+      number: 0,
+      size: 100,
+    });
+    vi.mocked(classesApi.listSubjectTeachers).mockResolvedValue([]);
+    vi.mocked(classesApi.listClassStudents).mockResolvedValue([STUDENT_ADA, STUDENT_BOLA]);
+    vi.mocked(meApi.listRecordableSubjects).mockResolvedValue([]);
+    vi.mocked(listBranches).mockResolvedValue({ content: [], totalElements: 0, totalPages: 1, number: 0, size: 50 });
+    vi.mocked(levelsApi.listLevels).mockResolvedValue([LEVEL]);
+    vi.mocked(birthdaysApi.listClassBirthdays).mockResolvedValue([]);
+    vi.mocked(classesApi.getClass).mockResolvedValue(BASE_CLASS);
+  });
+
+  it("hides the action when the school isn't entitled to student logins", async () => {
+    useFeatureStore.setState({ studentLogins: false, status: "loaded" });
+
+    renderAsSchoolAdmin();
+
+    await screen.findByText("Little Star 1");
+    expect(screen.queryByRole("button", { name: "Provision portal logins" })).not.toBeInTheDocument();
+  });
+
+  it("provisions logins and shows a per-row outcome, including an un-emailable temporary password", async () => {
+    useFeatureStore.setState({ studentLogins: true, status: "loaded" });
+    vi.mocked(studentsApi.provisionClassCredentials).mockResolvedValue({
+      provisioned: 2,
+      guardiansNotified: 1,
+      rows: [
+        {
+          studentId: "student-1",
+          studentName: "Ada Obi",
+          loginId: "ada-bfa20260001",
+          success: true,
+          notified: true,
+        },
+        {
+          studentId: "student-2",
+          studentName: "Bola Eze",
+          loginId: "bola-bfa20260002",
+          success: true,
+          notified: false,
+          temporaryPassword: "Temp5678Pass",
+          message: "No active guardian contact - share this temporary password with the student directly.",
+        },
+      ],
+    });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Little Star 1");
+
+    await user.click(screen.getByRole("button", { name: "Provision portal logins" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Provision" }));
+
+    expect(studentsApi.provisionClassCredentials).toHaveBeenCalledWith("class-1");
+    expect(await within(dialog).findByText("Ada Obi")).toBeInTheDocument();
+    // "2" (provisioned) and "1" (guardiansNotified) each render alone in their own <span>,
+    // so an exact match uniquely finds the count without matching an ancestor's fuller text
+    // or a sibling login id/password that happens to contain the digit as a substring.
+    expect(within(dialog).getByText("2", { selector: "span" })).toBeInTheDocument();
+    expect(within(dialog).getByText("1", { selector: "span" })).toBeInTheDocument();
+    expect(within(dialog).getByText("Temp5678Pass")).toBeInTheDocument();
+  });
+
+  it("is available for the class's own class teacher", async () => {
+    useFeatureStore.setState({ studentLogins: true, status: "loaded" });
+    vi.mocked(classesApi.getClass).mockResolvedValue({
+      ...BASE_CLASS,
+      classTeacherId: "teacher-1",
+      classTeacherName: "Sonia B",
+    });
+
+    renderAsTeacher();
+    useTeacherScopeStore.setState({
+      capabilities: {
+        isClassTeacher: true,
+        classTeacherClassIds: ["class-1"],
+        subjectTeacherClassIds: [],
+      },
+      status: "loaded",
+    });
+
+    expect(await screen.findByRole("button", { name: "Provision portal logins" })).toBeInTheDocument();
+  });
+
+  it("is hidden for a subject-teacher-only TEACHER", async () => {
+    useFeatureStore.setState({ studentLogins: true, status: "loaded" });
+    vi.mocked(classesApi.getClass).mockResolvedValue({
+      ...BASE_CLASS,
+      classTeacherId: "some-other-teacher",
+      classTeacherName: "Someone Else",
+    });
+
+    renderAsTeacher();
+    useTeacherScopeStore.setState({
+      capabilities: { isClassTeacher: false, classTeacherClassIds: [], subjectTeacherClassIds: ["class-1"] },
+      status: "loaded",
+    });
+
+    await screen.findByText("Enrolled students (2)");
+    expect(screen.queryByRole("button", { name: "Provision portal logins" })).not.toBeInTheDocument();
   });
 });

@@ -26,7 +26,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [hostMismatch, setHostMismatch] = useState(false);
@@ -40,7 +40,7 @@ export function LoginPage() {
     setFormError(null);
     setHostMismatch(false);
     try {
-      const user = await login(email, password, subdomain);
+      const user = await login(identifier, password, subdomain);
       const destination = from ? `${from.pathname}${from.search}` : homePathForRole(user.role);
       navigate(destination, { replace: true });
     } catch (error) {
@@ -70,16 +70,16 @@ export function LoginPage() {
             )}
           </Alert>
         )}
-        <FormField label="Email" htmlFor="email">
+        <FormField label="Email or student ID" htmlFor="identifier">
           <Input
-            id="email"
-            type="email"
-            autoComplete="email"
+            id="identifier"
+            type="text"
+            autoComplete="username"
             autoCapitalize="none"
             enterKeyHint="next"
             required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            value={identifier}
+            onChange={(event) => setIdentifier(event.target.value)}
           />
         </FormField>
         <FormField label="Password" htmlFor="password">
