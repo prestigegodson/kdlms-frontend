@@ -24,9 +24,12 @@ interface AcademicContextState {
  * school admin - never inferred from today's date). Any failure, or nothing
  * marked current yet, degrades to no chip rather than blocking the shell.
  *
- * SCHOOL_ADMIN/BRANCH_ADMIN only - a TEACHER's current term instead comes
- * from stores/teacherScopeStore.ts's capabilities, which already carries it
- * without a second call.
+ * The topbar chip itself stays SCHOOL_ADMIN/BRANCH_ADMIN only - a TEACHER's
+ * displayed current term instead comes from stores/teacherScopeStore.ts's
+ * capabilities, which already carries the name without a second call. A
+ * TEACHER *does* fetch this store (SchoolLayout), because capabilities
+ * carries no id - only this store's currentTermId lets SubjectsPage's row
+ * actions build a one-hop "New quiz" deep link.
  */
 const INITIAL_STATE = {
   label: null,

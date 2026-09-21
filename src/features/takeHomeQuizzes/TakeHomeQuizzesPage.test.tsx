@@ -31,7 +31,7 @@ vi.mock("@/api/sessions", async () => {
   return { ...actual, listSessions: vi.fn(), listTerms: vi.fn() };
 });
 
-function renderAs(role: "TEACHER" | "SCHOOL_ADMIN") {
+function renderAs(role: "TEACHER" | "SCHOOL_ADMIN", initialEntry = "/") {
   resetAuthStore();
   useAuthStore.setState({
     user: {
@@ -46,7 +46,7 @@ function renderAs(role: "TEACHER" | "SCHOOL_ADMIN") {
     refreshToken: "refresh",
   });
   const router = createMemoryRouter([{ path: "/", element: <TakeHomeQuizzesPage /> }], {
-    initialEntries: ["/"],
+    initialEntries: [initialEntry],
   });
   render(<RouterProvider router={router} />);
 }
@@ -146,6 +146,44 @@ describe("TakeHomeQuizzesPage", () => {
       0,
       20,
     );
+  });
+
+  it("seeds the class and subject from ?classId=&subjectId= (SubjectsPage's row action)", async () => {
+    vi.mocked(meApi.listMyClasses).mockResolvedValue([
+      { classId: "class-1", className: "JSS 1A", branchId: "branch-1", levelId: "level-1", isClassTeacher: true, subjectIds: ["subject-1"] },
+    ]);
+    vi.mocked(sessionsApi.listSessions).mockResolvedValue({
+      content: [
+        { id: "session-1", schoolId: "school-1", name: "2026/2027", startDate: "2026-09-01", endDate: null, current: true },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 50,
+    });
+    vi.mocked(sessionsApi.listTerms).mockResolvedValue([
+      { id: "term-1", schoolId: "school-1", sessionId: "session-1", termNumber: 1, name: "First Term", startDate: "2026-09-01", endDate: "2026-12-01", current: true },
+    ]);
+    vi.mocked(takeHomeQuizzesApi.getAuthorableSubjects).mockResolvedValue([
+      { subjectId: "subject-1", subjectName: "Mathematics" },
+    ]);
+
+    renderAs("TEACHER", "/?classId=class-1&subjectId=subject-1");
+
+    // No manual class/subject selection - both seed from the query string, so the list call fires
+    // with the seeded pair the moment the (auto-selected) current term resolves.
+    await vi.waitFor(() =>
+      expect(takeHomeQuizzesApi.listTakeHomeQuizzes).toHaveBeenCalledWith(
+        "class-1",
+        "term-1",
+        "subject-1",
+        undefined,
+        0,
+        20,
+      ),
+    );
+    expect(await screen.findByLabelText("Class")).toHaveValue("class-1");
+    expect(screen.getByLabelText("Subject")).toHaveValue("subject-1");
   });
 
   it("sources classes from listClasses (school-wide, branch-filtered), not listMyClasses, for a SCHOOL_ADMIN", async () => {

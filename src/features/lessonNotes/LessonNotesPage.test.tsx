@@ -36,7 +36,7 @@ vi.mock("@/api/sessions", async () => {
   return { ...actual, listSessions: vi.fn(), listTerms: vi.fn() };
 });
 
-function renderAs(role: "TEACHER" | "SCHOOL_ADMIN") {
+function renderAs(role: "TEACHER" | "SCHOOL_ADMIN", initialEntry = "/") {
   resetAuthStore();
   useAuthStore.setState({
     user: {
@@ -51,7 +51,7 @@ function renderAs(role: "TEACHER" | "SCHOOL_ADMIN") {
     refreshToken: "refresh",
   });
   const router = createMemoryRouter([{ path: "/", element: <LessonNotesPage /> }], {
-    initialEntries: ["/"],
+    initialEntries: [initialEntry],
   });
   render(<RouterProvider router={router} />);
 }
@@ -129,6 +129,15 @@ describe("LessonNotesPage", () => {
         size: 50,
       });
       vi.mocked(sessionsApi.listTerms).mockResolvedValue([CURRENT_TERM]);
+    });
+
+    it("seeds the subject from ?subjectId= (SubjectsPage's row action), not classId - lesson notes are level-scoped", async () => {
+      renderAs("TEACHER", "/?subjectId=subject-1");
+
+      // No manual subject selection - it seeds from the query string, and the week grid fetches
+      // the moment the (auto-selected) current term resolves alongside it.
+      await vi.waitFor(() => expect(lessonNotesApi.getWeekGrid).toHaveBeenCalledWith("subject-1", "term-1"));
+      expect(await screen.findByLabelText("Subject")).toHaveValue("subject-1");
     });
 
     it("shows the copy trigger once a current term is auto-selected, and opens the copy modal", async () => {

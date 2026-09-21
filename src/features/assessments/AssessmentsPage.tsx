@@ -18,12 +18,15 @@ type TeacherTab = "scores" | "remarks";
  * CLAUDE.md's Roles matrix (recording is TEACHER-only, admins have no
  * correction path for scores, but do write the separate principal remark).
  * An optional `?classId=` (from ClassDetailPage's "Results & broadsheet"
- * quick link) seeds the initial class selection.
+ * quick link) seeds the initial class selection; an optional `?subjectId=`
+ * (from SubjectsPage's "Record assessment" row action) additionally seeds
+ * the subject, TEACHER-only - the admin panel is class-level.
  */
 export function AssessmentsPage() {
   const role = useAuthStore((state) => state.user?.role);
   const [searchParams] = useSearchParams();
   const initialClassId = searchParams.get("classId") ?? undefined;
+  const initialSubjectId = searchParams.get("subjectId") ?? undefined;
   const [tab, setTab] = useState<TeacherTab>("scores");
 
   if (role === "TEACHER") {
@@ -42,7 +45,7 @@ export function AssessmentsPage() {
         />
 
         {tab === "scores" ? (
-          <TeacherEntryPanel initialClassId={initialClassId} />
+          <TeacherEntryPanel initialClassId={initialClassId} initialSubjectId={initialSubjectId} />
         ) : (
           <RemarksPanel initialClassId={initialClassId} />
         )}

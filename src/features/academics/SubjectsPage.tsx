@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import { ApiError } from "@/api/client";
 import { listMySubjects, type TeacherSubjectAssignmentView } from "@/api/me";
 import {
@@ -18,7 +19,8 @@ import {
   updateSubject,
 } from "@/api/subjects";
 import { can } from "@/auth/permissions";
-import { BookOpen } from "lucide-react";
+import { BookOpen, ClipboardCheck, ListChecks, MonitorPlay, NotebookPen, Plus } from "lucide-react";
+import { ActionMenu, type ActionMenuItem } from "@/components/ui/ActionMenu";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -37,7 +39,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } fro
 import { CopySubjectsModal } from "@/features/academics/components/CopySubjectsModal";
 import { LevelSelect } from "@/features/academics/components/LevelSelect";
 import { ALL_TERM_NUMBERS, termNumbersLabel } from "@/features/academics/subjectTerms";
+import { useAcademicContextStore } from "@/stores/academicContextStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useFeatureStore } from "@/stores/featureStore";
 import { useLevelStore } from "@/stores/levelStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 
@@ -71,19 +75,34 @@ type MySubjectsState =
   | { kind: "error"; message: string };
 
 /**
- * Read-only: only the (class, subject) pairs the calling TEACHER is assigned
- * to teach (GET /api/v1/me/subjects), already scoped server-side to the
- * school's current term. `capabilities` is populated app-wide by
- * SchoolLayout on mount, so `currentTermName` is either already there or
- * arrives a moment later via the store subscription below.
+ * The (class, subject) pairs the calling TEACHER is assigned to teach
+ * (GET /api/v1/me/subjects), already scoped server-side to the school's
+ * current term. `capabilities` is populated app-wide by SchoolLayout on
+ * mount, so `currentTermName` is either already there or arrives a moment
+ * later via the store subscription below. Each row carries an `ActionMenu`
+ * that deep-links into the teacher's actual work for that subject -
+ * SubjectsPage was previously a dead end.
  */
 function MySubjects() {
+  const navigate = useNavigate();
+  const role = useAuthStore((state) => state.user?.role);
   const [state, setState] = useState<MySubjectsState>({ kind: "loading" });
   const capabilities = useTeacherScopeStore((state) => state.capabilities);
+  const lessonNotesEntitled = useFeatureStore((state) => state.lessonNotes);
+  const takeHomeQuizEntitled = useFeatureStore((state) => state.takeHomeQuiz);
+  const onDemandLearningEntitled = useFeatureStore((state) => state.onDemandLearning);
+  const currentTermId = useAcademicContextStore((state) => state.currentTermId);
 
   useEffect(() => {
     listMySubjects()
-      .then((assignments) => setState({ kind: "loaded", assignments }))
+      .then((assignments) =>
+        setState({
+          kind: "loaded",
+          assignments: [...assignments].sort(
+            (a, b) => a.subjectName.localeCompare(b.subjectName) || a.className.localeCompare(b.className),
+          ),
+        }),
+      )
       .catch((error: unknown) =>
         setState({
           kind: "error",
@@ -91,6 +110,70 @@ function MySubjects() {
         }),
       );
   }, []);
+
+  /**
+   * Items are omitted (never disabled) when the school's package doesn't
+   * include the feature, or the account can't perform the action - the
+   * `resourceActions()` shape from LearningResourcesPage.tsx. Icons mirror
+   * the sidebar's icon for the same destination, so the menu reads as
+   * "jump to that nav item, pre-filtered". `termId` never travels on a list
+   * link - ClassTermPicker/SubjectTermPicker resolve the current term
+   * themselves the moment they load - only the "New quiz" *editor* link
+   * needs a real one, from academicContextStore.
+   */
+  function subjectActions(assignment: TeacherSubjectAssignmentView): ActionMenuItem[] {
+    const items: ActionMenuItem[] = [];
+
+    if (can.recordAssessments(role)) {
+      items.push({
+        label: "Record assessment",
+        icon: ClipboardCheck,
+        onSelect: () =>
+          navigate(`/school/assessments?classId=${assignment.classId}&subjectId=${assignment.subjectId}`),
+      });
+    }
+    if (can.viewLessonNotes(role, lessonNotesEntitled)) {
+      items.push({
+        label: "Lesson notes",
+        icon: NotebookPen,
+        onSelect: () => navigate(`/school/lesson-notes?subjectId=${assignment.subjectId}`),
+      });
+    }
+    if (can.viewTakeHomeQuizzes(role, takeHomeQuizEntitled)) {
+      items.push({
+        label: "Take-home quizzes",
+        icon: ListChecks,
+        separated: true,
+        onSelect: () =>
+          navigate(`/school/take-home-quizzes?classId=${assignment.classId}&subjectId=${assignment.subjectId}`),
+      });
+    }
+    if (can.authorTakeHomeQuizzes(role, takeHomeQuizEntitled) && currentTermId) {
+      items.push({
+        label: "New quiz",
+        icon: Plus,
+        onSelect: () => {
+          const params = new URLSearchParams({
+            classId: assignment.classId,
+            subjectId: assignment.subjectId,
+            termId: currentTermId,
+          });
+          navigate(`/school/take-home-quizzes/new?${params.toString()}`);
+        },
+      });
+    }
+    if (can.viewLearningResources(role, onDemandLearningEntitled)) {
+      items.push({
+        label: "Learning resources",
+        icon: MonitorPlay,
+        separated: true,
+        onSelect: () =>
+          navigate(`/school/learning-resources?classId=${assignment.classId}&subjectId=${assignment.subjectId}`),
+      });
+    }
+
+    return items;
+  }
 
   return (
     <div className="space-y-6">
@@ -127,6 +210,7 @@ function MySubjects() {
                 <TableHeaderCell>Subject</TableHeaderCell>
                 <TableHeaderCell>Class</TableHeaderCell>
                 <TableHeaderCell>Level</TableHeaderCell>
+                <TableHeaderCell>Actions</TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -137,6 +221,14 @@ function MySubjects() {
                   </TableCell>
                   <TableCell label="Class">{assignment.className}</TableCell>
                   <TableCell label="Level">{assignment.levelName ?? "—"}</TableCell>
+                  <TableCell label="Actions">
+                    <div className="flex justify-end md:justify-start">
+                      <ActionMenu
+                        items={subjectActions(assignment)}
+                        ariaLabel={`Actions for ${assignment.subjectName} in ${assignment.className}`}
+                      />
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

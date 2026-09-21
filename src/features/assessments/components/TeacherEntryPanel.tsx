@@ -18,6 +18,8 @@ import { ClipboardCheck } from "lucide-react";
 interface TeacherEntryPanelProps {
   /** Seeds the initial class selection (e.g. from ClassDetailPage's "Results & broadsheet" quick link). */
   initialClassId?: string;
+  /** Seeds the initial subject selection (e.g. from SubjectsPage's "Record assessment" row action). */
+  initialSubjectId?: string;
 }
 
 /**
@@ -25,11 +27,11 @@ interface TeacherEntryPanelProps {
  * the sheet. Renders as the "Scores" tab body under `AssessmentsPage`'s own
  * PageHeader, so it carries no title of its own.
  */
-export function TeacherEntryPanel({ initialClassId }: TeacherEntryPanelProps = {}) {
+export function TeacherEntryPanel({ initialClassId, initialSubjectId }: TeacherEntryPanelProps = {}) {
   const [classes, setClasses] = useState<TeacherClassView[] | null>(null);
   const [classId, setClassId] = useState(initialClassId ?? "");
   const [subjects, setSubjects] = useState<SubjectView[] | null>(null);
-  const [subjectId, setSubjectId] = useState("");
+  const [subjectId, setSubjectId] = useState(initialSubjectId ?? "");
   const [termId, setTermId] = useState("");
 
   const [sheet, setSheet] = useState<AssessmentSheetView | null>(null);

@@ -75,7 +75,7 @@ const RESOURCE_DETAIL: learningApi.LearningResourceView = {
   actions: { canEdit: true, canPublish: true, canUnpublish: false, canArchive: true, canDelete: true },
 };
 
-function renderAs(role: "TEACHER" | "SCHOOL_ADMIN") {
+function renderAs(role: "TEACHER" | "SCHOOL_ADMIN", initialEntry = "/") {
   resetAuthStore();
   useAuthStore.setState({
     user: {
@@ -90,7 +90,7 @@ function renderAs(role: "TEACHER" | "SCHOOL_ADMIN") {
     refreshToken: "refresh",
   });
   const router = createMemoryRouter([{ path: "/", element: <LearningResourcesPage /> }], {
-    initialEntries: ["/"],
+    initialEntries: [initialEntry],
   });
   render(<RouterProvider router={router} />);
 }
@@ -187,6 +187,23 @@ describe("LearningResourcesPage", () => {
       0,
       20,
     );
+  });
+
+  it("seeds the class and subject from ?classId=&subjectId= (SubjectsPage's row action)", async () => {
+    renderAs("TEACHER", "/?classId=class-1&subjectId=subject-1");
+
+    // No manual class/subject selection - both seed from the query string.
+    expect(await screen.findByText("Fractions worksheet")).toBeInTheDocument();
+    expect(learningApi.listLearningResources).toHaveBeenCalledWith(
+      "class-1",
+      "term-1",
+      "subject-1",
+      undefined,
+      0,
+      20,
+    );
+    expect(screen.getByLabelText("Class")).toHaveValue("class-1");
+    expect(screen.getByLabelText("Subject")).toHaveValue("subject-1");
   });
 
   it("shows a status badge matching each resource's status", async () => {

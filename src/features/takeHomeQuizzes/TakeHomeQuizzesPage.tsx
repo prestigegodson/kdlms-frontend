@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { getAuthorableSubjects, listTakeHomeQuizzes, type TakeHomeQuizSummaryView } from "@/api/takeHomeQuizzes";
 import { ApiError } from "@/api/client";
 import { listClasses, type SchoolClassView } from "@/api/classes";
@@ -32,10 +32,13 @@ import { ClipboardList } from "lucide-react";
  * class+term(+subject), and `BranchFilter` already renders nothing for a
  * BRANCH_ADMIN/TEACHER, so there's no per-role render branch worth
  * splitting out. Composition mirrors
- * `features/assessments/components/AdminResultsPanel.tsx`.
+ * `features/assessments/components/AdminResultsPanel.tsx`. An optional
+ * `?classId=&subjectId=` (from SubjectsPage's "Take-home quizzes" row
+ * action) seeds the initial class + subject selection.
  */
 export function TakeHomeQuizzesPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const role = useAuthStore((state) => state.user?.role);
   const entitled = useFeatureStore((state) => state.takeHomeQuiz);
   const canAuthor = can.authorTakeHomeQuizzes(role, entitled);
@@ -44,9 +47,9 @@ export function TakeHomeQuizzesPage() {
 
   const [adminClasses, setAdminClasses] = useState<SchoolClassView[] | null>(null);
   const [teacherClasses, setTeacherClasses] = useState<TeacherClassView[] | null>(null);
-  const [classId, setClassId] = useState("");
+  const [classId, setClassId] = useState(searchParams.get("classId") ?? "");
   const [termId, setTermId] = useState("");
-  const [subjectId, setSubjectId] = useState("");
+  const [subjectId, setSubjectId] = useState(searchParams.get("subjectId") ?? "");
   const [subjects, setSubjects] = useState<{ subjectId: string; subjectName: string }[] | null>(null);
 
   const [pageIndex, setPageIndex] = useState(0);

@@ -376,6 +376,11 @@ export function SchoolLayout() {
     if (role === "TEACHER") {
       fetchTeacherScope();
       fetchUnreadMessages("TEACHER");
+      // The topbar chip still reads currentTermName from teacherScopeStore's
+      // capabilities (below) - this fetch is for the ids (currentTermId in
+      // particular) capabilities doesn't carry, needed by SubjectsPage's
+      // row actions to build a one-hop "New quiz" link.
+      fetchAcademicContext();
     } else if (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN") {
       fetchAcademicContext();
       fetchPendingLessonNotes();

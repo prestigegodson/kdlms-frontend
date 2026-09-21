@@ -12,7 +12,9 @@ import type { SubjectGroupView } from "@/api/subjectGroups";
 import * as subjectsApi from "@/api/subjects";
 import type { SubjectView } from "@/api/subjects";
 import { SubjectsPage } from "@/features/academics/SubjectsPage";
+import { resetAcademicContextStore, useAcademicContextStore } from "@/stores/academicContextStore";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetFeatureStore, useFeatureStore } from "@/stores/featureStore";
 import { resetLevelStore } from "@/stores/levelStore";
 import { resetTeacherScopeStore, useTeacherScopeStore } from "@/stores/teacherScopeStore";
 
@@ -193,8 +195,15 @@ function renderAsTeacher() {
     accessToken: "access",
     refreshToken: "refresh",
   });
-  const router = createMemoryRouter([{ path: "/", element: <SubjectsPage /> }], { initialEntries: ["/"] });
+  const router = createMemoryRouter(
+    [
+      { path: "/", element: <SubjectsPage /> },
+      { path: "/school/*", element: <div>destination</div> },
+    ],
+    { initialEntries: ["/"] },
+  );
   render(<RouterProvider router={router} />);
+  return router;
 }
 
 const TERM_ONE_ASSIGNMENT: TeacherSubjectAssignmentView = {
@@ -206,11 +215,22 @@ const TERM_ONE_ASSIGNMENT: TeacherSubjectAssignmentView = {
   subjectName: "Mathematics",
 };
 
+const SAME_SUBJECT_OTHER_CLASS: TeacherSubjectAssignmentView = {
+  classId: "class-2",
+  className: "Little Star 2",
+  levelId: "level-1",
+  levelName: "Primary",
+  subjectId: "subject-2",
+  subjectName: "Mathematics",
+};
+
 describe("SubjectsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetTeacherScopeStore();
     resetLevelStore();
+    resetFeatureStore();
+    resetAcademicContextStore();
     vi.mocked(levelsApi.listLevels).mockResolvedValue([PRIMARY_LEVEL, SECONDARY_LEVEL]);
     vi.mocked(subjectGroupsApi.listSubjectGroups).mockResolvedValue([SCIENCES_GROUP]);
   });
@@ -470,6 +490,93 @@ describe("SubjectsPage", () => {
     expect(
       screen.getByText("Your school has not set a current term - showing all your subjects."),
     ).toBeInTheDocument();
+  });
+
+  describe("MySubjects row actions", () => {
+    function entitleEverything() {
+      useFeatureStore.setState({ lessonNotes: true, takeHomeQuiz: true, onDemandLearning: true });
+      useAcademicContextStore.setState({ currentTermId: "term-1" });
+    }
+
+    async function openMenu(name = "Actions for Mathematics in Little Star 1") {
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole("button", { name }));
+      return user;
+    }
+
+    it("navigates to the pre-filtered score sheet for Record assessment", async () => {
+      entitleEverything();
+      vi.mocked(meApi.listMySubjects).mockResolvedValue([TERM_ONE_ASSIGNMENT]);
+      const router = renderAsTeacher();
+
+      const user = await openMenu();
+      await user.click(screen.getByRole("menuitem", { name: "Record assessment" }));
+
+      expect(router.state.location.pathname).toBe("/school/assessments");
+      expect(router.state.location.search).toBe("?classId=class-1&subjectId=subject-2");
+    });
+
+    it("carries only the subject for Lesson notes - lesson notes are level-scoped, not class-scoped", async () => {
+      entitleEverything();
+      vi.mocked(meApi.listMySubjects).mockResolvedValue([TERM_ONE_ASSIGNMENT]);
+      const router = renderAsTeacher();
+
+      const user = await openMenu();
+      await user.click(screen.getByRole("menuitem", { name: "Lesson notes" }));
+
+      expect(router.state.location.pathname).toBe("/school/lesson-notes");
+      expect(router.state.location.search).toBe("?subjectId=subject-2");
+    });
+
+    it("New quiz opens the editor directly with a real termId, resolved from academicContextStore", async () => {
+      entitleEverything();
+      vi.mocked(meApi.listMySubjects).mockResolvedValue([TERM_ONE_ASSIGNMENT]);
+      const router = renderAsTeacher();
+
+      const user = await openMenu();
+      await user.click(screen.getByRole("menuitem", { name: "New quiz" }));
+
+      expect(router.state.location.pathname).toBe("/school/take-home-quizzes/new");
+      const params = new URLSearchParams(router.state.location.search);
+      expect(params.get("classId")).toBe("class-1");
+      expect(params.get("subjectId")).toBe("subject-2");
+      expect(params.get("termId")).toBe("term-1");
+    });
+
+    it("hides New quiz (but keeps the quiz list) when the school has no current term", async () => {
+      useFeatureStore.setState({ lessonNotes: true, takeHomeQuiz: true, onDemandLearning: true });
+      // currentTermId left null - resetAcademicContextStore's default.
+      vi.mocked(meApi.listMySubjects).mockResolvedValue([TERM_ONE_ASSIGNMENT]);
+      renderAsTeacher();
+
+      await openMenu();
+
+      expect(screen.queryByRole("menuitem", { name: "New quiz" })).not.toBeInTheDocument();
+      expect(screen.getByRole("menuitem", { name: "Take-home quizzes" })).toBeInTheDocument();
+    });
+
+    it("hides every packaged item on an unentitled school, keeping Record assessment", async () => {
+      // Every featureStore flag defaults false via resetFeatureStore() in beforeEach.
+      vi.mocked(meApi.listMySubjects).mockResolvedValue([TERM_ONE_ASSIGNMENT]);
+      renderAsTeacher();
+
+      await openMenu();
+
+      expect(screen.getByRole("menuitem", { name: "Record assessment" })).toBeInTheDocument();
+      expect(screen.queryByRole("menuitem", { name: "Lesson notes" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("menuitem", { name: "Take-home quizzes" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("menuitem", { name: "New quiz" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("menuitem", { name: "Learning resources" })).not.toBeInTheDocument();
+    });
+
+    it("gives each row its own disambiguated Actions trigger when a subject repeats across classes", async () => {
+      entitleEverything();
+      vi.mocked(meApi.listMySubjects).mockResolvedValue([TERM_ONE_ASSIGNMENT, SAME_SUBJECT_OTHER_CLASS]);
+      renderAsTeacher();
+
+      expect(await screen.findByRole("button", { name: "Actions for Mathematics in Little Star 1" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Actions for Mathematics in Little Star 2" })).toBeInTheDocument();
+    });
   });
 
   describe("copying subjects from another level", () => {

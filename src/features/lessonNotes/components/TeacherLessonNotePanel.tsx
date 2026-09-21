@@ -21,9 +21,14 @@ import { NotebookPen } from "lucide-react";
  * shares this screen's shape but sources its subjects from the school-wide
  * catalogue instead.
  */
-export function TeacherLessonNotePanel() {
+interface TeacherLessonNotePanelProps {
+  /** Seeds the initial subject selection (e.g. from SubjectsPage's "Lesson notes" row action). */
+  initialSubjectId?: string;
+}
+
+export function TeacherLessonNotePanel({ initialSubjectId }: TeacherLessonNotePanelProps = {}) {
   const [subjects, setSubjects] = useState<LevelSubjectView[] | null>(null);
-  const [subjectId, setSubjectId] = useState("");
+  const [subjectId, setSubjectId] = useState(initialSubjectId ?? "");
   const [termId, setTermId] = useState("");
   const [weeks, setWeeks] = useState<LessonNoteWeekView[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);

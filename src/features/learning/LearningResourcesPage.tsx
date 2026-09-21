@@ -1,6 +1,6 @@
 import { Archive, BookOpen, CircleCheck, Eye, MessageSquare, Pencil, Trash2, Undo2, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { ApiError } from "@/api/client";
 import { listClasses, type SchoolClassView } from "@/api/classes";
 import {
@@ -54,9 +54,12 @@ const TYPE_LABEL: Record<string, string> = {
  * The teacher/admin-facing learning-resource list (Phase 35E). One page for every staff role -
  * the `TakeHomeQuizzesPage` shape: a class+term(+subject) picker, then the resource table for that
  * selection. Reorder (backend-supported) has no drag-and-drop UI yet - out of this phase's scope.
+ * An optional `?classId=&subjectId=` (from SubjectsPage's "Learning resources" row action) seeds
+ * the initial class + subject selection.
  */
 export function LearningResourcesPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const role = useAuthStore((state) => state.user?.role);
   const entitled = useFeatureStore((state) => state.onDemandLearning);
   const learningMedia = useFeatureStore((state) => state.learningMedia);
@@ -68,9 +71,9 @@ export function LearningResourcesPage() {
 
   const [adminClasses, setAdminClasses] = useState<SchoolClassView[] | null>(null);
   const [teacherClasses, setTeacherClasses] = useState<TeacherClassView[] | null>(null);
-  const [classId, setClassId] = useState("");
+  const [classId, setClassId] = useState(searchParams.get("classId") ?? "");
   const [termId, setTermId] = useState("");
-  const [subjectId, setSubjectId] = useState("");
+  const [subjectId, setSubjectId] = useState(searchParams.get("subjectId") ?? "");
   const [status, setStatus] = useState<LearningResourceStatus | "">("");
   const [subjects, setSubjects] = useState<AuthorableSubjectView[] | null>(null);
 
