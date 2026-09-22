@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
-import { ApiError } from "@/api/client";
+import { getErrorMessage } from "@/api/client";
 import {
   getMyTakeHomeQuiz,
   saveMyTakeHomeQuizAnswers,
@@ -27,10 +27,6 @@ type Status =
   | { kind: "inProgress"; attempt: QuizAttemptView }
   | { kind: "submitted"; title: string | null };
 
-function errorMessage(error: unknown): string {
-  return error instanceof ApiError ? error.message : "Failed to load this quiz";
-}
-
 /**
  * The student portal's quiz-taking screen (Phase 35I.3) - the authenticated twin of
  * `TakeHomeQuizPublicPage`, resolved by `quizId` (never a token) and rendered inside the ordinary
@@ -55,7 +51,7 @@ export function StudentQuizPage() {
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        setStatus({ kind: "error", message: errorMessage(error) });
+        setStatus({ kind: "error", message: getErrorMessage(error, "Failed to load this quiz") });
       });
     return () => {
       cancelled = true;
@@ -66,7 +62,7 @@ export function StudentQuizPage() {
     setStarting(true);
     startMyTakeHomeQuiz(quizId)
       .then((attempt) => setStatus({ kind: "inProgress", attempt }))
-      .catch((error: unknown) => setStatus({ kind: "error", message: errorMessage(error) }))
+      .catch((error: unknown) => setStatus({ kind: "error", message: getErrorMessage(error, "Failed to load this quiz") }))
       .finally(() => setStarting(false));
   }
 
@@ -165,7 +161,7 @@ export function StudentQuizPage() {
       initialAttempt={status.attempt}
       transport={transport}
       onSubmitted={() => setStatus({ kind: "submitted", title: null })}
-      onError={(error) => setStatus({ kind: "error", message: errorMessage(error) })}
+      onError={(error) => setStatus({ kind: "error", message: getErrorMessage(error, "Failed to load this quiz") })}
     />
   );
 }

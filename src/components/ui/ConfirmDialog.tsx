@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from "react";
-import { ApiError } from "@/api/client";
+import { getErrorMessage } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
@@ -45,7 +45,7 @@ export function ConfirmDialog({
     try {
       await onConfirm();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "That action failed");
+      setError(getErrorMessage(err, "That action failed"));
       setSubmitting(false);
     }
   }

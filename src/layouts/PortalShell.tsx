@@ -360,6 +360,7 @@ export function PortalShell({
                           {!!badgeCount && (
                             <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 text-xs font-medium text-white">
                               {badgeCount > 99 ? "99+" : badgeCount}
+                              <span className="sr-only"> unread</span>
                             </span>
                           )}
                         </Link>

@@ -10,7 +10,7 @@ import {
   type QuizAttemptView,
   type QuizInterstitialView,
 } from "@/api/publicTakeHomeQuiz";
-import { ApiError } from "@/api/client";
+import { ApiError, GENERIC_ERROR_MESSAGE, getErrorMessage } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Spinner } from "@/components/ui/Spinner";
@@ -155,7 +155,6 @@ function errorStatus(error: unknown): Status {
     if (error.status === 404) {
       return { kind: "invalid" };
     }
-    return { kind: "error", message: error.message };
   }
-  return { kind: "error", message: "Something went wrong. Please try again." };
+  return { kind: "error", message: getErrorMessage(error, GENERIC_ERROR_MESSAGE) };
 }

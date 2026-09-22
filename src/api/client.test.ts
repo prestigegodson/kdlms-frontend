@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, apiFetch, apiFetchBlob, apiFetchText, setAccessTokenProvider } from "@/api/client";
+import {
+  ApiError,
+  GENERIC_ERROR_MESSAGE,
+  apiFetch,
+  apiFetchBlob,
+  apiFetchText,
+  getErrorMessage,
+  setAccessTokenProvider,
+} from "@/api/client";
 
 describe("apiFetch", () => {
   afterEach(() => {
@@ -45,15 +53,20 @@ describe("apiFetch", () => {
     await expect(apiFetch("/api/v1/branches")).resolves.toEqual({ id: "abc" });
   });
 
-  it("throws an ApiError carrying the problem detail on a non-2xx response", async () => {
+  it("throws an ApiError carrying the problem detail on a non-2xx response with a trusted kdlms problem type", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
         Promise.resolve(
-          new Response(JSON.stringify({ title: "Conflict", detail: "Already linked", status: 409 }), {
-            status: 409,
-            headers: { "Content-Type": "application/problem+json" },
-          }),
+          new Response(
+            JSON.stringify({
+              type: "https://kdlms.com/problems/conflict",
+              title: "Conflict",
+              detail: "Already linked",
+              status: 409,
+            }),
+            { status: 409, headers: { "Content-Type": "application/problem+json" } },
+          ),
         ),
       ),
     );
@@ -64,9 +77,10 @@ describe("apiFetch", () => {
     expect((error as ApiError).status).toBe(409);
     expect((error as ApiError).message).toBe("Already linked");
     expect((error as ApiError).problem?.detail).toBe("Already linked");
+    expect((error as ApiError).generic).toBe(false);
   });
 
-  it("falls back to the status text when a non-2xx response has no JSON body", async () => {
+  it("falls back to the generic message when a non-2xx response has no JSON body (never the raw status text)", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve(new Response(null, { status: 500, statusText: "Internal Server Error" }))),
@@ -76,7 +90,66 @@ describe("apiFetch", () => {
 
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).status).toBe(500);
-    expect((error as ApiError).message).toBe("Internal Server Error");
+    expect((error as ApiError).message).toBe(GENERIC_ERROR_MESSAGE);
+    expect((error as ApiError).generic).toBe(true);
+  });
+
+  it("falls back to the generic message for a problem body with no type (e.g. Spring's default about:blank)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ title: "Not Found", detail: "No static resource api/v1/whatever" }), {
+            status: 404,
+            headers: { "Content-Type": "application/problem+json" },
+          }),
+        ),
+      ),
+    );
+
+    const error = await apiFetch("/api/v1/whatever").catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).message).toBe(GENERIC_ERROR_MESSAGE);
+    expect((error as ApiError).generic).toBe(true);
+    // The raw backend text is still reachable via .problem for a caller that has its own reason to inspect it.
+    expect((error as ApiError).problem?.detail).toBe("No static resource api/v1/whatever");
+  });
+
+  it("falls back to the generic message for a trusted problem type with a blank detail", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ type: "https://kdlms.com/problems/forbidden", detail: "   " }), {
+            status: 403,
+            headers: { "Content-Type": "application/problem+json" },
+          }),
+        ),
+      ),
+    );
+
+    const error = await apiFetch("/api/v1/branches").catch((err: unknown) => err);
+
+    expect((error as ApiError).message).toBe(GENERIC_ERROR_MESSAGE);
+    expect((error as ApiError).generic).toBe(true);
+  });
+});
+
+describe("getErrorMessage", () => {
+  it("returns the message for a curated (non-generic) ApiError", () => {
+    const error = new ApiError(409, "Already linked", undefined, false);
+    expect(getErrorMessage(error, "fallback")).toBe("Already linked");
+  });
+
+  it("returns the fallback for a generic ApiError", () => {
+    const error = new ApiError(500, GENERIC_ERROR_MESSAGE, undefined, true);
+    expect(getErrorMessage(error, "Failed to load the page")).toBe("Failed to load the page");
+  });
+
+  it("returns the fallback for a non-ApiError value", () => {
+    expect(getErrorMessage(new Error("boom"), "Failed to load the page")).toBe("Failed to load the page");
+    expect(getErrorMessage(undefined, "Failed to load the page")).toBe("Failed to load the page");
   });
 });
 
@@ -133,10 +206,15 @@ describe("Accept header negotiation", () => {
       "fetch",
       vi.fn(() =>
         Promise.resolve(
-          new Response(JSON.stringify({ title: "Not Found", detail: "Student not found", status: 404 }), {
-            status: 404,
-            headers: { "Content-Type": "application/problem+json" },
-          }),
+          new Response(
+            JSON.stringify({
+              type: "https://kdlms.com/problems/not-found",
+              title: "Not Found",
+              detail: "Student not found",
+              status: 404,
+            }),
+            { status: 404, headers: { "Content-Type": "application/problem+json" } },
+          ),
         ),
       ),
     );

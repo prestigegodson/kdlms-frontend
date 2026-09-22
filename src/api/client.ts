@@ -2,17 +2,64 @@ import type { ProblemDetail } from "@/api/types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
+/**
+ * The one sentence shown for any error whose text isn't a curated, backend-authored message -
+ * mirrors the backend's own `GlobalExceptionHandler#GENERIC_ERROR_MESSAGE` verbatim, so a
+ * generic frontend fallback and a generic backend one never disagree in wording.
+ */
+export const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
+
+/**
+ * Every problem this app's own backend hands-writes carries a `type` under this prefix (see
+ * `GlobalExceptionHandler`/the filter-layer handlers in `shared.config`) - a response with no
+ * `type`, or one outside this prefix (a proxy/gateway's own error page, an unmapped path that
+ * somehow still returns JSON, `about:blank`), is never trusted to carry user-facing text.
+ */
+const KDLMS_PROBLEM_TYPE_PREFIX = "https://kdlms.com/problems/";
+
+function isTrustedProblem(problem: ProblemDetail | undefined): problem is ProblemDetail & { detail: string } {
+  return (
+    typeof problem?.type === "string" &&
+    problem.type.startsWith(KDLMS_PROBLEM_TYPE_PREFIX) &&
+    typeof problem.detail === "string" &&
+    problem.detail.trim().length > 0
+  );
+}
+
 /** Thrown for any non-2xx API response, carrying the parsed problem detail when available. */
 export class ApiError extends Error {
   readonly status: number;
   readonly problem?: ProblemDetail;
+  /**
+   * True when {@link message} is {@link GENERIC_ERROR_MESSAGE} rather than a curated backend
+   * message - e.g. a gateway/proxy error page, or a framework response with no recognized
+   * `kdlms.com/problems/...` type. A call site that wants its own specific fallback copy instead
+   * of the generic sentence should check this (see {@link getErrorMessage}) rather than rendering
+   * {@link message} unconditionally.
+   */
+  readonly generic: boolean;
 
-  constructor(status: number, message: string, problem?: ProblemDetail) {
+  constructor(status: number, message: string, problem?: ProblemDetail, generic = false) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.problem = problem;
+    this.generic = generic;
   }
+}
+
+/**
+ * The shared "what do I show the user" helper: a curated {@link ApiError} shows its own message,
+ * everything else (a generic {@link ApiError}, a network failure, a thrown non-Error) falls back
+ * to the caller's own copy. Callers that want a specific fallback (rather than the app-wide
+ * {@link GENERIC_ERROR_MESSAGE} an unmigrated call site shows) should use this instead of
+ * `error instanceof ApiError ? error.message : "..."`.
+ */
+export function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError && !error.generic) {
+    return error.message;
+  }
+  return fallback;
 }
 
 interface RequestOptions extends RequestInit {
@@ -115,7 +162,13 @@ async function fetchWithAuth(path: string, options: RequestOptions): Promise<Res
     } catch {
       // Response wasn't JSON (e.g. a non-problem-detail 5xx); fall through with no parsed body.
     }
-    throw new ApiError(response.status, problem?.detail ?? response.statusText, problem);
+    // response.statusText is never used as a message - it comes from the transport (a browser's
+    // or proxy's own wording, sometimes empty), not from this app's backend, so it can never be
+    // trusted as something to show a user. Only a curated kdlms.com/problems/... detail is.
+    if (isTrustedProblem(problem)) {
+      throw new ApiError(response.status, problem.detail, problem);
+    }
+    throw new ApiError(response.status, GENERIC_ERROR_MESSAGE, problem, true);
   }
   return response;
 }

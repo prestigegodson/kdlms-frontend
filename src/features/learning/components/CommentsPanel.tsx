@@ -1,7 +1,7 @@
 import { PencilLine } from "lucide-react";
 import { useState } from "react";
 import type { LearningCommentView } from "@/api/learning";
-import { ApiError } from "@/api/client";
+import { ApiError, getErrorMessage } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -11,14 +11,12 @@ import { formatInstant } from "@/utils/date";
 const RATE_LIMIT_PROBLEM_TYPE = "https://kdlms.com/problems/too-many-requests";
 const MAX_COMMENT_LENGTH = 2000;
 
+/** As {@link getErrorMessage}, but with this panel's own friendlier copy for the rate-limit problem type. */
 function errorMessage(error: unknown, fallback: string): string {
-  if (error instanceof ApiError) {
-    if (error.problem?.type === RATE_LIMIT_PROBLEM_TYPE) {
-      return "You've posted too many comments recently - please wait a while and try again.";
-    }
-    return error.message;
+  if (error instanceof ApiError && error.problem?.type === RATE_LIMIT_PROBLEM_TYPE) {
+    return "You've posted too many comments recently - please wait a while and try again.";
   }
-  return fallback;
+  return getErrorMessage(error, fallback);
 }
 
 interface CommentsPanelProps {

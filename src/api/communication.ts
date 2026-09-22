@@ -69,6 +69,12 @@ export interface UnreadCountView {
   unreadThreads: number;
 }
 
+/** Mirrors backend communication.application.port.in.UnreadThreadsView - the nav pill's destination. */
+export interface UnreadThreadsView {
+  threads: ThreadDigestView[];
+  total: number;
+}
+
 /** Mirrors backend communication.application.port.in.ManageThreadsUseCase.RowOutcome. */
 export interface StartThreadRowOutcome {
   studentId: string;
@@ -130,6 +136,11 @@ export function getUnreadCount(): Promise<UnreadCountView> {
   return apiFetch<UnreadCountView>(`${BASE}/unread-count`);
 }
 
+/** TEACHER only - the unread threads behind `getUnreadCount`'s number, most-recent-activity first. */
+export function getUnreadThreads(): Promise<UnreadThreadsView> {
+  return apiFetch<UnreadThreadsView>(`${BASE}/unread-threads`);
+}
+
 /** Read-only cross-class digest for SCHOOL_ADMIN (school-wide) / BRANCH_ADMIN (own branch). */
 export function getOverview(from: string, to: string, page = 0, size = 20): Promise<Page<ThreadDigestView>> {
   return apiFetch<Page<ThreadDigestView>>(`${BASE}/overview?from=${from}&to=${to}&page=${page}&size=${size}`);
@@ -168,4 +179,9 @@ export function editWardMessage(studentId: string, messageId: string, body: stri
 /** Unread count across every linked ward. */
 export function getWardUnreadCount(): Promise<UnreadCountView> {
   return apiFetch<UnreadCountView>("/api/v1/me/communication/unread-count");
+}
+
+/** Unread threads across every linked ward (and every school) - the unread count's own destination. */
+export function getWardUnreadThreads(): Promise<UnreadThreadsView> {
+  return apiFetch<UnreadThreadsView>("/api/v1/me/communication/unread-threads");
 }

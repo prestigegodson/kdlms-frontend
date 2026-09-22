@@ -1,15 +1,18 @@
 import { ChevronRight, MessageSquare } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router";
 import {
   editWardMessage,
   getWardThread,
   getWardThreads,
+  getWardUnreadThreads,
   markWardThreadRead,
   replyToWardThread,
   type ThreadDigestView,
   type ThreadView,
+  type UnreadThreadsView,
 } from "@/api/communication";
-import { ApiError } from "@/api/client";
+import { ApiError, getErrorMessage } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -18,14 +21,18 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Pagination } from "@/components/ui/Pagination";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
+import { Tabs } from "@/components/ui/Tabs";
 import { CategoryBadge } from "@/features/communication/components/CategoryBadge";
 import { ThreadCard } from "@/features/communication/components/ThreadCard";
+import { UnreadThreadList } from "@/features/communication/components/UnreadThreadList";
 import { categoryRailClass } from "@/features/communication/messageCategory";
 import { WardSelector } from "@/features/guardian/components/WardSelector";
 import { useUnreadMessagesStore } from "@/stores/unreadMessagesStore";
 import { useWardStore } from "@/stores/wardStore";
 import { formatLongDate } from "@/utils/date";
 import type { Page } from "@/api/types";
+
+type MessagesTab = "unread" | "all";
 
 /**
  * A ward's communication threads - notes their class teacher has logged,
@@ -39,8 +46,42 @@ export function WardMessagesPage() {
   const [page, setPage] = useState<Page<ThreadDigestView> | null>(null);
   const [pageIndex, setPageIndex] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [openThreadId, setOpenThreadId] = useState<string | null>(null);
+  const [openThread, setOpenThread] = useState<{ studentId: string; threadId: string } | null>(null);
+
+  const unreadCount = useUnreadMessagesStore((state) => state.count);
   const refreshUnread = useUnreadMessagesStore((state) => state.refresh);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const viewParam = searchParams.get("view");
+  // Defaults to the Unread tab when there's something unread to see (and no explicit
+  // ?view= was given) - what makes the nav pill's click land directly on the messages
+  // it's counting, rather than on the currently selected ward's own thread list.
+  const [tab, setTab] = useState<MessagesTab>(() =>
+    viewParam === "unread" || viewParam === "all" ? viewParam : unreadCount > 0 ? "unread" : "all",
+  );
+  const [unreadView, setUnreadView] = useState<UnreadThreadsView | null>(null);
+  const [unreadError, setUnreadError] = useState<string | null>(null);
+
+  function changeTab(next: MessagesTab) {
+    setTab(next);
+    setSearchParams(next === "all" ? {} : { view: next }, { replace: true });
+  }
+
+  function loadUnread() {
+    getWardUnreadThreads()
+      .then((view) => {
+        setUnreadView(view);
+        setUnreadError(null);
+      })
+      .catch((error: unknown) => setUnreadError(getErrorMessage(error, "Failed to load unread messages")));
+  }
+
+  useEffect(() => {
+    if (tab === "unread") {
+      loadUnread();
+      refreshUnread("GUARDIAN");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs only when the tab changes, not on every refreshUnread identity change
+  }, [tab]);
 
   useEffect(() => {
     fetchIfNeeded();
@@ -83,64 +124,97 @@ export function WardMessagesPage() {
       )}
 
       {hasWards && (
-        <StickySubHeader>
-          <WardSelector />
-        </StickySubHeader>
-      )}
-
-      {loadError && <Alert variant="error">{loadError}</Alert>}
-
-      {page && page.content.length === 0 && (
-        <EmptyState
-          icon={MessageSquare}
-          title="No messages yet"
-          description="Your ward's class teacher hasn't logged a note yet."
+        <Tabs
+          ariaLabel="Message views"
+          value={tab}
+          onChange={changeTab}
+          items={[
+            { value: "unread", label: `Unread (${unreadCount})` },
+            { value: "all", label: "All messages" },
+          ]}
         />
       )}
 
-      {page && page.content.length > 0 && (
+      {hasWards && tab === "unread" && (
+        <UnreadThreadList
+          view={unreadView}
+          error={unreadError}
+          onOpenThread={(thread) =>
+            thread.threadId && setOpenThread({ studentId: thread.studentId, threadId: thread.threadId })
+          }
+        />
+      )}
+
+      {hasWards && tab === "all" && (
         <>
-          <ul className="space-y-3">
-            {page.content.map((thread) => (
-              <li key={thread.threadId}>
-                <button
-                  type="button"
-                  onClick={() => setOpenThreadId(thread.threadId ?? null)}
-                  className={`flex min-h-14 w-full items-center gap-3 rounded-card border border-slate-200 border-l-4 bg-white p-4 text-left transition-colors hover:bg-slate-50 ${categoryRailClass(thread.category)}`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        {thread.unread && (
-                          <span className="h-2 w-2 shrink-0 rounded-full bg-brand-500" aria-label="Unread" />
-                        )}
-                        {thread.category && <CategoryBadge category={thread.category} />}
-                        <span className={`text-sm ${thread.unread ? "font-semibold text-slate-900" : "text-slate-500"}`}>
-                          {formatLongDate(thread.logDate)}
-                        </span>
+          <StickySubHeader>
+            <WardSelector />
+          </StickySubHeader>
+
+          {loadError && <Alert variant="error">{loadError}</Alert>}
+
+          {page && page.content.length === 0 && (
+            <EmptyState
+              icon={MessageSquare}
+              title="No messages yet"
+              description="Your ward's class teacher hasn't logged a note yet."
+            />
+          )}
+
+          {page && page.content.length > 0 && (
+            <>
+              <ul className="space-y-3">
+                {page.content.map((thread) => (
+                  <li key={thread.threadId}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        thread.threadId &&
+                        selectedWardId &&
+                        setOpenThread({ studentId: selectedWardId, threadId: thread.threadId })
+                      }
+                      className={`flex min-h-14 w-full items-center gap-3 rounded-card border border-slate-200 border-l-4 bg-white p-4 text-left transition-colors hover:bg-slate-50 ${categoryRailClass(thread.category)}`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            {thread.unread && (
+                              <span className="h-2 w-2 shrink-0 rounded-full bg-brand-500" aria-label="Unread" />
+                            )}
+                            {thread.category && <CategoryBadge category={thread.category} />}
+                            <span
+                              className={`text-sm ${thread.unread ? "font-semibold text-slate-900" : "text-slate-500"}`}
+                            >
+                              {formatLongDate(thread.logDate)}
+                            </span>
+                          </div>
+                          <span className="text-sm text-slate-500">
+                            {thread.startedByName}
+                            {thread.replyCount > 0
+                              ? ` · ${thread.replyCount} repl${thread.replyCount === 1 ? "y" : "ies"}`
+                              : ""}
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-sm text-slate-500">
-                        {thread.startedByName}
-                        {thread.replyCount > 0 ? ` · ${thread.replyCount} repl${thread.replyCount === 1 ? "y" : "ies"}` : ""}
-                      </span>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
-                </button>
-              </li>
-            ))}
-          </ul>
-          <Pagination page={page} onPageChange={setPageIndex} />
+                      <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <Pagination page={page} onPageChange={setPageIndex} />
+            </>
+          )}
         </>
       )}
 
-      {openThreadId && selectedWardId && (
+      {openThread && (
         <WardThreadModal
-          studentId={selectedWardId}
-          threadId={openThreadId}
+          studentId={openThread.studentId}
+          threadId={openThread.threadId}
           onClose={() => {
-            setOpenThreadId(null);
+            setOpenThread(null);
             load();
+            loadUnread();
             refreshUnread("GUARDIAN");
           }}
         />

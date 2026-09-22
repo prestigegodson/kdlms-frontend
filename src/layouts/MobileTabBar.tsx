@@ -62,7 +62,8 @@ export function MobileTabBar({
               {hasBadge && (
                 <span
                   className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-brand-500"
-                  aria-hidden="true"
+                  role="img"
+                  aria-label="unread"
                 />
               )}
             </span>
