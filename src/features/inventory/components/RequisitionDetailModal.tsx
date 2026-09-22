@@ -107,6 +107,16 @@ export function RequisitionDetailModal({ requisition, onClose, onChanged, onEdit
             <dt className="text-slate-500">Needed by</dt>
             <dd className="text-slate-900">{requisition.neededBy ?? "—"}</dd>
           </div>
+          <div>
+            <dt className="text-slate-500">Student</dt>
+            <dd className="text-slate-900">
+              {requisition.studentName
+                ? requisition.studentAdmissionNumber
+                  ? `${requisition.studentName} (${requisition.studentAdmissionNumber})`
+                  : requisition.studentName
+                : "—"}
+            </dd>
+          </div>
           {requisition.purpose && (
             <div className="sm:col-span-2">
               <dt className="text-slate-500">Purpose</dt>

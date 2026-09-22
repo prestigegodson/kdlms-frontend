@@ -1,3 +1,4 @@
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/Input";
@@ -16,6 +17,19 @@ interface SearchInputProps {
    * it doesn't shadow the visible label for assistive tech.
    */
   id?: string;
+  /**
+   * The WAI-ARIA combobox attributes, all optional - a plain search field
+   * (every call site but `StudentSearchField`) leaves these unset. Forwarded
+   * straight onto the underlying `<Input>`, which is where its own debounced
+   * `onKeyDown` also lands, so a combobox owner can drive Up/Down/Enter/
+   * Escape off the same element the person is typing into.
+   */
+  role?: string;
+  "aria-expanded"?: boolean;
+  "aria-controls"?: string;
+  "aria-activedescendant"?: string;
+  onKeyDown?: (event: ReactKeyboardEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
 }
 
 /**
@@ -30,7 +44,20 @@ interface SearchInputProps {
  * render. Committing a debounced change also sets `value` to that same
  * draft, so this is a no-op in the common case.
  */
-export function SearchInput({ value, onChange, placeholder, className = "", debounceMs = 300, id }: SearchInputProps) {
+export function SearchInput({
+  value,
+  onChange,
+  placeholder,
+  className = "",
+  debounceMs = 300,
+  id,
+  role,
+  "aria-expanded": ariaExpanded,
+  "aria-controls": ariaControls,
+  "aria-activedescendant": ariaActiveDescendant,
+  onKeyDown,
+  disabled,
+}: SearchInputProps) {
   const [draft, setDraft] = useState(value);
   const [lastSeenValue, setLastSeenValue] = useState(value);
 
@@ -59,8 +86,14 @@ export function SearchInput({ value, onChange, placeholder, className = "", debo
         type="search"
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
         className="pl-9"
+        role={role}
+        aria-expanded={ariaExpanded}
+        aria-controls={ariaControls}
+        aria-activedescendant={ariaActiveDescendant}
+        disabled={disabled}
         aria-label={id ? undefined : (placeholder ?? "Search")}
       />
     </div>

@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { StudentSearchField, type StudentSearchSelection } from "@/features/students/components/StudentSearchField";
+import { useAuthStore } from "@/stores/authStore";
 
 interface DraftLine {
   itemId: string;
@@ -40,14 +42,36 @@ function draftLinesFrom(requisition: RequisitionView | undefined): DraftLine[] {
   }));
 }
 
+function studentSelectionFrom(requisition: RequisitionView | undefined): StudentSearchSelection | null {
+  if (!requisition?.studentId || !requisition.studentName) {
+    return null;
+  }
+  // Denormalized straight off the view - the requestedByName/itemName precedent - so pre-filling
+  // the field in edit mode needs no extra round trip.
+  return {
+    id: requisition.studentId,
+    name: requisition.studentName,
+    admissionNumber: requisition.studentAdmissionNumber ?? "",
+  };
+}
+
 /** Create/edit a DRAFT requisition - a header plus a repeating list of item + quantity + note lines. */
 export function RequisitionFormModal({ requisition, branchId, items, onClose, onSaved }: RequisitionFormModalProps) {
   const isEdit = requisition != null;
   const [purpose, setPurpose] = useState(requisition?.purpose ?? "");
   const [neededBy, setNeededBy] = useState(requisition?.neededBy ?? "");
+  const [student, setStudent] = useState<StudentSearchSelection | null>(studentSelectionFrom(requisition));
   const [lines, setLines] = useState<DraftLine[]>(draftLinesFrom(requisition));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // On edit, RequisitionsTab omits `branchId` (a requisition's branch is immutable), so the
+  // requisition's own branchId covers that case. On create, `branchId` is the tab's own filter -
+  // present for a SCHOOL_ADMIN, but `undefined` for a BRANCH_ADMIN/INVENTORY_MANAGER
+  // (useBranchScope() deliberately leaves their own branch for the server to derive from the
+  // token), so the caller's own branchId from the auth store is the last fallback.
+  const ownBranchId = useAuthStore((state) => state.user?.branchId);
+  const studentSearchBranchId = requisition?.branchId ?? branchId ?? ownBranchId;
 
   function addLine() {
     setLines((current) => [...current, { itemId: items[0]?.id ?? "", quantityRequested: "1", note: "" }]);
@@ -72,9 +96,20 @@ export function RequisitionFormModal({ requisition, branchId, items, onClose, on
         note: line.note || null,
       }));
       if (isEdit) {
-        await updateRequisition(requisition.id, { purpose: purpose || null, neededBy: neededBy || null, lines: lineRequests });
+        await updateRequisition(requisition.id, {
+          purpose: purpose || null,
+          neededBy: neededBy || null,
+          studentId: student?.id ?? null,
+          lines: lineRequests,
+        });
       } else {
-        await createRequisition({ branchId, purpose: purpose || null, neededBy: neededBy || null, lines: lineRequests });
+        await createRequisition({
+          branchId,
+          purpose: purpose || null,
+          neededBy: neededBy || null,
+          studentId: student?.id ?? null,
+          lines: lineRequests,
+        });
       }
       onSaved();
       onClose();
@@ -107,6 +142,15 @@ export function RequisitionFormModal({ requisition, branchId, items, onClose, on
             type="date"
             value={neededBy}
             onChange={(event) => setNeededBy(event.target.value)}
+          />
+        </FormField>
+
+        <FormField label="Student" htmlFor="requisition-student" description="Optional - who the goods are for.">
+          <StudentSearchField
+            id="requisition-student"
+            value={student}
+            onChange={setStudent}
+            branchId={studentSearchBranchId}
           />
         </FormField>
 

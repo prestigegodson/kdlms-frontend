@@ -75,6 +75,8 @@ export interface RequisitionSummaryView {
   branchId: string;
   branchName: string | null;
   neededBy: string | null;
+  /** The student the goods are for, if named - optional, see RequisitionView. */
+  studentName: string | null;
   lineCount: number;
   requestedByName: string | null;
   createdAt: string;
@@ -90,7 +92,12 @@ export interface RequisitionLineView {
   note: string | null;
 }
 
-/** Mirrors backend inventory.application.port.in.RequisitionView - the full detail read, lines included. */
+/**
+ * Mirrors backend inventory.application.port.in.RequisitionView - the full detail read, lines
+ * included. studentId/studentName/studentAdmissionNumber are all null when no student was named -
+ * resolution is deliberately lenient (a student who has since transferred branch, withdrawn, or
+ * graduated still resolves here; only the write path is strict).
+ */
 export interface RequisitionView {
   id: string;
   reference: string;
@@ -99,6 +106,9 @@ export interface RequisitionView {
   branchName: string | null;
   purpose: string | null;
   neededBy: string | null;
+  studentId: string | null;
+  studentName: string | null;
+  studentAdmissionNumber: string | null;
   lines: RequisitionLineView[];
   requestedBy: string;
   requestedByName: string | null;
@@ -158,6 +168,8 @@ export interface SaveRequisitionRequest {
   branchId?: string;
   purpose: string | null;
   neededBy: string | null;
+  /** The student the goods are for, if named - optional on both create and edit; null clears it. */
+  studentId: string | null;
   lines: RequisitionLineRequest[];
 }
 

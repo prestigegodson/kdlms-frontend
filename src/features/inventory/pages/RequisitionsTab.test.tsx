@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as inventoryApi from "@/api/inventory";
 import type { InventoryItemView, RequisitionSummaryView, RequisitionView } from "@/api/inventory";
+import * as studentsApi from "@/api/students";
+import type { StudentView } from "@/api/students";
 import { RequisitionsTab } from "@/features/inventory/pages/RequisitionsTab";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import { resetBranchStore } from "@/stores/branchStore";
@@ -22,6 +24,15 @@ vi.mock("@/api/inventory", async () => {
   };
 });
 
+// The requisition form's optional Student field searches through this module.
+vi.mock("@/api/students", async () => {
+  const actual = await vi.importActual<typeof import("@/api/students")>("@/api/students");
+  return {
+    ...actual,
+    listStudents: vi.fn(),
+  };
+});
+
 const BLUE_UNIFORM: InventoryItemView = {
   id: "item-1",
   itemTypeId: "type-1",
@@ -37,6 +48,19 @@ const BLUE_UNIFORM: InventoryItemView = {
   updatedAt: "2026-01-01T00:00:00Z",
 };
 
+const GRACE_STUDENT: StudentView = {
+  id: "student-1",
+  schoolId: "school-1",
+  branchId: "branch-1",
+  admissionNumber: "KDL/2024/0031",
+  firstName: "Grace",
+  lastName: "Obi",
+  fullName: "Grace Obi",
+  gender: "FEMALE",
+  admissionDate: "2020-09-01",
+  status: "ACTIVE",
+};
+
 const DRAFT_SUMMARY: RequisitionSummaryView = {
   id: "req-1",
   reference: "REQ/2026/0001",
@@ -44,6 +68,7 @@ const DRAFT_SUMMARY: RequisitionSummaryView = {
   branchId: "branch-1",
   branchName: "Main Campus",
   neededBy: null,
+  studentName: null,
   lineCount: 1,
   requestedByName: "Ada Obi",
   createdAt: "2026-01-01T00:00:00Z",
@@ -57,6 +82,9 @@ const DRAFT_DETAIL: RequisitionView = {
   branchName: "Main Campus",
   purpose: "Restock",
   neededBy: null,
+  studentId: null,
+  studentName: null,
+  studentAdmissionNumber: null,
   lines: [
     {
       id: "line-1",
@@ -107,16 +135,20 @@ describe("RequisitionsTab", () => {
     vi.mocked(inventoryApi.listItems).mockResolvedValue([BLUE_UNIFORM]);
   });
 
-  it("renders the requisition worklist", async () => {
-    vi.mocked(inventoryApi.listRequisitions).mockResolvedValue([DRAFT_SUMMARY]);
+  it("renders the requisition worklist, including a named student", async () => {
+    vi.mocked(inventoryApi.listRequisitions).mockResolvedValue([
+      DRAFT_SUMMARY,
+      { ...DRAFT_SUMMARY, id: "req-2", reference: "REQ/2026/0002", studentName: "Grace Obi" },
+    ]);
 
     render(<RequisitionsTab />);
 
     expect(await screen.findByText("REQ/2026/0001")).toBeInTheDocument();
-    expect(screen.getByText("Draft")).toBeInTheDocument();
+    expect(screen.getAllByText("Draft")).toHaveLength(2);
+    expect(screen.getByText("Grace Obi")).toBeInTheDocument();
   });
 
-  it("creates a requisition through the modal", async () => {
+  it("creates a requisition through the modal with no student named", async () => {
     vi.mocked(inventoryApi.listRequisitions).mockResolvedValue([]);
     vi.mocked(inventoryApi.createRequisition).mockResolvedValue(DRAFT_DETAIL);
     const user = userEvent.setup();
@@ -132,10 +164,73 @@ describe("RequisitionsTab", () => {
     await waitFor(() =>
       expect(inventoryApi.createRequisition).toHaveBeenCalledWith(
         expect.objectContaining({
+          studentId: null,
           lines: [{ itemId: "item-1", quantityRequested: 1, note: null }],
         }),
       ),
     );
+    expect(studentsApi.listStudents).not.toHaveBeenCalled();
+  });
+
+  it("creates a requisition through the modal naming a student, searched by the requisition's own branch", async () => {
+    vi.mocked(inventoryApi.listRequisitions).mockResolvedValue([]);
+    vi.mocked(inventoryApi.createRequisition).mockResolvedValue({ ...DRAFT_DETAIL, studentId: "student-1" });
+    vi.mocked(studentsApi.listStudents).mockResolvedValue({
+      content: [GRACE_STUDENT],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 10,
+    });
+    const user = userEvent.setup();
+
+    render(<RequisitionsTab />);
+    await screen.findByText("No requisitions yet");
+
+    await user.click(screen.getByRole("button", { name: "New requisition" }));
+    const dialog = await screen.findByRole("dialog", { name: "New requisition" });
+    await user.selectOptions(within(dialog).getByLabelText("Item"), "item-1");
+    await user.type(within(dialog).getByLabelText("Student"), "gra");
+
+    await waitFor(() =>
+      expect(studentsApi.listStudents).toHaveBeenCalledWith(
+        { branchId: "branch-1", status: "ACTIVE", q: "gra" },
+        0,
+        10,
+      ),
+    );
+    await user.click(await within(dialog).findByRole("option", { name: /Grace Obi/ }));
+    expect(within(dialog).getByText("Grace Obi")).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "Create requisition" }));
+
+    await waitFor(() =>
+      expect(inventoryApi.createRequisition).toHaveBeenCalledWith(
+        expect.objectContaining({ studentId: "student-1" }),
+      ),
+    );
+  });
+
+  it("the detail modal shows a named student, and a dash when none was named", async () => {
+    vi.mocked(inventoryApi.listRequisitions).mockResolvedValue([DRAFT_SUMMARY]);
+    vi.mocked(inventoryApi.getRequisition).mockResolvedValue(DRAFT_DETAIL);
+    const user = userEvent.setup();
+
+    render(<RequisitionsTab />);
+    await user.click(await screen.findByText("REQ/2026/0001"));
+    let dialog = await screen.findByRole("dialog", { name: "REQ/2026/0001" });
+    expect(within(dialog).getByText("Student").nextElementSibling).toHaveTextContent("—");
+    await user.click(within(dialog).getByLabelText("Close"));
+
+    vi.mocked(inventoryApi.getRequisition).mockResolvedValue({
+      ...DRAFT_DETAIL,
+      studentId: "student-1",
+      studentName: "Grace Obi",
+      studentAdmissionNumber: "KDL/2024/0031",
+    });
+    await user.click(await screen.findByText("REQ/2026/0001"));
+    dialog = await screen.findByRole("dialog", { name: "REQ/2026/0001" });
+    expect(within(dialog).getByText("Grace Obi (KDL/2024/0031)")).toBeInTheDocument();
   });
 
   it("opens the detail modal and submits a DRAFT requisition", async () => {

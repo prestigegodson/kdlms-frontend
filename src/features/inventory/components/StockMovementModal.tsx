@@ -103,7 +103,7 @@ export function StockMovementModal({ kind, branchId, items, defaultItemId, onClo
             />
           </FormField>
         ) : (
-          <FormField label="Reference" htmlFor="movement-reference" description="Optional - supplier invoice, waybill…">
+          <FormField label="Reference" htmlFor="movement-reference" description="Optional - supplier invoice no, waybill no">
             <Input id="movement-reference" value={reference} onChange={(event) => setReference(event.target.value)} />
           </FormField>
         )}

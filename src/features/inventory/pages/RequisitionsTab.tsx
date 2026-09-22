@@ -132,6 +132,7 @@ export function RequisitionsTab({ initialStatus = "" }: RequisitionsTabProps) {
               <TableHeaderCell>Status</TableHeaderCell>
               <TableHeaderCell numeric>Lines</TableHeaderCell>
               <TableHeaderCell>Needed by</TableHeaderCell>
+              <TableHeaderCell>Student</TableHeaderCell>
               <TableHeaderCell>Requested by</TableHeaderCell>
             </TableRow>
           </TableHead>
@@ -146,6 +147,7 @@ export function RequisitionsTab({ initialStatus = "" }: RequisitionsTabProps) {
                   {requisition.lineCount}
                 </TableCell>
                 <TableCell label="Needed by">{requisition.neededBy ?? "—"}</TableCell>
+                <TableCell label="Student">{requisition.studentName ?? "—"}</TableCell>
                 <TableCell label="Requested by">{requisition.requestedByName ?? "—"}</TableCell>
               </TableRow>
             ))}
