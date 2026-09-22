@@ -80,3 +80,15 @@ export function scoreCellText(result: { finalScore?: number; scoreMax?: number }
   }
   return result.scoreMax == null ? String(result.finalScore) : `${result.finalScore} / ${result.scoreMax}`;
 }
+
+/**
+ * Renders a subject's class-average cell (Phase 37, the "Show class average
+ * per subject" opt-in) - shared by BroadsheetTable and StudentTermResultCard.
+ * `classAverage` is undefined unless the school has turned the setting on
+ * (or always, for a QUALITATIVE class); `scoreMax` is the row's own MIDTERM
+ * denominator, reused rather than carried separately, since the average and
+ * the student's own score share the same subject/term max.
+ */
+export function classAverageCellText(classAverage: number | undefined, scoreMax: number | undefined): string {
+  return scoreCellText({ finalScore: classAverage, scoreMax });
+}

@@ -3,18 +3,25 @@ import type { ReportAssessmentMode, ResultTemplateSummary } from "@/api/resultTe
 
 const BASE = "/api/v1/report-settings";
 
-/** Mirrors backend reporting.application.port.in.ManageSchoolReportSettingsUseCase.SchoolReportSettingsView. */
+/**
+ * Mirrors backend reporting.application.port.in.ManageSchoolReportSettingsUseCase.SchoolReportSettingsView.
+ * `showClassAverage` defaults to false for a school with no settings row yet -
+ * off by default, since schools differ on whether parents should see class
+ * comparatives.
+ */
 export interface SchoolReportSettingsView {
   schoolId: string;
   logoFileId?: string;
   principalName?: string;
   principalSignatureFileId?: string;
+  showClassAverage: boolean;
 }
 
 export interface SaveSettingsRequest {
   logoFileId?: string | null;
   principalName?: string | null;
   principalSignatureFileId?: string | null;
+  showClassAverage: boolean;
 }
 
 /**

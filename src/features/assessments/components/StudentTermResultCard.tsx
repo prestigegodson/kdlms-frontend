@@ -2,7 +2,7 @@ import type { StudentTermResultView, TraitRatingView } from "@/api/assessments";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
-import { scoreCellText } from "@/features/assessments/finalScore";
+import { classAverageCellText, scoreCellText } from "@/features/assessments/finalScore";
 
 const TRAIT_CATEGORY_LABELS: Record<TraitRatingView["category"], string> = {
   AFFECTIVE: "Affective disposition",
@@ -27,7 +27,12 @@ interface StudentTermResultCardProps {
 /** One student's term result - a per-subject table plus (NUMERIC only) total/average/position. */
 export function StudentTermResultCard({ result }: StudentTermResultCardProps) {
   const isNumeric = result.assessmentMode === "NUMERIC";
-  const subjectName = (subjectId: string) => result.subjects.find((subject) => subject.subjectId === subjectId)?.name ?? subjectId;
+  const subjectColumn = (subjectId: string) => result.subjects.find((subject) => subject.subjectId === subjectId);
+  const subjectName = (subjectId: string) => subjectColumn(subjectId)?.name ?? subjectId;
+  // Undefined unless the school's "Show class average per subject" opt-in is on
+  // (Report Settings) - the column is hidden entirely rather than showing a dash
+  // for every row when the school hasn't turned it on.
+  const showClassAverage = isNumeric && result.subjects.some((subject) => subject.classAverage != null);
 
   return (
     <Card className="p-0">
@@ -47,6 +52,7 @@ export function StudentTermResultCard({ result }: StudentTermResultCardProps) {
               {isNumeric ? (
                 <>
                   <TableHeaderCell numeric>Score</TableHeaderCell>
+                  {showClassAverage && <TableHeaderCell numeric>Class avg</TableHeaderCell>}
                   <TableHeaderCell>Grade</TableHeaderCell>
                 </>
               ) : (
@@ -68,6 +74,11 @@ export function StudentTermResultCard({ result }: StudentTermResultCardProps) {
                     <TableCell label="Score" numeric>
                       {scoreCellText(subject)}
                     </TableCell>
+                    {showClassAverage && (
+                      <TableCell label="Class avg" numeric>
+                        {classAverageCellText(subjectColumn(subject.subjectId)?.classAverage, subject.scoreMax)}
+                      </TableCell>
+                    )}
                     <TableCell label="Grade">{subject.grade ?? "—"}</TableCell>
                   </>
                 ) : (

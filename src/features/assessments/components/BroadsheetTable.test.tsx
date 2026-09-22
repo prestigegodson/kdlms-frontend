@@ -84,6 +84,53 @@ describe("BroadsheetTable", () => {
     expect(screen.queryByText("90")).not.toBeInTheDocument();
   });
 
+  it("shows no Class average row when no subject carries one", () => {
+    render(<BroadsheetTable broadsheet={NUMERIC_BROADSHEET} />);
+
+    expect(screen.queryByText("Class average")).not.toBeInTheDocument();
+  });
+
+  it("shows a Class average footer row and value when the school's opt-in is on", () => {
+    const withClassAverage: BroadsheetView = {
+      ...NUMERIC_BROADSHEET,
+      subjects: [{ subjectId: "subject-1", name: "Mathematics", code: "MTH", classAverage: 72.4 }],
+    };
+    render(<BroadsheetTable broadsheet={withClassAverage} />);
+
+    expect(screen.getByText("Class average")).toBeInTheDocument();
+    expect(screen.getByText("72.4")).toBeInTheDocument();
+  });
+
+  it("rides both TERM and MIDTERM scopes, unlike Total/Average/Position", () => {
+    const midtermWithClassAverage: BroadsheetView = {
+      ...NUMERIC_BROADSHEET,
+      subjects: [{ subjectId: "subject-1", name: "Mathematics", code: "MTH", classAverage: 14.2 }],
+      rows: [
+        {
+          ...NUMERIC_BROADSHEET.rows[0],
+          subjectResults: [{ subjectId: "subject-1", finalScore: 18, scoreMax: 20 }],
+          total: undefined,
+          average: undefined,
+          position: undefined,
+        },
+      ],
+    };
+    render(<BroadsheetTable broadsheet={midtermWithClassAverage} scope="MIDTERM" />);
+
+    expect(screen.getByText("Class average")).toBeInTheDocument();
+    expect(screen.getByText("14.2 / 20")).toBeInTheDocument();
+  });
+
+  it("never shows a Class average row for a qualitative class", () => {
+    const withStrayValue: BroadsheetView = {
+      ...QUALITATIVE_BROADSHEET,
+      subjects: [{ subjectId: "subject-2", name: "Numeracy", code: "NUM" }],
+    };
+    render(<BroadsheetTable broadsheet={withStrayValue} />);
+
+    expect(screen.queryByText("Class average")).not.toBeInTheDocument();
+  });
+
   it("keeps the scroll hint visible through the tablet width, hiding only from lg up", () => {
     render(<BroadsheetTable broadsheet={NUMERIC_BROADSHEET} />);
 

@@ -66,7 +66,10 @@ function renderAsSchoolAdmin() {
 describe("ReportSettingsPage — preview sample", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(reportSettingsApi.getReportSettings).mockResolvedValue({ schoolId: "school-1" });
+    vi.mocked(reportSettingsApi.getReportSettings).mockResolvedValue({
+      schoolId: "school-1",
+      showClassAverage: false,
+    });
     vi.mocked(reportSettingsApi.listLevelTemplates).mockResolvedValue([RESOLVED_LEVEL, UNRESOLVED_LEVEL]);
   });
 
@@ -112,5 +115,57 @@ describe("ReportSettingsPage — preview sample", () => {
     const nurseryButton = within(nurseryRow).getByRole("button", { name: "Preview sample" });
     expect(nurseryButton).toBeDisabled();
     expect(buttons.length).toBe(2);
+  });
+});
+
+describe("ReportSettingsPage — class average opt-in", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(reportSettingsApi.listLevelTemplates).mockResolvedValue([]);
+  });
+
+  it("defaults the checkbox off and includes it, unchanged, in a save that touches nothing else", async () => {
+    vi.mocked(reportSettingsApi.getReportSettings).mockResolvedValue({
+      schoolId: "school-1",
+      showClassAverage: false,
+    });
+    vi.mocked(reportSettingsApi.saveReportSettings).mockResolvedValue({
+      schoolId: "school-1",
+      showClassAverage: false,
+    });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    const checkbox = await screen.findByRole("checkbox", { name: "Show class average per subject" });
+    expect(checkbox).not.toBeChecked();
+
+    await user.click(screen.getByRole("button", { name: "Save settings" }));
+
+    expect(reportSettingsApi.saveReportSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ showClassAverage: false }),
+    );
+  });
+
+  it("turning the checkbox on saves it as true", async () => {
+    vi.mocked(reportSettingsApi.getReportSettings).mockResolvedValue({
+      schoolId: "school-1",
+      showClassAverage: false,
+    });
+    vi.mocked(reportSettingsApi.saveReportSettings).mockResolvedValue({
+      schoolId: "school-1",
+      showClassAverage: true,
+    });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    const checkbox = await screen.findByRole("checkbox", { name: "Show class average per subject" });
+    await user.click(checkbox);
+    expect(checkbox).toBeChecked();
+
+    await user.click(screen.getByRole("button", { name: "Save settings" }));
+
+    expect(reportSettingsApi.saveReportSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ showClassAverage: true }),
+    );
   });
 });

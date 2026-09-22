@@ -1,6 +1,6 @@
 import type { BroadsheetView } from "@/api/assessments";
 import type { ResultScope } from "@/api/types";
-import { scoreCellText } from "@/features/assessments/finalScore";
+import { classAverageCellText, scoreCellText } from "@/features/assessments/finalScore";
 
 interface BroadsheetTableProps {
   broadsheet: BroadsheetView;
@@ -25,6 +25,17 @@ export function BroadsheetTable({ broadsheet, scope = "TERM" }: BroadsheetTableP
   const rows = showsAggregates
     ? [...broadsheet.rows].sort((a, b) => (a.position ?? Infinity) - (b.position ?? Infinity))
     : broadsheet.rows;
+  // Undefined unless the school's "Show class average per subject" opt-in is on
+  // (Report Settings) - rides both TERM and MIDTERM scopes, unlike the
+  // per-student aggregates above, since it's a subject-axis figure, not a
+  // per-student one (see CLAUDE.md's Domain Rules).
+  const showClassAverage = isNumeric && broadsheet.subjects.some((subject) => subject.classAverage != null);
+  // A MIDTERM subject's scoreMax (the raw mark's denominator) is uniform across
+  // the class - reused from whichever row happens to carry it, the same
+  // assumption the backend's own class-average computation makes.
+  const scoreMaxFor = (subjectId: string) =>
+    broadsheet.rows.map((row) => row.subjectResults.find((result) => result.subjectId === subjectId)?.scoreMax)
+      .find((scoreMax) => scoreMax != null);
 
   return (
     <div className="space-y-2">
@@ -108,6 +119,27 @@ export function BroadsheetTable({ broadsheet, scope = "TERM" }: BroadsheetTableP
               );
             })}
           </tbody>
+          {showClassAverage && (
+            <tfoot className="border-t border-slate-200 bg-slate-50">
+              <tr>
+                <th
+                  scope="row"
+                  className="sticky left-0 z-10 bg-slate-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 after:absolute after:inset-y-0 after:-right-2 after:w-2 after:bg-gradient-to-r after:from-slate-900/10 after:to-transparent"
+                >
+                  Class average
+                </th>
+                {broadsheet.subjects.map((subject) => (
+                  <td
+                    key={subject.subjectId}
+                    className="whitespace-nowrap px-3 py-3 text-center tabular-nums font-medium text-slate-700"
+                  >
+                    {classAverageCellText(subject.classAverage, scoreMaxFor(subject.subjectId))}
+                  </td>
+                ))}
+                {showsAggregates && <td colSpan={3} />}
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
     </div>

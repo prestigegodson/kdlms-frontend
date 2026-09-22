@@ -88,12 +88,26 @@ export interface SubjectResult {
   observation?: string;
 }
 
+/**
+ * Mirrors backend assessment.application.port.in.BroadsheetView.SubjectColumn -
+ * shared verbatim by `BroadsheetView` and `StudentTermResultView`, the same
+ * way the backend record is. `classAverage` (Phase 37) is undefined unless
+ * the school has turned on the "Show class average per subject" opt-in in
+ * Report Settings, and always undefined for a QUALITATIVE class.
+ */
+export interface SubjectColumn {
+  subjectId: string;
+  name: string;
+  code?: string;
+  classAverage?: number;
+}
+
 /** Mirrors backend assessment.application.port.in.BroadsheetView - the whole-class results grid for one term. */
 export interface BroadsheetView {
   classId: string;
   termId: string;
   assessmentMode: AssessmentMode;
-  subjects: Array<{ subjectId: string; name: string; code?: string }>;
+  subjects: SubjectColumn[];
   rows: Array<{
     enrollmentId: string;
     studentId: string;
@@ -123,7 +137,7 @@ export interface StudentTermResultView {
   classId: string;
   termId: string;
   assessmentMode: AssessmentMode;
-  subjects: Array<{ subjectId: string; name: string; code?: string }>;
+  subjects: SubjectColumn[];
   subjectResults: SubjectResult[];
   total?: number;
   average?: number;

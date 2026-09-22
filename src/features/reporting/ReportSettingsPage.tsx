@@ -13,6 +13,7 @@ import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
@@ -38,6 +39,7 @@ export function ReportSettingsPage() {
   const editable = can.manageReportSettings(role);
 
   const [branding, setBranding] = useState<BrandingValues>(BLANK);
+  const [showClassAverage, setShowClassAverage] = useState(false);
   const [brandingLoaded, setBrandingLoaded] = useState(false);
   const [levels, setLevels] = useState<LevelTemplateAssignmentView[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -56,13 +58,14 @@ export function ReportSettingsPage() {
 
   useEffect(() => {
     getReportSettings()
-      .then((settings) =>
+      .then((settings) => {
         setBranding({
           logoFileId: settings.logoFileId,
           principalName: settings.principalName ?? "",
           principalSignatureFileId: settings.principalSignatureFileId,
-        }),
-      )
+        });
+        setShowClassAverage(settings.showClassAverage);
+      })
       .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load settings"))
       .finally(() => setBrandingLoaded(true));
     loadLevels();
@@ -77,6 +80,7 @@ export function ReportSettingsPage() {
         logoFileId: branding.logoFileId ?? null,
         principalName: branding.principalName || null,
         principalSignatureFileId: branding.principalSignatureFileId ?? null,
+        showClassAverage,
       });
       setSaved(true);
     } catch (error) {
@@ -125,6 +129,23 @@ export function ReportSettingsPage() {
         ) : (
           <>
             <BrandingFields values={branding} onChange={editable ? setBranding : () => undefined} />
+
+            <div className="mt-6 border-t border-slate-200 pt-6">
+              <h3 className="mb-2 font-display text-sm font-medium text-slate-900">Result options</h3>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <Checkbox
+                  checked={showClassAverage}
+                  disabled={!editable}
+                  onChange={(event) => setShowClassAverage(event.target.checked)}
+                />
+                Show class average per subject
+              </label>
+              <p className="mt-1 text-sm text-slate-500">
+                Off by default. When on, every NUMERIC result report, the broadsheet, and the on-screen
+                result views print each subject's class-wide average alongside a student's own score.
+              </p>
+            </div>
+
             {editable && (
               <div className="mt-6 flex items-center gap-3">
                 <Button onClick={handleSave} loading={saving}>

@@ -44,6 +44,37 @@ describe("StudentTermResultCard", () => {
     expect(screen.queryByText(/Position/)).not.toBeInTheDocument();
   });
 
+  it("shows no Class avg column when no subject carries one", () => {
+    render(<StudentTermResultCard result={TERM_RESULT} />);
+
+    expect(screen.queryByText("Class avg")).not.toBeInTheDocument();
+  });
+
+  it("shows a Class avg column and value when the school's opt-in is on", () => {
+    const withClassAverage: StudentTermResultView = {
+      ...TERM_RESULT,
+      subjects: [{ subjectId: "subject-1", name: "Mathematics", classAverage: 72.4 }],
+    };
+    render(<StudentTermResultCard result={withClassAverage} />);
+
+    expect(screen.getByText("Class avg")).toBeInTheDocument();
+    expect(screen.getByText("72.4")).toBeInTheDocument();
+  });
+
+  it("renders a MIDTERM class average as the raw average over the row's own snapshotted max", () => {
+    const midtermWithClassAverage: StudentTermResultView = {
+      ...TERM_RESULT,
+      subjects: [{ subjectId: "subject-1", name: "Mathematics", classAverage: 14.2 }],
+      subjectResults: [{ subjectId: "subject-1", finalScore: 18, scoreMax: 20, grade: "A" }],
+      total: undefined,
+      average: undefined,
+      position: undefined,
+    };
+    render(<StudentTermResultCard result={midtermWithClassAverage} />);
+
+    expect(screen.getByText("14.2 / 20")).toBeInTheDocument();
+  });
+
   it("renders rated behavioural traits grouped by category", () => {
     const resultWithTraits: StudentTermResultView = {
       ...TERM_RESULT,
