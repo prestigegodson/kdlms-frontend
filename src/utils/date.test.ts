@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatClockTime,
   formatDateRange,
+  formatInstantDate,
   formatLongDate,
   formatMonthName,
   normalizeClockTime,
@@ -134,5 +135,18 @@ describe("normalizeClockTime", () => {
   it("returns null for missing/unparseable input", () => {
     expect(normalizeClockTime(undefined)).toBeNull();
     expect(normalizeClockTime("garbage")).toBeNull();
+  });
+});
+
+describe("formatInstantDate", () => {
+  it("formats an instant as 'D Mon YYYY' with no time component", () => {
+    expect(formatInstantDate("2026-03-10T14:00:00Z")).toMatch(/^10 Mar 2026$/);
+  });
+
+  it("returns '—' for missing/unparseable input", () => {
+    expect(formatInstantDate(undefined)).toBe("—");
+    expect(formatInstantDate(null)).toBe("—");
+    expect(formatInstantDate("")).toBe("—");
+    expect(formatInstantDate("garbage")).toBe("—");
   });
 });

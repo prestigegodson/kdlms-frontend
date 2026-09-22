@@ -141,6 +141,8 @@ export interface RecordLearningInteractionRequest {
  * row of an already-uploaded file at the caller's own level+branch scope, labelled by the most
  * recently updated resource that references it. `durationSeconds` comes straight from that
  * resource, so picking an `AUDIO`/`VIDEO` file skips the fresh-upload duration probe entirely.
+ * `uploadedAt` is the underlying file's own upload date - distinct from `lastUsedAt`, which is the
+ * labelling resource's own `updatedAt` and isn't rendered anywhere today.
  */
 export interface LearningGalleryFileView {
   fileId: string;
@@ -154,6 +156,7 @@ export interface LearningGalleryFileView {
   subjectName: string;
   useCount: number;
   lastUsedAt: string;
+  uploadedAt: string;
 }
 
 /** Mirrors backend learning.application.port.in.ResourceCompletionsView (Phase 35H) - the staff-facing roster-vs-interactions read for one resource. */

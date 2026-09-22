@@ -12,7 +12,12 @@ vi.mock("@/api/files", async () => {
 
 vi.mock("@/api/learning", async () => {
   const actual = await vi.importActual<typeof import("@/api/learning")>("@/api/learning");
-  return { ...actual, createLearningResource: vi.fn(), updateLearningResource: vi.fn() };
+  return {
+    ...actual,
+    createLearningResource: vi.fn(),
+    updateLearningResource: vi.fn(),
+    listLearningGalleryFiles: vi.fn(),
+  };
 });
 
 const SUBJECTS = [{ subjectId: "subject-1", subjectName: "Mathematics" }];
@@ -124,4 +129,24 @@ describe("ResourceEditorModal", () => {
     },
     8000,
   );
+
+  it("opens the gallery modal (not a tab) when 'Choose from gallery' is clicked, with no tablist rendered", async () => {
+    vi.mocked(learningApi.listLearningGalleryFiles).mockResolvedValue({
+      content: [],
+      totalElements: 0,
+      totalPages: 1,
+      number: 0,
+      size: 9,
+    });
+
+    renderModal(true);
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByLabelText("Type"), "PDF");
+
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Choose from gallery" }));
+
+    expect(await screen.findByRole("dialog", { name: "Choose from gallery" })).toBeInTheDocument();
+  });
 });

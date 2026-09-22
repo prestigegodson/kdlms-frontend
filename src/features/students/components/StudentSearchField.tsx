@@ -41,7 +41,7 @@ interface StudentSearchFieldProps {
  * fight the sheet's own scroll region and safe-area padding, and `LinkExistingGuardianForm`
  * already proves the in-flow shape works fine inside a modal.
  *
- * Follows `GalleryFilePicker`'s stale-response guard (a `queryKey` compared during render, plus a
+ * Follows `learning`'s `GalleryPickerModal`'s stale-response guard (a `queryKey` compared during render, plus a
  * `cancelled` flag in the search effect) - the two other student/guardian search UIs in this app
  * lack it and can render an out-of-order result page.
  */
@@ -54,7 +54,7 @@ export function StudentSearchField({ value, onChange, branchId, id, disabled, di
 
   const isDisabled = Boolean(disabled) || !branchId;
 
-  // Reset while rendering - the SearchInput/GalleryFilePicker idiom - so a branch or query change
+  // Reset while rendering - the SearchInput/GalleryPickerModal idiom - so a branch or query change
   // clears stale results synchronously rather than flashing them for one extra render.
   const queryKey = `${branchId ?? ""}|${query}`;
   const [lastQueryKey, setLastQueryKey] = useState(queryKey);

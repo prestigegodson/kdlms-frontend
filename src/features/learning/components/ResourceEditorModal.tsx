@@ -15,10 +15,9 @@ import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
-import { Tabs } from "@/components/ui/Tabs";
 import { Textarea } from "@/components/ui/Textarea";
 import { RichTextField } from "@/components/richText/RichTextField";
-import { GalleryFilePicker } from "@/features/learning/components/GalleryFilePicker";
+import { GalleryPickerModal } from "@/features/learning/components/GalleryPickerModal";
 import { formatDuration } from "@/utils/duration";
 
 /** Mirrors backend `learning.domain.LearningRichText.MAX_IMAGES_PER_RESOURCE`. */
@@ -86,10 +85,12 @@ interface ResourceEditorModalProps {
  * delete-and-recreate), so the picker disappears when editing and the existing type is just
  * implied. Exactly one payload field is shown per type: `RichTextField` for `RICH_TEXT`, a file
  * field for `PDF`/`AUDIO`/`VIDEO`, a URL field for `YOUTUBE` (the raw URL, never a bare id - the
- * backend parses and validates it). The file field (Phase 35K) is itself a two-tab choice - upload
- * a fresh file (its `accept`/size cap driven by `FILE_CONTENT_TYPE`) or pick one already uploaded
- * elsewhere at the same level from `GalleryFilePicker` - both tabs converge on the same `fileId`/
- * `fileName`/`durationSeconds` state, so submit doesn't care which one populated it.
+ * backend parses and validates it). The file field's "Choose from gallery" button (Phase 35K)
+ * opens `GalleryPickerModal` on top of this one, as a sibling `<Modal>` rather than nested inside
+ * it - see that component's own docstring for why nesting would break Escape. Uploading a fresh
+ * file (its `accept`/size cap driven by `FILE_CONTENT_TYPE`) and picking a gallery file both
+ * converge on the same `fileId`/`fileName`/`durationSeconds` state, so submit doesn't care which
+ * one populated it.
  */
 export function ResourceEditorModal({
   classId,
@@ -111,7 +112,7 @@ export function ResourceEditorModal({
   const [fileName, setFileName] = useState<string | null>(null);
   const [durationSeconds, setDurationSeconds] = useState<number | null>(resource?.durationSeconds ?? null);
   const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [fileSourceTab, setFileSourceTab] = useState<"upload" | "gallery">("upload");
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -145,7 +146,12 @@ export function ResourceEditorModal({
     }
   }
 
-  /** A gallery pick already carries its own `durationSeconds` (Phase 35H interaction rows aside, straight from its source resource) - never re-probed client-side like a fresh upload. */
+  /**
+   * A gallery pick already carries its own `durationSeconds` (Phase 35H interaction rows aside,
+   * straight from its source resource) - never re-probed client-side like a fresh upload.
+   * `GalleryPickerModal` closes itself right after calling this, so `galleryOpen` isn't touched
+   * here.
+   */
   function handleGalleryPick(file: LearningGalleryFileView) {
     setError(null);
     setFileId(file.fileId);
@@ -195,145 +201,140 @@ export function ResourceEditorModal({
     (resourceType !== "YOUTUBE" || (isEdit ? true : youtubeUrl.trim().length > 0));
 
   return (
-    <Modal open onClose={onClose} title={isEdit ? "Edit resource" : "Add resource"} size="xl">
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        {error && <Alert variant="error">{error}</Alert>}
+    <>
+      <Modal open onClose={onClose} title={isEdit ? "Edit resource" : "Add resource"} size="xl">
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          {error && <Alert variant="error">{error}</Alert>}
 
-        {!isEdit && subjects.length > 1 && (
-          <FormField label="Subject" htmlFor="resource-subject">
-            <Select
-              id="resource-subject"
-              value={targetSubjectId}
-              onChange={(event) => setTargetSubjectId(event.target.value)}
-            >
-              {subjects.map((subject) => (
-                <option key={subject.subjectId} value={subject.subjectId}>
-                  {subject.subjectName}
-                </option>
-              ))}
-            </Select>
+          {!isEdit && subjects.length > 1 && (
+            <FormField label="Subject" htmlFor="resource-subject">
+              <Select
+                id="resource-subject"
+                value={targetSubjectId}
+                onChange={(event) => setTargetSubjectId(event.target.value)}
+              >
+                {subjects.map((subject) => (
+                  <option key={subject.subjectId} value={subject.subjectId}>
+                    {subject.subjectName}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          )}
+
+          {!isEdit && (
+            <FormField label="Type" htmlFor="resource-type">
+              <Select
+                id="resource-type"
+                value={resourceType}
+                onChange={(event) => setResourceType(event.target.value as LearningResourceType)}
+              >
+                <option value="RICH_TEXT">Rich text note</option>
+                <option value="PDF">PDF document</option>
+                <option value="YOUTUBE">YouTube video</option>
+                {canAuthorMedia && <option value="AUDIO">Audio (mp3)</option>}
+                {canAuthorMedia && <option value="VIDEO">Video (mp4)</option>}
+              </Select>
+            </FormField>
+          )}
+
+          <FormField label="Title" htmlFor="resource-title">
+            <Input id="resource-title" required value={title} onChange={(event) => setTitle(event.target.value)} />
           </FormField>
-        )}
 
-        {!isEdit && (
-          <FormField label="Type" htmlFor="resource-type">
-            <Select
-              id="resource-type"
-              value={resourceType}
-              onChange={(event) => setResourceType(event.target.value as LearningResourceType)}
-            >
-              <option value="RICH_TEXT">Rich text note</option>
-              <option value="PDF">PDF document</option>
-              <option value="YOUTUBE">YouTube video</option>
-              {canAuthorMedia && <option value="AUDIO">Audio (mp3)</option>}
-              {canAuthorMedia && <option value="VIDEO">Video (mp4)</option>}
-            </Select>
-          </FormField>
-        )}
-
-        <FormField label="Title" htmlFor="resource-title">
-          <Input id="resource-title" required value={title} onChange={(event) => setTitle(event.target.value)} />
-        </FormField>
-
-        <FormField label="Description" htmlFor="resource-description">
-          <Textarea
-            id="resource-description"
-            rows={2}
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-          />
-        </FormField>
-
-        {resourceType === "RICH_TEXT" && (
-          <FormField label="Content" htmlFor="resource-body">
-            <RichTextField
-              id="resource-body"
-              value={bodyHtml}
-              onChange={setBodyHtml}
-              allowImages
-              allowHeadings
-              allowTables
-              allowBlockMath
-              allowBlockquote
-              maxImages={MAX_IMAGES_PER_RESOURCE}
-              ariaLabel="Resource content"
+          <FormField label="Description" htmlFor="resource-description">
+            <Textarea
+              id="resource-description"
+              rows={2}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
             />
           </FormField>
-        )}
 
-        {isFileBacked && contentType && (
-          <FormField label="File" htmlFor="resource-file">
-            <Tabs
-              ariaLabel="Attachment source"
-              value={fileSourceTab}
-              onChange={setFileSourceTab}
-              items={[
-                { value: "upload", label: "Upload new" },
-                { value: "gallery", label: "From gallery" },
-              ]}
-            />
-            <div className="mt-3">
-              {fileSourceTab === "upload" && (
-                <div>
-                  <p className="mb-2 text-sm text-slate-500">
-                    {resourceType === "PDF" ? "PDF" : resourceType === "AUDIO" ? "mp3" : "mp4"} only · max{" "}
-                    {uploadLimitLabel(contentType)}
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <input
-                      id="resource-file"
-                      type="file"
-                      accept={contentType}
-                      onChange={(event) => handleFileSelected(event.target.files?.[0])}
-                    />
-                    {uploading && <span className="text-sm text-slate-500">Uploading…</span>}
-                  </div>
-                </div>
-              )}
-              {fileSourceTab === "gallery" && (
-                <GalleryFilePicker
-                  classId={classId}
-                  subjectId={targetSubjectId}
-                  resourceType={resourceType}
-                  selectedFileId={fileId}
-                  onPick={handleGalleryPick}
+          {resourceType === "RICH_TEXT" && (
+            <FormField label="Content" htmlFor="resource-body">
+              <RichTextField
+                id="resource-body"
+                value={bodyHtml}
+                onChange={setBodyHtml}
+                allowImages
+                allowHeadings
+                allowTables
+                allowBlockMath
+                allowBlockquote
+                maxImages={MAX_IMAGES_PER_RESOURCE}
+                ariaLabel="Resource content"
+              />
+            </FormField>
+          )}
+
+          {isFileBacked && contentType && (
+            <FormField label="File" htmlFor="resource-file">
+              <p className="mb-2 text-sm text-slate-500">
+                {resourceType === "PDF" ? "PDF" : resourceType === "AUDIO" ? "mp3" : "mp4"} only · max{" "}
+                {uploadLimitLabel(contentType)}
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <input
+                  id="resource-file"
+                  type="file"
+                  accept={contentType}
+                  onChange={(event) => handleFileSelected(event.target.files?.[0])}
                 />
-              )}
-              {!uploading && fileId && (
-                <p className="mt-2 text-sm text-slate-600">
-                  Selected: <span className="font-medium text-slate-900">{fileName ?? "File uploaded"}</span>
-                  {isMedia && durationSeconds != null && ` · ${formatDuration(durationSeconds)}`}
-                </p>
-              )}
-            </div>
-          </FormField>
-        )}
+                <Button type="button" variant="secondary" disabled={uploading} onClick={() => setGalleryOpen(true)}>
+                  Choose from gallery
+                </Button>
+                {uploading && <span className="text-sm text-slate-500">Uploading…</span>}
+              </div>
+              <div className="mt-3">
+                {!uploading && fileId && (
+                  <p className="text-sm text-slate-600">
+                    Selected: <span className="font-medium text-slate-900">{fileName ?? "File uploaded"}</span>
+                    {isMedia && durationSeconds != null && ` · ${formatDuration(durationSeconds)}`}
+                  </p>
+                )}
+              </div>
+            </FormField>
+          )}
 
-        {resourceType === "YOUTUBE" && (
-          <FormField
-            label="YouTube URL"
-            htmlFor="resource-youtube"
-            description={isEdit ? "Leave blank to keep the current video." : "A full youtube.com or youtu.be link."}
-          >
-            <Input
-              id="resource-youtube"
-              type="url"
-              placeholder="https://www.youtube.com/watch?v=..."
-              value={youtubeUrl}
-              onChange={(event) => setYoutubeUrl(event.target.value)}
-            />
-          </FormField>
-        )}
+          {resourceType === "YOUTUBE" && (
+            <FormField
+              label="YouTube URL"
+              htmlFor="resource-youtube"
+              description={
+                isEdit ? "Leave blank to keep the current video." : "A full youtube.com or youtu.be link."
+              }
+            >
+              <Input
+                id="resource-youtube"
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=..."
+                value={youtubeUrl}
+                onChange={(event) => setYoutubeUrl(event.target.value)}
+              />
+            </FormField>
+          )}
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={!canSubmit}>
-            {submitting ? "Saving…" : isEdit ? "Save changes" : "Add resource"}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!canSubmit}>
+              {submitting ? "Saving…" : isEdit ? "Save changes" : "Add resource"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+      {galleryOpen && isFileBacked && (
+        <GalleryPickerModal
+          classId={classId}
+          subjectId={targetSubjectId}
+          resourceType={resourceType}
+          selectedFileId={fileId}
+          onPick={handleGalleryPick}
+          onClose={() => setGalleryOpen(false)}
+        />
+      )}
+    </>
   );
 }

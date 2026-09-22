@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as learningApi from "@/api/learning";
 import type { LearningGalleryFileView } from "@/api/learning";
 import type { Page } from "@/api/types";
-import { GalleryFilePicker } from "@/features/learning/components/GalleryFilePicker";
+import { GalleryPickerModal } from "@/features/learning/components/GalleryPickerModal";
 
 vi.mock("@/api/learning", async () => {
   const actual = await vi.importActual<typeof import("@/api/learning")>("@/api/learning");
@@ -12,7 +12,7 @@ vi.mock("@/api/learning", async () => {
 });
 
 function pageOf(content: LearningGalleryFileView[]): Page<LearningGalleryFileView> {
-  return { content, totalElements: content.length, totalPages: 1, number: 0, size: 10 };
+  return { content, totalElements: content.length, totalPages: 1, number: 0, size: 9 };
 }
 
 const HANDOUT: LearningGalleryFileView = {
@@ -27,27 +27,30 @@ const HANDOUT: LearningGalleryFileView = {
   subjectName: "English",
   useCount: 2,
   lastUsedAt: "2026-09-02T10:00:00Z",
+  uploadedAt: "2026-03-10T14:00:00Z",
 };
 
 beforeEach(() => vi.clearAllMocks());
 
-describe("GalleryFilePicker", () => {
-  it("loads and renders a deduped file, showing the reuse count", async () => {
+describe("GalleryPickerModal", () => {
+  it("loads and renders a deduped file as a card, showing the reuse count and upload date", async () => {
     vi.mocked(learningApi.listLearningGalleryFiles).mockResolvedValue(pageOf([HANDOUT]));
 
     render(
-      <GalleryFilePicker
+      <GalleryPickerModal
         classId="class-1"
         subjectId="subject-1"
         resourceType="PDF"
         selectedFileId={null}
         onPick={vi.fn()}
+        onClose={vi.fn()}
       />,
     );
 
     expect(await screen.findByText("Handout B")).toBeInTheDocument();
     expect(screen.getByText("handout.pdf")).toBeInTheDocument();
     expect(screen.getByText("Used by 2 resources")).toBeInTheDocument();
+    expect(screen.getByText(/10 Mar 2026/)).toBeInTheDocument();
     expect(learningApi.listLearningGalleryFiles).toHaveBeenCalledWith(
       expect.objectContaining({ classId: "class-1", subjectId: "subject-1", resourceType: "PDF" }),
     );
@@ -57,12 +60,13 @@ describe("GalleryFilePicker", () => {
     vi.mocked(learningApi.listLearningGalleryFiles).mockResolvedValue(pageOf([{ ...HANDOUT, useCount: 1 }]));
 
     render(
-      <GalleryFilePicker
+      <GalleryPickerModal
         classId="class-1"
         subjectId="subject-1"
         resourceType="PDF"
         selectedFileId={null}
         onPick={vi.fn()}
+        onClose={vi.fn()}
       />,
     );
 
@@ -70,35 +74,39 @@ describe("GalleryFilePicker", () => {
     expect(screen.queryByText(/Used by/)).not.toBeInTheDocument();
   });
 
-  it("calls onPick with the row's file when clicked", async () => {
+  it("calls onPick with the card's file and closes when clicked", async () => {
     vi.mocked(learningApi.listLearningGalleryFiles).mockResolvedValue(pageOf([HANDOUT]));
     const onPick = vi.fn();
+    const onClose = vi.fn();
     const user = userEvent.setup();
 
     render(
-      <GalleryFilePicker
+      <GalleryPickerModal
         classId="class-1"
         subjectId="subject-1"
         resourceType="PDF"
         selectedFileId={null}
         onPick={onPick}
+        onClose={onClose}
       />,
     );
 
     await user.click(await screen.findByText("Handout B"));
     expect(onPick).toHaveBeenCalledWith(HANDOUT);
+    expect(onClose).toHaveBeenCalled();
   });
 
   it("shows an empty state when the level has no gallery files yet", async () => {
     vi.mocked(learningApi.listLearningGalleryFiles).mockResolvedValue(pageOf([]));
 
     render(
-      <GalleryFilePicker
+      <GalleryPickerModal
         classId="class-1"
         subjectId="subject-1"
         resourceType="PDF"
         selectedFileId={null}
         onPick={vi.fn()}
+        onClose={vi.fn()}
       />,
     );
 
@@ -109,15 +117,39 @@ describe("GalleryFilePicker", () => {
     vi.mocked(learningApi.listLearningGalleryFiles).mockRejectedValue(new Error("network down"));
 
     render(
-      <GalleryFilePicker
+      <GalleryPickerModal
         classId="class-1"
         subjectId="subject-1"
         resourceType="PDF"
         selectedFileId={null}
         onPick={vi.fn()}
+        onClose={vi.fn()}
       />,
     );
 
     expect(await screen.findByText("Failed to load the gallery")).toBeInTheDocument();
+  });
+
+  it("closes on Escape without calling onPick", async () => {
+    vi.mocked(learningApi.listLearningGalleryFiles).mockResolvedValue(pageOf([HANDOUT]));
+    const onPick = vi.fn();
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <GalleryPickerModal
+        classId="class-1"
+        subjectId="subject-1"
+        resourceType="PDF"
+        selectedFileId={null}
+        onPick={onPick}
+        onClose={onClose}
+      />,
+    );
+
+    await screen.findByText("Handout B");
+    await user.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalled();
+    expect(onPick).not.toHaveBeenCalled();
   });
 });

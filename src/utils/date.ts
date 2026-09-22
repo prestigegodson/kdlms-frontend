@@ -244,3 +244,21 @@ export function formatInstant(instant: string | null | undefined): string {
     minute: "2-digit",
   });
 }
+
+/**
+ * "2026-03-10T14:00:00Z" -> "10 Mar 2026", in the browser's own local zone. Returns "—" for
+ * missing/unparseable input. Uses the same fixed `en-GB` month formatter as `formatLongDate`
+ * (rather than `toLocaleString`'s locale-dependent ordering, the way `formatInstant` does) so the
+ * day-month-year order this app displays everywhere else doesn't depend on the viewer's own
+ * locale.
+ */
+export function formatInstantDate(instant: string | null | undefined): string {
+  if (!instant) {
+    return "—";
+  }
+  const date = new Date(instant);
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+  return `${date.getDate()} ${SHORT_MONTH_FORMATTER.format(date)} ${date.getFullYear()}`;
+}
