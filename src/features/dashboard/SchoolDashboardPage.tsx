@@ -230,6 +230,7 @@ function TeacherDashboard({ teacher }: { teacher: NonNullable<SchoolDashboardVie
 
   return (
     <>
+      <UpcomingBirthdaysCard />
       <Card className="p-0">
         <h2 className="p-6 pb-0 text-sm font-semibold text-slate-900">Your classes</h2>
         <ul className="mt-4 divide-y divide-slate-100 pb-2">
@@ -252,8 +253,6 @@ function TeacherDashboard({ teacher }: { teacher: NonNullable<SchoolDashboardVie
           ))}
         </ul>
       </Card>
-
-      <UpcomingBirthdaysCard />
     </>
   );
 }
