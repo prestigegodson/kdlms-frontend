@@ -145,6 +145,69 @@ describe("layoutOps", () => {
     expect(unchanged).toEqual(layout);
   });
 
+  it("updateRowCondition sets a row's condition", () => {
+    const condition = { match: "ALL" as const, rules: [{ flag: "HAS_CLASS_TEACHER_REMARK" as const, expected: true }] };
+
+    const layout = ops.updateRowCondition(blankLayout(), "row-1", condition);
+
+    expect(layout.rows[0].condition).toEqual(condition);
+  });
+
+  it("updateRowCondition clears a row's condition back to undefined", () => {
+    const condition = { match: "ALL" as const, rules: [{ flag: "HAS_CLASS_TEACHER_REMARK" as const }] };
+    const withCondition = ops.updateRowCondition(blankLayout(), "row-1", condition);
+
+    const cleared = ops.updateRowCondition(withCondition, "row-1", undefined);
+
+    expect(cleared.rows[0].condition).toBeUndefined();
+  });
+
+  it("updateRowCondition leaves other rows' conditions untouched", () => {
+    let layout: ReportLayout = {
+      ...blankLayout(),
+      rows: [
+        { id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [] }] },
+        { id: "row-2", columns: [{ id: "col-2", widthPercent: 100, elements: [] }] },
+      ],
+    };
+    const condition = { match: "ALL" as const, rules: [{ flag: "IS_MIDTERM" as const }] };
+    layout = ops.updateRowCondition(layout, "row-2", condition);
+
+    const updated = ops.updateRowCondition(layout, "row-1", { match: "ANY" as const, rules: [{ flag: "HAS_STUDENT_PHOTO" as const }] });
+
+    expect(updated.rows[1].condition).toEqual(condition);
+  });
+
+  it("addRow's new row starts with no condition", () => {
+    const layout = ops.addRow(blankLayout());
+
+    expect(layout.rows[layout.rows.length - 1].condition).toBeUndefined();
+  });
+
+  it("moveRow preserves an existing row's condition", () => {
+    const condition = { match: "ALL" as const, rules: [{ flag: "HAS_PRINCIPAL_REMARK" as const }] };
+    let layout: ReportLayout = {
+      ...blankLayout(),
+      rows: [
+        { id: "row-1", condition, columns: [{ id: "col-1", widthPercent: 100, elements: [] }] },
+        { id: "row-2", columns: [{ id: "col-2", widthPercent: 100, elements: [] }] },
+      ],
+    };
+
+    layout = ops.moveRow(layout, "row-1", "down");
+
+    expect(layout.rows.find((r) => r.id === "row-1")?.condition).toEqual(condition);
+  });
+
+  it("setColumnWidths preserves a row's own condition", () => {
+    const condition = { match: "ALL" as const, rules: [{ flag: "HAS_SCHOOL_LOGO" as const }] };
+    const withCondition = ops.updateRowCondition(blankLayout(), "row-1", condition);
+
+    const layout = ops.setColumnWidths(withCondition, "row-1", [50, 50]);
+
+    expect(layout.rows[0].condition).toEqual(condition);
+  });
+
   it("the standard result sheet starter is a structurally sound layout tree", () => {
     const layout = buildStandardResultSheetLayout();
 

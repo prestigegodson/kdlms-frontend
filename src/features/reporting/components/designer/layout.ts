@@ -176,9 +176,50 @@ export interface RowStyle {
   borderBottom?: boolean;
 }
 
+/** Mirrors backend `reporting.domain.ReportConditionFlag` - the vocabulary a row's visibility condition (and, independently, the renderer's own blank-block pruning) is built from. Keep this list in exact sync with that enum. */
+export const REPORT_CONDITION_FLAGS = [
+  "HAS_CLASS_TEACHER_REMARK",
+  "HAS_PRINCIPAL_REMARK",
+  "HAS_STUDENT_PHOTO",
+  "HAS_SCHOOL_LOGO",
+  "HAS_CLASS_TEACHER_SIGNATURE",
+  "HAS_PRINCIPAL_SIGNATURE",
+  "HAS_RESULT_POSITION",
+  "IS_MIDTERM",
+  "HAS_AFFECTIVE_TRAITS",
+  "HAS_PSYCHOMOTOR_TRAITS",
+  "HAS_TRAIT_SCALE",
+] as const;
+
+export type ReportConditionFlag = (typeof REPORT_CONDITION_FLAGS)[number];
+
+export const CONDITION_MATCHES = ["ALL", "ANY"] as const;
+export type ConditionMatch = (typeof CONDITION_MATCHES)[number];
+
+/** Mirrors backend `ReportLayoutValidator`'s `MAX_CONDITION_RULES`. */
+export const MAX_CONDITION_RULES = 5;
+
+/**
+ * `expected` is nullable (absent) on the wire, defaulting to `true` - see
+ * backend `ReportLayout.ConditionRule`'s Javadoc for why it's a boxed
+ * boolean rather than a primitive with a `false` default.
+ */
+export interface ConditionRule {
+  flag: ReportConditionFlag;
+  expected?: boolean;
+}
+
+/** A row's visibility rule - `null`/absent on a `LayoutRow` always means "always visible." `rules` must be non-empty whenever `condition` itself is present; the inspector clears the whole object rather than ever producing an empty list. */
+export interface RowCondition {
+  match: ConditionMatch;
+  rules: ConditionRule[];
+}
+
 export interface LayoutRow {
   id: string;
   style?: RowStyle;
+  /** Absent (or `undefined`) means the row is always shown - see `RowCondition`. */
+  condition?: RowCondition;
   columns: LayoutColumn[];
 }
 
@@ -224,6 +265,61 @@ export const BLOCK_LABELS: Record<ReportBlockName, string> = {
   PSYCHOMOTOR_TRAITS: "Psychomotor skills table",
   TRAIT_LEGEND: "Behavioural traits key",
 };
+
+/**
+ * Noun-phrase labels for every flag, so a stored condition always renders
+ * legibly - even for a flag `SELECTABLE_CONDITION_FLAGS` doesn't (yet) offer
+ * in the dropdown, e.g. one authored by a future version of this app.
+ */
+export const CONDITION_FLAG_LABELS: Record<ReportConditionFlag, string> = {
+  HAS_CLASS_TEACHER_REMARK: "Class teacher's remark",
+  HAS_PRINCIPAL_REMARK: "Principal's remark",
+  HAS_STUDENT_PHOTO: "Student photo",
+  HAS_SCHOOL_LOGO: "School logo",
+  HAS_CLASS_TEACHER_SIGNATURE: "Class teacher signature",
+  HAS_PRINCIPAL_SIGNATURE: "Principal signature",
+  HAS_RESULT_POSITION: "Class position",
+  IS_MIDTERM: "Mid-term result",
+  HAS_AFFECTIVE_TRAITS: "Affective ratings",
+  HAS_PSYCHOMOTOR_TRAITS: "Psychomotor ratings",
+  HAS_TRAIT_SCALE: "Behavioural traits key",
+};
+
+/** `IS_*`-shaped flags read as "Yes"/"No" in the inspector rather than "Present"/"Not present" - "Mid-term result / Yes" reads naturally, "Mid-term result / Present" doesn't. */
+const YES_NO_FLAGS: ReadonlySet<ReportConditionFlag> = new Set(["IS_MIDTERM"]);
+
+export function conditionRulePolarityLabel(flag: ReportConditionFlag, expected: boolean | undefined): string {
+  const isTrue = expected !== false;
+  if (YES_NO_FLAGS.has(flag)) return isTrue ? "Yes" : "No";
+  return isTrue ? "Present" : "Not present";
+}
+
+/**
+ * The flags the inspector's dropdown offers, deliberately narrower than
+ * `REPORT_CONDITION_FLAGS` - the trait flags exist so the renderer's own
+ * blank-block prune table and an author's own row conditions share one
+ * vocabulary, but aren't author-facing yet. Widen this constant, not the
+ * enum, when they should be.
+ */
+export const SELECTABLE_CONDITION_FLAGS: readonly ReportConditionFlag[] = [
+  "HAS_CLASS_TEACHER_REMARK",
+  "HAS_PRINCIPAL_REMARK",
+  "IS_MIDTERM",
+  "HAS_STUDENT_PHOTO",
+  "HAS_SCHOOL_LOGO",
+  "HAS_CLASS_TEACHER_SIGNATURE",
+  "HAS_PRINCIPAL_SIGNATURE",
+  "HAS_RESULT_POSITION",
+];
+
+/** One-line summary shared by the inspector header, `RowShell`'s badge tooltip, and their tests. */
+export function describeRowCondition(condition: RowCondition): string {
+  const joiner = condition.match === "ANY" ? " or " : " and ";
+  const clauses = condition.rules.map(
+    (rule) => `${CONDITION_FLAG_LABELS[rule.flag]}: ${conditionRulePolarityLabel(rule.flag, rule.expected)}`,
+  );
+  return clauses.join(joiner);
+}
 
 /** Only these four blocks are mode-specific - every other block (and every non-BLOCK element) is offered regardless of assessment mode. */
 export const NUMERIC_ONLY_BLOCKS: ReadonlySet<ReportBlockName> = new Set(["SCORE_TABLE", "GRADE_KEY"]);

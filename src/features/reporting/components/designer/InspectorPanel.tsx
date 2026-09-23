@@ -6,10 +6,18 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import {
   ALLOWED_FONT_FAMILIES,
+  CONDITION_FLAG_LABELS,
+  type ConditionMatch,
+  type ConditionRule,
+  MAX_CONDITION_RULES,
   MAX_TABLE_COLUMNS,
   MAX_TABLE_ROWS,
+  type ReportConditionFlag,
+  type RowCondition,
+  SELECTABLE_CONDITION_FLAGS,
   SIZABLE_BLOCKS,
   TABLE_BORDER_STYLES,
+  conditionRulePolarityLabel,
   type ElementStyle,
   type LayoutElement,
   type TableCell,
@@ -196,6 +204,114 @@ function RowInspector({ editor, rowId }: { editor: LayoutEditor; rowId: string }
         <Checkbox checked={style.borderBottom ?? false} onChange={(e) => set({ borderBottom: e.target.checked })} />
         Border below
       </label>
+      <RowConditionEditor condition={row.condition} onChange={(next) => editor.updateRowCondition(rowId, next)} />
+    </div>
+  );
+}
+
+/**
+ * The row's visibility rule editor - "Only show this row when…" seeds a
+ * single-rule ALL condition on check, the same seed-a-companion-value
+ * pattern `PageInspector`'s `logoBackground` checkbox uses; unchecking (or
+ * removing the last rule) clears the whole `condition` object rather than
+ * ever leaving `rules: []`, a shape the backend validator rejects.
+ */
+function RowConditionEditor({
+  condition,
+  onChange,
+}: {
+  condition: RowCondition | undefined;
+  onChange: (next: RowCondition | undefined) => void;
+}) {
+  const enabled = (condition?.rules.length ?? 0) > 0;
+
+  function toggle(checked: boolean) {
+    onChange(checked ? { match: "ALL", rules: [{ flag: SELECTABLE_CONDITION_FLAGS[0] }] } : undefined);
+  }
+
+  function updateRule(index: number, patch: Partial<ConditionRule>) {
+    if (!condition) return;
+    onChange({ ...condition, rules: condition.rules.map((rule, i) => (i === index ? { ...rule, ...patch } : rule)) });
+  }
+
+  function removeRule(index: number) {
+    if (!condition) return;
+    const rules = condition.rules.filter((_, i) => i !== index);
+    onChange(rules.length === 0 ? undefined : { ...condition, rules });
+  }
+
+  function addRule() {
+    if (!condition || condition.rules.length >= MAX_CONDITION_RULES) return;
+    const used = new Set(condition.rules.map((rule) => rule.flag));
+    const nextFlag = SELECTABLE_CONDITION_FLAGS.find((flag) => !used.has(flag)) ?? SELECTABLE_CONDITION_FLAGS[0];
+    onChange({ ...condition, rules: [...condition.rules, { flag: nextFlag }] });
+  }
+
+  return (
+    <div className="space-y-2 border-t border-slate-100 pt-3">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Visibility</h3>
+      <label className="flex items-center gap-2 text-sm text-slate-700">
+        <Checkbox checked={enabled} onChange={(e) => toggle(e.target.checked)} />
+        Only show this row when&hellip;
+      </label>
+      {enabled && condition && (
+        <div className="space-y-2 pl-1">
+          {condition.rules.length > 1 && (
+            <FormField label="Match" htmlFor="row-condition-match">
+              <Select
+                id="row-condition-match"
+                value={condition.match}
+                onChange={(e) => onChange({ ...condition, match: e.target.value as ConditionMatch })}
+              >
+                <option value="ALL">All conditions match</option>
+                <option value="ANY">Any condition matches</option>
+              </Select>
+            </FormField>
+          )}
+          {condition.rules.map((rule, index) => (
+            <div key={index} className="space-y-1.5 rounded-control border border-slate-200 p-2">
+              <Select
+                aria-label="Condition"
+                value={rule.flag}
+                onChange={(e) => updateRule(index, { flag: e.target.value as ReportConditionFlag })}
+              >
+                {SELECTABLE_CONDITION_FLAGS.map((flag) => (
+                  <option key={flag} value={flag}>
+                    {CONDITION_FLAG_LABELS[flag]}
+                  </option>
+                ))}
+              </Select>
+              <div className="flex items-center justify-between gap-2">
+                <Select
+                  aria-label="is / is not"
+                  className="w-28"
+                  value={rule.expected === false ? "false" : "true"}
+                  onChange={(e) => updateRule(index, { expected: e.target.value === "true" })}
+                >
+                  <option value="true">{conditionRulePolarityLabel(rule.flag, true)}</option>
+                  <option value="false">{conditionRulePolarityLabel(rule.flag, false)}</option>
+                </Select>
+                <button
+                  type="button"
+                  className="shrink-0 text-xs text-slate-500 hover:text-slate-700"
+                  onClick={() => removeRule(index)}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="text-xs text-brand-600 hover:text-brand-700 disabled:pointer-events-none disabled:opacity-40"
+            disabled={condition.rules.length >= MAX_CONDITION_RULES}
+            onClick={addRule}
+          >
+            + Add condition
+          </button>
+        </div>
+      )}
+      <p className="text-xs text-slate-500">A row with no conditions always shows.</p>
     </div>
   );
 }

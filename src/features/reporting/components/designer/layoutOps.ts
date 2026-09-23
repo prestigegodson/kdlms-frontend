@@ -4,6 +4,7 @@ import {
   type LayoutRow,
   type PageStyle,
   type ReportLayout,
+  type RowCondition,
   type RowStyle,
   newElementId,
 } from "@/features/reporting/components/designer/layout";
@@ -175,6 +176,10 @@ export function moveRow(layout: ReportLayout, rowId: string, direction: "up" | "
 
 export function updateRowStyle(layout: ReportLayout, rowId: string, style: RowStyle | undefined): ReportLayout {
   return { ...layout, rows: layout.rows.map((row) => (row.id === rowId ? { ...row, style } : row)) };
+}
+
+export function updateRowCondition(layout: ReportLayout, rowId: string, condition: RowCondition | undefined): ReportLayout {
+  return { ...layout, rows: layout.rows.map((row) => (row.id === rowId ? { ...row, condition } : row)) };
 }
 
 /**

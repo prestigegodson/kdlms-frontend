@@ -4,6 +4,7 @@ import type {
   LayoutElement,
   PageStyle,
   ReportLayout,
+  RowCondition,
   RowStyle,
 } from "@/features/reporting/components/designer/layout";
 
@@ -191,6 +192,13 @@ export function useLayoutEditor(initial: ReportLayout) {
     [layout, commit],
   );
 
+  const updateRowCondition = useCallback(
+    (rowId: string, condition: RowCondition | undefined) => {
+      commit(ops.updateRowCondition(layout, rowId, condition));
+    },
+    [layout, commit],
+  );
+
   const setColumnWidths = useCallback(
     (rowId: string, widths: number[]) => {
       commit(ops.setColumnWidths(layout, rowId, widths));
@@ -229,6 +237,7 @@ export function useLayoutEditor(initial: ReportLayout) {
     removeRow,
     moveRow,
     updateRowStyle,
+    updateRowCondition,
     setColumnWidths,
     updatePage,
   };

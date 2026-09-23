@@ -1,6 +1,6 @@
-import { ChevronDown, ChevronRight, ChevronUp, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, EyeOff, Trash2 } from "lucide-react";
 import { ColumnShell } from "@/features/reporting/components/designer/ColumnShell";
-import type { LayoutRow } from "@/features/reporting/components/designer/layout";
+import { describeRowCondition, type LayoutRow } from "@/features/reporting/components/designer/layout";
 import type { LayoutEditor } from "@/features/reporting/components/designer/useLayoutEditor";
 
 interface ColumnPreset {
@@ -49,13 +49,14 @@ export function RowShell({ row, index, rowCount, editor, collapsed, onToggleColl
   const currentKey = presetKey(row.columns.map((c) => c.widthPercent));
   const matchesPreset = COLUMN_PRESETS.some((preset) => presetKey(preset.widths) === currentKey);
   const elementCount = row.columns.reduce((sum, column) => sum + column.elements.length, 0);
+  const conditional = (row.condition?.rules.length ?? 0) > 0;
 
   return (
     <div
       onClick={() => editor.setSelection({ type: "row", rowId: row.id })}
-      className={`group cursor-pointer rounded-panel border p-2 transition-colors ${
-        selected ? "border-brand-500 bg-brand-50/40" : "border-slate-200 hover:border-slate-300"
-      }`}
+      className={`group relative cursor-pointer rounded-panel border p-2 transition-colors ${
+        conditional ? "border-dashed" : ""
+      } ${selected ? "border-brand-500 bg-brand-50/40" : "border-slate-200 hover:border-slate-300"}`}
       style={{
         marginTop: row.style?.marginTopPx,
         // The server never emits margin-bottom on the last row (LayoutHtmlEmitter) - a trailing
@@ -65,11 +66,19 @@ export function RowShell({ row, index, rowCount, editor, collapsed, onToggleColl
         backgroundColor: row.style?.backgroundColor,
       }}
     >
-      <div
-        className={`mb-2 flex items-center justify-between ${
-          collapsed ? "" : "opacity-0 transition-opacity group-hover:opacity-100 has-[:focus]:opacity-100"
-        }`}
-      >
+      {conditional && (
+        // Deliberately a sibling of the hover-only toolbar below, not inside it - this
+        // must stay visible while scanning the canvas for conditional rows, exactly
+        // when the toolbar's own opacity-0 would otherwise hide it.
+        <span
+          title={describeRowCondition(row.condition!)}
+          className="absolute -top-2 right-2 inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
+        >
+          <EyeOff className="h-3 w-3" aria-hidden="true" />
+          Conditional
+        </span>
+      )}
+      <div className="mb-2 flex items-center justify-between">
         <div className="flex min-w-0 items-center gap-1.5">
           <button
             type="button"
@@ -91,8 +100,35 @@ export function RowShell({ row, index, rowCount, editor, collapsed, onToggleColl
             <span className="truncate text-xs text-slate-500">
               Row {index + 1} · {row.columns.length} column{row.columns.length === 1 ? "" : "s"} · {elementCount}{" "}
               element{elementCount === 1 ? "" : "s"}
+              {conditional ? " · Conditional" : ""}
             </span>
           ) : (
+            // Always visible (not hover-gated like the select/actions below) - a row can be
+            // fully packed with elements, each of which stops click propagation to select
+            // itself (ElementCard), so this is the one reliable, labeled handle for selecting
+            // the row rather than something inside it (needed for its Visibility section, and
+            // its margin/padding/background/border style fields).
+            <button
+              type="button"
+              title="Click to configure this row (style, columns, visibility)"
+              onClick={(event) => {
+                event.stopPropagation();
+                editor.setSelection({ type: "row", rowId: row.id });
+              }}
+              className={`shrink-0 truncate rounded-control px-1.5 py-0.5 text-xs font-medium transition-colors ${
+                selected ? "bg-brand-100 text-brand-700" : "text-slate-500 hover:bg-slate-100"
+              }`}
+            >
+              Row {index + 1}
+            </button>
+          )}
+        </div>
+        <div
+          className={`flex shrink-0 items-center gap-0.5 ${
+            collapsed ? "" : "opacity-0 transition-opacity group-hover:opacity-100 has-[:focus]:opacity-100"
+          }`}
+        >
+          {!collapsed && (
             <select
               aria-label="Column split"
               value={matchesPreset ? currentKey : "custom"}
@@ -115,8 +151,6 @@ export function RowShell({ row, index, rowCount, editor, collapsed, onToggleColl
               ))}
             </select>
           )}
-        </div>
-        <div className="flex shrink-0 items-center gap-0.5">
           <button
             type="button"
             aria-label="Move row up"

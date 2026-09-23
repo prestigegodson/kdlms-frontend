@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { isLayoutValid, validateLayout } from "@/features/reporting/components/designer/layoutValidation";
-import type { LayoutElement, ReportBlockName, ReportLayout, TableSpec } from "@/features/reporting/components/designer/layout";
+import type {
+  LayoutElement,
+  LayoutRow,
+  ReportBlockName,
+  ReportLayout,
+  RowCondition,
+  TableSpec,
+} from "@/features/reporting/components/designer/layout";
 
 function layoutWith(rows: ReportLayout["rows"]): ReportLayout {
   return { version: 1, page: { paddingPx: 24, fontFamily: "Helvetica, Arial, sans-serif", fontSizePx: 12, color: "#1a1a1a" }, rows };
@@ -247,5 +254,115 @@ describe("validateLayout", () => {
     };
 
     expect(isLayoutValid(layout, "NUMERIC")).toBe(true);
+  });
+
+  describe("row conditions", () => {
+    function conditionalRow(condition: RowCondition | undefined): LayoutRow {
+      return { id: "row-1", condition, columns: [{ id: "col-1", widthPercent: 100, elements: [] }] };
+    }
+
+    it("accepts a row with no condition", () => {
+      const layout = layoutWith([conditionalRow(undefined)]);
+
+      expect(isLayoutValid(layout, "NUMERIC")).toBe(true);
+    });
+
+    it("accepts a valid ALL condition", () => {
+      const layout = layoutWith([
+        conditionalRow({ match: "ALL", rules: [{ flag: "HAS_CLASS_TEACHER_REMARK", expected: true }] }),
+      ]);
+
+      expect(isLayoutValid(layout, "NUMERIC")).toBe(true);
+    });
+
+    it("accepts a valid ANY condition with expected:false", () => {
+      const layout = layoutWith([
+        conditionalRow({
+          match: "ANY",
+          rules: [
+            { flag: "HAS_CLASS_TEACHER_REMARK", expected: true },
+            { flag: "IS_MIDTERM", expected: false },
+          ],
+        }),
+      ]);
+
+      expect(isLayoutValid(layout, "NUMERIC")).toBe(true);
+    });
+
+    it("accepts a condition with exactly five rules", () => {
+      const layout = layoutWith([
+        conditionalRow({
+          match: "ALL",
+          rules: [
+            { flag: "HAS_CLASS_TEACHER_REMARK" },
+            { flag: "HAS_PRINCIPAL_REMARK" },
+            { flag: "HAS_STUDENT_PHOTO" },
+            { flag: "HAS_SCHOOL_LOGO" },
+            { flag: "IS_MIDTERM", expected: false },
+          ],
+        }),
+      ]);
+
+      expect(isLayoutValid(layout, "NUMERIC")).toBe(true);
+    });
+
+    it("rejects an unknown match value", () => {
+      const layout = layoutWith([
+        conditionalRow({ match: "SOME" as RowCondition["match"], rules: [{ flag: "HAS_CLASS_TEACHER_REMARK" }] }),
+      ]);
+
+      const errors = validateLayout(layout, "NUMERIC");
+      expect(errors.some((e) => e.includes("match must be one of"))).toBe(true);
+    });
+
+    it("rejects a condition with no rules", () => {
+      const layout = layoutWith([conditionalRow({ match: "ALL", rules: [] })]);
+
+      const errors = validateLayout(layout, "NUMERIC");
+      expect(errors.some((e) => e.includes("at least one rule"))).toBe(true);
+    });
+
+    it("rejects a condition with six rules", () => {
+      const layout = layoutWith([
+        conditionalRow({
+          match: "ALL",
+          rules: [
+            { flag: "HAS_CLASS_TEACHER_REMARK" },
+            { flag: "HAS_PRINCIPAL_REMARK" },
+            { flag: "HAS_STUDENT_PHOTO" },
+            { flag: "HAS_SCHOOL_LOGO" },
+            { flag: "IS_MIDTERM" },
+            { flag: "HAS_RESULT_POSITION" },
+          ],
+        }),
+      ]);
+
+      const errors = validateLayout(layout, "NUMERIC");
+      expect(errors.some((e) => e.includes("at most 5 rules"))).toBe(true);
+    });
+
+    it("rejects an unknown flag", () => {
+      const layout = layoutWith([
+        conditionalRow({ match: "ALL", rules: [{ flag: "NOT_A_REAL_FLAG" as RowCondition["rules"][number]["flag"] }] }),
+      ]);
+
+      const errors = validateLayout(layout, "NUMERIC");
+      expect(errors.some((e) => e.includes("Unknown row condition flag"))).toBe(true);
+    });
+
+    it("rejects a duplicate flag within one condition", () => {
+      const layout = layoutWith([
+        conditionalRow({
+          match: "ALL",
+          rules: [
+            { flag: "HAS_CLASS_TEACHER_REMARK", expected: true },
+            { flag: "HAS_CLASS_TEACHER_REMARK", expected: false },
+          ],
+        }),
+      ]);
+
+      const errors = validateLayout(layout, "NUMERIC");
+      expect(errors.some((e) => e.includes("more than once"))).toBe(true);
+    });
   });
 });

@@ -1,14 +1,18 @@
 import {
   ALLOWED_FONT_FAMILIES,
+  CONDITION_MATCHES,
   LAYOUT_VERSION,
   type LayoutColumn,
   type LayoutElement,
   type LayoutRow,
+  MAX_CONDITION_RULES,
   MAX_TABLE_CELL_TEXT_LENGTH,
   MAX_TABLE_COLUMNS,
   MAX_TABLE_ROWS,
+  REPORT_CONDITION_FLAGS,
   type ReportLayout,
   REPORT_BLOCK_NAMES,
+  type RowCondition,
   SIZABLE_BLOCKS,
   TABLE_BORDER_STYLES,
   type TableCell,
@@ -91,6 +95,7 @@ function validateRows(rows: LayoutRow[], mode: AssessmentMode, errors: string[])
   }
   for (const row of rows) {
     validateRowStyle(row, errors);
+    validateRowCondition(row.condition, errors);
     validateColumns(row.columns, mode, errors);
   }
 }
@@ -103,6 +108,42 @@ function validateRowStyle(row: LayoutRow, errors: string[]) {
   requireRange(style.paddingPx, 0, MAX_PADDING_PX, "Row padding", errors);
   if (style.backgroundColor !== undefined) {
     requireColor(style.backgroundColor, "Row background color", errors);
+  }
+}
+
+/**
+ * Mirrors backend `ReportLayoutValidator#validateRowCondition` rule for
+ * rule, error strings included - see that method's Javadoc for the
+ * rationale behind each one (in particular why an empty `rules` list is
+ * rejected even though `condition` itself is optional).
+ */
+function validateRowCondition(condition: RowCondition | undefined, errors: string[]) {
+  if (!condition) return;
+  if (!CONDITION_MATCHES.includes(condition.match)) {
+    errors.push(`A row condition's match must be one of: ${CONDITION_MATCHES.join(", ")}.`);
+  }
+  if (!condition.rules || condition.rules.length === 0) {
+    errors.push("A row condition requires at least one rule.");
+    return;
+  }
+  if (condition.rules.length > MAX_CONDITION_RULES) {
+    errors.push(`A row condition may have at most ${MAX_CONDITION_RULES} rules.`);
+  }
+  const seenFlags = new Set<string>();
+  for (const rule of condition.rules) {
+    if (!rule || !rule.flag) {
+      errors.push("Every row condition rule requires a flag.");
+      continue;
+    }
+    if (!REPORT_CONDITION_FLAGS.includes(rule.flag)) {
+      errors.push(`Unknown row condition flag: ${rule.flag}.`);
+      continue;
+    }
+    if (seenFlags.has(rule.flag)) {
+      errors.push(`A row condition may not name ${rule.flag} more than once.`);
+      continue;
+    }
+    seenFlags.add(rule.flag);
   }
 }
 

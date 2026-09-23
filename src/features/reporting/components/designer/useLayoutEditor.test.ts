@@ -125,4 +125,23 @@ describe("useLayoutEditor", () => {
     expect(result.current.layout.page.color).toBe("#1a1a1a");
     expect(result.current.dirty).toBe(true);
   });
+
+  it("updateRowCondition sets a row's condition and undo restores the prior (absent) one", () => {
+    const { result } = renderHook(() => useLayoutEditor(blankLayout()));
+    const condition = { match: "ALL" as const, rules: [{ flag: "HAS_CLASS_TEACHER_REMARK" as const }] };
+
+    act(() => result.current.updateRowCondition("row-1", condition));
+
+    expect(result.current.layout.rows[0].condition).toEqual(condition);
+    expect(result.current.dirty).toBe(true);
+
+    act(() => result.current.undo());
+
+    expect(result.current.layout.rows[0].condition).toBeUndefined();
+    expect(result.current.canRedo).toBe(true);
+
+    act(() => result.current.redo());
+
+    expect(result.current.layout.rows[0].condition).toEqual(condition);
+  });
 });
