@@ -5,6 +5,7 @@ import { ApiError } from "@/api/client";
 import {
   createResultTemplate,
   deleteResultTemplate,
+  duplicateResultTemplate,
   listResultTemplates,
   publishResultTemplate,
   type ReportAssessmentMode,
@@ -53,6 +54,7 @@ export function ResultTemplatesPage() {
   const [retiring, setRetiring] = useState<ResultTemplateSummary | null>(null);
   const [deleting, setDeleting] = useState<ResultTemplateSummary | null>(null);
   const [changingAvailability, setChangingAvailability] = useState<ResultTemplateSummary | null>(null);
+  const [duplicating, setDuplicating] = useState<ResultTemplateSummary | null>(null);
   const [schoolFilter, setSchoolFilter] = useState("");
 
   function fetchTemplates() {
@@ -202,6 +204,13 @@ export function ResultTemplatesPage() {
                       >
                         Change school
                       </button>
+                      <button
+                        type="button"
+                        className="inline-flex mobile:min-h-11 items-center px-1 text-brand-500 hover:text-brand-600"
+                        onClick={() => setDuplicating(template)}
+                      >
+                        Duplicate
+                      </button>
                       {template.status !== "PUBLISHED" && (
                         <button
                           type="button"
@@ -280,6 +289,14 @@ export function ResultTemplatesPage() {
             setChangingAvailability(null);
             load();
           }}
+        />
+      )}
+      {duplicating && (
+        <DuplicateTemplateModal
+          template={duplicating}
+          schools={state.kind === "loaded" ? state.schools : []}
+          onClose={() => setDuplicating(null)}
+          onDuplicated={(templateId) => navigate(`/admin/templates/${templateId}`)}
         />
       )}
     </div>
@@ -393,6 +410,99 @@ function CreateTemplateModal({ schools, onClose, onCreated }: CreateTemplateModa
           </Button>
           <Button type="submit" disabled={submitting}>
             {submitting ? "Creating…" : "Create and design"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+interface DuplicateTemplateModalProps {
+  template: ResultTemplateSummary;
+  schools: SchoolView[];
+  onClose: () => void;
+  onDuplicated: (templateId: string) => void;
+}
+
+/**
+ * Copies `template`'s assessment mode and layout into a new `DRAFT`
+ * template. Name/description/stage/availability are prefilled from the
+ * source but are otherwise ordinary fields - the copy doesn't have to keep
+ * them, only the mode and layout carry over.
+ */
+function DuplicateTemplateModal({ template, schools, onClose, onDuplicated }: DuplicateTemplateModalProps) {
+  const [name, setName] = useState(`Copy of ${template.name}`);
+  const [description, setDescription] = useState(template.description ?? "");
+  const [baseLevel, setBaseLevel] = useState(template.baseLevel ?? "");
+  const [schoolId, setSchoolId] = useState(template.schoolId ?? "");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    try {
+      const copy = await duplicateResultTemplate(template.id, {
+        name,
+        description: description || undefined,
+        baseLevel: baseLevel || undefined,
+        schoolId: schoolId || undefined,
+      });
+      onDuplicated(copy.id);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to duplicate template");
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Duplicate template">
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        {error && <Alert variant="error">{error}</Alert>}
+        <FormField label="Name" htmlFor="duplicate-template-name">
+          <Input id="duplicate-template-name" required value={name} onChange={(event) => setName(event.target.value)} />
+        </FormField>
+        <FormField label="Description" htmlFor="duplicate-template-description">
+          <Input
+            id="duplicate-template-description"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+          />
+        </FormField>
+        <FormField label="Stage" htmlFor="duplicate-template-base-level">
+          <Select
+            id="duplicate-template-base-level"
+            value={baseLevel}
+            onChange={(event) => setBaseLevel(event.target.value)}
+          >
+            <option value="">Any stage sharing this mode</option>
+            {BASE_LEVELS.map((level) => (
+              <option key={level} value={level}>
+                {level}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+        <FormField label="Available to" htmlFor="duplicate-template-school">
+          <SchoolSelect
+            id="duplicate-template-school"
+            schools={schools}
+            value={schoolId}
+            onChange={setSchoolId}
+            allOptionLabel="All schools"
+          />
+        </FormField>
+        <p className="text-xs text-slate-500">
+          The assessment mode ({template.assessmentMode === "NUMERIC" ? "Numeric" : "Qualitative"}) and layout are
+          copied from "{template.name}". The copy always starts as a Draft, with no schools assigned to it yet.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={submitting}>
+            {submitting ? "Duplicating…" : "Duplicate and design"}
           </Button>
         </div>
       </form>

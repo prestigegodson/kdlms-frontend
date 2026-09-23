@@ -15,6 +15,7 @@ vi.mock("@/api/resultTemplates", async () => {
     deleteResultTemplate: vi.fn(),
     publishResultTemplate: vi.fn(),
     retireResultTemplate: vi.fn(),
+    duplicateResultTemplate: vi.fn(),
   };
 });
 
@@ -93,6 +94,62 @@ describe("ResultTemplatesPage", () => {
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("Standard result sheet")).toBeInTheDocument();
+    expect(screen.queryByText("Template designer page")).not.toBeInTheDocument();
+  });
+
+  it("Duplicate opens a modal prefilled from the source and navigates to the new template on submit", async () => {
+    mockTemplates([TEMPLATE]);
+    vi.mocked(templatesApi.duplicateResultTemplate).mockResolvedValue({
+      id: "template-2",
+      name: "Copy of Standard result sheet",
+      assessmentMode: "NUMERIC",
+      baseLevel: "PRIMARY",
+      layout: {
+        version: 1,
+        page: { paddingPx: 24, fontFamily: "Helvetica, Arial, sans-serif", fontSizePx: 12, color: "#000" },
+        rows: [],
+      },
+      status: "DRAFT",
+      createdBy: "user-1",
+      createdAt: "2026-01-01T00:00:00Z",
+      updatedAt: "2026-01-01T00:00:00Z",
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText("Standard result sheet");
+
+    await user.click(screen.getByRole("button", { name: "Duplicate" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("Duplicate template");
+    const nameInput = screen.getByLabelText("Name") as HTMLInputElement;
+    expect(nameInput.value).toBe("Copy of Standard result sheet");
+
+    await user.click(screen.getByRole("button", { name: "Duplicate and design" }));
+
+    expect(templatesApi.duplicateResultTemplate).toHaveBeenCalledWith("template-1", {
+      name: "Copy of Standard result sheet",
+      description: undefined,
+      baseLevel: "PRIMARY",
+      schoolId: undefined,
+    });
+    expect(await screen.findByText("Template designer page")).toBeInTheDocument();
+  });
+
+  it("shows an error in the Duplicate modal when the request fails", async () => {
+    mockTemplates([TEMPLATE]);
+    vi.mocked(templatesApi.duplicateResultTemplate).mockRejectedValue(new Error("boom"));
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText("Standard result sheet");
+
+    await user.click(screen.getByRole("button", { name: "Duplicate" }));
+    await screen.findByRole("dialog");
+    await user.click(screen.getByRole("button", { name: "Duplicate and design" }));
+
+    expect(await screen.findByText("Failed to duplicate template")).toBeInTheDocument();
     expect(screen.queryByText("Template designer page")).not.toBeInTheDocument();
   });
 });

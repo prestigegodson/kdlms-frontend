@@ -56,6 +56,14 @@ export interface UpdateTemplateRequest {
   layout: ReportLayout;
 }
 
+/** `baseLevel`/`schoolId` are taken as-is, not inherited from the source template being duplicated. */
+export interface DuplicateTemplateRequest {
+  name: string;
+  description?: string;
+  baseLevel?: string;
+  schoolId?: string;
+}
+
 export function listResultTemplates(
   page = 0,
   size = 20,
@@ -79,6 +87,17 @@ export function createResultTemplate(request: CreateTemplateRequest): Promise<Re
 
 export function updateResultTemplate(templateId: string, request: UpdateTemplateRequest): Promise<ResultTemplateView> {
   return apiFetch<ResultTemplateView>(`${BASE}/${templateId}`, { method: "PUT", body: JSON.stringify(request) });
+}
+
+/** Copies `templateId`'s assessment mode and layout into a new `DRAFT` template. */
+export function duplicateResultTemplate(
+  templateId: string,
+  request: DuplicateTemplateRequest,
+): Promise<ResultTemplateView> {
+  return apiFetch<ResultTemplateView>(`${BASE}/${templateId}/duplicate`, {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
 }
 
 /**
