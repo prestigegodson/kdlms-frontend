@@ -37,7 +37,10 @@ import { useBranchScope } from "@/features/branches/useBranchScope";
 import { CommentsModal } from "@/features/learning/components/CommentsModal";
 import { CompletionsModal } from "@/features/learning/components/CompletionsModal";
 import { ResourceEditorModal } from "@/features/learning/components/ResourceEditorModal";
-import { LEARNING_RESOURCE_STATUS_VARIANT } from "@/features/learning/learningResourceStatus";
+import {
+  LEARNING_RESOURCE_STATUS_VARIANT,
+  learningResourceAvailabilityBadge,
+} from "@/features/learning/learningResourceStatus";
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
 import { formatInstant } from "@/utils/date";
@@ -307,7 +310,19 @@ export function LearningResourcesPage() {
                   <TableCell label="Subject">{resource.subjectName}</TableCell>
                   <TableCell label="Type">{TYPE_LABEL[resource.resourceType] ?? resource.resourceType}</TableCell>
                   <TableCell label="Status">
-                    <Badge variant={LEARNING_RESOURCE_STATUS_VARIANT[resource.status]}>{resource.status}</Badge>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <Badge variant={LEARNING_RESOURCE_STATUS_VARIANT[resource.status]}>{resource.status}</Badge>
+                      {(() => {
+                        const availability = learningResourceAvailabilityBadge(
+                          resource.status,
+                          resource.availableFrom,
+                          resource.availableUntil,
+                        );
+                        return (
+                          availability && <Badge variant={availability.variant}>{availability.label}</Badge>
+                        );
+                      })()}
+                    </div>
                   </TableCell>
                   <TableCell label="Updated">{formatInstant(resource.updatedAt)}</TableCell>
                   {canAuthor && (

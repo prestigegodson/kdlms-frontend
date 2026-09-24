@@ -51,6 +51,8 @@ const RESOURCE_ROW: learningApi.LearningResourceSummaryView = {
   resourceType: "PDF",
   status: "DRAFT",
   position: 0,
+  availableFrom: null,
+  availableUntil: null,
   updatedAt: "2026-03-01T00:00:00Z",
 };
 
@@ -71,6 +73,8 @@ const RESOURCE_DETAIL: learningApi.LearningResourceView = {
   commentsEnabled: true,
   status: "DRAFT",
   position: 0,
+  availableFrom: null,
+  availableUntil: null,
   updatedAt: "2026-03-01T00:00:00Z",
   actions: { canEdit: true, canPublish: true, canUnpublish: false, canArchive: true, canDelete: true },
 };

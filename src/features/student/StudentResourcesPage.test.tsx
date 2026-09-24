@@ -18,6 +18,7 @@ const RESOURCE_COMPLETED: learningApi.MyLearningResourceSummaryView = {
   durationSeconds: 300,
   position: 0,
   completed: true,
+  availableUntil: null,
 };
 
 const RESOURCE_INCOMPLETE: learningApi.MyLearningResourceSummaryView = {
@@ -29,6 +30,7 @@ const RESOURCE_INCOMPLETE: learningApi.MyLearningResourceSummaryView = {
   durationSeconds: null,
   position: 0,
   completed: false,
+  availableUntil: null,
 };
 
 function renderPage() {

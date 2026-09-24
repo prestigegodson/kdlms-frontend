@@ -35,6 +35,8 @@ const RESOURCE: LearningResourceView = {
   commentsEnabled: true,
   status: "PUBLISHED",
   position: 0,
+  availableFrom: null,
+  availableUntil: null,
   actions: { canEdit: true, canPublish: false, canUnpublish: true, canArchive: true, canDelete: false },
   updatedAt: "2026-08-15T09:00:00Z",
 };

@@ -18,6 +18,9 @@ export interface LearningResourceSummaryView {
   resourceType: LearningResourceType;
   status: LearningResourceStatus;
   position: number;
+  /** Optional, independent visibility window (Phase 35L) - a student sees this resource only between these instants, on top of its publish status. Either/both may be null. */
+  availableFrom: string | null;
+  availableUntil: string | null;
   updatedAt: string;
 }
 
@@ -49,6 +52,9 @@ export interface LearningResourceView {
   commentsEnabled: boolean;
   status: LearningResourceStatus;
   position: number;
+  /** Optional, independent visibility window (Phase 35L) - see `LearningResourceSummaryView`. */
+  availableFrom: string | null;
+  availableUntil: string | null;
   actions: LearningResourceActionsView;
   updatedAt: string;
 }
@@ -66,6 +72,9 @@ export interface CreateLearningResourceRequest {
   /** A raw YouTube URL, never a bare id - the backend parses and validates it (`learning.domain.YouTubeVideoId`). */
   youtubeUrl: string | null;
   durationSeconds: number | null;
+  /** Optional, independent visibility window (Phase 35L) - build with `localDateToStartInstant`/`localDateToEndInstant` from a date picker, never a raw local time. */
+  availableFrom: string | null;
+  availableUntil: string | null;
 }
 
 /** Mirrors backend learning.adapter.in.web.LearningResourceController.UpdateLearningResourceRequest. `resourceType` isn't here - it's immutable once created. */
@@ -76,6 +85,8 @@ export interface UpdateLearningResourceRequest {
   fileId: string | null;
   youtubeUrl: string | null;
   durationSeconds: number | null;
+  availableFrom: string | null;
+  availableUntil: string | null;
 }
 
 /** Mirrors backend learning.application.port.in.MyLearningResourceSummaryView - one row of the calling STUDENT's own resource list, published only. `completed` (Phase 35H) is the caller's own interaction state, resolved in one batched query for the whole list. */
@@ -88,6 +99,8 @@ export interface MyLearningResourceSummaryView {
   durationSeconds: number | null;
   position: number;
   completed: boolean;
+  /** Set only when the resource has an end of its availability window (Phase 35L) - shown as an "Available until ..." hint; the row is simply absent from this list once it's actually passed, so this is never used client-side to decide visibility. */
+  availableUntil: string | null;
 }
 
 /** Mirrors backend learning.application.port.in.MyLearningResourceView - the calling STUDENT's own full detail. No `fileId` - a file's bytes come from this same resource's own `/file` endpoint. `fileSizeBytes` (Phase 35F) is present only for a file-backed type (`PDF`/`AUDIO`/`VIDEO`) - it lets the player show a determinate progress bar before the first byte arrives. `completed`/`positionSeconds` (Phase 35H) are the caller's own current interaction state - `positionSeconds` seeds an audio/video player's resume point. */

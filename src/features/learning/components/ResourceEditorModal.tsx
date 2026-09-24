@@ -11,6 +11,7 @@ import {
 } from "@/api/learning";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { DateInput } from "@/components/ui/DateInput";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
@@ -19,6 +20,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { RichTextField } from "@/components/richText/RichTextField";
 import { GalleryPickerModal } from "@/features/learning/components/GalleryPickerModal";
 import { formatDuration } from "@/utils/duration";
+import { instantToLocalDate, localDateToEndInstant, localDateToStartInstant } from "@/utils/date";
 
 /** Mirrors backend `learning.domain.LearningRichText.MAX_IMAGES_PER_RESOURCE`. */
 const MAX_IMAGES_PER_RESOURCE = 30;
@@ -112,6 +114,8 @@ export function ResourceEditorModal({
   const [fileName, setFileName] = useState<string | null>(null);
   const [durationSeconds, setDurationSeconds] = useState<number | null>(resource?.durationSeconds ?? null);
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [availableFromDate, setAvailableFromDate] = useState(instantToLocalDate(resource?.availableFrom));
+  const [availableUntilDate, setAvailableUntilDate] = useState(instantToLocalDate(resource?.availableUntil));
   const [galleryOpen, setGalleryOpen] = useState(false);
 
   const [uploading, setUploading] = useState(false);
@@ -171,6 +175,8 @@ export function ResourceEditorModal({
         fileId: isFileBacked ? fileId : null,
         youtubeUrl: resourceType === "YOUTUBE" ? (isEdit ? youtubeUrl || null : youtubeUrl) : null,
         durationSeconds: isMedia ? durationSeconds : null,
+        availableFrom: localDateToStartInstant(availableFromDate),
+        availableUntil: localDateToEndInstant(availableUntilDate),
       };
       if (isEdit) {
         await updateLearningResource(resource.id, payload);
@@ -192,9 +198,13 @@ export function ResourceEditorModal({
     }
   }
 
+  const availabilityWindowInvalid =
+    availableFromDate.length > 0 && availableUntilDate.length > 0 && availableUntilDate < availableFromDate;
+
   const canSubmit =
     !submitting &&
     !uploading &&
+    !availabilityWindowInvalid &&
     title.trim().length > 0 &&
     (resourceType !== "RICH_TEXT" || bodyHtml.trim().length > 0) &&
     (!isFileBacked || fileId != null) &&
@@ -313,6 +323,36 @@ export function ResourceEditorModal({
                 onChange={(event) => setYoutubeUrl(event.target.value)}
               />
             </FormField>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              label="Available from"
+              htmlFor="resource-available-from"
+              description="Leave blank for no start limit."
+            >
+              <DateInput
+                id="resource-available-from"
+                value={availableFromDate}
+                onChange={setAvailableFromDate}
+                max={availableUntilDate || undefined}
+              />
+            </FormField>
+            <FormField
+              label="Available until"
+              htmlFor="resource-available-until"
+              description="Students only see this resource within this window. Leave blank for no end limit."
+            >
+              <DateInput
+                id="resource-available-until"
+                value={availableUntilDate}
+                onChange={setAvailableUntilDate}
+                min={availableFromDate || undefined}
+              />
+            </FormField>
+          </div>
+          {availabilityWindowInvalid && (
+            <Alert variant="error">The availability end date cannot be before its start date.</Alert>
           )}
 
           <div className="flex justify-end gap-2">

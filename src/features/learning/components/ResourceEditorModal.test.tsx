@@ -101,6 +101,8 @@ describe("ResourceEditorModal", () => {
         commentsEnabled: true,
         status: "DRAFT",
         position: 0,
+        availableFrom: null,
+        availableUntil: null,
         actions: { canEdit: true, canPublish: true, canUnpublish: false, canArchive: true, canDelete: true },
         updatedAt: "2026-01-01T00:00:00Z",
       });
@@ -148,5 +150,83 @@ describe("ResourceEditorModal", () => {
     await user.click(screen.getByRole("button", { name: "Choose from gallery" }));
 
     expect(await screen.findByRole("dialog", { name: "Choose from gallery" })).toBeInTheDocument();
+  });
+
+  it("sends the availability window as local-day start/end instants", async () => {
+    vi.mocked(filesApi.uploadFile).mockResolvedValue({
+      fileId: "file-1",
+      fileName: "handout.pdf",
+      contentType: "application/pdf",
+      sizeBytes: 1000,
+    });
+
+    renderModal(true);
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByLabelText("Type"), "PDF");
+    await user.type(screen.getByLabelText("Title"), "Handout");
+    await user.upload(screen.getByLabelText(/File/) as HTMLInputElement, fileOfSize("handout.pdf", "application/pdf", 1000));
+    expect(await screen.findByText("handout.pdf")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Available from"), "2026-03-10");
+    await user.type(screen.getByLabelText("Available until"), "2026-03-20");
+    await user.click(screen.getByRole("button", { name: "Add resource" }));
+
+    expect(learningApi.createLearningResource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        availableFrom: new Date(2026, 2, 10, 0, 0, 0, 0).toISOString(),
+        availableUntil: new Date(2026, 2, 20, 23, 59, 59, 999).toISOString(),
+      }),
+    );
+  });
+
+  it("blocks typing an 'Available until' date earlier than the chosen 'Available from' date", async () => {
+    renderModal(true);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Available from"), "2026-03-20");
+    // Rejected by the field's own min (wired to "Available from") before it ever reaches
+    // onChange - so the draft is left uncommitted rather than producing an invalid window.
+    await user.type(screen.getByLabelText("Available until"), "2026-03-10");
+
+    expect(screen.queryByText(/cannot be before its start date/)).not.toBeInTheDocument();
+  });
+
+  it("disables submit and refuses to save when an existing resource's availability window is already inconsistent", () => {
+    render(
+      <ResourceEditorModal
+        classId="class-1"
+        subjectId="subject-1"
+        termId="term-1"
+        subjects={SUBJECTS}
+        canAuthorMedia
+        resource={{
+          id: "resource-1",
+          classId: "class-1",
+          className: "Class 1",
+          subjectId: "subject-1",
+          subjectName: "Mathematics",
+          termId: "term-1",
+          title: "Handout",
+          description: null,
+          resourceType: "PDF",
+          bodyHtml: null,
+          fileId: "file-1",
+          youtubeVideoId: null,
+          durationSeconds: null,
+          commentsEnabled: true,
+          status: "DRAFT",
+          position: 0,
+          availableFrom: "2026-03-20T00:00:00.000Z",
+          availableUntil: "2026-03-10T23:59:59.999Z",
+          actions: { canEdit: true, canPublish: true, canUnpublish: false, canArchive: true, canDelete: true },
+          updatedAt: "2026-01-01T00:00:00Z",
+        }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    expect(screen.getByText(/cannot be before its start date/)).toBeInTheDocument();
+    expect(learningApi.updateLearningResource).not.toHaveBeenCalled();
   });
 });

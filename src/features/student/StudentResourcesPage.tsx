@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { DrillRow } from "@/features/guardian/components/DrillRow";
+import { formatInstantDate } from "@/utils/date";
 import { formatDuration } from "@/utils/duration";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -17,11 +18,19 @@ const TYPE_LABEL: Record<string, string> = {
   VIDEO: "Video",
 };
 
-/** `resource.description`, with the media duration appended when there is one - e.g. "5:00 lecture · 4:32". */
+/**
+ * `resource.description`, with the media duration and (Phase 35L) an "Available until ..." hint
+ * appended - e.g. "5:00 lecture · 4:32 · Available until 10 Oct 2026". The resource is simply
+ * absent from this list once its window has actually closed - this is a heads-up while it's still
+ * visible, never a claim this page enforces itself.
+ */
 function rowMeta(resource: MyLearningResourceSummaryView): string | undefined {
-  const duration = formatDuration(resource.durationSeconds);
-  if (!duration) return resource.description ?? undefined;
-  return resource.description ? `${resource.description} · ${duration}` : duration;
+  const parts = [
+    resource.description ?? undefined,
+    formatDuration(resource.durationSeconds) || undefined,
+    resource.availableUntil ? `Available until ${formatInstantDate(resource.availableUntil)}` : undefined,
+  ].filter((part): part is string => Boolean(part));
+  return parts.length > 0 ? parts.join(" · ") : undefined;
 }
 
 interface SubjectGroup {

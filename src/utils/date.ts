@@ -212,6 +212,45 @@ export function toInstant(dateIso: string, clockTime: string): string | null {
   return combined.toISOString();
 }
 
+/**
+ * "2026-03-10" -> the ISO instant for local midnight that day - a resource's `availableFrom`
+ * date-picker value, in the browser's own local zone per quiz-module.md's "Timezone handling".
+ * Returns `null` for missing/unparseable input, so a blank picker never sends a wrong instant.
+ */
+export function localDateToStartInstant(dateIso: string | null | undefined): string | null {
+  if (!dateIso) {
+    return null;
+  }
+  const date = parseIsoDate(dateIso);
+  return date ? date.toISOString() : null;
+}
+
+/**
+ * "2026-03-10" -> the ISO instant for the last millisecond of that local day (23:59:59.999) - the
+ * inclusive-end counterpart to {@link localDateToStartInstant} for a resource's `availableUntil`
+ * date-picker value. Returns `null` for missing/unparseable input.
+ */
+export function localDateToEndInstant(dateIso: string | null | undefined): string | null {
+  if (!dateIso) {
+    return null;
+  }
+  const date = parseIsoDate(dateIso);
+  if (!date) {
+    return null;
+  }
+  date.setHours(23, 59, 59, 999);
+  return date.toISOString();
+}
+
+/** The inverse of both {@link localDateToStartInstant} and {@link localDateToEndInstant} - the local calendar day a server instant falls on, as "YYYY-MM-DD" for a `DateInput`. Returns `""` for missing/unparseable input. */
+export function instantToLocalDate(instant: string | null | undefined): string {
+  if (!instant) {
+    return "";
+  }
+  const date = new Date(instant);
+  return Number.isNaN(date.getTime()) ? "" : toIso(date);
+}
+
 /** The inverse of {@link toInstant} - splits a server instant back into the local "YYYY-MM-DD" date and "HH:mm" time a `QuizWindowFields`-shaped editor needs. Returns `{ dateIso: "", clockTime: "" }` for missing/unparseable input. */
 export function splitInstant(instant: string | null | undefined): { dateIso: string; clockTime: string } {
   if (!instant) {
