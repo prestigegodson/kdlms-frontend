@@ -14,6 +14,7 @@ import {
 import { ApiError } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
@@ -38,6 +39,7 @@ interface FormState {
   durationMinutes: string;
   opensAt: string;
   closesAt: string;
+  revealResultsOnSubmit: boolean;
   questions: EditableQuestion[];
 }
 
@@ -54,6 +56,7 @@ function blankForm(): FormState {
     durationMinutes: "",
     opensAt: nowPlusHours(24),
     closesAt: nowPlusHours(24 * 8),
+    revealResultsOnSubmit: false,
     questions: [],
   };
 }
@@ -67,6 +70,7 @@ function fromView(view: TakeHomeQuizView): FormState {
     durationMinutes: view.durationMinutes !== null ? String(view.durationMinutes) : "",
     opensAt: view.opensAt,
     closesAt: view.closesAt,
+    revealResultsOnSubmit: view.revealResultsOnSubmit,
     questions: view.questions.map(toEditableQuestion),
   };
 }
@@ -125,6 +129,10 @@ export function TakeHomeQuizEditorPage() {
   const showForm = !loadError && (isNew || quiz !== null);
   const readOnly = quiz ? !quiz.actions.canEditMetadata : false;
   const questionsReadOnly = quiz ? !quiz.actions.canEditQuestions : false;
+  // Once a submission exists, only `closesAt` (extend-only) and `revealResultsOnSubmit` stay
+  // editable - everything else metadata-shaped locks alongside the question set. `readOnly` (the
+  // quiz is archived) locks every field including those two.
+  const locked = readOnly || questionsReadOnly;
   const dirty = snapshotOf(form) !== snapshot;
 
   function applyQuiz(loaded: TakeHomeQuizView) {
@@ -158,6 +166,7 @@ export function TakeHomeQuizEditorPage() {
           durationMinutes,
           opensAt: form.opensAt,
           closesAt: form.closesAt,
+          revealResultsOnSubmit: form.revealResultsOnSubmit,
         });
       } else {
         saved = await updateTakeHomeQuiz(quiz!.id, {
@@ -168,6 +177,7 @@ export function TakeHomeQuizEditorPage() {
           durationMinutes,
           opensAt: form.opensAt,
           closesAt: form.closesAt,
+          revealResultsOnSubmit: form.revealResultsOnSubmit,
         });
       }
       if (form.questions.length > 0 || (quiz && quiz.questions.length > 0)) {
@@ -256,12 +266,19 @@ export function TakeHomeQuizEditorPage() {
 
       {showForm && (
         <div className="max-w-2xl space-y-6">
+          {questionsReadOnly && !readOnly && (
+            <Alert variant="info">
+              Students have already submitted this quiz. Only the closing date (later only) and the
+              reveal setting below can still be changed.
+            </Alert>
+          )}
+
           <FormField label="Title" htmlFor="quiz-title" description={TAKE_HOME_QUIZ_FIELD_HELP.title}>
             <Input
               id="quiz-title"
               value={form.title}
               onChange={(event) => setForm({ ...form, title: event.target.value })}
-              disabled={readOnly}
+              disabled={locked}
             />
           </FormField>
 
@@ -271,7 +288,7 @@ export function TakeHomeQuizEditorPage() {
               rows={3}
               value={form.instructions}
               onChange={(event) => setForm({ ...form, instructions: event.target.value })}
-              disabled={readOnly}
+              disabled={locked}
             />
           </FormField>
 
@@ -299,6 +316,16 @@ export function TakeHomeQuizEditorPage() {
             disabled={readOnly}
             opensAtDisabled={questionsReadOnly}
           />
+
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <Checkbox
+              checked={form.revealResultsOnSubmit}
+              onChange={(event) => setForm({ ...form, revealResultsOnSubmit: event.target.checked })}
+              disabled={readOnly}
+            />
+            Show students their score and correct answers after they submit
+          </label>
+          <p className="text-xs text-slate-500">{TAKE_HOME_QUIZ_FIELD_HELP.revealResultsOnSubmit}</p>
         </div>
       )}
 

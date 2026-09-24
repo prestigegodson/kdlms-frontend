@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { AnswerCommand, PublicAnswerView, QuizAttemptView } from "@/api/publicTakeHomeQuiz";
+import type {
+  AnswerCommand,
+  PublicAnswerView,
+  QuizAttemptView,
+  SubmitConfirmationView,
+} from "@/api/publicTakeHomeQuiz";
+import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { QuestionCard } from "@/features/takeHomeQuizzes/public/components/QuestionCard";
 import { QuestionNavStrip } from "@/features/takeHomeQuizzes/public/components/QuestionNavStrip";
 import { QuizTimer } from "@/features/takeHomeQuizzes/public/components/QuizTimer";
@@ -34,7 +41,10 @@ function readBuffer(bufferKey: string): AnswersState | null {
 
 function writeBuffer(bufferKey: string, answers: AnswersState) {
   try {
-    localStorage.setItem(bufferStorageKey(bufferKey), JSON.stringify({ answers, updatedAt: Date.now() }));
+    localStorage.setItem(
+      bufferStorageKey(bufferKey),
+      JSON.stringify({ answers, updatedAt: Date.now() }),
+    );
   } catch {
     // Private browsing / quota failures - the buffer is a convenience, never load-bearing.
   }
@@ -53,8 +63,8 @@ export interface QuizRunnerProps {
   initialAttempt: QuizAttemptView;
   /** Everything network/auth-specific - see `quizTransport.ts`. */
   transport: QuizTransport;
-  /** Called once submit (or auto-submit on timer expiry) succeeds. */
-  onSubmitted: () => void;
+  /** Called once submit (or auto-submit on timer expiry) succeeds, with the server's own confirmation (`revealResults` tells the caller whether to show the score/review right away). */
+  onSubmitted: (confirmation: SubmitConfirmationView) => void;
   /** Called when submit fails outright (not a save failure, which is silently retried) - the caller renders its own error chrome. */
   onError: (error: unknown) => void;
 }
@@ -77,8 +87,11 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
   });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
-  const [online, setOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
+  const [online, setOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine,
+  );
   const [submitting, setSubmitting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pendingAnswersRef = useRef<AnswersState | null>(null);
@@ -172,12 +185,13 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
     if (submitting) {
       return;
     }
+    setConfirmOpen(false);
     setSubmitting(true);
     handleBlurFlush();
     submit()
-      .then(() => {
+      .then((confirmation) => {
         clearBuffer(bufferKey);
-        onSubmitted();
+        onSubmitted(confirmation);
       })
       .catch((error: unknown) => onError(error))
       .finally(() => setSubmitting(false));
@@ -198,13 +212,25 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
     return indexes;
   }, [questions, answers]);
 
+  const unansweredIndexes = useMemo(
+    () =>
+      Array.from({ length: questions.length }, (_, index) => index).filter(
+        (index) => !answeredIndexes.has(index),
+      ),
+    [questions.length, answeredIndexes],
+  );
+
   const currentQuestion = questions[currentIndex];
 
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
         <SaveStatusIndicator status={online ? saveStatus : "offline"} />
-        <QuizTimer deadlineAt={attempt.deadlineAt} serverTime={attempt.serverTime} onExpire={handleSubmit} />
+        <QuizTimer
+          deadlineAt={attempt.deadlineAt}
+          serverTime={attempt.serverTime}
+          onExpire={handleSubmit}
+        />
       </div>
 
       <div className="mb-4">
@@ -237,15 +263,62 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
           <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Previous
         </Button>
         {currentIndex < questions.length - 1 ? (
-          <Button onClick={() => setCurrentIndex((index) => Math.min(questions.length - 1, index + 1))}>
+          <Button
+            onClick={() => setCurrentIndex((index) => Math.min(questions.length - 1, index + 1))}
+          >
             Next <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </Button>
         ) : (
-          <Button onClick={handleSubmit} loading={submitting}>
+          <Button onClick={() => setConfirmOpen(true)} loading={submitting}>
             Submit quiz
           </Button>
         )}
       </div>
+
+      {confirmOpen && (
+        <ConfirmDialog
+          title="Submit quiz?"
+          confirmLabel="Submit quiz"
+          onConfirm={async () => handleSubmit()}
+          onClose={() => setConfirmOpen(false)}
+          message={
+            unansweredIndexes.length === 0 ? (
+              <p>
+                You&apos;ve answered all {questions.length} question
+                {questions.length === 1 ? "" : "s"}. Once submitted, you can&apos;t change your
+                answers.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <Alert
+                  variant="warning"
+                  title={`You have ${unansweredIndexes.length} unanswered question${unansweredIndexes.length === 1 ? "" : "s"}`}
+                >
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {unansweredIndexes.map((index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => {
+                          setConfirmOpen(false);
+                          setCurrentIndex(index);
+                        }}
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-amber-300 bg-white text-sm font-medium text-amber-800 hover:bg-amber-100"
+                      >
+                        {index + 1}
+                      </button>
+                    ))}
+                  </div>
+                </Alert>
+                <p>
+                  Unanswered questions will score zero. Once submitted, you can&apos;t change your
+                  answers.
+                </p>
+              </div>
+            )
+          }
+        />
+      )}
     </div>
   );
 }

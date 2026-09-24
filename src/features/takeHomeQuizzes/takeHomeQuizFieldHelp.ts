@@ -11,4 +11,6 @@ export const TAKE_HOME_QUIZ_FIELD_HELP = {
   closesAt: "When the link stops accepting answers - can only be extended, never brought forward, once a student has started.",
   timed: "Turn this on to give each student a countdown once they press Start, rather than the full window until closesAt.",
   durationMinutes: "How long a student has once they press Start.",
+  revealResultsOnSubmit:
+    "Off by default. When on, a student sees their score and which answers were correct as soon as they submit - including a student who finishes before their classmates, who could then share the answers.",
 } as const;

@@ -50,6 +50,8 @@ export interface QuizInterstitialView {
   closesAt: string;
   availability: QuizAvailability | null;
   attemptState: AttemptState;
+  /** True only once the quiz's own `revealResultsOnSubmit` is on and this caller has already submitted - see `getTakeHomeQuizReview`. */
+  revealResults: boolean;
   serverTime: string;
 }
 
@@ -69,7 +71,46 @@ export interface AnswerCommand {
 
 export interface SubmitConfirmationView {
   alreadySubmitted: boolean;
+  /** True only when the quiz's own `revealResultsOnSubmit` is on - see `getTakeHomeQuizReview`. */
+  revealResults: boolean;
   serverTime: string;
+}
+
+/**
+ * A student's own score and per-question review, answer key included (Phase 20K) - deliberately a
+ * distinct shape from `PublicQuestionView`/`PublicOptionView`, which stay answer-key-free for the
+ * pre-submit taking flow. Only ever fetchable once `revealResults` is true on the interstitial or
+ * the submit confirmation.
+ */
+export interface ReviewOptionView {
+  id: string;
+  position: number;
+  /** Sanitized HTML, the same contract as `PublicOptionView.label`. */
+  label: string;
+  correct: boolean;
+}
+
+export interface ReviewQuestionView {
+  id: string;
+  position: number;
+  questionType: QuestionType;
+  /** Sanitized HTML - see backend `takehomequiz.domain.QuizRichText`. Render with `RichContent`, never as plain text. */
+  prompt: string;
+  points: number;
+  options: ReviewOptionView[];
+  /** Correct answer text for a FILL_IN_THE_GAP question - empty for a choice question. */
+  acceptedAnswers: string[];
+  selectedOptionIds: string[];
+  textAnswer: string | null;
+  awardedPoints: number | null;
+  correct: boolean | null;
+}
+
+/** Mirrors backend `TakeTakeHomeQuizUseCase.QuizReviewView`. `score` is the attempt's effective score - a later teacher adjustment is reflected here too. */
+export interface QuizReviewView {
+  score: number;
+  totalPoints: number;
+  questions: ReviewQuestionView[];
 }
 
 function base(token: string): string {
@@ -110,4 +151,9 @@ export function saveTakeHomeQuizAnswers(token: string, answers: AnswerCommand[])
 
 export function submitTakeHomeQuiz(token: string): Promise<SubmitConfirmationView> {
   return apiFetch<SubmitConfirmationView>(`${base(token)}/submit`, { method: "POST", authenticated: false });
+}
+
+/** The caller's own score and per-question review - 404s (the identical shape every other failure on this surface produces) unless `revealResults` is true. */
+export function getTakeHomeQuizReview(token: string): Promise<QuizReviewView> {
+  return apiFetch<QuizReviewView>(`${base(token)}/review`, { authenticated: false });
 }

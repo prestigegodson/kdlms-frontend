@@ -84,6 +84,8 @@ export interface TakeHomeQuizView {
   durationMinutes: number | null;
   opensAt: string;
   closesAt: string;
+  /** Off by default - see backend `TakeHomeQuiz`'s Javadoc. Never frozen once a submission exists, unlike most of this view's other fields. */
+  revealResultsOnSubmit: boolean;
   totalPoints: number;
   questions: TakeHomeQuizQuestionView[];
   actions: TakeHomeQuizActionsView;
@@ -137,6 +139,7 @@ export interface CreateTakeHomeQuizRequest {
   durationMinutes: number | null;
   opensAt: string;
   closesAt: string;
+  revealResultsOnSubmit: boolean;
 }
 
 export interface UpdateTakeHomeQuizRequest {
@@ -147,6 +150,7 @@ export interface UpdateTakeHomeQuizRequest {
   durationMinutes: number | null;
   opensAt: string;
   closesAt: string;
+  revealResultsOnSubmit: boolean;
 }
 
 /** Mirrors backend takehomequiz.application.port.in.PublishOutcomeView.RowOutcome. */

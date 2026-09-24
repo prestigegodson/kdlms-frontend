@@ -1,7 +1,8 @@
 import { LinkIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import {
+  getTakeHomeQuizReview,
   publicQuestionImageUrl,
   resolveTakeHomeQuiz,
   saveTakeHomeQuizAnswers,
@@ -14,6 +15,7 @@ import { ApiError, GENERIC_ERROR_MESSAGE, getErrorMessage } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Spinner } from "@/components/ui/Spinner";
+import { QuizResultReveal } from "@/features/takeHomeQuizzes/components/QuizResultReveal";
 import { QuizInterstitial } from "@/features/takeHomeQuizzes/public/components/QuizInterstitial";
 import { SubmitConfirmation } from "@/features/takeHomeQuizzes/public/components/SubmitConfirmation";
 import { QuizRunner } from "@/features/takeHomeQuizzes/runner/QuizRunner";
@@ -25,7 +27,7 @@ type Status =
   | { kind: "invalid" }
   | { kind: "interstitial"; data: QuizInterstitialView }
   | { kind: "inProgress"; attempt: QuizAttemptView }
-  | { kind: "submitted" }
+  | { kind: "submitted"; revealResults: boolean }
   | { kind: "error"; message: string };
 
 /**
@@ -60,7 +62,7 @@ export function TakeHomeQuizPublicPage() {
       .then((data) => {
         if (cancelled) return;
         if (data.attemptState === "SUBMITTED") {
-          setStatus({ kind: "submitted" });
+          setStatus({ kind: "submitted", revealResults: data.revealResults });
         } else {
           setStatus({ kind: "interstitial", data });
         }
@@ -99,6 +101,12 @@ export function TakeHomeQuizPublicPage() {
     [token],
   );
 
+  const loadReview = useCallback(() => getTakeHomeQuizReview(token), [token]);
+  const renderReviewImage = useCallback(
+    (fileId: string, alt: string) => <img src={publicQuestionImageUrl(token, fileId)} alt={alt} loading="lazy" />,
+    [token],
+  );
+
   if (status.kind === "loading") {
     return (
       <div className="flex min-h-dvh items-center justify-center gap-2 text-sm text-slate-500">
@@ -128,6 +136,13 @@ export function TakeHomeQuizPublicPage() {
   }
 
   if (status.kind === "submitted") {
+    if (status.revealResults) {
+      return (
+        <div className="mx-auto min-h-dvh max-w-2xl px-4 py-8">
+          <QuizResultReveal load={loadReview} renderImage={renderReviewImage} />
+        </div>
+      );
+    }
     return <SubmitConfirmation />;
   }
 
@@ -140,7 +155,7 @@ export function TakeHomeQuizPublicPage() {
       <QuizRunner
         initialAttempt={status.attempt}
         transport={transport}
-        onSubmitted={() => setStatus({ kind: "submitted" })}
+        onSubmitted={(confirmation) => setStatus({ kind: "submitted", revealResults: confirmation.revealResults })}
         onError={(error) => setStatus(errorStatus(error))}
       />
     </div>

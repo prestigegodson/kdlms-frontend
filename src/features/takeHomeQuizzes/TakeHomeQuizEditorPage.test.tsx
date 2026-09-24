@@ -59,6 +59,7 @@ const SAVED_VIEW: takeHomeQuizzesApi.TakeHomeQuizView = {
   durationMinutes: null,
   opensAt: "2026-03-01T00:00:00Z",
   closesAt: "2026-03-08T00:00:00Z",
+  revealResultsOnSubmit: false,
   totalPoints: 0,
   questions: [],
   actions: {
@@ -169,6 +170,42 @@ describe("TakeHomeQuizEditorPage - an existing quiz", () => {
     expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeInTheDocument();
     expect(screen.queryByText("Delete")).not.toBeInTheDocument();
     expect(screen.queryByText("Publish")).not.toBeInTheDocument();
+  });
+
+  it("locks title/instructions once a submission exists, but keeps closesAt and the reveal checkbox editable", async () => {
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuiz).mockResolvedValue({
+      ...SAVED_VIEW,
+      status: "PUBLISHED",
+      actions: {
+        canEditMetadata: true,
+        canEditQuestions: false,
+        canDelete: false,
+        canPublish: true,
+        canPublishResults: true,
+        canUnpublishResults: false,
+      },
+    });
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizValidation).mockResolvedValue({
+      canPublish: true,
+      blockers: [],
+      totalPoints: 4,
+      midtermMax: null,
+      rosterSize: 3,
+    });
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizLinks).mockResolvedValue([]);
+
+    renderAt("/school/take-home-quizzes/quiz-1?classId=class-1&subjectId=subject-1&termId=term-1");
+
+    expect(
+      await screen.findByText(/Students have already submitted this quiz/),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Title")).toBeDisabled();
+    expect(screen.getByLabelText("Instructions")).toBeDisabled();
+    const revealCheckbox = screen.getByRole("checkbox", {
+      name: "Show students their score and correct answers after they submit",
+    });
+    expect(revealCheckbox).not.toBeDisabled();
+    expect(screen.getByLabelText("Closes time")).not.toBeDisabled();
   });
 
   it("shows the Publish action only when the server reports the quiz publishable", async () => {

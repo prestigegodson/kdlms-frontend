@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { getErrorMessage } from "@/api/client";
 import {
+  getMyQuizReview,
   getMyTakeHomeQuiz,
   saveMyTakeHomeQuizAnswers,
   startMyTakeHomeQuiz,
@@ -16,6 +17,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { PortalQuizImage } from "@/features/student/components/PortalQuizImage";
+import { QuizResultReveal } from "@/features/takeHomeQuizzes/components/QuizResultReveal";
 import { QuizRunner } from "@/features/takeHomeQuizzes/runner/QuizRunner";
 import type { QuizTransport } from "@/features/takeHomeQuizzes/runner/quizTransport";
 import { formatInstant } from "@/utils/date";
@@ -25,15 +27,17 @@ type Status =
   | { kind: "error"; message: string }
   | { kind: "interstitial"; data: MyQuizInterstitialView }
   | { kind: "inProgress"; attempt: QuizAttemptView }
-  | { kind: "submitted"; title: string | null };
+  | { kind: "submitted"; title: string | null; revealResults: boolean };
 
 /**
  * The student portal's quiz-taking screen (Phase 35I.3) - the authenticated twin of
  * `TakeHomeQuizPublicPage`, resolved by `quizId` (never a token) and rendered inside the ordinary
  * portal shell rather than full-viewport chrome. Shares the same `QuizRunner` state machine (timer,
- * autosave, buffer, submit) via its own `QuizTransport`. No score is shown here even once results
- * are published - that lives on `StudentQuizzesPage`'s own list row (Phase 35I, confirmed with the
- * user), matching this module's existing "no per-question breakdown at v1" stance.
+ * autosave, buffer, submit) via its own `QuizTransport`. `QuizResultReveal` shows the score and a
+ * per-question breakdown once `revealResults` is true - either because the quiz's own opt-in
+ * `revealResultsOnSubmit` is on (right after submit, Phase 20K) or because the teacher has since
+ * published results, in which case a revisiting student sees the review too, not just the bare
+ * score on `StudentQuizzesPage`'s own list row.
  */
 export function StudentQuizPage() {
   const { quizId = "" } = useParams<{ quizId: string }>();
@@ -46,7 +50,9 @@ export function StudentQuizPage() {
       .then((data) => {
         if (cancelled) return;
         setStatus(
-          data.attemptState === "SUBMITTED" ? { kind: "submitted", title: data.title } : { kind: "interstitial", data },
+          data.attemptState === "SUBMITTED"
+            ? { kind: "submitted", title: data.title, revealResults: data.revealResults }
+            : { kind: "interstitial", data },
         );
       })
       .catch((error: unknown) => {
@@ -75,6 +81,12 @@ export function StudentQuizPage() {
     ),
   };
 
+  const loadReview = useCallback(() => getMyQuizReview(quizId), [quizId]);
+  const renderReviewImage = useCallback(
+    (fileId: string, alt: string) => <PortalQuizImage quizId={quizId} fileId={fileId} alt={alt} size="option" />,
+    [quizId],
+  );
+
   if (status.kind === "loading") {
     return (
       <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -96,12 +108,18 @@ export function StudentQuizPage() {
     return (
       <div className="space-y-6">
         <PageHeader title={status.title ?? "Quiz"} />
-        <Card className="text-center">
-          <h2 className="font-display text-lg font-medium text-slate-900">Quiz submitted</h2>
-          <p className="mt-2 text-sm text-slate-600">
-            Your result is being computed. Check back here once your teacher publishes it.
-          </p>
-        </Card>
+        {status.revealResults ? (
+          <Card>
+            <QuizResultReveal load={loadReview} renderImage={renderReviewImage} />
+          </Card>
+        ) : (
+          <Card className="text-center">
+            <h2 className="font-display text-lg font-medium text-slate-900">Quiz submitted</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Your result is being computed. Check back here once your teacher publishes it.
+            </p>
+          </Card>
+        )}
       </div>
     );
   }
@@ -160,7 +178,9 @@ export function StudentQuizPage() {
     <QuizRunner
       initialAttempt={status.attempt}
       transport={transport}
-      onSubmitted={() => setStatus({ kind: "submitted", title: null })}
+      onSubmitted={(confirmation) =>
+        setStatus({ kind: "submitted", title: null, revealResults: confirmation.revealResults })
+      }
       onError={(error) => setStatus({ kind: "error", message: getErrorMessage(error, "Failed to load this quiz") })}
     />
   );
