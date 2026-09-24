@@ -50,6 +50,17 @@ const PAST_TERM_UNPUBLISHED = {
   midtermPublished: false,
 };
 
+/** One published term per session, `count` past sessions named 2010/2011 upward. */
+function pastSessions(count: number) {
+  return Array.from({ length: count }, (_, i) => ({
+    ...CURRENT_TERM,
+    sessionId: `sess-${i}`,
+    sessionName: `${2010 + i}/${2011 + i}`,
+    currentSession: false,
+    termId: `term-${i}`,
+  }));
+}
+
 function renderPage(initialPath = "/guardian/results/s1") {
   resetAuthStore();
   useAuthStore.setState({
@@ -116,6 +127,41 @@ describe("WardSessionsPage (step 2 - sessions)", () => {
     await user.click(await screen.findByText("2026/2027"));
 
     expect(await screen.findByText("Ward terms page")).toBeInTheDocument();
+  });
+
+  it("pages sessions ten at a time and honours ?page= in the URL", async () => {
+    vi.mocked(wardsApi.listWardTerms).mockResolvedValue(pastSessions(12));
+    const user = userEvent.setup();
+
+    renderPage();
+
+    expect(await screen.findByText("2021/2022")).toBeInTheDocument();
+    expect(screen.getByText("2012/2013")).toBeInTheDocument();
+    expect(screen.queryByText("2011/2012")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+
+    expect(screen.getByText("2011/2012")).toBeInTheDocument();
+    expect(screen.getByText("2010/2011")).toBeInTheDocument();
+    expect(screen.queryByText("2021/2022")).not.toBeInTheDocument();
+  });
+
+  it("opens the page named in the URL", async () => {
+    vi.mocked(wardsApi.listWardTerms).mockResolvedValue(pastSessions(12));
+
+    renderPage("/guardian/results/s1?page=2");
+
+    expect(await screen.findByText("2010/2011")).toBeInTheDocument();
+    expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
+  });
+
+  it("shows no pagination controls when every session fits on one page", async () => {
+    vi.mocked(wardsApi.listWardTerms).mockResolvedValue([PAST_TERM_UNPUBLISHED, CURRENT_TERM]);
+
+    renderPage();
+
+    expect(await screen.findByText("2026/2027")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next page" })).not.toBeInTheDocument();
   });
 
   it("shows an empty state when the ward has no enrolment history", async () => {

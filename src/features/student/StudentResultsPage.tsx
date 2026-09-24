@@ -4,9 +4,15 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Pagination } from "@/components/ui/Pagination";
 import { Spinner } from "@/components/ui/Spinner";
 import { DrillRow } from "@/features/guardian/components/DrillRow";
+import { usePageParam } from "@/hooks/usePageParam";
 import { useStudentStore } from "@/stores/studentStore";
+import { paginate } from "@/utils/paginate";
+
+/** Paged by whole session - a session's terms never split across two pages. */
+const SESSIONS_PER_PAGE = 5;
 
 interface SessionGroup {
   sessionId: string;
@@ -52,6 +58,7 @@ export function StudentResultsPage() {
   const errorMessage = useStudentStore((state) => state.errorMessage);
   const fetchIfNeeded = useStudentStore((state) => state.fetchIfNeeded);
   const retry = useStudentStore((state) => state.retry);
+  const [pageIndex, setPageIndex] = usePageParam();
 
   useEffect(() => {
     fetchIfNeeded();
@@ -75,6 +82,7 @@ export function StudentResultsPage() {
   }
 
   const sessions = sessionsFrom(terms);
+  const page = paginate(sessions, pageIndex, SESSIONS_PER_PAGE);
 
   return (
     <div className="space-y-6">
@@ -85,7 +93,7 @@ export function StudentResultsPage() {
       )}
 
       <div className="space-y-6">
-        {sessions.map((session) => (
+        {page.content.map((session) => (
           <div key={session.sessionId} className="space-y-2">
             <p className="text-sm font-medium text-slate-500">
               {session.sessionName}
@@ -122,6 +130,8 @@ export function StudentResultsPage() {
           </div>
         ))}
       </div>
+
+      {page.totalPages > 1 && <Pagination page={page} onPageChange={setPageIndex} />}
     </div>
   );
 }

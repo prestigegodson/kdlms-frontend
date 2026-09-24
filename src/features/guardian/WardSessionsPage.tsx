@@ -2,9 +2,14 @@ import type { WardTermView } from "@/api/wards";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Pagination } from "@/components/ui/Pagination";
 import { DrillRow } from "@/features/guardian/components/DrillRow";
 import { WardBreadcrumb } from "@/features/guardian/components/WardBreadcrumb";
 import { useWardResultsContext } from "@/features/guardian/WardResultsLayout";
+import { usePageParam } from "@/hooks/usePageParam";
+import { paginate } from "@/utils/paginate";
+
+const SESSIONS_PER_PAGE = 10;
 
 interface SessionSummary {
   sessionId: string;
@@ -51,6 +56,8 @@ function sessionsFrom(terms: WardTermView[]): SessionSummary[] {
 export function WardSessionsPage() {
   const { ward, terms } = useWardResultsContext();
   const sessions = sessionsFrom(terms);
+  const [pageIndex, setPageIndex] = usePageParam();
+  const page = paginate(sessions, pageIndex, SESSIONS_PER_PAGE);
 
   return (
     <div className="space-y-6">
@@ -62,7 +69,7 @@ export function WardSessionsPage() {
       )}
 
       <div className="space-y-3">
-        {sessions.map((session) =>
+        {page.content.map((session) =>
           session.publishedCount > 0 ? (
             <DrillRow
               key={session.sessionId}
@@ -86,6 +93,8 @@ export function WardSessionsPage() {
           ),
         )}
       </div>
+
+      {page.totalPages > 1 && <Pagination page={page} onPageChange={setPageIndex} />}
     </div>
   );
 }
