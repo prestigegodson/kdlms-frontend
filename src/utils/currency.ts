@@ -32,3 +32,21 @@ export function formatMoney(
   }
   return formatter.format(amount);
 }
+
+const PLAIN_AMOUNT_FORMATTER = new Intl.NumberFormat("en-NG", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/**
+ * Grouped, 2-decimal formatting for an amount that carries no currency - inventory's own
+ * estimated costs/totals, which (like inventory_items.unit_price) are informational-only, with no
+ * currency column anywhere in the module. Returns "—" when the amount is missing, the
+ * formatMoney precedent.
+ */
+export function formatAmount(amount: number | null | undefined): string {
+  if (amount == null || !Number.isFinite(amount)) {
+    return "—";
+  }
+  return PLAIN_AMOUNT_FORMATTER.format(amount);
+}

@@ -22,6 +22,19 @@ const MOVEMENT_BADGE: Record<StockMovementView["kind"], "success" | "danger" | "
   ADJUSTMENT: "neutral",
 };
 
+/**
+ * A student recipient, then a legacy requisition reference, then general usage (with its own
+ * optional "used for" text), then falls back to the reason/reference every other movement kind
+ * carries. An ISSUE with no student and no issuedTo/requisitionReference is general usage with no
+ * description.
+ */
+function movementDetail(movement: StockMovementView): string {
+  if (movement.studentName) return movement.studentName;
+  if (movement.requisitionReference) return movement.requisitionReference;
+  if (movement.kind === "ISSUE") return movement.issuedTo ? `General usage — ${movement.issuedTo}` : "General usage";
+  return movement.issuedTo ?? movement.reason ?? movement.reference ?? "—";
+}
+
 /** One item's movement history for a branch - read-only, newest first. */
 export function StockLedgerModal({ level, branchId, onClose }: StockLedgerModalProps) {
   const [pageNumber, setPageNumber] = useState(0);
@@ -70,9 +83,7 @@ export function StockLedgerModal({ level, branchId, onClose }: StockLedgerModalP
                     <TableCell label="Quantity" numeric>
                       {movement.quantity > 0 ? `+${movement.quantity}` : movement.quantity}
                     </TableCell>
-                    <TableCell label="Detail">
-                      {movement.requisitionReference ?? movement.reason ?? movement.reference ?? "—"}
-                    </TableCell>
+                    <TableCell label="Detail">{movementDetail(movement)}</TableCell>
                     <TableCell label="By">{movement.createdByName ?? "—"}</TableCell>
                   </TableRow>
                 ))}

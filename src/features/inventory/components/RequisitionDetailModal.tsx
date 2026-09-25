@@ -4,7 +4,7 @@ import {
   approveRequisition,
   cancelRequisition,
   deleteRequisition,
-  issueRequisition,
+  fulfilRequisition,
   rejectRequisition,
   type RequisitionView,
   submitRequisition,
@@ -21,6 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } fro
 import { Textarea } from "@/components/ui/Textarea";
 import { RequisitionStatusBadge } from "@/features/inventory/components/RequisitionStatusBadge";
 import { useAuthStore } from "@/stores/authStore";
+import { formatAmount } from "@/utils/currency";
 
 interface RequisitionDetailModalProps {
   requisition: RequisitionView;
@@ -107,16 +108,6 @@ export function RequisitionDetailModal({ requisition, onClose, onChanged, onEdit
             <dt className="text-slate-500">Needed by</dt>
             <dd className="text-slate-900">{requisition.neededBy ?? "—"}</dd>
           </div>
-          <div>
-            <dt className="text-slate-500">Student</dt>
-            <dd className="text-slate-900">
-              {requisition.studentName
-                ? requisition.studentAdmissionNumber
-                  ? `${requisition.studentName} (${requisition.studentAdmissionNumber})`
-                  : requisition.studentName
-                : "—"}
-            </dd>
-          </div>
           {requisition.purpose && (
             <div className="sm:col-span-2">
               <dt className="text-slate-500">Purpose</dt>
@@ -129,16 +120,26 @@ export function RequisitionDetailModal({ requisition, onClose, onChanged, onEdit
           <TableHead>
             <TableRow>
               <TableHeaderCell>Item</TableHeaderCell>
+              <TableHeaderCell numeric>Unit cost</TableHeaderCell>
               <TableHeaderCell numeric>Requested</TableHeaderCell>
               {showApprovedColumn && <TableHeaderCell numeric>Approved</TableHeaderCell>}
+              <TableHeaderCell numeric>Amount</TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {requisition.lines.map((line) => (
               <TableRow key={line.id}>
                 <TableCell label="Item">
+                  {line.itemId != null && (
+                    <span className="mr-1.5 inline-block rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-600">
+                      Inventory item (legacy)
+                    </span>
+                  )}
                   {line.itemName}
                   {line.note && <span className="block text-xs text-slate-500">{line.note}</span>}
+                </TableCell>
+                <TableCell label="Unit cost" numeric>
+                  {line.estimatedUnitCost != null ? formatAmount(line.estimatedUnitCost) : "—"}
                 </TableCell>
                 <TableCell label="Requested" numeric>
                   {line.quantityRequested} {line.unit}
@@ -162,10 +163,32 @@ export function RequisitionDetailModal({ requisition, onClose, onChanged, onEdit
                     )}
                   </TableCell>
                 )}
+                <TableCell label="Amount" numeric>
+                  {line.approvedAmount != null
+                    ? formatAmount(line.approvedAmount)
+                    : line.requestedAmount != null
+                      ? formatAmount(line.requestedAmount)
+                      : "—"}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+
+        {(requisition.totalRequestedAmount != null || requisition.totalApprovedAmount != null) && (
+          <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 text-sm">
+            {requisition.totalRequestedAmount != null && (
+              <span className="text-slate-600">
+                Total requested: <span className="font-medium text-slate-900">{formatAmount(requisition.totalRequestedAmount)}</span>
+              </span>
+            )}
+            {requisition.totalApprovedAmount != null && (
+              <span className="text-slate-600">
+                Total approved: <span className="font-medium text-slate-900">{formatAmount(requisition.totalApprovedAmount)}</span>
+              </span>
+            )}
+          </div>
+        )}
 
         {requisition.reviewNote && (
           <Alert variant={requisition.status === "REJECTED" ? "error" : "info"} title="Review note">
@@ -244,8 +267,8 @@ export function RequisitionDetailModal({ requisition, onClose, onChanged, onEdit
             allows it from DRAFT/SUBMITTED/APPROVED alike, and ManageRequisitionsService routes it
             through requireVisibleRequisition rather than requireReviewableRequisition, so it's
             gated on canManage (which an INVENTORY_MANAGER has for their own requisition) at every
-            status, not canReview. Issue stays canReview-only - only SCHOOL_ADMIN/BRANCH_ADMIN may
-            actually fulfil a requisition.
+            status, not canReview. Fulfilling stays canReview-only - only SCHOOL_ADMIN/BRANCH_ADMIN
+            may mark a requisition fulfilled.
           */}
           {!inlineAction && canManage && requisition.status === "APPROVED" && (
             <Button variant="ghost" onClick={() => run(() => cancelRequisition(requisition.id))} disabled={submitting}>
@@ -253,8 +276,8 @@ export function RequisitionDetailModal({ requisition, onClose, onChanged, onEdit
             </Button>
           )}
           {!inlineAction && canReview && requisition.status === "APPROVED" && (
-            <Button variant="accent" onClick={() => run(() => issueRequisition(requisition.id))} disabled={submitting}>
-              Issue
+            <Button variant="accent" onClick={() => run(() => fulfilRequisition(requisition.id))} disabled={submitting}>
+              Mark fulfilled
             </Button>
           )}
           {!inlineAction && canManage && requisition.status === "SUBMITTED" && (

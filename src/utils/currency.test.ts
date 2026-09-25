@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMoney } from "@/utils/currency";
+import { formatAmount, formatMoney } from "@/utils/currency";
 
 describe("formatMoney", () => {
   it("formats a naira amount with the symbol, grouping, and 2dp", () => {
@@ -39,5 +39,24 @@ describe("formatMoney", () => {
     // Intl.NumberFormat throws a RangeError for a code that isn't a
     // well-formed ISO 4217 string - guard against a render crash.
     expect(formatMoney(25000, "N")).toBe("N 25,000.00");
+  });
+});
+
+describe("formatAmount", () => {
+  it("groups with 2dp and no currency symbol", () => {
+    expect(formatAmount(15000)).toBe("15,000.00");
+  });
+
+  it("rounds to 2dp", () => {
+    expect(formatAmount(1234567.891)).toBe("1,234,567.89");
+  });
+
+  it("formats zero", () => {
+    expect(formatAmount(0)).toBe("0.00");
+  });
+
+  it("returns an em dash for a missing amount", () => {
+    expect(formatAmount(undefined)).toBe("—");
+    expect(formatAmount(null)).toBe("—");
   });
 });

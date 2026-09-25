@@ -464,7 +464,7 @@ describe("SchoolDashboardPage", () => {
           ],
           draftRequisitions: 1,
           awaitingReviewRequisitions: 1,
-          approvedNotIssuedRequisitions: 1,
+          approvedNotFulfilledRequisitions: 1,
           rejectedRequisitions: 0,
           requisitionPreview: [
             {
@@ -515,7 +515,7 @@ describe("SchoolDashboardPage", () => {
           stockPreview: [],
           draftRequisitions: 0,
           awaitingReviewRequisitions: 0,
-          approvedNotIssuedRequisitions: 0,
+          approvedNotFulfilledRequisitions: 0,
           rejectedRequisitions: 0,
           requisitionPreview: [],
         },

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatAge,
   formatClockTime,
   formatDateRange,
   formatInstantDate,
@@ -28,6 +29,37 @@ describe("formatLongDate", () => {
 
   it("returns an em dash for unparseable input", () => {
     expect(formatLongDate("not-a-date")).toBe("—");
+  });
+});
+
+describe("formatAge", () => {
+  const today = new Date(2026, 8, 24); // 24 September 2026
+
+  it("formats years and months", () => {
+    expect(formatAge("2022-06-10", today)).toBe("4 yrs 3 months");
+  });
+
+  it("drops the month part on an exact birthday month", () => {
+    expect(formatAge("2022-09-24", today)).toBe("4 yrs");
+  });
+
+  it("doesn't count a month until its day is reached", () => {
+    expect(formatAge("2022-09-25", today)).toBe("3 yrs 11 months");
+  });
+
+  it("uses singulars", () => {
+    expect(formatAge("2025-08-01", today)).toBe("1 yr 1 month");
+  });
+
+  it("shows months alone under a year", () => {
+    expect(formatAge("2026-06-01", today)).toBe("3 months");
+    expect(formatAge("2026-09-10", today)).toBe("0 months");
+  });
+
+  it("returns a dash for missing, unparseable, or future dates", () => {
+    expect(formatAge(undefined, today)).toBe("—");
+    expect(formatAge("not-a-date", today)).toBe("—");
+    expect(formatAge("2026-10-01", today)).toBe("—");
   });
 });
 

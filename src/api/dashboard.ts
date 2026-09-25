@@ -123,7 +123,7 @@ export interface SchoolDashboardInventorySection {
   stockPreview: DashboardLowStockItem[];
   draftRequisitions: number;
   awaitingReviewRequisitions: number;
-  approvedNotIssuedRequisitions: number;
+  approvedNotFulfilledRequisitions: number;
   rejectedRequisitions: number;
   requisitionPreview: DashboardRequisitionRow[];
 }

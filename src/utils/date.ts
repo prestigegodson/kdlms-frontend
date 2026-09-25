@@ -36,6 +36,36 @@ export function formatLongDate(iso: string | null | undefined): string {
   return `${date.getDate()} ${MONTH_FORMATTER.format(date)}, ${date.getFullYear()}`;
 }
 
+/**
+ * A date of birth -> the age it gives on `today`, to whole-month precision:
+ * "4 yrs 3 months", "1 yr 1 month", "4 yrs" (no "0 months"), "3 months"
+ * under a year. Returns "—" for missing/unparseable input or a future date.
+ */
+export function formatAge(iso: string | null | undefined, today: Date = new Date()): string {
+  if (!iso) {
+    return "—";
+  }
+  const dob = parseIsoDate(iso);
+  if (!dob) {
+    return "—";
+  }
+  let months = (today.getFullYear() - dob.getFullYear()) * 12 + (today.getMonth() - dob.getMonth());
+  if (today.getDate() < dob.getDate()) {
+    months -= 1;
+  }
+  if (months < 0) {
+    return "—";
+  }
+  const years = Math.floor(months / 12);
+  const remainder = months % 12;
+  const monthPart = `${remainder} month${remainder === 1 ? "" : "s"}`;
+  if (years === 0) {
+    return monthPart;
+  }
+  const yearPart = `${years} yr${years === 1 ? "" : "s"}`;
+  return remainder === 0 ? yearPart : `${yearPart} ${monthPart}`;
+}
+
 /** "2026-06-29" -> "June". Returns "—" for missing/unparseable input. */
 export function formatMonthName(iso: string | null | undefined): string {
   if (!iso) {

@@ -48,7 +48,12 @@ export interface StockLevelView {
   band: StockBand;
 }
 
-/** Mirrors backend inventory.application.port.in.StockMovementView - one append-only ledger row. */
+/**
+ * Mirrors backend inventory.application.port.in.StockMovementView - one append-only ledger row.
+ * studentId/studentName and issuedTo are set only on a direct ISSUE (Phase 40) - never both at
+ * once, and both null on a RECEIPT/ADJUSTMENT, a legacy requisition-tied ISSUE (requisitionId set
+ * instead), or a general-usage direct ISSUE with no "used for" description.
+ */
 export interface StockMovementView {
   id: string;
   itemId: string;
@@ -59,15 +64,24 @@ export interface StockMovementView {
   reference: string | null;
   requisitionId: string | null;
   requisitionReference: string | null;
+  studentId: string | null;
+  studentName: string | null;
+  issuedTo: string | null;
   occurredOn: string;
   createdBy: string;
   createdByName: string | null;
   createdAt: string;
 }
 
-export type RequisitionStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED" | "ISSUED" | "CANCELLED";
+/** FULFILLED replaced ISSUED in Phase 40, when a requisition became a purchase request only and stopped moving stock. */
+export type RequisitionStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED" | "FULFILLED" | "CANCELLED";
 
-/** A requisition list row - no lines, unlike RequisitionView. Mirrors backend RequisitionSummaryView. */
+/**
+ * A requisition list row - no lines, unlike RequisitionView. Mirrors backend
+ * RequisitionSummaryView. totalRequestedAmount sums only the ad-hoc lines' quantity *
+ * estimatedUnitCost - an inventory item line carries no cost - and is null when the requisition
+ * has none.
+ */
 export interface RequisitionSummaryView {
   id: string;
   reference: string;
@@ -75,28 +89,38 @@ export interface RequisitionSummaryView {
   branchId: string;
   branchName: string | null;
   neededBy: string | null;
-  /** The student the goods are for, if named - optional, see RequisitionView. */
-  studentName: string | null;
   lineCount: number;
+  totalRequestedAmount: number | null;
   requestedByName: string | null;
   createdAt: string;
 }
 
+/**
+ * itemId is null for an ad-hoc (non-inventory) line - description/estimatedUnitCost carry the
+ * purchase's own details instead, and itemName mirrors description so the UI never has to branch
+ * on line kind just to show a name. estimatedUnitCost/requestedAmount/approvedAmount are null for
+ * an ordinary item line, which carries no cost. Since Phase 40 no line drafted through the UI
+ * carries an itemId any more - a non-null one can only be historic, read-only line from a
+ * requisition raised before Phase 40.
+ */
 export interface RequisitionLineView {
   id: string;
-  itemId: string;
+  itemId: string | null;
   itemName: string;
   unit: string | null;
+  description: string | null;
+  estimatedUnitCost: number | null;
   quantityRequested: number;
   quantityApproved: number | null;
+  requestedAmount: number | null;
+  approvedAmount: number | null;
   note: string | null;
 }
 
 /**
  * Mirrors backend inventory.application.port.in.RequisitionView - the full detail read, lines
- * included. studentId/studentName/studentAdmissionNumber are all null when no student was named -
- * resolution is deliberately lenient (a student who has since transferred branch, withdrawn, or
- * graduated still resolves here; only the write path is strict).
+ * included. totalRequestedAmount/totalApprovedAmount sum only the ad-hoc lines - null when the
+ * requisition has none (or, for the approved total, hasn't been reviewed yet).
  */
 export interface RequisitionView {
   id: string;
@@ -106,10 +130,9 @@ export interface RequisitionView {
   branchName: string | null;
   purpose: string | null;
   neededBy: string | null;
-  studentId: string | null;
-  studentName: string | null;
-  studentAdmissionNumber: string | null;
   lines: RequisitionLineView[];
+  totalRequestedAmount: number | null;
+  totalApprovedAmount: number | null;
   requestedBy: string;
   requestedByName: string | null;
   submittedAt: string | null;
@@ -117,9 +140,9 @@ export interface RequisitionView {
   reviewedByName: string | null;
   reviewedAt: string | null;
   reviewNote: string | null;
-  issuedBy: string | null;
-  issuedByName: string | null;
-  issuedAt: string | null;
+  fulfilledBy: string | null;
+  fulfilledByName: string | null;
+  fulfilledAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -158,8 +181,25 @@ export interface AdjustStockRequest {
   occurredOn: string | null;
 }
 
-export interface RequisitionLineRequest {
+/**
+ * A direct stock issue (Phase 40/41) - either studentId names a student recipient, or the issue is
+ * general usage, optionally described by issuedTo (free text); never both at once. note is
+ * optional. Takes effect immediately, refused (422) if on-hand can't cover it.
+ */
+export interface IssueStockRequest {
+  branchId?: string;
   itemId: string;
+  quantity: number;
+  studentId: string | null;
+  issuedTo: string | null;
+  note: string | null;
+  occurredOn: string | null;
+}
+
+/** A described, non-inventory purchase - since Phase 40 a requisition line names no inventory item. */
+export interface RequisitionLineRequest {
+  description: string | null;
+  estimatedUnitCost: number | null;
   quantityRequested: number;
   note: string | null;
 }
@@ -168,8 +208,6 @@ export interface SaveRequisitionRequest {
   branchId?: string;
   purpose: string | null;
   neededBy: string | null;
-  /** The student the goods are for, if named - optional on both create and edit; null clears it. */
-  studentId: string | null;
   lines: RequisitionLineRequest[];
 }
 
@@ -264,6 +302,14 @@ export function adjustStock(request: AdjustStockRequest): Promise<StockMovementV
   });
 }
 
+/** Records a direct issue to a named recipient - no approval step, refused (422) if on-hand can't cover it. */
+export function issueStock(request: IssueStockRequest): Promise<StockMovementView> {
+  return apiFetch<StockMovementView>(`${STOCK_BASE}/movements/issue`, {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
 // ============ requisitions ============
 
 export function listRequisitions(branchId?: string, status?: string): Promise<RequisitionSummaryView[]> {
@@ -315,8 +361,9 @@ export function rejectRequisition(requisitionId: string, reviewNote: string): Pr
   });
 }
 
-export function issueRequisition(requisitionId: string): Promise<RequisitionView> {
-  return apiFetch<RequisitionView>(`${REQUISITIONS_BASE}/${requisitionId}/issue`, { method: "POST" });
+/** Marks an APPROVED requisition FULFILLED - the purchase was made or the money released. Moves no stock. */
+export function fulfilRequisition(requisitionId: string): Promise<RequisitionView> {
+  return apiFetch<RequisitionView>(`${REQUISITIONS_BASE}/${requisitionId}/fulfil`, { method: "POST" });
 }
 
 export function cancelRequisition(requisitionId: string): Promise<RequisitionView> {

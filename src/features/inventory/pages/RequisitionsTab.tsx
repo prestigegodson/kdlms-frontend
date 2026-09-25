@@ -1,14 +1,7 @@
 import { ClipboardList, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
-import {
-  getRequisition,
-  type InventoryItemView,
-  listItems,
-  listRequisitions,
-  type RequisitionSummaryView,
-  type RequisitionView,
-} from "@/api/inventory";
+import { getRequisition, listRequisitions, type RequisitionSummaryView, type RequisitionView } from "@/api/inventory";
 import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -24,8 +17,9 @@ import { RequisitionDetailModal } from "@/features/inventory/components/Requisit
 import { RequisitionFormModal } from "@/features/inventory/components/RequisitionFormModal";
 import { RequisitionStatusBadge } from "@/features/inventory/components/RequisitionStatusBadge";
 import { useAuthStore } from "@/stores/authStore";
+import { formatAmount } from "@/utils/currency";
 
-const STATUS_OPTIONS = ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED", "ISSUED", "CANCELLED"] as const;
+const STATUS_OPTIONS = ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED", "FULFILLED", "CANCELLED"] as const;
 
 interface RequisitionsTabProps {
   /** Seeds the status filter - the dashboard's "Awaiting review"/"Draft" deep links into this tab. */
@@ -40,7 +34,6 @@ export function RequisitionsTab({ initialStatus = "" }: RequisitionsTabProps) {
 
   const [status, setStatus] = useState(initialStatus);
   const [requisitions, setRequisitions] = useState<RequisitionSummaryView[] | null>(null);
-  const [items, setItems] = useState<InventoryItemView[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [editingRequisition, setEditingRequisition] = useState<RequisitionView | null>(null);
@@ -50,11 +43,8 @@ export function RequisitionsTab({ initialStatus = "" }: RequisitionsTabProps) {
 
   function load() {
     if (!branchReady) return;
-    Promise.all([listRequisitions(branchId, status || undefined), listItems(undefined, true)])
-      .then(([requisitionsResult, itemsResult]) => {
-        setRequisitions(requisitionsResult);
-        setItems(itemsResult);
-      })
+    listRequisitions(branchId, status || undefined)
+      .then(setRequisitions)
       .catch((err: unknown) => setLoadError(err instanceof ApiError ? err.message : "Failed to load requisitions"));
   }
 
@@ -102,14 +92,11 @@ export function RequisitionsTab({ initialStatus = "" }: RequisitionsTabProps) {
 
       {canManage && (
         <div className="flex justify-end">
-          <Button variant="accent" disabled={items.length === 0} onClick={() => setCreating(true)}>
+          <Button variant="accent" onClick={() => setCreating(true)}>
             <Plus className="h-4 w-4" aria-hidden="true" />
             New requisition
           </Button>
         </div>
-      )}
-      {canManage && items.length === 0 && (
-        <Alert variant="info">Add an item on the Items tab before raising a requisition.</Alert>
       )}
 
       {requisitions === null ? (
@@ -131,8 +118,8 @@ export function RequisitionsTab({ initialStatus = "" }: RequisitionsTabProps) {
               <TableHeaderCell>Reference</TableHeaderCell>
               <TableHeaderCell>Status</TableHeaderCell>
               <TableHeaderCell numeric>Lines</TableHeaderCell>
+              <TableHeaderCell numeric>Amount</TableHeaderCell>
               <TableHeaderCell>Needed by</TableHeaderCell>
-              <TableHeaderCell>Student</TableHeaderCell>
               <TableHeaderCell>Requested by</TableHeaderCell>
             </TableRow>
           </TableHead>
@@ -146,8 +133,10 @@ export function RequisitionsTab({ initialStatus = "" }: RequisitionsTabProps) {
                 <TableCell label="Lines" numeric>
                   {requisition.lineCount}
                 </TableCell>
+                <TableCell label="Amount" numeric>
+                  {formatAmount(requisition.totalRequestedAmount)}
+                </TableCell>
                 <TableCell label="Needed by">{requisition.neededBy ?? "—"}</TableCell>
-                <TableCell label="Student">{requisition.studentName ?? "—"}</TableCell>
                 <TableCell label="Requested by">{requisition.requestedByName ?? "—"}</TableCell>
               </TableRow>
             ))}
@@ -156,18 +145,12 @@ export function RequisitionsTab({ initialStatus = "" }: RequisitionsTabProps) {
       )}
 
       {creating && (
-        <RequisitionFormModal
-          branchId={branchId}
-          items={items}
-          onClose={() => setCreating(false)}
-          onSaved={load}
-        />
+        <RequisitionFormModal branchId={branchId} onClose={() => setCreating(false)} onSaved={load} />
       )}
 
       {editingRequisition && (
         <RequisitionFormModal
           requisition={editingRequisition}
-          items={items}
           onClose={() => setEditingRequisition(null)}
           onSaved={reloadOpenRequisition}
         />

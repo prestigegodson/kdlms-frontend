@@ -69,7 +69,7 @@ import {
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
-import { formatLongDate, todayIso } from "@/utils/date";
+import { formatAge, formatLongDate, todayIso } from "@/utils/date";
 
 type LoadState =
   | { kind: "loading" }
@@ -229,6 +229,10 @@ export function StudentDetailPage() {
               <div>
                 <dt className="text-slate-500">Date of birth</dt>
                 <dd className="text-slate-900">{formatLongDate(student.dateOfBirth)}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">Age</dt>
+                <dd className="text-slate-900">{formatAge(student.dateOfBirth)}</dd>
               </div>
               <div>
                 <dt className="text-slate-500">Admission date</dt>

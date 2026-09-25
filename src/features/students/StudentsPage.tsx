@@ -26,6 +26,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { useAuthStore } from "@/stores/authStore";
+import { formatAge } from "@/utils/date";
 
 const PAGE_SIZE = 20;
 
@@ -250,6 +251,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
                 <TableRow>
                   <TableHeaderCell>Name</TableHeaderCell>
                   <TableHeaderCell>Admission no.</TableHeaderCell>
+                  <TableHeaderCell>Age</TableHeaderCell>
                   <TableHeaderCell>Class</TableHeaderCell>
                   <TableHeaderCell>Status</TableHeaderCell>
                   <TableHeaderCell></TableHeaderCell>
@@ -266,6 +268,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
                       {student.fullName}
                     </TableCell>
                     <TableCell label="Admission no.">{student.admissionNumber}</TableCell>
+                    <TableCell label="Age">{formatAge(student.dateOfBirth)}</TableCell>
                     <TableCell label="Class">{student.currentClassName ?? "—"}</TableCell>
                     <TableCell label="Status">
                       <Badge

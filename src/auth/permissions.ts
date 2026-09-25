@@ -724,24 +724,35 @@ export const can = {
   /**
    * Receiving/adjusting a branch's stock - SCHOOL_ADMIN (any branch) or BRANCH_ADMIN (own branch,
    * enforced server-side by `InventoryAccessGuard.requireBranchWritable`). Deliberately excludes
-   * INVENTORY_MANAGER, who may raise a requisition (`manageRequisitions`) but not move stock.
+   * INVENTORY_MANAGER, who may raise a requisition (`manageRequisitions`) and issue stock directly
+   * (`issueStock`) but not receive or adjust it.
    */
   manageInventoryStock(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
   },
 
   /**
+   * Issuing stock directly to a named recipient (Phase 40) - SCHOOL_ADMIN (any branch),
+   * BRANCH_ADMIN, or INVENTORY_MANAGER (own branch, enforced server-side by
+   * `InventoryAccessGuard.requireBranchAccess`) - the natural storekeeper, unlike
+   * `manageInventoryStock`'s receive/adjust.
+   */
+  issueStock(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "INVENTORY_MANAGER";
+  },
+
+  /**
    * Raising/editing/submitting/withdrawing/cancelling a requisition - SCHOOL_ADMIN/BRANCH_ADMIN
    * (own branch) or INVENTORY_MANAGER (own branch, own requisitions only, enforced server-side by
    * `InventoryAccessGuard.requireBranchAccess`). Unlike `manageInventoryStock`, this admits
-   * INVENTORY_MANAGER - the module's one raise-only capability.
+   * INVENTORY_MANAGER - one of this module's raise-only capabilities.
    */
   manageRequisitions(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "INVENTORY_MANAGER";
   },
 
   /**
-   * Approving/rejecting/issuing a requisition - SCHOOL_ADMIN/BRANCH_ADMIN only, enforced
+   * Approving/rejecting/fulfilling a requisition - SCHOOL_ADMIN/BRANCH_ADMIN only, enforced
    * server-side by `InventoryAccessGuard.requireBranchWritable`. Deliberately excludes
    * INVENTORY_MANAGER even for a requisition they raised themselves - the review/write gate stays
    * admin-only.

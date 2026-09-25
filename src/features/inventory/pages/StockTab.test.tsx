@@ -9,7 +9,14 @@ import { resetBranchStore } from "@/stores/branchStore";
 
 vi.mock("@/api/inventory", async () => {
   const actual = await vi.importActual<typeof import("@/api/inventory")>("@/api/inventory");
-  return { ...actual, getStockLevels: vi.fn(), listItems: vi.fn(), receiveStock: vi.fn(), adjustStock: vi.fn() };
+  return {
+    ...actual,
+    getStockLevels: vi.fn(),
+    listItems: vi.fn(),
+    receiveStock: vi.fn(),
+    adjustStock: vi.fn(),
+    issueStock: vi.fn(),
+  };
 });
 
 const BLUE_UNIFORM: InventoryItemView = {
@@ -109,6 +116,9 @@ describe("StockTab", () => {
       reference: null,
       requisitionId: null,
       requisitionReference: null,
+      studentId: null,
+      studentName: null,
+      issuedTo: null,
       occurredOn: "2026-01-01",
       createdBy: "user-1",
       createdByName: "Ada Obi",
@@ -132,7 +142,7 @@ describe("StockTab", () => {
     );
   });
 
-  it("an INVENTORY_MANAGER reads on-hand quantities but gets no Receive/Adjust controls", async () => {
+  it("an INVENTORY_MANAGER reads on-hand quantities, gets no Receive/Adjust controls, but may issue stock", async () => {
     signInAs("INVENTORY_MANAGER");
     vi.mocked(inventoryApi.getStockLevels).mockResolvedValue([LOW_STOCK_LEVEL]);
 
@@ -141,5 +151,55 @@ describe("StockTab", () => {
     expect(await screen.findByText("Blue Uniform (Size 4)")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Receive stock" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Adjust stock" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Issue" })).toBeInTheDocument();
+  });
+
+  it("the Issue action is disabled when on-hand is zero", async () => {
+    vi.mocked(inventoryApi.getStockLevels).mockResolvedValue([{ ...LOW_STOCK_LEVEL, onHand: 0, band: "OUT_OF_STOCK" }]);
+
+    render(<StockTab />);
+
+    expect(await screen.findByText("Blue Uniform (Size 4)")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Issue" })).toBeDisabled();
+  });
+
+  it("issues stock as general usage through the modal", async () => {
+    vi.mocked(inventoryApi.getStockLevels).mockResolvedValue([LOW_STOCK_LEVEL]);
+    vi.mocked(inventoryApi.issueStock).mockResolvedValue({
+      id: "movement-2",
+      itemId: "item-1",
+      itemName: "Blue Uniform (Size 4)",
+      kind: "ISSUE",
+      quantity: -2,
+      reason: null,
+      reference: null,
+      requisitionId: null,
+      requisitionReference: null,
+      studentId: null,
+      studentName: null,
+      issuedTo: "PE department",
+      occurredOn: "2026-01-01",
+      createdBy: "user-1",
+      createdByName: "Ada Obi",
+      createdAt: "2026-01-01T00:00:00Z",
+    });
+    const user = userEvent.setup();
+
+    render(<StockTab />);
+    await screen.findByText("Blue Uniform (Size 4)");
+
+    await user.click(screen.getByRole("button", { name: "Issue" }));
+    const dialog = await screen.findByRole("dialog", { name: "Issue Blue Uniform (Size 4)" });
+    await user.click(within(dialog).getByRole("radio", { name: "General usage" }));
+    await user.type(within(dialog).getByLabelText("Used for"), "PE department");
+    await user.clear(within(dialog).getByLabelText("Quantity"));
+    await user.type(within(dialog).getByLabelText("Quantity"), "2");
+    await user.click(within(dialog).getByRole("button", { name: "Issue stock" }));
+
+    await waitFor(() =>
+      expect(inventoryApi.issueStock).toHaveBeenCalledWith(
+        expect.objectContaining({ itemId: "item-1", quantity: 2, issuedTo: "PE department", studentId: null }),
+      ),
+    );
   });
 });

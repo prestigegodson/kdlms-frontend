@@ -6,7 +6,7 @@ const VARIANT_BY_STATUS: Record<RequisitionStatus, "neutral" | "brand" | "succes
   SUBMITTED: "brand",
   APPROVED: "warning",
   REJECTED: "danger",
-  ISSUED: "success",
+  FULFILLED: "success",
   CANCELLED: "neutral",
 };
 
@@ -15,7 +15,7 @@ const LABEL_BY_STATUS: Record<RequisitionStatus, string> = {
   SUBMITTED: "Submitted",
   APPROVED: "Approved",
   REJECTED: "Rejected",
-  ISSUED: "Issued",
+  FULFILLED: "Fulfilled",
   CANCELLED: "Cancelled",
 };
 

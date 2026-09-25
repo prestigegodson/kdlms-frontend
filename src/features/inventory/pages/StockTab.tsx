@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } fro
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
 import { useBranchScope } from "@/features/branches/useBranchScope";
 import { StockBandBadge } from "@/features/inventory/components/StockBandBadge";
+import { StockIssueModal } from "@/features/inventory/components/StockIssueModal";
 import { StockLedgerModal } from "@/features/inventory/components/StockLedgerModal";
 import { StockMovementModal } from "@/features/inventory/components/StockMovementModal";
 import { useAuthStore } from "@/stores/authStore";
@@ -22,6 +23,7 @@ type MovementModalState = { kind: "receive" | "adjust"; defaultItemId?: string }
 export function StockTab() {
   const role = useAuthStore((state) => state.user?.role);
   const canManage = can.manageInventoryStock(role);
+  const canIssue = can.issueStock(role);
   const { ready: branchReady, branchId } = useBranchScope();
 
   const [levels, setLevels] = useState<StockLevelView[] | null>(null);
@@ -29,6 +31,7 @@ export function StockTab() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [movementModal, setMovementModal] = useState<MovementModalState>(null);
   const [ledgerLevel, setLedgerLevel] = useState<StockLevelView | null>(null);
+  const [issuingLevel, setIssuingLevel] = useState<StockLevelView | null>(null);
 
   function load() {
     if (!branchReady) return;
@@ -91,6 +94,7 @@ export function StockTab() {
               <TableHeaderCell numeric>On hand</TableHeaderCell>
               <TableHeaderCell numeric>Reorder level</TableHeaderCell>
               <TableHeaderCell>Status</TableHeaderCell>
+              {canIssue && <TableHeaderCell>Actions</TableHeaderCell>}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -107,6 +111,21 @@ export function StockTab() {
                 <TableCell label="Status">
                   <StockBandBadge band={level.band} />
                 </TableCell>
+                {canIssue && (
+                  <TableCell label="Actions">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={level.onHand <= 0}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setIssuingLevel(level);
+                      }}
+                    >
+                      Issue
+                    </Button>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
@@ -126,6 +145,10 @@ export function StockTab() {
 
       {ledgerLevel && (
         <StockLedgerModal level={ledgerLevel} branchId={branchId} onClose={() => setLedgerLevel(null)} />
+      )}
+
+      {issuingLevel && (
+        <StockIssueModal level={issuingLevel} branchId={branchId} onClose={() => setIssuingLevel(null)} onSaved={load} />
       )}
     </div>
   );
