@@ -33,6 +33,10 @@ export function StudentTermResultCard({ result }: StudentTermResultCardProps) {
   // (Report Settings) - the column is hidden entirely rather than showing a dash
   // for every row when the school hasn't turned it on.
   const showClassAverage = isNumeric && result.subjects.some((subject) => subject.classAverage != null);
+  // Mirrors the printed report (TemplateRenderer#ratingTable): the Observation
+  // column is dropped entirely, not just left as an em dash, when none of this
+  // student's subjects carry a recorded observation.
+  const showObservation = !isNumeric && result.subjectResults.some((subject) => subject.observation?.trim());
 
   return (
     <Card className="p-0">
@@ -58,7 +62,7 @@ export function StudentTermResultCard({ result }: StudentTermResultCardProps) {
               ) : (
                 <>
                   <TableHeaderCell>Rating</TableHeaderCell>
-                  <TableHeaderCell>Observation</TableHeaderCell>
+                  {showObservation && <TableHeaderCell>Observation</TableHeaderCell>}
                 </>
               )}
             </TableRow>
@@ -84,9 +88,11 @@ export function StudentTermResultCard({ result }: StudentTermResultCardProps) {
                 ) : (
                   <>
                     <TableCell label="Rating">{subject.ratingLabel ?? "—"}</TableCell>
-                    <TableCell label="Observation" className="text-slate-500">
-                      {subject.observation ?? "—"}
-                    </TableCell>
+                    {showObservation && (
+                      <TableCell label="Observation" className="text-slate-500">
+                        {subject.observation ?? "—"}
+                      </TableCell>
+                    )}
                   </>
                 )}
               </TableRow>
