@@ -693,6 +693,19 @@ export const can = {
   },
 
   /**
+   * Generating a stateless prospective bill for a child who isn't a `students` row yet (Phase 42)
+   * - `editStudentBills`'s body exactly, the same branch-scoped write `BillingAccessGuard.
+   * requireBranchWritable` grants: SCHOOL_ADMIN (any branch) or BRANCH_ADMIN (own branch).
+   * Deliberately not TEACHER, matching every other write in this module.
+   */
+  generateProspectiveBills(role: Role | undefined, entitled: boolean): boolean {
+    if (!entitled) {
+      return false;
+    }
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /**
    * A guardian's read of their own ward's published, billable bills - a **separate** check from
    * `viewBilling`, not GUARDIAN added to it, the `viewWardLessonNotes`/`viewWardTakeHomeQuizzes`
    * precedent `viewBilling`'s own Javadoc-style comment above pre-announced: the guardian path

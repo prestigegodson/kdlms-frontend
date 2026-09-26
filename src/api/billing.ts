@@ -995,3 +995,115 @@ export function getAdvanceBillPreview(
   if (branchId) params.set("branchId", branchId);
   return apiFetch<AdvanceBillPreviewView>(`${ADVANCE_BILL_PLANS_BASE}/preview?${params}`);
 }
+
+// ============================================================================
+// Prospective bills (Phase 42) - a stateless one-off quote for a child who isn't a `students`
+// row yet, priced as a brand-new admission. Nothing here is persisted: there is no history and no
+// re-send, only preview/pdf/email against the exact request the admin currently has filled in.
+// See billing-module.md's Phase 42 section.
+// ============================================================================
+
+const PROSPECTIVE_BILLS_BASE = "/api/v1/billing/prospective-bills";
+
+/**
+ * Mirrors backend billing.application.port.in.ProspectiveBillUseCase.FeeOption - one active,
+ * level-applicable STANDARD fee for the chosen branch+level+term. `priced` is `false` when this
+ * (level, branch, session, term) has no fee_prices row at all - a compulsory fee with `priced ===
+ * false` must be overridden with an amount before a bill can be generated.
+ */
+export interface ProspectiveFeeOption {
+  feeId: string;
+  feeName: string;
+  compulsory: boolean;
+  priced: boolean;
+  standardAmount: number | null;
+}
+
+/** Mirrors backend billing.application.port.in.ProspectiveBillUseCase.RouteOption - one active school-bus route, priced where a fare exists for the term's session. */
+export interface ProspectiveRouteOption {
+  routeId: string;
+  routeName: string;
+  oneWayAmount: number | null;
+  toAndFroAmount: number | null;
+}
+
+/** Mirrors backend billing.application.port.in.ProspectiveBillUseCase.ProspectiveBillOptionsView - what a prospective-bill form builds itself around before a name is filled in. */
+export interface ProspectiveBillOptionsView {
+  branchId: string;
+  levelId: string;
+  levelName: string;
+  termId: string;
+  termName: string;
+  termNumber: number;
+  sessionId: string;
+  sessionName: string | null;
+  currency: string;
+  fees: ProspectiveFeeOption[];
+  routes: ProspectiveRouteOption[];
+}
+
+/** One fee row of a prospective-bill request - mirrors `FeeAdjustmentRequest` minus `thisTermOnly`, which has no meaning for a one-off quote. */
+export interface ProspectiveFeeSelection {
+  feeId: string;
+  selected: boolean;
+  overrideAmount: number | null;
+}
+
+/** One custom charge row of a prospective-bill request. */
+export interface ProspectiveExtraCharge {
+  label: string;
+  amount: number;
+}
+
+/**
+ * Mirrors backend billing.application.port.in.ProspectiveBillUseCase.ProspectiveBillRequest.
+ * `fullName` is display-only free text - there is no student registry to validate it against yet.
+ * `guardianEmail` is required only for `emailProspectiveBill`; preview/pdf accept it blank.
+ * `transportRouteId`/`transportDirection` are both `null` or both set.
+ */
+export interface ProspectiveBillRequest {
+  fullName: string;
+  guardianEmail: string | null;
+  branchId: string | null;
+  levelId: string;
+  termId: string;
+  fees: ProspectiveFeeSelection[];
+  extras: ProspectiveExtraCharge[];
+  transportRouteId: string | null;
+  transportDirection: TransportDirection | null;
+}
+
+/** branchId is optional for a BRANCH_ADMIN - their own branch is derived server-side; a SCHOOL_ADMIN must supply one. */
+export function getProspectiveBillOptions(
+  levelId: string,
+  termId: string,
+  branchId?: string,
+): Promise<ProspectiveBillOptionsView> {
+  const params = new URLSearchParams({ levelId, termId });
+  if (branchId) params.set("branchId", branchId);
+  return apiFetch<ProspectiveBillOptionsView>(`${PROSPECTIVE_BILLS_BASE}/options?${params}`);
+}
+
+/** A read-only preview of the bill this request would produce - the same shape a real student's bill uses (BillCard renders it as-is). */
+export function previewProspectiveBill(request: ProspectiveBillRequest): Promise<BillView> {
+  return apiFetch<BillView>(`${PROSPECTIVE_BILLS_BASE}/preview`, {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+/** The rendered PDF - identical layout to a real student's bill, with a blank admission number/reference. */
+export function getProspectiveBillPdf(request: ProspectiveBillRequest): Promise<Blob> {
+  return apiFetchBlob(`${PROSPECTIVE_BILLS_BASE}/pdf`, {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+/** Renders the PDF and emails it inline, right now - no queue, no stored row. Rejected (422) when `guardianEmail` is blank. */
+export function emailProspectiveBill(request: ProspectiveBillRequest): Promise<void> {
+  return apiFetch<void>(`${PROSPECTIVE_BILLS_BASE}/email`, {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}

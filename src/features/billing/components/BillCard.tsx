@@ -32,13 +32,16 @@ export function BillCard({ bill }: BillCardProps) {
       <div className="space-y-1">
         <h2 className="font-display text-lg font-medium text-slate-900">{bill.studentName}</h2>
         <p className="text-sm text-slate-500">
-          {bill.admissionNumber} · {bill.className} ({bill.levelName})
+          {/* A prospective bill (no student/class yet) omits admissionNumber/className - joins only what's there. */}
+          {[bill.admissionNumber, bill.className ? `${bill.className} (${bill.levelName})` : bill.levelName]
+            .filter(Boolean)
+            .join(" · ")}
         </p>
         <p className="text-sm text-slate-500">
           {bill.termName}
           {bill.sessionName ? ` · ${bill.sessionName}` : ""}
         </p>
-        <p className="text-xs text-slate-400">Bill reference: {bill.billReference}</p>
+        {bill.billReference && <p className="text-xs text-slate-400">Bill reference: {bill.billReference}</p>}
       </div>
 
       <div>
