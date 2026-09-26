@@ -1,10 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as authApi from "@/api/auth";
 import { UserMenu } from "@/layouts/UserMenu";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import type { AuthenticatedUser } from "@/stores/authStore";
+
+vi.mock("@/api/auth");
 
 const USER: AuthenticatedUser = {
   id: "1",
@@ -14,10 +17,21 @@ const USER: AuthenticatedUser = {
   role: "SYSTEM_ADMIN",
 };
 
+const TARGET_ADMIN: AuthenticatedUser = {
+  id: "2",
+  email: "admin@greenwood.edu",
+  firstName: "Grace",
+  lastName: "Adeyemi",
+  role: "SCHOOL_ADMIN",
+  schoolId: "school-1",
+};
+
 function renderMenu(user: AuthenticatedUser = USER) {
   const router = createMemoryRouter(
     [
       { path: "/login", element: <div>Login page</div> },
+      { path: "/admin/schools/:schoolId", element: <div>School detail page</div> },
+      { path: "/admin", element: <div>System admin home</div> },
       { path: "/menu", element: <UserMenu user={user} /> },
     ],
     { initialEntries: ["/menu"] },
@@ -93,6 +107,7 @@ describe("UserMenu", () => {
   });
 
   it("logs out, clears the session, and redirects to /login", async () => {
+    vi.mocked(authApi.logout).mockResolvedValue(undefined);
     const user = userEvent.setup();
     renderMenu();
 
@@ -101,5 +116,41 @@ describe("UserMenu", () => {
 
     expect(await screen.findByText("Login page")).toBeInTheDocument();
     expect(useAuthStore.getState().user).toBeNull();
+  });
+
+  describe("while impersonating", () => {
+    beforeEach(() => {
+      vi.mocked(authApi.stopImpersonation).mockResolvedValue(undefined);
+      useAuthStore.setState({
+        user: TARGET_ADMIN,
+        accessToken: "impersonation-access",
+        refreshToken: null,
+        impersonation: { sessionId: "session-1", expiresAt: "2026-01-01T01:00:00Z" },
+        stashedSession: { user: USER, accessToken: "sysadmin-access", refreshToken: "sysadmin-refresh" },
+      });
+    });
+
+    it("shows Stop impersonating instead of Log out, and hides Change password", async () => {
+      const user = userEvent.setup();
+      renderMenu(TARGET_ADMIN);
+
+      await user.click(screen.getByRole("button", { name: "Account menu" }));
+
+      expect(screen.getByRole("menuitem", { name: "Stop impersonating" })).toBeInTheDocument();
+      expect(screen.queryByRole("menuitem", { name: "Log out" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("menuitem", { name: "Change password" })).not.toBeInTheDocument();
+    });
+
+    it("stops impersonating, restores the stashed session, and returns to the school's detail page", async () => {
+      const user = userEvent.setup();
+      renderMenu(TARGET_ADMIN);
+
+      await user.click(screen.getByRole("button", { name: "Account menu" }));
+      await user.click(screen.getByRole("menuitem", { name: "Stop impersonating" }));
+
+      expect(await screen.findByText("School detail page")).toBeInTheDocument();
+      expect(useAuthStore.getState().user).toEqual(USER);
+      expect(useAuthStore.getState().impersonation).toBeNull();
+    });
   });
 });

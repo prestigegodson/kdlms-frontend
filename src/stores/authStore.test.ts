@@ -1,10 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as authApi from "@/api/auth";
 import { apiFetch } from "@/api/client";
+import * as usersApi from "@/api/users";
 import { initAuth, resetAuthStore, useAuthStore } from "@/stores/authStore";
 import { useStudentStore } from "@/stores/studentStore";
 
 vi.mock("@/api/auth");
+vi.mock("@/api/users");
+
+const SYSTEM_ADMIN = {
+  id: "sysadmin-1",
+  email: "root@kdlms.com",
+  firstName: "Root",
+  lastName: "Admin",
+  role: "SYSTEM_ADMIN",
+} as const;
 
 const USER = {
   id: "1",
@@ -100,6 +110,115 @@ describe("authStore", () => {
     expect(useAuthStore.getState().user).toBeNull();
     expect(useStudentStore.getState().me).toBeNull();
     expect(useStudentStore.getState().status).toBe("idle");
+  });
+
+  describe("impersonation", () => {
+    beforeEach(() => {
+      useAuthStore.setState({
+        user: SYSTEM_ADMIN,
+        accessToken: "sysadmin-access",
+        refreshToken: "sysadmin-refresh",
+      });
+    });
+
+    it("startImpersonation stashes the caller's own session and switches to the target's, with no refresh token", async () => {
+      vi.mocked(usersApi.impersonate).mockResolvedValue({
+        accessToken: "impersonation-access",
+        sessionId: "session-1",
+        expiresAt: "2026-01-01T01:00:00Z",
+        schoolName: "Greenwood School",
+        user: USER,
+      });
+
+      await useAuthStore.getState().startImpersonation("school-1", "admin-1", "Support ticket #123");
+
+      const state = useAuthStore.getState();
+      expect(usersApi.impersonate).toHaveBeenCalledWith("school-1", "admin-1", "Support ticket #123");
+      expect(state.user).toEqual(USER);
+      expect(state.accessToken).toBe("impersonation-access");
+      expect(state.refreshToken).toBeNull();
+      expect(state.impersonation).toEqual({
+        sessionId: "session-1",
+        expiresAt: "2026-01-01T01:00:00Z",
+        schoolName: "Greenwood School",
+      });
+      expect(state.stashedSession).toEqual({
+        user: SYSTEM_ADMIN,
+        accessToken: "sysadmin-access",
+        refreshToken: "sysadmin-refresh",
+      });
+    });
+
+    it("stopImpersonation calls the backend and restores the stashed session", async () => {
+      vi.mocked(authApi.stopImpersonation).mockResolvedValue(undefined);
+      useAuthStore.setState({
+        user: USER,
+        accessToken: "impersonation-access",
+        refreshToken: null,
+        impersonation: { sessionId: "session-1", expiresAt: "2026-01-01T01:00:00Z" },
+        stashedSession: { user: SYSTEM_ADMIN, accessToken: "sysadmin-access", refreshToken: "sysadmin-refresh" },
+      });
+
+      await useAuthStore.getState().stopImpersonation();
+
+      expect(authApi.stopImpersonation).toHaveBeenCalledTimes(1);
+      const state = useAuthStore.getState();
+      expect(state.user).toEqual(SYSTEM_ADMIN);
+      expect(state.accessToken).toBe("sysadmin-access");
+      expect(state.refreshToken).toBe("sysadmin-refresh");
+      expect(state.impersonation).toBeNull();
+      expect(state.stashedSession).toBeNull();
+      expect(state.sessionNotice).toBeNull();
+    });
+
+    it("stopImpersonation({ expired: true }) skips the backend call and sets a session notice", async () => {
+      useAuthStore.setState({
+        user: USER,
+        accessToken: "impersonation-access",
+        refreshToken: null,
+        impersonation: { sessionId: "session-1", expiresAt: "2026-01-01T01:00:00Z" },
+        stashedSession: { user: SYSTEM_ADMIN, accessToken: "sysadmin-access", refreshToken: "sysadmin-refresh" },
+      });
+
+      await useAuthStore.getState().stopImpersonation({ expired: true });
+
+      expect(authApi.stopImpersonation).not.toHaveBeenCalled();
+      const state = useAuthStore.getState();
+      expect(state.user).toEqual(SYSTEM_ADMIN);
+      expect(state.impersonation).toBeNull();
+      expect(state.sessionNotice).toBe("Your impersonation session ended. You're back in your own account.");
+    });
+
+    it("initAuth's unauthorized handler restores the stashed session instead of logging out while impersonating", async () => {
+      initAuth();
+      useAuthStore.setState({
+        accessToken: "expired-impersonation-token",
+        refreshToken: null,
+        user: USER,
+        impersonation: { sessionId: "session-1", expiresAt: "2026-01-01T01:00:00Z" },
+        stashedSession: { user: SYSTEM_ADMIN, accessToken: "sysadmin-access", refreshToken: "sysadmin-refresh" },
+      });
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(() =>
+          Promise.resolve({
+            ok: false,
+            status: 401,
+            json: () => Promise.resolve({ detail: "This impersonation session has ended." }),
+          }),
+        ),
+      );
+
+      await expect(apiFetch("/api/v1/branches")).rejects.toThrow();
+
+      // No refresh token means refreshSession() short-circuits to false first (see that test
+      // above), so the unauthorized handler is what's under test here.
+      const state = useAuthStore.getState();
+      expect(state.user).toEqual(SYSTEM_ADMIN);
+      expect(state.impersonation).toBeNull();
+      expect(state.sessionNotice).toBe("Your impersonation session ended. You're back in your own account.");
+      vi.unstubAllGlobals();
+    });
   });
 
   describe("apiFetch integration (single-flight refresh)", () => {

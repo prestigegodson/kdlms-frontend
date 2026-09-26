@@ -42,6 +42,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
+import { ImpersonateDialog } from "@/features/schools/components/ImpersonateDialog";
 import { formatDateRange } from "@/utils/date";
 
 type PendingAction =
@@ -457,6 +458,7 @@ function SchoolAdminsCard({ schoolId, refreshKey }: { schoolId: string; refreshK
   const [state, setState] = useState<SchoolAdminsLoadState>({ kind: "loading" });
   const [pendingReset, setPendingReset] = useState<SchoolUserView | null>(null);
   const [justReset, setJustReset] = useState<{ email: string; temporaryPassword: string } | null>(null);
+  const [impersonating, setImpersonating] = useState<SchoolUserView | null>(null);
 
   function fetchAdmins() {
     listSchoolAdmins(schoolId)
@@ -491,7 +493,8 @@ function SchoolAdminsCard({ schoolId, refreshKey }: { schoolId: string; refreshK
       <div className="p-6 pb-0">
         <h2 className="text-sm font-semibold text-slate-900">Admins</h2>
         <p className="mt-1 text-sm text-slate-500">
-          This school's SCHOOL_ADMIN and BRANCH_ADMIN users. Reset a password for one who's locked out.
+          This school's SCHOOL_ADMIN and BRANCH_ADMIN users. Reset a password for one who's locked
+          out, or impersonate an active SCHOOL_ADMIN to see the portal exactly as they do.
         </p>
       </div>
 
@@ -543,9 +546,16 @@ function SchoolAdminsCard({ schoolId, refreshKey }: { schoolId: string; refreshK
                     <Badge variant={USER_STATUS_VARIANT[admin.status]}>{admin.status}</Badge>
                   </TableCell>
                   <TableCell label="Actions">
-                    <Button variant="secondary" onClick={() => setPendingReset(admin)}>
-                      Reset password
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="secondary" onClick={() => setPendingReset(admin)}>
+                        Reset password
+                      </Button>
+                      {admin.role === "SCHOOL_ADMIN" && admin.status === "ACTIVE" && (
+                        <Button variant="secondary" onClick={() => setImpersonating(admin)}>
+                          Impersonate
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -570,6 +580,14 @@ function SchoolAdminsCard({ schoolId, refreshKey }: { schoolId: string; refreshK
           variant="danger"
           onConfirm={confirmReset}
           onClose={() => setPendingReset(null)}
+        />
+      )}
+
+      {impersonating && (
+        <ImpersonateDialog
+          schoolId={schoolId}
+          admin={impersonating}
+          onClose={() => setImpersonating(null)}
         />
       )}
     </Card>

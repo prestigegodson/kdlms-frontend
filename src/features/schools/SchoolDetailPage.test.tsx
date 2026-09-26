@@ -7,6 +7,7 @@ import type { SchoolView } from "@/api/schools";
 import * as usersApi from "@/api/users";
 import type { SchoolUserView } from "@/api/users";
 import { SchoolDetailPage } from "@/features/schools/SchoolDetailPage";
+import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 
 vi.mock("@/api/schools", async () => {
   const actual = await vi.importActual<typeof import("@/api/schools")>("@/api/schools");
@@ -26,6 +27,7 @@ vi.mock("@/api/users", async () => {
     ...actual,
     listSchoolAdmins: vi.fn(),
     resetUserPassword: vi.fn(),
+    impersonate: vi.fn(),
   };
 });
 
@@ -40,7 +42,10 @@ function renderDetailPage(school: SchoolView, admins: SchoolUserView[] = []) {
   });
 
   const router = createMemoryRouter(
-    [{ path: "/admin/schools/:schoolId", element: <SchoolDetailPage /> }],
+    [
+      { path: "/admin/schools/:schoolId", element: <SchoolDetailPage /> },
+      { path: "/school", element: <div>School portal home</div> },
+    ],
     { initialEntries: [`/admin/schools/${school.id}`] },
   );
   render(<RouterProvider router={router} />);
@@ -56,6 +61,23 @@ const BRANCH_ADMIN: SchoolUserView = {
   branchName: "Ikeja",
   status: "ACTIVE",
   createdAt: "2026-01-01T00:00:00Z",
+};
+
+const ACTIVE_SCHOOL_ADMIN: SchoolUserView = {
+  id: "user-2",
+  email: "grace@bsa.example",
+  firstName: "Grace",
+  lastName: "Adeyemi",
+  role: "SCHOOL_ADMIN",
+  status: "ACTIVE",
+  createdAt: "2026-01-01T00:00:00Z",
+};
+
+const DISABLED_SCHOOL_ADMIN: SchoolUserView = {
+  ...ACTIVE_SCHOOL_ADMIN,
+  id: "user-3",
+  email: "old-admin@bsa.example",
+  status: "DISABLED",
 };
 
 const ARCHIVED_SCHOOL: SchoolView = {
@@ -77,6 +99,12 @@ const ACTIVE_SCHOOL: SchoolView = {
 describe("SchoolDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetAuthStore();
+    useAuthStore.setState({
+      user: { id: "sysadmin-1", email: "root@kdlms.com", firstName: "Root", lastName: "Admin", role: "SYSTEM_ADMIN" },
+      accessToken: "sysadmin-access",
+      refreshToken: "sysadmin-refresh",
+    });
   });
 
   it("shows a School heading while loading, so the mobile app bar keeps a title and back chevron", () => {
@@ -152,5 +180,55 @@ describe("SchoolDetailPage", () => {
 
     await user.click(await screen.findByRole("button", { name: /Show credentials/ }));
     expect(await screen.findByText("fresh-temp-pass")).toBeInTheDocument();
+  });
+
+  it("offers Impersonate only for an active SCHOOL_ADMIN, never a BRANCH_ADMIN or a disabled admin", async () => {
+    renderDetailPage(ACTIVE_SCHOOL, [BRANCH_ADMIN, ACTIVE_SCHOOL_ADMIN, DISABLED_SCHOOL_ADMIN]);
+
+    await screen.findByText("sam@bsa.example");
+    expect(screen.getAllByRole("button", { name: "Impersonate" })).toHaveLength(1);
+  });
+
+  it("requires a 10+ character reason before impersonation can start", async () => {
+    renderDetailPage(ACTIVE_SCHOOL, [ACTIVE_SCHOOL_ADMIN]);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: "Impersonate" }));
+    const dialog = await screen.findByRole("dialog");
+    const confirm = within(dialog).getByRole("button", { name: "Start impersonating" });
+    expect(confirm).toBeDisabled();
+
+    await user.type(within(dialog).getByLabelText(/Reason/), "too short");
+    expect(confirm).toBeDisabled();
+
+    await user.type(within(dialog).getByLabelText(/Reason/), " - now long enough");
+    expect(confirm).toBeEnabled();
+    expect(usersApi.impersonate).not.toHaveBeenCalled();
+  });
+
+  it("starts impersonation, switches the session to the target admin, and lands on the school portal", async () => {
+    vi.mocked(usersApi.impersonate).mockResolvedValue({
+      accessToken: "impersonation-access",
+      sessionId: "session-1",
+      expiresAt: "2026-01-01T01:00:00Z",
+      schoolName: ACTIVE_SCHOOL.name,
+      user: { ...ACTIVE_SCHOOL_ADMIN, schoolId: ACTIVE_SCHOOL.id },
+    });
+    renderDetailPage(ACTIVE_SCHOOL, [ACTIVE_SCHOOL_ADMIN]);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: "Impersonate" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText(/Reason/), "Support ticket #4321 - checking a report bug");
+    await user.click(within(dialog).getByRole("button", { name: "Start impersonating" }));
+
+    expect(usersApi.impersonate).toHaveBeenCalledWith(
+      ACTIVE_SCHOOL.id,
+      ACTIVE_SCHOOL_ADMIN.id,
+      "Support ticket #4321 - checking a report bug",
+    );
+    expect(await screen.findByText("School portal home")).toBeInTheDocument();
+    expect(useAuthStore.getState().user?.id).toBe(ACTIVE_SCHOOL_ADMIN.id);
+    expect(useAuthStore.getState().impersonation?.sessionId).toBe("session-1");
   });
 });

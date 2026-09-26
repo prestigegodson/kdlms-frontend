@@ -118,3 +118,14 @@ export function setInitialPassword(newPassword: string): Promise<SessionResponse
     body: JSON.stringify({ newPassword }),
   });
 }
+
+/**
+ * Ends the caller's own current impersonation session (see api/users.ts's
+ * `impersonate`) - only reachable while impersonating, per the backend's
+ * `shared.config.ImpersonationGuardFilter`. authStore's `stopImpersonation`
+ * restores the stashed system-admin session client-side afterward; this
+ * call has nothing to hand back.
+ */
+export function stopImpersonation(): Promise<void> {
+  return apiFetch<void>("/api/v1/auth/impersonation/stop", { method: "POST" });
+}

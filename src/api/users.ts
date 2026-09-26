@@ -185,3 +185,30 @@ export function enableUser(userId: string): Promise<void> {
 export function disableUser(userId: string): Promise<void> {
   return apiFetch<void>(`/api/v1/users/${userId}/disable`, { method: "PATCH" });
 }
+
+/**
+ * Mirrors backend identity.application.port.in.ImpersonationUseCase.ImpersonationResult -
+ * `accessToken` carries no paired refresh token (see authStore's
+ * `startImpersonation`), and `user.mustChangePassword` is always `false`
+ * regardless of the target's real flag.
+ */
+export interface ImpersonationSession {
+  accessToken: string;
+  sessionId: string;
+  expiresAt: string;
+  schoolName?: string;
+  user: UserSummary;
+}
+
+/**
+ * Starts a support impersonation session, signing the system admin in to
+ * `schoolId`'s portal as `userId` (an ACTIVE SCHOOL_ADMIN of that school).
+ * `reason` is a mandatory support note (10-500 chars), recorded on the
+ * session and never editable afterward.
+ */
+export function impersonate(schoolId: string, userId: string, reason: string): Promise<ImpersonationSession> {
+  return apiFetch<ImpersonationSession>(`/api/v1/admin/schools/${schoolId}/users/${userId}/impersonation`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}

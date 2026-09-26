@@ -3,7 +3,9 @@ import { ChevronDown, ChevronLeft, Download, X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 import type { Role } from "@/api/types";
+import { Alert } from "@/components/ui/Alert";
 import { useInstallApp } from "@/hooks/useInstallApp";
+import { ImpersonationBanner } from "@/layouts/ImpersonationBanner";
 import { InstallBanner } from "@/layouts/InstallBanner";
 import { InstallInstructionsModal } from "@/layouts/InstallInstructionsModal";
 import { MobileTabBar } from "@/layouts/MobileTabBar";
@@ -185,6 +187,8 @@ export function PortalShell({
   children,
 }: PortalShellProps) {
   const user = useAuthStore((state) => state.user);
+  const sessionNotice = useAuthStore((state) => state.sessionNotice);
+  const clearSessionNotice = useAuthStore((state) => state.clearSessionNotice);
   const collapsedGroups = useNavGroupsStore((state) => state.collapsed);
   const setGroupCollapsed = useNavGroupsStore((state) => state.setCollapsed);
   const { platform, canInstall, install, instructionsOpen, closeInstructions } = useInstallApp();
@@ -377,113 +381,130 @@ export function PortalShell({
   }
 
   return (
-    <div className="flex min-h-screen">
-      {/* Desktop rail - sticky + viewport-height so its own nav scrolls
-          independently of the page instead of the whole page needing to
-          scroll to reach items below the fold (see the file-level history:
-          without this, `renderNav`'s `overflow-y-auto` had no bounded box
-          to actually scroll, since `align-items: stretch` on the flex row
-          above stretched the aside to page height, not viewport height). */}
-      <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-64 lg:shrink-0 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white">
-        <div className="flex h-16 min-w-0 shrink-0 items-center border-b border-slate-200 px-6">
-          <BrandMark />
-        </div>
-        <p className="shrink-0 px-6 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
-          {portalName}
-        </p>
-        {renderNav(`${portalName} navigation`, "rail")}
-      </aside>
-
-      {/* Mobile drawer */}
-      {drawerOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div
-            className="overlay-fade fixed inset-0 bg-slate-900/50"
-            onClick={() => setDrawerOpen(false)}
-            aria-hidden="true"
-          />
-          <div
-            ref={drawerRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label={`${portalName} navigation`}
-            tabIndex={-1}
-            onKeyDown={handleDrawerKeyDown}
-            className="drawer-panel fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col overscroll-contain bg-white shadow-xl outline-none"
-          >
-            <div className="flex h-16 min-w-0 items-center justify-between border-b border-slate-200 px-4">
-              <BrandMark />
-              <button
-                type="button"
-                onClick={() => setDrawerOpen(false)}
-                aria-label="Close menu"
-                className="flex h-9 w-9 items-center justify-center rounded-control text-slate-500 hover:bg-slate-100 mobile:h-11 mobile:w-11"
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
-            <div className="flex items-center justify-between gap-2 px-6 pt-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{portalName}</p>
-              {contextLabel && (
-                <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-800">
-                  {contextLabel}
-                </span>
-              )}
-            </div>
-            {renderNav(undefined, "drawer")}
-            {canInstall && (
-              // A <button>, not a NavItem - NavItem.href is required and
-              // always renders a Link, but installing is an action, not a
-              // route. The permanent fallback for anyone who dismissed
-              // InstallBanner or is only discovering the feature now.
-              <div className="shrink-0 border-t border-slate-200 p-4">
+    <div className="flex min-h-screen flex-col">
+      <ImpersonationBanner />
+      <div className="flex flex-1">
+        {/* Desktop rail - sticky + viewport-height so its own nav scrolls
+            independently of the page instead of the whole page needing to
+            scroll to reach items below the fold (see the file-level history:
+            without this, `renderNav`'s `overflow-y-auto` had no bounded box
+            to actually scroll, since `align-items: stretch` on the flex row
+            above stretched the aside to page height, not viewport height). */}
+        <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-64 lg:shrink-0 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white">
+          <div className="flex h-16 min-w-0 shrink-0 items-center border-b border-slate-200 px-6">
+            <BrandMark />
+          </div>
+          <p className="shrink-0 px-6 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            {portalName}
+          </p>
+          {renderNav(`${portalName} navigation`, "rail")}
+        </aside>
+  
+        {/* Mobile drawer */}
+        {drawerOpen && (
+          <div className="fixed inset-0 z-40 lg:hidden">
+            <div
+              className="overlay-fade fixed inset-0 bg-slate-900/50"
+              onClick={() => setDrawerOpen(false)}
+              aria-hidden="true"
+            />
+            <div
+              ref={drawerRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label={`${portalName} navigation`}
+              tabIndex={-1}
+              onKeyDown={handleDrawerKeyDown}
+              className="drawer-panel fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col overscroll-contain bg-white shadow-xl outline-none"
+            >
+              <div className="flex h-16 min-w-0 items-center justify-between border-b border-slate-200 px-4">
+                <BrandMark />
                 <button
                   type="button"
-                  onClick={() => {
-                    setDrawerOpen(false);
-                    install();
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-control px-2.5 py-2 text-sm text-slate-700 hover:bg-slate-100 mobile:min-h-11"
+                  onClick={() => setDrawerOpen(false)}
+                  aria-label="Close menu"
+                  className="flex h-9 w-9 items-center justify-center rounded-control text-slate-500 hover:bg-slate-100 mobile:h-11 mobile:w-11"
                 >
-                  <Download className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  Install app
+                  <X className="h-5 w-5" aria-hidden="true" />
                 </button>
               </div>
-            )}
+              <div className="flex items-center justify-between gap-2 px-6 pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{portalName}</p>
+                {contextLabel && (
+                  <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-800">
+                    {contextLabel}
+                  </span>
+                )}
+              </div>
+              {renderNav(undefined, "drawer")}
+              {canInstall && (
+                // A <button>, not a NavItem - NavItem.href is required and
+                // always renders a Link, but installing is an action, not a
+                // route. The permanent fallback for anyone who dismissed
+                // InstallBanner or is only discovering the feature now.
+                <div className="shrink-0 border-t border-slate-200 p-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDrawerOpen(false);
+                      install();
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-control px-2.5 py-2 text-sm text-slate-700 hover:bg-slate-100 mobile:min-h-11"
+                  >
+                    <Download className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    Install app
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
+        )}
+  
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
+            <MobileAppBar />
+            <div className="flex shrink-0 items-center gap-3 lg:min-w-0 lg:flex-1 lg:justify-between">
+              {contextLabel ? (
+                <span className="hidden truncate rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-800 sm:inline-flex">
+                  {contextLabel}
+                </span>
+              ) : (
+                <span className="hidden sm:inline-flex" />
+              )}
+              {user ? <UserMenu user={user} /> : <span className="text-sm text-slate-500">Not signed in</span>}
+            </div>
+          </header>
+          <main className="flex-1 pb-tabbar-safe lg:pb-0">
+            <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+              {sessionNotice && (
+                <Alert variant="info" className="mb-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>{sessionNotice}</span>
+                    <button
+                      type="button"
+                      onClick={clearSessionNotice}
+                      className="shrink-0 text-xs font-medium underline underline-offset-2"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </Alert>
+              )}
+              <InstallBanner />
+              {banner}
+              {children ?? <Outlet />}
+            </div>
+          </main>
+          <MobileTabBar
+            items={visibleNavItems}
+            role={user?.role}
+            activeHref={activeHref}
+            onMore={() => setDrawerOpen(true)}
+            moreRef={moreRef}
+            drawerOpen={drawerOpen}
+            portalName={portalName}
+          />
         </div>
-      )}
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
-          <MobileAppBar />
-          <div className="flex shrink-0 items-center gap-3 lg:min-w-0 lg:flex-1 lg:justify-between">
-            {contextLabel ? (
-              <span className="hidden truncate rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-800 sm:inline-flex">
-                {contextLabel}
-              </span>
-            ) : (
-              <span className="hidden sm:inline-flex" />
-            )}
-            {user ? <UserMenu user={user} /> : <span className="text-sm text-slate-500">Not signed in</span>}
-          </div>
-        </header>
-        <main className="flex-1 pb-tabbar-safe lg:pb-0">
-          <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-            <InstallBanner />
-            {banner}
-            {children ?? <Outlet />}
-          </div>
-        </main>
-        <MobileTabBar
-          items={visibleNavItems}
-          role={user?.role}
-          activeHref={activeHref}
-          onMore={() => setDrawerOpen(true)}
-          moreRef={moreRef}
-          drawerOpen={drawerOpen}
-          portalName={portalName}
-        />
       </div>
       {/* Shared by the drawer's Install entry above - InstallBanner owns its
           own copy for its own CTA, but the drawer's fallback needs one too,

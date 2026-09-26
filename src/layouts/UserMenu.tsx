@@ -1,4 +1,4 @@
-import { KeyRound, LogOut } from "lucide-react";
+import { KeyRound, LogOut, UserCog } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { ChangePasswordDialog } from "@/features/auth/ChangePasswordDialog";
@@ -20,6 +20,8 @@ interface UserMenuProps {
  */
 export function UserMenu({ user }: UserMenuProps) {
   const logout = useAuthStore((state) => state.logout);
+  const impersonation = useAuthStore((state) => state.impersonation);
+  const stopImpersonation = useAuthStore((state) => state.stopImpersonation);
   const navigate = useNavigate();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -45,6 +47,15 @@ export function UserMenu({ user }: UserMenuProps) {
     close();
     logout();
     navigate("/login", { replace: true });
+  }
+
+  async function handleStopImpersonation() {
+    close();
+    // user.schoolId is the school currently being impersonated - the stashed
+    // (system-admin) session has none of its own, see AuthenticatedUser's Javadoc.
+    const schoolId = user.schoolId;
+    await stopImpersonation();
+    navigate(schoolId ? `/admin/schools/${schoolId}` : "/admin", { replace: true });
   }
 
   function handleChangePassword() {
@@ -90,24 +101,41 @@ export function UserMenu({ user }: UserMenuProps) {
               </p>
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{user.role}</p>
             </div>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={handleChangePassword}
-              className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
-            >
-              <KeyRound className="h-4 w-4 text-slate-400" aria-hidden="true" />
-              Change password
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={handleLogout}
-              className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
-            >
-              <LogOut className="h-4 w-4 text-slate-400" aria-hidden="true" />
-              Log out
-            </button>
+            {/* The backend refuses /auth/change-password for an impersonation token outright
+                (shared.config.ImpersonationGuardFilter) - a sysadmin must never change the
+                target's own credentials, so this is hidden rather than shown-then-403ing. */}
+            {!impersonation && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleChangePassword}
+                className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+              >
+                <KeyRound className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                Change password
+              </button>
+            )}
+            {impersonation ? (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleStopImpersonation}
+                className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+              >
+                <UserCog className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                Stop impersonating
+              </button>
+            ) : (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleLogout}
+                className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+              >
+                <LogOut className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                Log out
+              </button>
+            )}
           </div>
         </>
       )}
