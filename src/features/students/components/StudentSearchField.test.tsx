@@ -8,7 +8,7 @@ import { StudentSearchField } from "@/features/students/components/StudentSearch
 
 vi.mock("@/api/students", async () => {
   const actual = await vi.importActual<typeof import("@/api/students")>("@/api/students");
-  return { ...actual, listStudents: vi.fn() };
+  return { ...actual, quickSearchStudents: vi.fn() };
 });
 
 const GRACE: StudentView = {
@@ -34,10 +34,6 @@ const ADA: StudentView = {
   fullName: "Ada Obi",
 };
 
-function page(content: StudentView[]) {
-  return { content, totalElements: content.length, totalPages: 1, number: 0, size: 10 };
-}
-
 describe("StudentSearchField", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -49,27 +45,41 @@ describe("StudentSearchField", () => {
 
   it("fires no search for an empty query", () => {
     render(<StudentSearchField id="student" value={null} onChange={vi.fn()} branchId="branch-1" />);
-    expect(studentsApi.listStudents).not.toHaveBeenCalled();
+    expect(studentsApi.quickSearchStudents).not.toHaveBeenCalled();
     expect(screen.getByText("Type a name or admission number.")).toBeInTheDocument();
   });
 
+  it("fires no search below the minimum query length", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<StudentSearchField id="student" value={null} onChange={vi.fn()} branchId="branch-1" />);
+
+    await user.type(screen.getByRole("combobox"), "g");
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(await screen.findByText("Keep typing - at least 2 characters.")).toBeInTheDocument();
+    expect(studentsApi.quickSearchStudents).not.toHaveBeenCalled();
+  });
+
   it("debounces the search, then renders results scoped to the branch and ACTIVE status", async () => {
-    vi.mocked(studentsApi.listStudents).mockResolvedValue(page([GRACE]));
+    vi.mocked(studentsApi.quickSearchStudents).mockResolvedValue([GRACE]);
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<StudentSearchField id="student" value={null} onChange={vi.fn()} branchId="branch-1" />);
 
     await user.type(screen.getByRole("combobox"), "gra");
-    expect(studentsApi.listStudents).not.toHaveBeenCalled();
+    expect(studentsApi.quickSearchStudents).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(300);
     await waitFor(() =>
-      expect(studentsApi.listStudents).toHaveBeenCalledWith({ branchId: "branch-1", status: "ACTIVE", q: "gra" }, 0, 10),
+      expect(studentsApi.quickSearchStudents).toHaveBeenCalledWith(
+        { branchId: "branch-1", status: "ACTIVE", q: "gra" },
+        10,
+      ),
     );
     expect(await screen.findByRole("option", { name: /Grace Obi/ })).toBeInTheDocument();
   });
 
   it("clicking a result selects it", async () => {
-    vi.mocked(studentsApi.listStudents).mockResolvedValue(page([GRACE]));
+    vi.mocked(studentsApi.quickSearchStudents).mockResolvedValue([GRACE]);
     const onChange = vi.fn();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<StudentSearchField id="student" value={null} onChange={onChange} branchId="branch-1" />);
@@ -82,7 +92,7 @@ describe("StudentSearchField", () => {
   });
 
   it("Down then Enter selects the highlighted result via the keyboard", async () => {
-    vi.mocked(studentsApi.listStudents).mockResolvedValue(page([GRACE, ADA]));
+    vi.mocked(studentsApi.quickSearchStudents).mockResolvedValue([GRACE, ADA]);
     const onChange = vi.fn();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<StudentSearchField id="student" value={null} onChange={onChange} branchId="branch-1" />);
@@ -97,7 +107,7 @@ describe("StudentSearchField", () => {
   });
 
   it("Escape closes the results without selecting anything", async () => {
-    vi.mocked(studentsApi.listStudents).mockResolvedValue(page([GRACE]));
+    vi.mocked(studentsApi.quickSearchStudents).mockResolvedValue([GRACE]);
     const onChange = vi.fn();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<StudentSearchField id="student" value={null} onChange={onChange} branchId="branch-1" />);
@@ -114,7 +124,7 @@ describe("StudentSearchField", () => {
   });
 
   it("shows no matching students for an empty result page", async () => {
-    vi.mocked(studentsApi.listStudents).mockResolvedValue(page([]));
+    vi.mocked(studentsApi.quickSearchStudents).mockResolvedValue([]);
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<StudentSearchField id="student" value={null} onChange={vi.fn()} branchId="branch-1" />);
 
@@ -125,7 +135,7 @@ describe("StudentSearchField", () => {
   });
 
   it("surfaces a rejected search inline", async () => {
-    vi.mocked(studentsApi.listStudents).mockRejectedValue(new ApiError(500, "Search failed"));
+    vi.mocked(studentsApi.quickSearchStudents).mockRejectedValue(new ApiError(500, "Search failed"));
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<StudentSearchField id="student" value={null} onChange={vi.fn()} branchId="branch-1" />);
 

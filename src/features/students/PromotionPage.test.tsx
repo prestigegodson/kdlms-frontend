@@ -17,6 +17,7 @@ vi.mock("@/api/students", async () => {
   return {
     ...actual,
     listStudents: vi.fn(),
+    quickSearchStudents: vi.fn(),
     promoteStudents: vi.fn(),
     placeStudents: vi.fn(),
     graduateClass: vi.fn(),
@@ -172,13 +173,7 @@ describe("PromotionPage", () => {
   });
 
   it("searches for and places individual students", async () => {
-    vi.mocked(studentsApi.listStudents).mockResolvedValue({
-      content: [STUDENT_VIEW],
-      totalElements: 1,
-      totalPages: 1,
-      number: 0,
-      size: 50,
-    });
+    vi.mocked(studentsApi.quickSearchStudents).mockResolvedValue([STUDENT_VIEW]);
     vi.mocked(studentsApi.placeStudents).mockResolvedValue({
       outcomes: [{ studentId: "student-1", success: true }],
     });

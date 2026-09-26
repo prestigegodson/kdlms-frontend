@@ -2,11 +2,14 @@ import { X } from "lucide-react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "@/api/client";
-import { listStudents, type StudentView } from "@/api/students";
+import { quickSearchStudents, type StudentView } from "@/api/students";
 import { Spinner } from "@/components/ui/Spinner";
 import { SearchInput } from "@/components/ui/SearchInput";
 
 const PAGE_SIZE = 10;
+
+/** Below this, `quickSearchStudents` short-circuits client-side rather than round-tripping for a pattern that'd match nearly every student. */
+const MIN_QUERY_LENGTH = 2;
 
 export interface StudentSearchSelection {
   id: string;
@@ -66,13 +69,13 @@ export function StudentSearchField({ value, onChange, branchId, id, disabled, di
   }
 
   useEffect(() => {
-    if (!branchId || !query) {
+    if (!branchId || query.trim().length < MIN_QUERY_LENGTH) {
       return;
     }
     let cancelled = false;
-    listStudents({ branchId, status: "ACTIVE", q: query }, 0, PAGE_SIZE)
-      .then((page) => {
-        if (!cancelled) setResults(page.content);
+    quickSearchStudents({ branchId, status: "ACTIVE", q: query }, PAGE_SIZE)
+      .then((students) => {
+        if (!cancelled) setResults(students);
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof ApiError ? err.message : "Search failed");
@@ -145,7 +148,8 @@ export function StudentSearchField({ value, onChange, branchId, id, disabled, di
   }
 
   const listboxId = `${id}-listbox`;
-  const showList = query.length > 0;
+  const isBelowMinLength = query.length > 0 && query.trim().length < MIN_QUERY_LENGTH;
+  const showList = query.trim().length >= MIN_QUERY_LENGTH;
   const activeOptionId =
     highlightedIndex >= 0 && results && results.length > 0 ? `${id}-option-${highlightedIndex}` : undefined;
 
@@ -163,7 +167,9 @@ export function StudentSearchField({ value, onChange, branchId, id, disabled, di
         aria-controls={listboxId}
         aria-activedescendant={activeOptionId}
       />
-      {isDisabled ? null : !showList ? (
+      {isDisabled ? null : isBelowMinLength ? (
+        <p className="mt-1 text-xs text-slate-500">Keep typing - at least {MIN_QUERY_LENGTH} characters.</p>
+      ) : !showList ? (
         <p className="mt-1 text-xs text-slate-500">Type a name or admission number.</p>
       ) : error ? (
         <p className="mt-1 text-sm text-red-600">{error}</p>

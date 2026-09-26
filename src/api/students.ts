@@ -252,6 +252,26 @@ export function listStudents(
   return apiFetch<Page<StudentView>>(`${BASE}?${params.toString()}`);
 }
 
+/**
+ * The typeahead pickers' search (`StudentSearchField`, `PlaceStudentsPanel`) - `GET
+ * /api/v1/students/search`, a bare capped list with no total, unlike {@link listStudents}'s
+ * `Page`. `q` is required and must be at least 2 characters (enforced both here, defensively,
+ * and by the backend) - a shorter query would match nearly every student and isn't worth the
+ * round trip. `limit` defaults to 10 server-side.
+ */
+export function quickSearchStudents(
+  filter: { branchId?: string; status?: StudentStatus; q: string },
+  limit = 10,
+): Promise<StudentView[]> {
+  if (filter.q.trim().length < 2) {
+    return Promise.resolve([]);
+  }
+  const params = new URLSearchParams({ q: filter.q, limit: String(limit) });
+  if (filter.branchId) params.set("branchId", filter.branchId);
+  if (filter.status) params.set("status", filter.status);
+  return apiFetch<StudentView[]>(`${BASE}/search?${params.toString()}`);
+}
+
 export function graduateStudent(studentId: string): Promise<void> {
   return apiFetch<void>(`${BASE}/${studentId}/graduate`, { method: "PATCH" });
 }

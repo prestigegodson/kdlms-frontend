@@ -7,6 +7,7 @@ import {
   listStudents,
   placeStudents,
   promoteStudents,
+  quickSearchStudents,
   type MovementResult,
   type StudentView,
 } from "@/api/students";
@@ -287,11 +288,13 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
   const [result, setResult] = useState<MovementResult | null>(null);
 
   useEffect(() => {
+    // quickSearchStudents no-ops client-side (and the backend rejects) a query under 2
+    // characters - see its own Javadoc for why that's not worth a round trip.
     if (!query) {
       return;
     }
-    listStudents({ q: query, status: "ACTIVE" }, 0, 50)
-      .then((page) => setCandidates(page.content))
+    quickSearchStudents({ q: query, status: "ACTIVE" }, 50)
+      .then(setCandidates)
       .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Search failed"));
   }, [query]);
 
