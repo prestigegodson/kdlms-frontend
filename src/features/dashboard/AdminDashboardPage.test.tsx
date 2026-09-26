@@ -29,6 +29,7 @@ describe("AdminDashboardPage", () => {
       activeSubscriptions: 8,
       expiringSoonSubscriptions: 3,
       expiredSubscriptions: 1,
+      expiringSchools: [],
     });
 
     renderPage();
@@ -50,6 +51,7 @@ describe("AdminDashboardPage", () => {
         activeSubscriptions: 1,
         expiringSoonSubscriptions: 0,
         expiredSubscriptions: 0,
+        expiringSchools: [],
       });
 
     renderPage();
@@ -59,5 +61,52 @@ describe("AdminDashboardPage", () => {
 
     await waitFor(() => expect(dashboardApi.getAdminDashboard).toHaveBeenCalledTimes(2));
     expect(await screen.findByText("Total schools")).toBeInTheDocument();
+  });
+
+  it("shows the empty state when no subscriptions are expiring soon", async () => {
+    vi.mocked(dashboardApi.getAdminDashboard).mockResolvedValue({
+      totalSchools: 1,
+      activeSchools: 1,
+      suspendedSchools: 0,
+      archivedSchools: 0,
+      activeSubscriptions: 1,
+      expiringSoonSubscriptions: 0,
+      expiredSubscriptions: 0,
+      expiringSchools: [],
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("Nothing expiring soon")).toBeInTheDocument();
+  });
+
+  it("renders the renewal worklist with a link into each school's detail page", async () => {
+    vi.mocked(dashboardApi.getAdminDashboard).mockResolvedValue({
+      totalSchools: 2,
+      activeSchools: 2,
+      suspendedSchools: 0,
+      archivedSchools: 0,
+      activeSubscriptions: 2,
+      expiringSoonSubscriptions: 1,
+      expiredSubscriptions: 0,
+      expiringSchools: [
+        {
+          schoolId: "school-1",
+          schoolName: "Greenwood Academy",
+          packageName: "Growth",
+          endDate: "2026-10-10",
+          daysRemaining: 14,
+        },
+      ],
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("Greenwood Academy")).toBeInTheDocument();
+    expect(screen.getByText("Growth")).toBeInTheDocument();
+    expect(screen.getByText("14 days")).toBeInTheDocument();
+
+    const link = screen.getByText("Greenwood Academy").closest("tr");
+    expect(link).toHaveAttribute("tabindex", "0");
   });
 });

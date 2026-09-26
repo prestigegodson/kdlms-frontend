@@ -1,5 +1,14 @@
 import { apiFetch } from "@/api/client";
 
+/** Mirrors backend dashboard.application.port.in.AdminDashboardView.ExpiringSchoolRow - one row on the renewal worklist. */
+export interface AdminDashboardExpiringSchool {
+  schoolId: string;
+  schoolName: string;
+  packageName: string;
+  endDate: string;
+  daysRemaining: number;
+}
+
 /** Mirrors backend dashboard.application.port.in.AdminDashboardView - the SYSTEM_ADMIN landing page. */
 export interface AdminDashboardView {
   totalSchools: number;
@@ -9,6 +18,8 @@ export interface AdminDashboardView {
   activeSubscriptions: number;
   expiringSoonSubscriptions: number;
   expiredSubscriptions: number;
+  /** The renewal worklist - every school whose subscription is still active but ends within 3 months, soonest first. */
+  expiringSchools: AdminDashboardExpiringSchool[];
 }
 
 /** Mirrors backend dashboard.application.port.in.SchoolDashboardView.AttendanceToday. */

@@ -63,6 +63,7 @@ const ARCHIVED_SCHOOL: SchoolView = {
   name: "Bright Star Academy",
   code: "BSA",
   status: "ARCHIVED",
+  freemium: false,
 };
 
 const ACTIVE_SCHOOL: SchoolView = {
@@ -70,6 +71,7 @@ const ACTIVE_SCHOOL: SchoolView = {
   name: "Bright Star Academy",
   code: "BSA",
   status: "ACTIVE",
+  freemium: false,
 };
 
 describe("SchoolDetailPage", () => {

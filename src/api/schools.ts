@@ -14,6 +14,13 @@ export interface SchoolView {
   /** The school's login-page subdomain (e.g. "greenwood" for greenwood.kdlms.com) - SYSTEM_ADMIN-set, read-only here. */
   subdomain?: string;
   status: SchoolStatus;
+  /**
+   * Marks the school as freemium irrespective of whatever package it's
+   * assigned (or not assigned at all) - SYSTEM_ADMIN-set, read-only here.
+   * The one functional effect: the school stays writable even with no
+   * active subscription.
+   */
+  freemium: boolean;
 }
 
 export interface CreateSchoolRequest {
@@ -24,13 +31,15 @@ export interface CreateSchoolRequest {
   address?: string;
   mainBranchName?: string;
   subdomain?: string;
+  freemium?: boolean;
 }
 
 /**
  * SYSTEM_ADMIN's `PUT /api/v1/admin/schools/{id}` - a full replace like
- * every PUT in this codebase, so an omitted `subdomain` clears it. Distinct
- * from {@link UpdateSchoolRequest}: only a system admin may set/change the
- * subdomain, matching `AdminSchoolController.UpdateSchoolRequest` vs
+ * every PUT in this codebase, so an omitted `subdomain`/`freemium` clears/
+ * resets it. Distinct from {@link UpdateSchoolRequest}: only a system admin
+ * may set/change the subdomain or freemium status, matching
+ * `AdminSchoolController.UpdateSchoolRequest` vs
  * `SchoolProfileController.UpdateProfileRequest` on the backend.
  */
 export interface AdminUpdateSchoolRequest {
@@ -39,6 +48,7 @@ export interface AdminUpdateSchoolRequest {
   phone?: string;
   address?: string;
   subdomain?: string;
+  freemium?: boolean;
 }
 
 /** School-admin self-service `PUT /api/v1/school` - no `subdomain` field at all; that stays SYSTEM_ADMIN-only. */

@@ -6,6 +6,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
@@ -130,6 +131,7 @@ function CreateSchoolModal({ open, onClose, onCreated }: CreateSchoolModalProps)
   const [email, setEmail] = useState("");
   const [mainBranchName, setMainBranchName] = useState("");
   const [subdomain, setSubdomain] = useState("");
+  const [freemium, setFreemium] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -144,12 +146,14 @@ function CreateSchoolModal({ open, onClose, onCreated }: CreateSchoolModalProps)
         email: email || undefined,
         mainBranchName: mainBranchName || undefined,
         subdomain: subdomain || undefined,
+        freemium,
       });
       setName("");
       setCode("");
       setEmail("");
       setMainBranchName("");
       setSubdomain("");
+      setFreemium(false);
       onCreated();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to create school");
@@ -205,6 +209,19 @@ function CreateSchoolModal({ open, onClose, onCreated }: CreateSchoolModalProps)
             onChange={(event) => setSubdomain(event.target.value)}
           />
           {subdomain && <p className="mt-1 text-xs text-slate-500">Login page: {subdomain.toLowerCase()}.kdlms.com</p>}
+        </FormField>
+        <FormField label="Freemium" htmlFor="school-freemium">
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <Checkbox
+              id="school-freemium"
+              checked={freemium}
+              onChange={() => setFreemium((value) => !value)}
+            />
+            Mark this school as freemium
+          </label>
+          <p className="mt-1 text-xs text-slate-500">
+            Keeps the school writable regardless of whatever package it's assigned (or not assigned at all).
+          </p>
         </FormField>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

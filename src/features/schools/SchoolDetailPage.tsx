@@ -30,6 +30,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CredentialsReveal } from "@/components/ui/CredentialsReveal";
 import { DateInput } from "@/components/ui/DateInput";
@@ -153,6 +154,10 @@ export function SchoolDetailPage() {
               <dd className="text-slate-900">
                 {state.school.subdomain ? `${state.school.subdomain}.kdlms.com` : "—"}
               </dd>
+              <dt className="text-slate-500">Freemium</dt>
+              <dd className="text-slate-900">
+                {state.school.freemium ? <Badge variant="success">Freemium</Badge> : "—"}
+              </dd>
             </dl>
             <div className="mt-4 flex flex-wrap gap-2">
               {state.school.status === "SUSPENDED" && (
@@ -256,9 +261,10 @@ interface EditSchoolModalProps {
 }
 
 /**
- * Name/email/phone/address plus the SYSTEM_ADMIN-only subdomain - a full
- * replace like the backend PUT, so this always resends every field
- * (including the current subdomain unchanged) rather than only the diff.
+ * Name/email/phone/address plus the SYSTEM_ADMIN-only subdomain and
+ * freemium flag - a full replace like the backend PUT, so this always
+ * resends every field (including the current subdomain/freemium unchanged)
+ * rather than only the diff.
  */
 function EditSchoolModal({ school, onClose, onSaved }: EditSchoolModalProps) {
   const [name, setName] = useState(school.name);
@@ -266,6 +272,7 @@ function EditSchoolModal({ school, onClose, onSaved }: EditSchoolModalProps) {
   const [phone, setPhone] = useState(school.phone ?? "");
   const [address, setAddress] = useState(school.address ?? "");
   const [subdomain, setSubdomain] = useState(school.subdomain ?? "");
+  const [freemium, setFreemium] = useState(school.freemium);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -280,6 +287,7 @@ function EditSchoolModal({ school, onClose, onSaved }: EditSchoolModalProps) {
         phone: phone || undefined,
         address: address || undefined,
         subdomain: subdomain || undefined,
+        freemium,
       });
       onSaved();
     } catch (err) {
@@ -323,6 +331,19 @@ function EditSchoolModal({ school, onClose, onSaved }: EditSchoolModalProps) {
             {subdomain
               ? `Login page: ${subdomain.toLowerCase()}.kdlms.com`
               : "No custom login page - the school signs in at the main site."}
+          </p>
+        </FormField>
+        <FormField label="Freemium" htmlFor="edit-school-freemium">
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <Checkbox
+              id="edit-school-freemium"
+              checked={freemium}
+              onChange={() => setFreemium((value) => !value)}
+            />
+            Mark this school as freemium
+          </label>
+          <p className="mt-1 text-xs text-slate-500">
+            Keeps the school writable regardless of whatever package it's assigned (or not assigned at all).
           </p>
         </FormField>
         <div className="flex justify-end gap-2">

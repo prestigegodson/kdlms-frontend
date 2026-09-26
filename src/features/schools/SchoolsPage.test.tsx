@@ -16,6 +16,7 @@ const SCHOOL: SchoolView = {
   name: "Bright Stars Academy",
   code: "BSA",
   status: "ACTIVE",
+  freemium: false,
 };
 
 function mockSchools(schools: SchoolView[]) {

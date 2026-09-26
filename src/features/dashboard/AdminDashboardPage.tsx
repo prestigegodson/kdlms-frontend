@@ -2,10 +2,13 @@ import { AlertTriangle, Archive, Building2, CheckCircle2, PauseCircle, XCircle }
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
 import { type AdminDashboardView, getAdminDashboard } from "@/api/dashboard";
+import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatTile } from "@/components/ui/StatTile";
 import { StatTileSkeleton } from "@/components/ui/StatTileSkeleton";
+import { TableSkeleton } from "@/components/ui/TableSkeleton";
+import { ExpiringSubscriptionsCard } from "@/features/dashboard/components/ExpiringSubscriptionsCard";
 
 type LoadState =
   | { kind: "loading" }
@@ -55,6 +58,11 @@ export function AdminDashboardPage() {
               <StatTileSkeleton key={index} />
             ))}
           </div>
+          <Card className="p-0">
+            <div className="mt-3">
+              <TableSkeleton rows={3} columns={4} />
+            </div>
+          </Card>
         </>
       )}
 
@@ -82,6 +90,8 @@ export function AdminDashboardPage() {
               <StatTile icon={XCircle} label="Expired" value={state.view.expiredSubscriptions} />
             </div>
           </section>
+
+          <ExpiringSubscriptionsCard schools={state.view.expiringSchools} />
         </>
       )}
     </div>
