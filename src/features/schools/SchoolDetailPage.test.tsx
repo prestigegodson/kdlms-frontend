@@ -8,6 +8,7 @@ import * as usersApi from "@/api/users";
 import type { SchoolUserView } from "@/api/users";
 import { SchoolDetailPage } from "@/features/schools/SchoolDetailPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { formatInstant } from "@/utils/date";
 
 vi.mock("@/api/schools", async () => {
   const actual = await vi.importActual<typeof import("@/api/schools")>("@/api/schools");
@@ -71,6 +72,7 @@ const ACTIVE_SCHOOL_ADMIN: SchoolUserView = {
   role: "SCHOOL_ADMIN",
   status: "ACTIVE",
   createdAt: "2026-01-01T00:00:00Z",
+  lastLoginAt: "2026-03-10T14:00:00Z",
 };
 
 const DISABLED_SCHOOL_ADMIN: SchoolUserView = {
@@ -158,6 +160,17 @@ describe("SchoolDetailPage", () => {
 
     expect(await screen.findByText("sam@bsa.example")).toBeInTheDocument();
     expect(screen.getByText("Ikeja")).toBeInTheDocument();
+  });
+
+  it("shows a formatted last-login timestamp for an admin who has logged in, and \"Never\" for one who hasn't", async () => {
+    renderDetailPage(ACTIVE_SCHOOL, [BRANCH_ADMIN, ACTIVE_SCHOOL_ADMIN]);
+
+    const branchAdminRow = (await screen.findByText("sam@bsa.example")).closest("tr");
+    const schoolAdminRow = screen.getByText("grace@bsa.example").closest("tr");
+    expect(within(branchAdminRow!).getByText("Never")).toBeInTheDocument();
+    expect(
+      within(schoolAdminRow!).getByText(formatInstant(ACTIVE_SCHOOL_ADMIN.lastLoginAt)),
+    ).toBeInTheDocument();
   });
 
   it("confirming a password reset reveals the new temporary password behind the collapsed toggle", async () => {

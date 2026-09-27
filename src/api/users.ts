@@ -16,6 +16,7 @@ export interface SchoolUserView {
   branchName?: string;
   status: UserStatus;
   createdAt: string;
+  lastLoginAt?: string | null;
 }
 
 export interface CreateSchoolAdminRequest {

@@ -43,7 +43,7 @@ import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { ImpersonateDialog } from "@/features/schools/components/ImpersonateDialog";
-import { formatDateRange } from "@/utils/date";
+import { formatDateRange, formatInstant } from "@/utils/date";
 
 type PendingAction =
   | { kind: "suspend" }
@@ -530,6 +530,7 @@ function SchoolAdminsCard({ schoolId, refreshKey }: { schoolId: string; refreshK
                 <TableHeaderCell>Role</TableHeaderCell>
                 <TableHeaderCell>Branch</TableHeaderCell>
                 <TableHeaderCell>Status</TableHeaderCell>
+                <TableHeaderCell>Last login</TableHeaderCell>
                 <TableHeaderCell>Actions</TableHeaderCell>
               </TableRow>
             </TableHead>
@@ -544,6 +545,9 @@ function SchoolAdminsCard({ schoolId, refreshKey }: { schoolId: string; refreshK
                   <TableCell label="Branch">{admin.branchName ?? "—"}</TableCell>
                   <TableCell label="Status">
                     <Badge variant={USER_STATUS_VARIANT[admin.status]}>{admin.status}</Badge>
+                  </TableCell>
+                  <TableCell label="Last login">
+                    {admin.lastLoginAt ? formatInstant(admin.lastLoginAt) : "Never"}
                   </TableCell>
                   <TableCell label="Actions">
                     <div className="flex flex-wrap gap-2">
