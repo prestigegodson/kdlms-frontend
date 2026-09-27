@@ -287,21 +287,6 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"],
   },
   {
-    label: "Subscription",
-    href: "/school/subscription",
-    icon: CreditCard,
-    group: "Administration",
-    roles: ["SCHOOL_ADMIN"],
-  },
-  {
-    label: "Support",
-    href: "/school/support",
-    icon: LifeBuoy,
-    group: "Administration",
-    // Read-only for both - see auth/permissions.ts's viewSupportContact.
-    roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"],
-  },
-  {
     label: "Fees & Bills",
     href: "/school/billing",
     icon: Receipt,
@@ -327,6 +312,21 @@ const NAV_ITEMS: NavItem[] = [
     // auth/permissions.ts's viewInventory, the single source of truth.
     visible: () => can.viewInventory(useAuthStore.getState().user?.role),
     primary: ["INVENTORY_MANAGER"],
+  },
+  {
+    label: "Subscription",
+    href: "/school/subscription",
+    icon: CreditCard,
+    group: "Administration",
+    roles: ["SCHOOL_ADMIN"],
+  },
+  {
+    label: "Support",
+    href: "/school/support",
+    icon: LifeBuoy,
+    group: "Administration",
+    // Read-only for both - see auth/permissions.ts's viewSupportContact.
+    roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"],
   },
 ];
 

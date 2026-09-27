@@ -9,6 +9,28 @@ export interface AdminDashboardExpiringSchool {
   daysRemaining: number;
 }
 
+/**
+ * Mirrors backend dashboard.application.port.in.AdminDashboardView.PlatformImpact - all-time,
+ * lifetime counts across every school regardless of status, cached for a few minutes server-side.
+ */
+export interface AdminDashboardPlatformImpact {
+  students: number;
+  studentsWithLogin: number;
+  staff: number;
+  teachers: number;
+  guardians: number;
+  takeHomeQuizzes: number;
+  quizQuestions: number;
+  learningResources: number;
+  lessonNotes: number;
+  aiGenerations: number;
+  classes: number;
+  subjects: number;
+  billPublications: number;
+  stockIssues: number;
+  requisitions: number;
+}
+
 /** Mirrors backend dashboard.application.port.in.AdminDashboardView - the SYSTEM_ADMIN landing page. */
 export interface AdminDashboardView {
   totalSchools: number;
@@ -20,6 +42,8 @@ export interface AdminDashboardView {
   expiredSubscriptions: number;
   /** The renewal worklist - every school whose subscription is still active but ends within 3 months, soonest first. */
   expiringSchools: AdminDashboardExpiringSchool[];
+  /** Platform-wide people/content/activity totals - see {@link AdminDashboardPlatformImpact}. */
+  impact: AdminDashboardPlatformImpact;
 }
 
 /** Mirrors backend dashboard.application.port.in.SchoolDashboardView.AttendanceToday. */
