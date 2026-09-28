@@ -1,4 +1,4 @@
-import { FileText } from "lucide-react";
+import { Copy, FileText, LayoutTemplate, Pencil, Play, School, Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { ApiError } from "@/api/client";
@@ -13,6 +13,7 @@ import {
   type ResultTemplateSummary,
 } from "@/api/resultTemplates";
 import { listSchools, type SchoolView } from "@/api/schools";
+import { ActionMenu, type ActionMenuItem } from "@/components/ui/ActionMenu";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -27,12 +28,12 @@ import { Select } from "@/components/ui/Select";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { TableSkeleton } from "@/components/ui/TableSkeleton";
+import { BASE_LEVELS } from "@/features/reporting/components/baseLevels";
 import { starterLayoutsForMode } from "@/features/reporting/components/designer/starterLayouts";
 import { TemplateAvailabilityModal } from "@/features/reporting/components/TemplateAvailabilityModal";
+import { TemplateStageModal } from "@/features/reporting/components/TemplateStageModal";
 import { TemplateStatusBadge } from "@/features/reporting/components/TemplateStatusBadge";
 import { SchoolSelect } from "@/features/schools/components/SchoolSelect";
-
-const BASE_LEVELS = ["PRE_SCHOOL", "PRE_NURSERY", "NURSERY", "PRIMARY", "SECONDARY"];
 
 type ListState =
   | { kind: "loading" }
@@ -53,6 +54,7 @@ export function ResultTemplatesPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [retiring, setRetiring] = useState<ResultTemplateSummary | null>(null);
   const [deleting, setDeleting] = useState<ResultTemplateSummary | null>(null);
+  const [changingStage, setChangingStage] = useState<ResultTemplateSummary | null>(null);
   const [changingAvailability, setChangingAvailability] = useState<ResultTemplateSummary | null>(null);
   const [duplicating, setDuplicating] = useState<ResultTemplateSummary | null>(null);
   const [schoolFilter, setSchoolFilter] = useState("");
@@ -95,6 +97,28 @@ export function ResultTemplatesPage() {
   }, [state]);
 
   const hasAnyBoundTemplate = state.kind === "loaded" && state.templates.some((template) => template.schoolId);
+
+  function templateActions(template: ResultTemplateSummary): ActionMenuItem[] {
+    const items: ActionMenuItem[] = [
+      { label: "Open designer", icon: LayoutTemplate, onSelect: () => navigate(`/admin/templates/${template.id}`) },
+      { label: "Change stage", icon: Pencil, onSelect: () => setChangingStage(template) },
+      { label: "Change school", icon: School, onSelect: () => setChangingAvailability(template) },
+      { label: "Duplicate", icon: Copy, onSelect: () => setDuplicating(template) },
+    ];
+    if (template.status !== "PUBLISHED") {
+      items.push({ label: "Publish", icon: Play, onSelect: () => handlePublish(template) });
+    } else {
+      items.push({ label: "Retire", icon: Play, onSelect: () => setRetiring(template) });
+    }
+    items.push({
+      label: "Delete",
+      icon: Trash2,
+      variant: "danger",
+      separated: true,
+      onSelect: () => setDeleting(template),
+    });
+    return items;
+  }
 
   const visibleTemplates =
     state.kind === "loaded"
@@ -188,54 +212,16 @@ export function ResultTemplatesPage() {
                   <TableCell label="Status">
                     <TemplateStatusBadge status={template.status} />
                   </TableCell>
-                  <TableCell label="Actions">
-                    {/* The row itself now navigates to the designer (TableRow's `to`) - stop
-                        propagation here so a click - or an Enter/Space press while one of these
-                        buttons has focus - doesn't also navigate the row. */}
-                    <div
-                      className="flex flex-wrap justify-end gap-3 sm:justify-start"
-                      onClick={(event) => event.stopPropagation()}
-                      onKeyDown={(event) => event.stopPropagation()}
-                    >
-                      <button
-                        type="button"
-                        className="inline-flex mobile:min-h-11 items-center px-1 text-brand-500 hover:text-brand-600"
-                        onClick={() => setChangingAvailability(template)}
-                      >
-                        Change school
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex mobile:min-h-11 items-center px-1 text-brand-500 hover:text-brand-600"
-                        onClick={() => setDuplicating(template)}
-                      >
-                        Duplicate
-                      </button>
-                      {template.status !== "PUBLISHED" && (
-                        <button
-                          type="button"
-                          className="inline-flex mobile:min-h-11 items-center px-1 text-green-700 hover:text-green-800"
-                          onClick={() => handlePublish(template)}
-                        >
-                          Publish
-                        </button>
-                      )}
-                      {template.status === "PUBLISHED" && (
-                        <button
-                          type="button"
-                          className="inline-flex mobile:min-h-11 items-center px-1 text-slate-500 hover:text-slate-700"
-                          onClick={() => setRetiring(template)}
-                        >
-                          Retire
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="inline-flex mobile:min-h-11 items-center px-1 text-red-600 hover:text-red-700"
-                        onClick={() => setDeleting(template)}
-                      >
-                        Delete
-                      </button>
+                  <TableCell
+                    label="Actions"
+                    // The row itself now navigates to the designer (TableRow's `to`) - stop
+                    // propagation here so a click - or an Enter/Space press while the menu
+                    // trigger has focus - doesn't also navigate the row.
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
+                    <div className="flex justify-end sm:justify-start">
+                      <ActionMenu items={templateActions(template)} ariaLabel={`Actions for ${template.name}`} />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -276,6 +262,16 @@ export function ResultTemplatesPage() {
           onConfirm={async () => {
             await deleteResultTemplate(deleting.id);
             setDeleting(null);
+            load();
+          }}
+        />
+      )}
+      {changingStage && (
+        <TemplateStageModal
+          template={changingStage}
+          onClose={() => setChangingStage(null)}
+          onSaved={() => {
+            setChangingStage(null);
             load();
           }}
         />
@@ -400,9 +396,9 @@ function CreateTemplateModal({ schools, onClose, onCreated }: CreateTemplateModa
           />
         </FormField>
         <p className="text-xs text-slate-500">
-          The mode and stage can't be changed after creation - a different shape needs a new template. The school it's
-          available to can be changed later, but only while no school has it assigned to a class. The starter layout
-          is just a starting point on the canvas - rearrange or clear it freely.
+          The mode can't be changed after creation - a different shape needs a new template. The stage and the school
+          it's available to can both be changed later (the school only while no school has it assigned to a class).
+          The starter layout is just a starting point on the canvas - rearrange or clear it freely.
         </p>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

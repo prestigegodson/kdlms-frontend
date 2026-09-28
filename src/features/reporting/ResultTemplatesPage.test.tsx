@@ -16,6 +16,7 @@ vi.mock("@/api/resultTemplates", async () => {
     publishResultTemplate: vi.fn(),
     retireResultTemplate: vi.fn(),
     duplicateResultTemplate: vi.fn(),
+    changeResultTemplateStage: vi.fn(),
   };
 });
 
@@ -32,6 +33,10 @@ const TEMPLATE: ResultTemplateSummary = {
   status: "DRAFT",
   updatedAt: "2026-01-01T00:00:00Z",
 };
+
+async function openRowMenu(user: ReturnType<typeof userEvent.setup>, name = "Standard result sheet") {
+  await user.click(await screen.findByRole("button", { name: `Actions for ${name}` }));
+}
 
 function mockTemplates(templates: ResultTemplateSummary[]) {
   vi.mocked(templatesApi.listResultTemplates).mockResolvedValue({
@@ -81,6 +86,26 @@ describe("ResultTemplatesPage", () => {
     expect(await screen.findByText("Template designer page")).toBeInTheDocument();
   });
 
+  it("collapses the row actions into a single Actions menu", async () => {
+    mockTemplates([TEMPLATE]);
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText("Standard result sheet");
+
+    expect(screen.queryByRole("menuitem", { name: "Delete" })).not.toBeInTheDocument();
+    await openRowMenu(user);
+
+    expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "Open designer",
+      "Change stage",
+      "Change school",
+      "Duplicate",
+      "Publish",
+      "Delete",
+    ]);
+  });
+
   it("Delete opens its confirmation dialog without navigating the row", async () => {
     mockTemplates([TEMPLATE]);
     const user = userEvent.setup();
@@ -88,13 +113,46 @@ describe("ResultTemplatesPage", () => {
     renderPage();
     await screen.findByText("Standard result sheet");
 
-    // The row itself is also a nav target (TableRow's `to`) - clicking the
-    // inline Delete action must stop propagation rather than also navigating away.
-    await user.click(screen.getByRole("button", { name: "Delete" }));
+    // The row itself is also a nav target (TableRow's `to`) - opening the menu and
+    // choosing Delete must stop propagation rather than also navigating away.
+    await openRowMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("Standard result sheet")).toBeInTheDocument();
     expect(screen.queryByText("Template designer page")).not.toBeInTheDocument();
+  });
+
+  it("Change stage opens a modal prefilled from the template and saves the chosen stage", async () => {
+    mockTemplates([TEMPLATE]);
+    vi.mocked(templatesApi.changeResultTemplateStage).mockResolvedValue({
+      ...TEMPLATE,
+      baseLevel: undefined,
+      layout: {
+        version: 1,
+        page: { paddingPx: 24, fontFamily: "Helvetica, Arial, sans-serif", fontSizePx: 12, color: "#000" },
+        rows: [],
+      },
+      createdBy: "user-1",
+      createdAt: "2026-01-01T00:00:00Z",
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText("Standard result sheet");
+
+    await openRowMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: "Change stage" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("Template stage");
+    expect(screen.getByLabelText("Stage")).toHaveValue("PRIMARY");
+
+    await user.selectOptions(screen.getByLabelText("Stage"), "Any stage sharing this mode");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(templatesApi.changeResultTemplateStage).toHaveBeenCalledWith("template-1", null);
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
   it("Duplicate opens a modal prefilled from the source and navigates to the new template on submit", async () => {
@@ -119,7 +177,8 @@ describe("ResultTemplatesPage", () => {
     renderPage();
     await screen.findByText("Standard result sheet");
 
-    await user.click(screen.getByRole("button", { name: "Duplicate" }));
+    await openRowMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: "Duplicate" }));
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveTextContent("Duplicate template");
@@ -145,7 +204,8 @@ describe("ResultTemplatesPage", () => {
     renderPage();
     await screen.findByText("Standard result sheet");
 
-    await user.click(screen.getByRole("button", { name: "Duplicate" }));
+    await openRowMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: "Duplicate" }));
     await screen.findByRole("dialog");
     await user.click(screen.getByRole("button", { name: "Duplicate and design" }));
 

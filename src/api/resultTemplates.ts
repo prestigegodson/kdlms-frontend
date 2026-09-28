@@ -115,6 +115,21 @@ export function bindResultTemplateSchool(templateId: string, schoolId: string | 
   });
 }
 
+/**
+ * Rebinds the stage (base level) this template is pinned to - `null` makes
+ * it usable against any stage sharing its mode again. A dedicated endpoint,
+ * same reasoning as `bindResultTemplateSchool`: `updateResultTemplate` is a
+ * full-replace of editable content and never touches `baseLevel`. No
+ * dependents guard on the backend, unlike school - a school's explicit
+ * per-level assignment never checks a template's stage.
+ */
+export function changeResultTemplateStage(templateId: string, baseLevel: string | null): Promise<ResultTemplateView> {
+  return apiFetch<ResultTemplateView>(`${BASE}/${templateId}/stage`, {
+    method: "PUT",
+    body: JSON.stringify({ baseLevel }),
+  });
+}
+
 export function publishResultTemplate(templateId: string): Promise<ResultTemplateView> {
   return apiFetch<ResultTemplateView>(`${BASE}/${templateId}/publish`, { method: "POST" });
 }
