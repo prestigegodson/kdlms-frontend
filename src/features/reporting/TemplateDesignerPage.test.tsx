@@ -140,7 +140,7 @@ describe("TemplateDesignerPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Table" }));
 
-    const cells = screen.getAllByPlaceholderText("Empty cell");
+    const cells = screen.getAllByPlaceholderText("Text or drop elements");
     expect(cells.length).toBeGreaterThan(0);
     await user.type(cells[0], "Hello");
     await user.tab();

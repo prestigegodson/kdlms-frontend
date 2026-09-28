@@ -147,9 +147,21 @@ export function useLayoutEditor(initial: ReportLayout) {
       if (selection?.type === "element") {
         const location = ops.findElementLocation(layout, selection.elementId);
         if (location) {
-          commit(ops.insertElement(layout, location.containerId, location.index + 1, element));
-          setSelection({ type: "element", elementId: element.id });
-          return;
+          // A BOX added while a cell's/box's own child is selected (or a
+          // BOX-in-BOX) can't land right there - `canPlace` says so - so it
+          // bubbles up to right after the owning TABLE/BOX instead of being
+          // silently dropped.
+          if (ops.canPlace(element.type, location.containerKind)) {
+            commit(ops.insertElement(layout, location.containerId, location.index + 1, element));
+            setSelection({ type: "element", elementId: element.id });
+            return;
+          }
+          const owner = ops.findContainerOwnerLocation(layout, location.containerId, location.containerKind);
+          if (owner) {
+            commit(ops.insertElement(layout, owner.containerId, owner.index + 1, element));
+            setSelection({ type: "element", elementId: element.id });
+            return;
+          }
         }
       }
       if (selection?.type === "row") {

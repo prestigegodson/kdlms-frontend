@@ -6,6 +6,7 @@ import { ElementPreview } from "@/features/reporting/components/designer/Element
 import { TableEditorGrid } from "@/features/reporting/components/designer/TableEditorGrid";
 import { primeDataTransfer, setCurrentDrag } from "@/features/reporting/components/designer/dragTypes";
 import type { LayoutElement } from "@/features/reporting/components/designer/layout";
+import type { ContainerKind } from "@/features/reporting/components/designer/layoutOps";
 import type { LayoutEditor } from "@/features/reporting/components/designer/useLayoutEditor";
 
 interface ElementCardProps {
@@ -14,7 +15,7 @@ interface ElementCardProps {
   siblingCount: number;
   containerId: string;
   editor: LayoutEditor;
-  insideBox: boolean;
+  containerKind: ContainerKind;
 }
 
 const ELEMENT_LABELS: Record<LayoutElement["type"], string> = {
@@ -34,6 +35,10 @@ export function ElementCard({ element, index, siblingCount, editor }: ElementCar
   const [inlineEditing, setInlineEditing] = useState(false);
 
   function handleDragStart(event: DragEvent<HTMLDivElement>) {
+    // A card nested inside a BOX or a TABLE cell sits inside its parent's own
+    // draggable div - without this, the bubbled event would let the parent's
+    // own onDragStart overwrite this element's drag payload with its own.
+    event.stopPropagation();
     setCurrentDrag({ kind: "move-element", elementId: element.id });
     primeDataTransfer(event.dataTransfer);
   }
@@ -97,7 +102,7 @@ export function ElementCard({ element, index, siblingCount, editor }: ElementCar
 
       {element.type === "BOX" ? (
         <div className="rounded-control border border-dashed border-slate-300 bg-slate-50/50 p-2">
-          <ElementList containerId={element.id} elements={element.elements} editor={editor} insideBox />
+          <ElementList containerId={element.id} elements={element.elements} editor={editor} containerKind="box" />
         </div>
       ) : element.type === "TABLE" ? (
         <TableEditorGrid element={element} editor={editor} onInlineEditingChange={setInlineEditing} />

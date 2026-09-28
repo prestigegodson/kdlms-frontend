@@ -1,6 +1,7 @@
 import {
   MAX_TABLE_COLUMNS,
   MAX_TABLE_ROWS,
+  type LayoutElement,
   type TableCell,
   type TableRow,
   type TableSpec,
@@ -43,18 +44,29 @@ export function newTableSpec(rowCount = 2, columnCount = 2): TableSpec {
 }
 
 /**
- * Re-fits a row's cells to `columnCount`, never discarding a cell's text
- * silently: a cell whose colspan would overrun the new column count is
- * clamped down to fit, a cell that no longer has room at all is dropped, and
- * a row left short is padded with empty cells - so the row's cells always
- * sum to exactly `columnCount`, the same invariant `ReportLayoutValidator`
- * enforces server-side.
+ * Re-fits a row's cells to `columnCount`, never discarding a cell's text or
+ * elements silently: a cell whose colspan would overrun the new column count
+ * is clamped down to fit, a cell that no longer has room at all is dropped
+ * but its own `elements` are carried onto the last surviving cell (the same
+ * "append the overflow, never lose it" rule `layoutOps.setColumnWidths` uses
+ * for a reduced row's columns), and a row left short is padded with empty
+ * cells - so the row's cells always sum to exactly `columnCount`, the same
+ * invariant `ReportLayoutValidator` enforces server-side. A dropped cell's
+ * plain `text` has no such rescue - it was already the pre-existing
+ * behaviour before cells could carry elements, and there's no single
+ * "surviving" text field to append it to.
  */
 function normalizeRow(cells: TableCell[], columnCount: number): TableCell[] {
   const result: TableCell[] = [];
   let spanned = 0;
+  let overflowElements: LayoutElement[] = [];
   for (const cell of cells) {
-    if (spanned >= columnCount) break;
+    if (spanned >= columnCount) {
+      if (cell.elements && cell.elements.length > 0) {
+        overflowElements = overflowElements.concat(cell.elements);
+      }
+      continue;
+    }
     const span = Math.min(cell.colSpan ?? 1, columnCount - spanned);
     result.push(span === (cell.colSpan ?? 1) ? cell : { ...cell, colSpan: span });
     spanned += span;
@@ -62,6 +74,10 @@ function normalizeRow(cells: TableCell[], columnCount: number): TableCell[] {
   while (spanned < columnCount) {
     result.push(emptyCell());
     spanned += 1;
+  }
+  if (overflowElements.length > 0 && result.length > 0) {
+    const last = result[result.length - 1];
+    result[result.length - 1] = { ...last, elements: [...(last.elements ?? []), ...overflowElements] };
   }
   return result;
 }
@@ -99,15 +115,22 @@ export function setCell(spec: TableSpec, rowIndex: number, cellIndex: number, pa
  * Merges a cell with the one immediately after it in the same row (by array
  * index, not visual grid column - a cell's own `colSpan` already accounts
  * for how many grid columns it occupies) into a single cell whose `colSpan`
- * is the sum of both. A no-op if there is no next cell to merge with.
+ * is the sum of both. Either cell's own `elements` (if any) are concatenated
+ * onto the merged cell, in order, rather than the second cell's silently
+ * disappearing. A no-op if there is no next cell to merge with.
  */
 export function mergeCellWithNext(spec: TableSpec, rowIndex: number, cellIndex: number): TableSpec {
   const row = spec.rows[rowIndex];
   if (!row || cellIndex >= row.cells.length - 1) return spec;
   const current = row.cells[cellIndex];
   const next = row.cells[cellIndex + 1];
+  const mergedElements = [...(current.elements ?? []), ...(next.elements ?? [])];
   const cells = row.cells.slice();
-  cells.splice(cellIndex, 2, { ...current, colSpan: (current.colSpan ?? 1) + (next.colSpan ?? 1) });
+  cells.splice(cellIndex, 2, {
+    ...current,
+    colSpan: (current.colSpan ?? 1) + (next.colSpan ?? 1),
+    elements: mergedElements.length > 0 ? mergedElements : undefined,
+  });
   return { ...spec, rows: spec.rows.map((r, i) => (i === rowIndex ? { ...row, cells } : r)) };
 }
 

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import * as tableOps from "@/features/reporting/components/designer/tableOps";
-import type { TableSpec } from "@/features/reporting/components/designer/layout";
+import type { LayoutElement, TableSpec } from "@/features/reporting/components/designer/layout";
+
+function textElement(id: string): LayoutElement {
+  return { id, type: "TEXT", text: id };
+}
 
 describe("tableOps", () => {
   it("newTableSpec seeds the requested rows and columns with empty cells", () => {
@@ -127,5 +131,36 @@ describe("tableOps", () => {
     const spec = tableOps.distributeWidthsEvenly(tableOps.newTableSpec(1, 2));
 
     expect(tableOps.clearColumnWidths(spec).columnWidthsPercent).toBeUndefined();
+  });
+
+  it("mergeCellWithNext concatenates both cells' own elements onto the merged cell, in order", () => {
+    let spec = tableOps.newTableSpec(1, 2);
+    spec = tableOps.setCell(spec, 0, 0, { elements: [textElement("a")] });
+    spec = tableOps.setCell(spec, 0, 1, { elements: [textElement("b")] });
+
+    const merged = tableOps.mergeCellWithNext(spec, 0, 0);
+
+    expect(merged.rows[0].cells).toHaveLength(1);
+    expect(merged.rows[0].cells[0].colSpan).toBe(2);
+    expect(merged.rows[0].cells[0].elements?.map((e) => e.id)).toEqual(["a", "b"]);
+  });
+
+  it("mergeCellWithNext leaves elements undefined when neither cell had any", () => {
+    const spec = tableOps.newTableSpec(1, 2);
+
+    const merged = tableOps.mergeCellWithNext(spec, 0, 0);
+
+    expect(merged.rows[0].cells[0].elements).toBeUndefined();
+  });
+
+  it("setColumnCount shrinking appends a dropped cell's elements onto the last surviving cell rather than discarding them", () => {
+    let spec = tableOps.newTableSpec(1, 3);
+    spec = tableOps.setCell(spec, 0, 1, { elements: [textElement("survivor-owned")] });
+    spec = tableOps.setCell(spec, 0, 2, { elements: [textElement("overflow")] });
+
+    const shrunk = tableOps.setColumnCount(spec, 2);
+
+    expect(shrunk.rows[0].cells).toHaveLength(2);
+    expect(shrunk.rows[0].cells[1].elements?.map((e) => e.id)).toEqual(["survivor-owned", "overflow"]);
   });
 });

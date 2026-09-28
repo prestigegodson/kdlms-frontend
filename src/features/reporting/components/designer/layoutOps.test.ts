@@ -1,7 +1,18 @@
 import { describe, expect, it } from "vitest";
 import * as ops from "@/features/reporting/components/designer/layoutOps";
 import { buildStandardResultSheetLayout } from "@/features/reporting/components/designer/starterLayouts";
-import type { LayoutElement, ReportLayout } from "@/features/reporting/components/designer/layout";
+import type { LayoutElement, ReportLayout, TableElement } from "@/features/reporting/components/designer/layout";
+
+function tableElement(id: string, rowId: string, cellCount = 1): TableElement {
+  return {
+    id,
+    type: "TABLE",
+    table: {
+      columnCount: cellCount,
+      rows: [{ id: rowId, cells: Array.from({ length: cellCount }, () => ({ text: "" })) }],
+    },
+  };
+}
 
 function blankLayout(): ReportLayout {
   return {
@@ -206,6 +217,87 @@ describe("layoutOps", () => {
     const layout = ops.setColumnWidths(withCondition, "row-1", [50, 50]);
 
     expect(layout.rows[0].condition).toEqual(condition);
+  });
+
+  it("insertElement adds an element into a TABLE cell", () => {
+    let layout = ops.insertElement(blankLayout(), "col-1", 0, tableElement("table-1", "row-a"));
+    const cellId = ops.cellContainerId("row-a", 0);
+
+    layout = ops.insertElement(layout, cellId, 0, textElement("el-1"));
+
+    const table = layout.rows[0].columns[0].elements[0] as TableElement;
+    expect(table.table.rows[0].cells[0].elements?.map((e) => e.id)).toEqual(["el-1"]);
+  });
+
+  it("findElementLocation locates an element nested inside a TABLE cell, reporting containerKind cell", () => {
+    let layout = ops.insertElement(blankLayout(), "col-1", 0, tableElement("table-1", "row-a"));
+    const cellId = ops.cellContainerId("row-a", 0);
+    layout = ops.insertElement(layout, cellId, 0, textElement("el-1"));
+
+    const location = ops.findElementLocation(layout, "el-1");
+
+    expect(location?.containerId).toBe(cellId);
+    expect(location?.containerKind).toBe("cell");
+  });
+
+  it("moveElement moves an element from a column into a TABLE cell", () => {
+    let layout = ops.insertElement(blankLayout(), "col-1", 0, tableElement("table-1", "row-a"));
+    layout = ops.insertElement(layout, "col-1", 1, textElement("el-1"));
+    const cellId = ops.cellContainerId("row-a", 0);
+
+    layout = ops.moveElement(layout, "el-1", cellId, 0);
+
+    expect(layout.rows[0].columns[0].elements.map((e) => e.id)).toEqual(["table-1"]);
+    const table = layout.rows[0].columns[0].elements[0] as TableElement;
+    expect(table.table.rows[0].cells[0].elements?.map((e) => e.id)).toEqual(["el-1"]);
+  });
+
+  it("removeElement drops an element that lives inside a TABLE cell", () => {
+    let layout = ops.insertElement(blankLayout(), "col-1", 0, tableElement("table-1", "row-a"));
+    const cellId = ops.cellContainerId("row-a", 0);
+    layout = ops.insertElement(layout, cellId, 0, textElement("el-1"));
+
+    layout = ops.removeElement(layout, "el-1");
+
+    const table = layout.rows[0].columns[0].elements[0] as TableElement;
+    expect(table.table.rows[0].cells[0].elements).toEqual([]);
+  });
+
+  it("canPlace forbids a BOX or TABLE inside a cell, and a BOX inside a BOX, but allows everything else", () => {
+    expect(ops.canPlace("BOX", "cell")).toBe(false);
+    expect(ops.canPlace("TABLE", "cell")).toBe(false);
+    expect(ops.canPlace("TEXT", "cell")).toBe(true);
+    expect(ops.canPlace("BLOCK", "cell")).toBe(true);
+    expect(ops.canPlace("BOX", "box")).toBe(false);
+    expect(ops.canPlace("TABLE", "box")).toBe(true);
+    expect(ops.canPlace("BOX", "column")).toBe(true);
+  });
+
+  it("findContainerOwnerLocation resolves a cell's owning TABLE, and a BOX's own location for a box container", () => {
+    let layout = ops.insertElement(blankLayout(), "col-1", 0, tableElement("table-1", "row-a"));
+    const cellId = ops.cellContainerId("row-a", 0);
+
+    const owner = ops.findContainerOwnerLocation(layout, cellId, "cell");
+    expect(owner?.element.id).toBe("table-1");
+    expect(owner?.containerId).toBe("col-1");
+
+    layout = ops.insertElement(blankLayout(), "col-1", 0, { id: "box-1", type: "BOX", elements: [] });
+    const boxOwner = ops.findContainerOwnerLocation(layout, "box-1", "box");
+    expect(boxOwner?.element.id).toBe("box-1");
+  });
+
+  it("a TABLE nested inside a BOX still resolves an element inside one of its cells", () => {
+    let layout = ops.insertElement(blankLayout(), "col-1", 0, {
+      id: "box-1",
+      type: "BOX",
+      elements: [tableElement("table-1", "row-a")],
+    });
+    const cellId = ops.cellContainerId("row-a", 0);
+    layout = ops.insertElement(layout, cellId, 0, textElement("el-1"));
+
+    const location = ops.findElementLocation(layout, "el-1");
+    expect(location?.containerKind).toBe("cell");
+    expect(location?.containerId).toBe(cellId);
   });
 
   it("the standard result sheet starter is a structurally sound layout tree", () => {

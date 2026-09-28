@@ -229,6 +229,74 @@ describe("validateLayout", () => {
     expect(errors.some((e) => e.includes("border style"))).toBe(true);
   });
 
+  it("accepts a table cell that carries a block and an image alongside its text", () => {
+    const table: TableSpec = {
+      columnCount: 1,
+      rows: [
+        {
+          id: "r1",
+          cells: [
+            {
+              text: "Label",
+              elements: [
+                { id: "sig-1", type: "BLOCK", block: "SIGNATURE_PRINCIPAL" },
+                { id: "img-1", type: "IMAGE", fileId: "11111111-1111-1111-1111-111111111111" },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [{ id: "el-1", type: "TABLE", table }] }] }]);
+
+    expect(isLayoutValid(layout, "NUMERIC")).toBe(true);
+  });
+
+  it("rejects a BOX inside a table cell", () => {
+    const table: TableSpec = {
+      columnCount: 1,
+      rows: [{ id: "r1", cells: [{ text: "", elements: [{ id: "box-1", type: "BOX", elements: [] }] }] }],
+    };
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [{ id: "el-1", type: "TABLE", table }] }] }]);
+
+    const errors = validateLayout(layout, "NUMERIC");
+    expect(errors.some((e) => e.includes("may not contain a BOX or TABLE"))).toBe(true);
+  });
+
+  it("rejects a nested TABLE inside a table cell", () => {
+    const innerTable: TableSpec = { columnCount: 1, rows: [{ id: "inner-r1", cells: [{ text: "x" }] }] };
+    const outerTable: TableSpec = {
+      columnCount: 1,
+      rows: [{ id: "r1", cells: [{ text: "", elements: [{ id: "el-2", type: "TABLE", table: innerTable }] }] }],
+    };
+    const layout = layoutWith([
+      { id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [{ id: "el-1", type: "TABLE", table: outerTable }] }] },
+    ]);
+
+    const errors = validateLayout(layout, "NUMERIC");
+    expect(errors.some((e) => e.includes("may not contain a BOX or TABLE"))).toBe(true);
+  });
+
+  it("rejects a table cell with more than 10 elements", () => {
+    const elements: LayoutElement[] = Array.from({ length: 11 }, (_, i) => ({ id: `div-${i}`, type: "DIVIDER" }));
+    const table: TableSpec = { columnCount: 1, rows: [{ id: "r1", cells: [{ text: "", elements }] }] };
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [{ id: "el-1", type: "TABLE", table }] }] }]);
+
+    const errors = validateLayout(layout, "NUMERIC");
+    expect(errors.some((e) => e.includes("at most 10 elements"))).toBe(true);
+  });
+
+  it("rejects a mode-mismatched block inside a table cell", () => {
+    const table: TableSpec = {
+      columnCount: 1,
+      rows: [{ id: "r1", cells: [{ text: "", elements: [{ id: "rt-1", type: "BLOCK", block: "RATING_TABLE" }] }] }],
+    };
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [{ id: "el-1", type: "TABLE", table }] }] }]);
+
+    const errors = validateLayout(layout, "NUMERIC");
+    expect(errors.some((e) => e.includes("QUALITATIVE template"))).toBe(true);
+  });
+
   it("rejects a table nested inside a table with a table on the wrong element type", () => {
     // A TABLE is mode-agnostic and may sit inside a BOX - accepted on both modes.
     const table: TableSpec = { columnCount: 1, rows: [{ id: "r1", cells: [{ text: "a" }] }] };

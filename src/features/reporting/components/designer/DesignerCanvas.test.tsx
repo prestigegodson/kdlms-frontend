@@ -1,9 +1,10 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { DesignerCanvas } from "@/features/reporting/components/designer/DesignerCanvas";
+import { setCurrentDrag } from "@/features/reporting/components/designer/dragTypes";
 import { useLayoutEditor } from "@/features/reporting/components/designer/useLayoutEditor";
-import type { ReportLayout } from "@/features/reporting/components/designer/layout";
+import type { ReportLayout, TableElement } from "@/features/reporting/components/designer/layout";
 
 function blankLayout(): ReportLayout {
   return {
@@ -18,16 +19,30 @@ function blankLayout(): ReportLayout {
   };
 }
 
-/** Renders `editor.canUndo`/`editor.selection` alongside the canvas so a test can assert on state `DesignerCanvas` itself exposes no way to read back. */
+/** Renders `editor.canUndo`/`editor.selection`/`editor.layout` alongside the canvas so a test can assert on state `DesignerCanvas` itself exposes no way to read back. */
 function Harness({ initial }: { initial?: ReportLayout } = {}) {
   const editor = useLayoutEditor(initial ?? blankLayout());
   return (
     <div>
       <span data-testid="can-undo">{String(editor.canUndo)}</span>
       <span data-testid="selection">{JSON.stringify(editor.selection)}</span>
+      <span data-testid="layout">{JSON.stringify(editor.layout)}</span>
       <DesignerCanvas editor={editor} />
     </div>
   );
+}
+
+function layoutWithTable(): ReportLayout {
+  const table: TableElement = {
+    id: "table-1",
+    type: "TABLE",
+    table: { columnCount: 1, rows: [{ id: "row-a", cells: [{ text: "" }] }] },
+  };
+  return {
+    version: 1,
+    page: { paddingPx: 24, fontFamily: "Helvetica, Arial, sans-serif", fontSizePx: 12, color: "#1a1a1a" },
+    rows: [{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [table] }] }],
+  };
 }
 
 function layoutWithConditionalRow(): ReportLayout {
@@ -139,5 +154,39 @@ describe("DesignerCanvas row selection", () => {
 
     expect(screen.getByTestId("selection")).toHaveTextContent('"type":"element"');
     expect(screen.getByTestId("selection")).not.toHaveTextContent('"type":"row"');
+  });
+});
+
+describe("DesignerCanvas table cell drops", () => {
+  afterEach(() => setCurrentDrag(null));
+
+  it("dropping a palette block onto a table cell adds it to that cell's own elements", () => {
+    render(<Harness initial={layoutWithTable()} />);
+    const cell = screen.getByPlaceholderText("Text or drop elements").closest("td")!;
+
+    setCurrentDrag({
+      kind: "new-block",
+      label: "Divider",
+      elementType: "DIVIDER",
+      factory: () => ({ id: "new-divider", type: "DIVIDER" }),
+    });
+    fireEvent.drop(cell);
+
+    expect(screen.getByTestId("layout")).toHaveTextContent("new-divider");
+  });
+
+  it("dropping a BOX onto a table cell is rejected - a cell may not contain a BOX or another TABLE", () => {
+    render(<Harness initial={layoutWithTable()} />);
+    const cell = screen.getByPlaceholderText("Text or drop elements").closest("td")!;
+
+    setCurrentDrag({
+      kind: "new-block",
+      label: "Box",
+      elementType: "BOX",
+      factory: () => ({ id: "new-box", type: "BOX", elements: [] }),
+    });
+    fireEvent.drop(cell);
+
+    expect(screen.getByTestId("layout")).not.toHaveTextContent("new-box");
   });
 });

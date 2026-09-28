@@ -1,11 +1,13 @@
 import {
   ALLOWED_FONT_FAMILIES,
+  CELL_FORBIDDEN_TYPES,
   CONDITION_MATCHES,
   LAYOUT_VERSION,
   type LayoutColumn,
   type LayoutElement,
   type LayoutRow,
   MAX_CONDITION_RULES,
+  MAX_TABLE_CELL_ELEMENTS,
   MAX_TABLE_CELL_TEXT_LENGTH,
   MAX_TABLE_COLUMNS,
   MAX_TABLE_ROWS,
@@ -213,13 +215,13 @@ function validateElement(element: LayoutElement, mode: AssessmentMode, insideBox
       }
       break;
     case "TABLE":
-      validateTable(element.table, errors);
+      validateTable(element.table, mode, errors);
       break;
   }
 }
 
-/** Mirrors backend `ReportLayoutValidator#validateTable` - a TABLE is mode-agnostic and may sit inside a BOX. */
-function validateTable(table: TableSpec, errors: string[]) {
+/** Mirrors backend `ReportLayoutValidator#validateTable` - a TABLE is mode-agnostic and may sit inside a BOX. `mode` is threaded down to each cell's own `elements` only. */
+function validateTable(table: TableSpec, mode: AssessmentMode, errors: string[]) {
   requireRange(table.columnCount, 1, MAX_TABLE_COLUMNS, "Table column count", errors);
   const columnCount = table.columnCount;
   validateTableColumnWidths(table.columnWidthsPercent, columnCount, errors);
@@ -242,7 +244,7 @@ function validateTable(table: TableSpec, errors: string[]) {
     errors.push(`A table may have at most ${MAX_TABLE_ROWS} rows.`);
   }
   for (const row of table.rows) {
-    validateTableRow(row.cells, columnCount, errors);
+    validateTableRow(row.cells, columnCount, mode, errors);
   }
 }
 
@@ -265,7 +267,7 @@ function validateTableColumnWidths(widths: number[] | undefined, columnCount: nu
   }
 }
 
-function validateTableRow(cells: TableCell[], columnCount: number, errors: string[]) {
+function validateTableRow(cells: TableCell[], columnCount: number, mode: AssessmentMode, errors: string[]) {
   if (!cells || cells.length === 0) {
     errors.push("Every table row requires at least one cell.");
     return;
@@ -286,10 +288,32 @@ function validateTableRow(cells: TableCell[], columnCount: number, errors: strin
       errors.push(`A table cell's colspan must be between 1 and ${columnCount}.`);
     }
     spanned += colSpan;
+    validateTableCellElements(cell.elements, mode, errors);
   }
   if (spanned !== columnCount) {
     errors.push(`A table row's cells must span exactly ${columnCount} columns (got ${spanned}).`);
   }
+}
+
+/**
+ * A cell's own elements - one level deep, like a BOX's, but narrower: a BOX
+ * or another TABLE is rejected outright (mirrors backend
+ * `ReportLayoutValidator#validateTableCellElements`) rather than merely
+ * disallowed one level further down, so a cell can never host a second grid
+ * or an indefinitely-nesting box.
+ */
+function validateTableCellElements(elements: LayoutElement[] | undefined, mode: AssessmentMode, errors: string[]) {
+  if (!elements || elements.length === 0) return;
+  if (elements.length > MAX_TABLE_CELL_ELEMENTS) {
+    errors.push(`A table cell may hold at most ${MAX_TABLE_CELL_ELEMENTS} elements.`);
+  }
+  for (const element of elements) {
+    if (CELL_FORBIDDEN_TYPES.has(element.type)) {
+      errors.push("A table cell may not contain a BOX or TABLE element.");
+      return;
+    }
+  }
+  validateElements(elements, mode, false, errors);
 }
 
 /** Only a block in `SIZABLE_BLOCKS` may carry a size - mirrors backend `ReportLayoutValidator#validateBlockSizing`. */

@@ -29,6 +29,8 @@ export const REPORT_BLOCK_NAMES = [
   "RATING_LEGEND",
   "SIGNATURE_CLASS_TEACHER",
   "SIGNATURE_PRINCIPAL",
+  "SIGNATURE_IMAGE_CLASS_TEACHER",
+  "SIGNATURE_IMAGE_PRINCIPAL",
   "REMARK_CLASS_TEACHER",
   "REMARK_PRINCIPAL",
   "AFFECTIVE_TRAITS",
@@ -113,6 +115,10 @@ export const MAX_TABLE_COLUMNS = 8;
 export const MAX_TABLE_CELL_TEXT_LENGTH = 500;
 export const MAX_TABLE_BORDER_WIDTH_PX = 8;
 export const MAX_TABLE_CELL_PADDING_PX = 24;
+/** Mirrors backend `ReportLayoutValidator#MAX_TABLE_CELL_ELEMENTS`. */
+export const MAX_TABLE_CELL_ELEMENTS = 10;
+/** A table cell may not host another grid or an indefinitely-nesting box - mirrors backend `ReportLayoutValidator#validateTableCellElements`. */
+export const CELL_FORBIDDEN_TYPES: ReadonlySet<LayoutElement["type"]> = new Set(["BOX", "TABLE"]);
 
 export interface TableCell {
   text: string;
@@ -121,6 +127,12 @@ export interface TableCell {
   backgroundColor?: string;
   /** Defaults to 1. Every row's cells must span exactly the table's `columnCount`. */
   colSpan?: number;
+  /**
+   * Elements the cell carries underneath its own `text` - one level deep,
+   * like a `BOX`'s own `elements`, but narrower: never a `BOX` or another
+   * `TABLE` (see `CELL_FORBIDDEN_TYPES`). Absent/empty means none.
+   */
+  elements?: LayoutElement[];
 }
 
 export interface TableRow {
@@ -259,6 +271,8 @@ export const BLOCK_LABELS: Record<ReportBlockName, string> = {
   RATING_LEGEND: "Rating legend",
   SIGNATURE_CLASS_TEACHER: "Class teacher signature",
   SIGNATURE_PRINCIPAL: "Principal signature",
+  SIGNATURE_IMAGE_CLASS_TEACHER: "Class teacher signature (image only)",
+  SIGNATURE_IMAGE_PRINCIPAL: "Principal signature (image only)",
   REMARK_CLASS_TEACHER: "Class teacher's remark",
   REMARK_PRINCIPAL: "Principal's remark",
   AFFECTIVE_TRAITS: "Affective disposition table",

@@ -1,5 +1,8 @@
-import { useRef, useState } from "react";
+import { type DragEvent, useRef, useState } from "react";
+import { ElementList } from "@/features/reporting/components/designer/ElementList";
+import { getCurrentDrag } from "@/features/reporting/components/designer/dragTypes";
 import type { LayoutElement, TableElement } from "@/features/reporting/components/designer/layout";
+import { canPlace, cellContainerId, findElementLocation } from "@/features/reporting/components/designer/layoutOps";
 import { setCell } from "@/features/reporting/components/designer/tableOps";
 import type { LayoutEditor } from "@/features/reporting/components/designer/useLayoutEditor";
 
@@ -15,7 +18,12 @@ interface TableEditorGridProps {
  * (see that class for the real, authoritative markup), with each cell an
  * inline-editable `<textarea>` - the one element whose canvas rendering
  * needs `editor` for live editing rather than the stateless `ElementPreview`
- * every other free-form element uses.
+ * every other free-form element uses. Underneath its own textarea, a cell
+ * also renders its own `ElementList` (`containerKind="cell"`) so a block,
+ * image, text, divider, or spacer can be dropped into it - never a BOX or
+ * another TABLE, enforced by `canPlace` at both the inner `ElementList` and
+ * this component's own cell-wide fallback drop target (`handleCellDrop`),
+ * which exists purely to widen the hit area for a small, mostly-empty cell.
  * <p>
  * A keystroke is held in local `drafts` state and only committed to the
  * layout on blur: `useLayoutEditor.commit` pushes an undo entry on every
@@ -60,6 +68,31 @@ export function TableEditorGrid({ element, editor, onInlineEditingChange }: Tabl
   const border = borderWidth === 0 || borderStyle === "none" ? "none" : `${borderWidth}px ${borderStyle} ${borderColor}`;
   const cellPadding = table.cellPaddingPx ?? 4;
 
+  /**
+   * A cell-wide fallback drop target, on top of the thin strips `ElementList`
+   * already renders between its own elements - a small cell is otherwise an
+   * awkward target to hit. Always appends at the end; `DropZone`'s own
+   * `handleDrop` calls `stopPropagation`, so this never double-processes a
+   * drop that actually landed on one of those inner strips.
+   */
+  function handleCellDrop(rowId: string, colIndex: number, elements: LayoutElement[]) {
+    return (event: DragEvent<HTMLElement>) => {
+      event.preventDefault();
+      const payload = getCurrentDrag();
+      if (!payload) return;
+      const containerId = cellContainerId(rowId, colIndex);
+      if (payload.kind === "new-block") {
+        if (!canPlace(payload.elementType, "cell")) return;
+        editor.insertElement(containerId, elements.length, payload.factory());
+      } else {
+        const dragged = findElementLocation(editor.layout, payload.elementId);
+        if (dragged && !canPlace(dragged.element.type, "cell")) return;
+        editor.moveElement(payload.elementId, containerId, elements.length);
+        editor.setSelection({ type: "element", elementId: payload.elementId });
+      }
+    };
+  }
+
   return (
     <table
       className="w-full table-fixed border-collapse text-xs"
@@ -80,6 +113,7 @@ export function TableEditorGrid({ element, editor, onInlineEditingChange }: Tabl
               const isHeader = Boolean(table.headerRow) && rowIndex === 0;
               const Tag = isHeader ? "th" : "td";
               const key = cellKey(rowIndex, colIndex);
+              const cellElements = cell.elements ?? [];
               return (
                 <Tag
                   key={key}
@@ -92,11 +126,16 @@ export function TableEditorGrid({ element, editor, onInlineEditingChange }: Tabl
                     fontWeight: isHeader || cell.bold ? 700 : 400,
                     backgroundColor: isHeader ? (table.headerBackgroundColor ?? "#f2f2f2") : cell.backgroundColor,
                   }}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                  }}
+                  onDrop={handleCellDrop(row.id, colIndex, cellElements)}
                 >
                   <textarea
                     rows={1}
                     value={valueAt(rowIndex, colIndex, cell.text)}
-                    placeholder="Empty cell"
+                    placeholder="Text or drop elements"
                     className="w-full resize-none border-0 bg-transparent p-0 text-xs leading-snug focus:outline-none"
                     onFocus={() => {
                       onInlineEditingChange(true);
@@ -122,6 +161,13 @@ export function TableEditorGrid({ element, editor, onInlineEditingChange }: Tabl
                     onMouseDown={(event) => event.stopPropagation()}
                     onDragStart={(event) => event.stopPropagation()}
                     onClick={(event) => event.stopPropagation()}
+                  />
+                  <ElementList
+                    containerId={cellContainerId(row.id, colIndex)}
+                    elements={cellElements}
+                    editor={editor}
+                    containerKind="cell"
+                    compact
                   />
                 </Tag>
               );

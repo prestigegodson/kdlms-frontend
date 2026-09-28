@@ -37,6 +37,16 @@ export const REPORT_BLOCKS: ReportBlockDefinition[] = [
   { id: "SIGNATURE_CLASS_TEACHER", label: "Class teacher signature", description: "Signature image and name" },
   { id: "SIGNATURE_PRINCIPAL", label: "Principal signature", description: "Signature image and name" },
   {
+    id: "SIGNATURE_IMAGE_CLASS_TEACHER",
+    label: "Class teacher signature (image only)",
+    description: "Just the signature image, no name beneath it",
+  },
+  {
+    id: "SIGNATURE_IMAGE_PRINCIPAL",
+    label: "Principal signature (image only)",
+    description: "Just the signature image, no name beneath it",
+  },
+  {
     id: "REMARK_CLASS_TEACHER",
     label: "Class teacher's remark",
     description: "The term's holistic remark - closes up when never written for a student",

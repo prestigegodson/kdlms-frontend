@@ -12,7 +12,7 @@ export function ColumnShell({ column, editor }: ColumnShellProps) {
   return (
     <div className="min-w-0 flex-1 rounded-control border border-slate-200 bg-white p-2" style={{ flexBasis: `${column.widthPercent}%` }}>
       <div className="mb-1 text-[10px] font-medium text-slate-400">{column.widthPercent}%</div>
-      <ElementList containerId={column.id} elements={column.elements} editor={editor} insideBox={false} />
+      <ElementList containerId={column.id} elements={column.elements} editor={editor} containerKind="column" />
     </div>
   );
 }
