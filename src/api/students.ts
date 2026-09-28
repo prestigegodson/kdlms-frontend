@@ -229,6 +229,8 @@ export function updateStudentMedical(
 
 export interface ListStudentsFilter {
   branchId?: string;
+  /** Narrows to every classroom of this level (the registry's "Class" filter) - ignored when `classId` is also set. */
+  levelId?: string;
   classId?: string;
   sessionId?: string;
   status?: StudentStatus;
@@ -244,6 +246,7 @@ export function listStudents(
 ): Promise<Page<StudentView>> {
   const params = new URLSearchParams({ page: String(page), size: String(size) });
   if (filter.branchId) params.set("branchId", filter.branchId);
+  if (filter.levelId) params.set("levelId", filter.levelId);
   if (filter.classId) params.set("classId", filter.classId);
   if (filter.sessionId) params.set("sessionId", filter.sessionId);
   if (filter.status) params.set("status", filter.status);

@@ -3,12 +3,14 @@ import { useNavigate, useSearchParams } from "react-router";
 import type { BranchView } from "@/api/branches";
 import { listClasses, type SchoolClassView } from "@/api/classes";
 import { ApiError } from "@/api/client";
+import type { LevelView } from "@/api/levels";
 import { listClassRoster, listMyClasses, type RosterStudentView, type TeacherClassView } from "@/api/me";
 import { listStudents, type StudentStatus, type StudentView } from "@/api/students";
 import type { Page } from "@/api/types";
 import { can } from "@/auth/permissions";
 import { ArrowLeftRight, GraduationCap, SlidersHorizontal, Users } from "lucide-react";
 import { useBranchFilter } from "@/features/branches/useBranchFilter";
+import { LevelSelect } from "@/features/academics/components/LevelSelect";
 import { RegisterStudentModal } from "@/features/students/components/RegisterStudentModal";
 import { StudentMedicalModal } from "@/features/students/components/StudentMedicalModal";
 import { Alert } from "@/components/ui/Alert";
@@ -26,6 +28,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { useAuthStore } from "@/stores/authStore";
+import { useLevelStore } from "@/stores/levelStore";
 import { formatAge } from "@/utils/date";
 
 const PAGE_SIZE = 20;
@@ -62,7 +65,10 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   const [searchParams] = useSearchParams();
 
   const { ready: branchReady, branches, branchId, defaultBranchId, setBranchId } = useBranchFilter();
+  const levels = useLevelStore((storeState) => storeState.levels);
+  const fetchLevels = useLevelStore((storeState) => storeState.fetchIfNeeded);
   const [classes, setClasses] = useState<SchoolClassView[] | null>(null);
+  const [levelId, setLevelId] = useState("");
   const [classId, setClassId] = useState("");
   const [status, setStatus] = useState<StudentStatus | "">("");
   // Seeded from the URL so NeedsAttentionCard's "no linked guardian" deep
@@ -81,13 +87,15 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
     listClasses(undefined, undefined, 0, 200)
       .then((page) => setClasses(page.content))
       .catch(() => setClasses([]));
-  }, []);
+    fetchLevels();
+  }, [fetchLevels]);
 
   function fetchStudents() {
     if (!branchReady) return;
     listStudents(
       {
         branchId: branchId || undefined,
+        levelId: levelId || undefined,
         classId: classId || undefined,
         status: status || undefined,
         hasGuardian: hasGuardian === "" ? undefined : hasGuardian === "true",
@@ -105,7 +113,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
       );
   }
 
-  useEffect(fetchStudents, [branchReady, branchId, classId, status, hasGuardian, query, pageIndex]);
+  useEffect(fetchStudents, [branchReady, branchId, levelId, classId, status, hasGuardian, query, pageIndex]);
 
   function load() {
     setState({ kind: "loading" });
@@ -120,15 +128,26 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   }
 
   const classOptions = (isBranchScoped ? classes?.filter((c) => c.branchId) : classes) ?? [];
+  // Narrows the Classroom dropdown to the selected Class (level) - the same
+  // cascade RegisterStudentModal's own pickers use.
+  const classOptionsInLevel = levelId ? classOptions.filter((c) => c.levelId === levelId) : classOptions;
   // The branch filter only counts as "active" when it deviates from its
   // main-branch default - otherwise every fresh load would show a "1" badge.
-  const activeFilterCount = [branchId !== defaultBranchId, classId, status, hasGuardian].filter(Boolean).length;
+  const activeFilterCount = [branchId !== defaultBranchId, levelId, classId, status, hasGuardian].filter(
+    Boolean,
+  ).length;
 
   function clearFilters() {
     resetToFirstPage(setBranchId)(defaultBranchId);
+    resetToFirstPage(setLevelId)("");
     resetToFirstPage(setClassId)("");
     resetToFirstPage(setStatus)("");
     resetToFirstPage(setHasGuardian)("");
+  }
+
+  function handleLevelChange(value: string) {
+    resetToFirstPage(setLevelId)(value);
+    resetToFirstPage(setClassId)("");
   }
 
   return (
@@ -181,14 +200,17 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
         </div>
       </StickySubHeader>
 
-      <div className="hidden gap-4 lg:grid lg:grid-cols-4">
+      <div className="hidden gap-4 lg:grid lg:grid-cols-5">
         <StudentFilterFields
           idPrefix="student-filter"
           isBranchScoped={isBranchScoped}
           branches={branches}
-          classOptions={classOptions}
+          levels={levels}
+          classOptions={classOptionsInLevel}
           branchId={branchId}
           onBranchChange={resetToFirstPage(setBranchId)}
+          levelId={levelId}
+          onLevelChange={handleLevelChange}
           classId={classId}
           onClassChange={resetToFirstPage(setClassId)}
           status={status}
@@ -205,9 +227,12 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
               idPrefix="student-filter-sheet"
               isBranchScoped={isBranchScoped}
               branches={branches}
-              classOptions={classOptions}
+              levels={levels}
+              classOptions={classOptionsInLevel}
               branchId={branchId}
               onBranchChange={resetToFirstPage(setBranchId)}
+              levelId={levelId}
+              onLevelChange={handleLevelChange}
               classId={classId}
               onClassChange={resetToFirstPage(setClassId)}
               status={status}
@@ -295,6 +320,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
       {createOpen && (
         <RegisterStudentModal
           branches={branches ?? []}
+          levels={levels}
           classes={classOptions}
           showBranchField={!isBranchScoped}
           onClose={() => setCreateOpen(false)}
@@ -313,9 +339,12 @@ interface StudentFilterFieldsProps {
   idPrefix: string;
   isBranchScoped: boolean;
   branches: BranchView[] | null;
+  levels: LevelView[];
   classOptions: SchoolClassView[];
   branchId: string;
   onBranchChange: (value: string) => void;
+  levelId: string;
+  onLevelChange: (value: string) => void;
   classId: string;
   onClassChange: (value: string) => void;
   status: StudentStatus | "";
@@ -324,14 +353,17 @@ interface StudentFilterFieldsProps {
   onHasGuardianChange: (value: HasGuardianFilter) => void;
 }
 
-/** Branch/Class/Status/Guardian filters - rendered once inline at `lg` and up, once inside the mobile Filters sheet. */
+/** Branch/Class/Classroom/Status/Guardian filters - rendered once inline at `lg` and up, once inside the mobile Filters sheet. */
 function StudentFilterFields({
   idPrefix,
   isBranchScoped,
   branches,
+  levels,
   classOptions,
   branchId,
   onBranchChange,
+  levelId,
+  onLevelChange,
   classId,
   onClassChange,
   status,
@@ -357,6 +389,15 @@ function StudentFilterFields({
           </Select>
         </FormField>
       )}
+      <FormField label="Class" htmlFor={`${idPrefix}-level`}>
+        <LevelSelect
+          id={`${idPrefix}-level`}
+          levels={levels}
+          value={levelId}
+          onChange={onLevelChange}
+          allOptionLabel="All classes"
+        />
+      </FormField>
       <FormField label="Classroom" htmlFor={`${idPrefix}-class`}>
         <Select id={`${idPrefix}-class`} value={classId} onChange={(event) => onClassChange(event.target.value)}>
           <option value="">All classrooms</option>

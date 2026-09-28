@@ -2,7 +2,9 @@ import { type FormEvent, useState } from "react";
 import type { BranchView } from "@/api/branches";
 import type { SchoolClassView } from "@/api/classes";
 import { ApiError } from "@/api/client";
+import type { LevelView } from "@/api/levels";
 import { registerStudent } from "@/api/students";
+import { LevelSelect } from "@/features/academics/components/LevelSelect";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -15,6 +17,7 @@ import { todayIso } from "@/utils/date";
 
 interface RegisterStudentModalProps {
   branches?: BranchView[];
+  levels?: LevelView[];
   classes?: SchoolClassView[];
   showBranchField?: boolean;
   /**
@@ -35,6 +38,7 @@ interface RegisterStudentModalProps {
  */
 export function RegisterStudentModal({
   branches = [],
+  levels = [],
   classes = [],
   showBranchField = false,
   fixedClass,
@@ -42,8 +46,10 @@ export function RegisterStudentModal({
   onSaved,
 }: RegisterStudentModalProps) {
   const [branchId, setBranchId] = useState(branches[0]?.id ?? "");
+  const [levelId, setLevelId] = useState("");
   const classesInBranch = showBranchField ? classes.filter((c) => c.branchId === branchId) : classes;
-  const [classId, setClassId] = useState(fixedClass?.id ?? classesInBranch[0]?.id ?? "");
+  const classesInLevel = levelId ? classesInBranch.filter((c) => c.levelId === levelId) : classesInBranch;
+  const [classId, setClassId] = useState(fixedClass?.id ?? "");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [otherName, setOtherName] = useState("");
@@ -110,17 +116,31 @@ export function RegisterStudentModal({
                 </Select>
               </FormField>
             )}
+            <FormField label="Class" htmlFor="register-level">
+              <LevelSelect
+                id="register-level"
+                required
+                activeOnly
+                levels={levels}
+                value={levelId}
+                onChange={(value) => {
+                  setLevelId(value);
+                  setClassId("");
+                }}
+              />
+            </FormField>
             <FormField label="Classroom" htmlFor="register-class">
               <Select
                 id="register-class"
                 required
+                disabled={!levelId}
                 value={classId}
                 onChange={(event) => setClassId(event.target.value)}
               >
                 <option value="" disabled>
-                  Select a classroom…
+                  {levelId ? "Select a classroom…" : "Select a class first…"}
                 </option>
-                {classesInBranch.map((schoolClass) => (
+                {classesInLevel.map((schoolClass) => (
                   <option key={schoolClass.id} value={schoolClass.id}>
                     {schoolClass.name}
                   </option>

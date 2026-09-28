@@ -6,12 +6,15 @@ import * as branchesApi from "@/api/branches";
 import type { BranchView } from "@/api/branches";
 import * as classesApi from "@/api/classes";
 import type { SchoolClassView } from "@/api/classes";
+import * as levelsApi from "@/api/levels";
+import type { LevelView } from "@/api/levels";
 import * as meApi from "@/api/me";
 import type { RosterStudentView, TeacherClassView } from "@/api/me";
 import * as studentsApi from "@/api/students";
 import type { StudentMedicalView, StudentView } from "@/api/students";
 import { StudentsPage } from "@/features/students/StudentsPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetLevelStore } from "@/stores/levelStore";
 
 vi.mock("@/api/students", async () => {
   const actual = await vi.importActual<typeof import("@/api/students")>("@/api/students");
@@ -28,12 +31,28 @@ vi.mock("@/api/classes", async () => {
   return { ...actual, listClasses: vi.fn() };
 });
 
+vi.mock("@/api/levels", async () => {
+  const actual = await vi.importActual<typeof import("@/api/levels")>("@/api/levels");
+  return { ...actual, listLevels: vi.fn() };
+});
+
 vi.mock("@/api/me", async () => {
   const actual = await vi.importActual<typeof import("@/api/me")>("@/api/me");
   return { ...actual, listMyClasses: vi.fn(), listClassRoster: vi.fn(), getStudentMedical: vi.fn() };
 });
 
 const MAIN_BRANCH: BranchView = { id: "branch-1", schoolId: "school-1", name: "Main Branch", main: true, status: "ACTIVE" };
+
+const PRIMARY_LEVEL: LevelView = {
+  id: "level-1",
+  baseLevel: "PRIMARY",
+  displayName: "Primary",
+  rank: 4,
+  status: "ACTIVE",
+  subjectCount: 0,
+  classCount: 1,
+  subjectGroupCount: 0,
+};
 
 const CLASS_VIEW: SchoolClassView = {
   id: "class-1",
@@ -109,6 +128,7 @@ function renderAsTeacher() {
 describe("StudentsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetLevelStore();
     vi.mocked(branchesApi.listBranches).mockResolvedValue({
       content: [MAIN_BRANCH],
       totalElements: 1,
@@ -123,6 +143,7 @@ describe("StudentsPage", () => {
       number: 0,
       size: 200,
     });
+    vi.mocked(levelsApi.listLevels).mockResolvedValue([PRIMARY_LEVEL]);
   });
 
   it("lists students with their class and status", async () => {
@@ -204,7 +225,7 @@ describe("StudentsPage", () => {
     );
   });
 
-  it("registers a student into the selected class", async () => {
+  it("registers a student into the selected class, requiring Class before Classroom", async () => {
     mockStudents([]);
     vi.mocked(studentsApi.registerStudent).mockResolvedValue(STUDENT_VIEW);
     const user = userEvent.setup();
@@ -215,6 +236,14 @@ describe("StudentsPage", () => {
     await user.click(screen.getByRole("button", { name: "Register student" }));
     const dialog = await screen.findByRole("dialog");
 
+    // Classroom stays disabled, with nothing preselected, until a Class is picked.
+    expect(within(dialog).getByLabelText("Classroom")).toBeDisabled();
+    expect(within(dialog).getByLabelText("Classroom")).toHaveValue("");
+
+    await user.selectOptions(within(dialog).getByLabelText("Class"), "Primary");
+    expect(within(dialog).getByLabelText("Classroom")).toBeEnabled();
+    await user.selectOptions(within(dialog).getByLabelText("Classroom"), "Primary 1");
+
     await user.type(within(dialog).getByLabelText("First name"), "Ada");
     await user.type(within(dialog).getByLabelText("Last name"), "Obi");
     await user.click(within(dialog).getByRole("button", { name: "Register student" }));
@@ -222,6 +251,23 @@ describe("StudentsPage", () => {
     expect(studentsApi.registerStudent).toHaveBeenCalledWith(
       expect.objectContaining({ branchId: "branch-1", classId: "class-1", firstName: "Ada", lastName: "Obi" }),
     );
+  });
+
+  it("filters students by Class, narrowing the Classroom dropdown to that level", async () => {
+    mockStudents([STUDENT_VIEW]);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Ada Obi");
+
+    await user.selectOptions(screen.getByLabelText("Class"), "Primary");
+
+    expect(studentsApi.listStudents).toHaveBeenCalledWith(
+      expect.objectContaining({ levelId: "level-1" }),
+      0,
+      expect.any(Number),
+    );
+    expect(within(screen.getByLabelText("Classroom")).getAllByRole("option")).toHaveLength(2);
   });
 
   it("shows a read-only roster for a TEACHER instead of the admin registry", async () => {
