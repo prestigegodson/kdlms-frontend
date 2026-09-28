@@ -36,9 +36,9 @@ export function ClassReportExportCard({ classId, termId, scope }: ClassReportExp
         <FileArchive className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
         <div className="min-w-0 flex-1 space-y-3">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">Class reports</h2>
+            <h2 className="text-sm font-semibold text-slate-900">Classroom reports</h2>
             <p className="text-sm text-slate-500">
-              Render every student&apos;s report for this class and download them as one ZIP file.
+              Render every student&apos;s report for this classroom and download them as one ZIP file.
             </p>
           </div>
 
@@ -53,7 +53,7 @@ export function ClassReportExportCard({ classId, termId, scope }: ClassReportExp
 
           {!loading && !job && (
             <Button variant="accent" onClick={generate} loading={generating}>
-              Generate class reports
+              Generate classroom reports
             </Button>
           )}
 

@@ -27,6 +27,7 @@ const GROUP_LABELS: Record<string, string> = {
   attendance: "Attendance",
   teacher: "Signatures",
   principal: "Signatures",
+  head: "Remarks",
   remark: "Remarks",
 };
 

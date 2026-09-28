@@ -100,7 +100,7 @@ function renderAsSchoolAdmin() {
   const router = createMemoryRouter(
     [
       { path: "/", element: <ClassesPage /> },
-      { path: "/school/academics/classes/:classId", element: <div>Class detail page</div> },
+      { path: "/school/academics/classrooms/:classId", element: <div>Class detail page</div> },
     ],
     { initialEntries: ["/"] },
   );
@@ -161,9 +161,9 @@ describe("ClassesPage", () => {
     const user = userEvent.setup();
 
     renderAsSchoolAdmin();
-    await screen.findByText(/No classes yet/);
+    await screen.findByText(/No classrooms yet/);
 
-    await user.click(screen.getByRole("button", { name: "Add class" }));
+    await user.click(screen.getByRole("button", { name: "Add classroom" }));
     const dialog = await screen.findByRole("dialog");
 
     await user.type(within(dialog).getByLabelText("Name"), "Little Star 1");

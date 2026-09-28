@@ -42,7 +42,7 @@ function baseLevelLabel(baseLevel: string): string {
 function describeUsage(level: LevelView): string {
   const parts: string[] = [];
   if (level.subjectCount > 0) parts.push(`${level.subjectCount} subject${level.subjectCount === 1 ? "" : "s"}`);
-  if (level.classCount > 0) parts.push(`${level.classCount} class${level.classCount === 1 ? "" : "es"}`);
+  if (level.classCount > 0) parts.push(`${level.classCount} classroom${level.classCount === 1 ? "" : "s"}`);
   if (level.subjectGroupCount > 0) {
     parts.push(`${level.subjectGroupCount} group${level.subjectGroupCount === 1 ? "" : "s"}`);
   }
@@ -104,7 +104,7 @@ export function LevelsPage() {
       await reorderLevels({ levelIds: reordered.map((level) => level.id) });
       await refresh();
     } catch (error) {
-      setActionError(error instanceof ApiError ? error.message : "Failed to reorder levels");
+      setActionError(error instanceof ApiError ? error.message : "Failed to reorder classes");
     } finally {
       setReordering(false);
     }
@@ -119,24 +119,24 @@ export function LevelsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Levels"
+        title="Classes"
         description="The schooling stages your school uses, in promotion order."
-        actions={canManage && <Button variant="accent" onClick={() => setCreateOpen(true)}>Add level</Button>}
+        actions={canManage && <Button variant="accent" onClick={() => setCreateOpen(true)}>Add class</Button>}
       />
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
       {status !== "loaded" && status !== "error" && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading levels…
+          <Spinner /> Loading classes…
         </div>
       )}
-      {status === "error" && <Alert variant="error">Failed to load levels</Alert>}
+      {status === "error" && <Alert variant="error">Failed to load classes</Alert>}
       {status === "loaded" && levels.length === 0 && (
         <EmptyState
           icon={Layers}
-          title="No levels yet"
-          description="Add a level to start building your subject and class catalogue."
+          title="No classes yet"
+          description="Add a class to start building your subject and classroom catalogue."
         />
       )}
       {status === "loaded" && levels.length > 0 && (
@@ -208,7 +208,7 @@ export function LevelsPage() {
                         disabled={level.subjectCount + level.classCount + level.subjectGroupCount > 0}
                         title={
                           level.subjectCount + level.classCount + level.subjectGroupCount > 0
-                            ? "Move or delete what this level still holds before deleting it."
+                            ? "Move or delete what this class still holds before deleting it."
                             : undefined
                         }
                         onClick={() => setDeleting(level)}
@@ -226,7 +226,7 @@ export function LevelsPage() {
 
       {createOpen && (
         <LevelFormModal
-          title="Add level"
+          title="Add class"
           onClose={() => setCreateOpen(false)}
           onSubmit={async (values) => {
             await createLevel({ baseLevel: values.baseLevel ?? BASE_LEVEL_OPTIONS[0].value, displayName: values.displayName });
@@ -240,7 +240,7 @@ export function LevelsPage() {
       {editing && (
         <LevelFormModal
           key={editing.id}
-          title="Rename level"
+          title="Rename class"
           initial={editing}
           onClose={() => setEditing(null)}
           onSubmit={async (values) => {
@@ -254,7 +254,7 @@ export function LevelsPage() {
       )}
       {deleting && (
         <ConfirmDialog
-          title="Delete this level?"
+          title="Delete this class?"
           message={
             <>
               <strong>{deleting.displayName}</strong> will be removed. This can't be undone - you'd need to add it
@@ -299,7 +299,7 @@ function LevelFormModal({ title, initial, onClose, onSubmit, onSaved }: LevelFor
       await onSubmit({ baseLevel: initial ? undefined : baseLevel, displayName });
       onSaved();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to save level");
+      setError(err instanceof ApiError ? err.message : "Failed to save class");
     } finally {
       setSubmitting(false);
     }
@@ -319,7 +319,7 @@ function LevelFormModal({ title, initial, onClose, onSubmit, onSaved }: LevelFor
               ))}
             </Select>
             <p className="mt-1 text-xs text-slate-500">
-              Sets the grading style this level starts with. It can't be changed later.
+              Sets the grading style this class starts with. It can't be changed later.
             </p>
           </FormField>
         )}

@@ -96,13 +96,13 @@ export function TeacherEntryPanel({ initialClassId, initialSubjectId }: TeacherE
     <div className="space-y-6">
       {classes === null && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading your classes…
+          <Spinner /> Loading your classrooms…
         </div>
       )}
       {classes !== null && classes.length === 0 && (
         <EmptyState
           icon={ClipboardCheck}
-          title="No classes assigned yet"
+          title="No classrooms assigned yet"
           description="You'll see this page once you're assigned as a class or subject teacher."
         />
       )}

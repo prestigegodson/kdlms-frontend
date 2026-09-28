@@ -13,11 +13,11 @@ interface BillExportCardProps {
 }
 
 const COPY = {
-  heading: "Level bills",
+  heading: "Class bills",
   description:
-    "Render every bill for students at this level — advance bills for those not yet promoted, plus ordinary " +
+    "Render every bill for students at this class — advance bills for those not yet promoted, plus ordinary " +
     "bills for anyone already promoted into this session — and download them as one ZIP file.",
-  generate: "Generate level bills",
+  generate: "Generate class bills",
 } as const;
 
 /**

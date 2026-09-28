@@ -145,9 +145,30 @@ describe("AdminResultsPanel", () => {
       termId: "term-1",
       classTeacherEditable: false,
       principalRemarkEditable: true,
+      headRemarkTitle: "Principal",
       traitCategories: [],
       rows: [],
     });
+  });
+
+  it("heads the remarks composer with the resolved commenter's title, not a hard-coded 'Principal'", async () => {
+    const user = userEvent.setup();
+    vi.mocked(assessmentsApi.getPublicationStatus).mockResolvedValue({ published: false });
+    vi.mocked(assessmentsApi.getRemarksSheet).mockResolvedValue({
+      classId: "class-1",
+      className: "Primary 1A",
+      termId: "term-1",
+      classTeacherEditable: false,
+      principalRemarkEditable: true,
+      headRemarkTitle: "Head of Primary",
+      traitCategories: [],
+      rows: [],
+    });
+
+    renderPanel();
+    await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
+
+    expect(await screen.findByText("Head of Primary's remarks")).toBeInTheDocument();
   });
 
   it("defaults to End of term, then refetches the broadsheet and publication status with MIDTERM on toggle", async () => {

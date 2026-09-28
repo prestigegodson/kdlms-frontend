@@ -75,7 +75,7 @@ export function SubjectTeachersPanel({
     return (
       <EmptyState
         icon={BookOpen}
-        title="No subjects for this level yet"
+        title="No subjects for this class yet"
         description="Add subjects on the Subjects page before assigning teachers."
       />
     );
@@ -158,7 +158,7 @@ export function SubjectTeachersPanel({
           title="Remove this subject teacher?"
           message={
             <>
-              {removing.teacherName} will no longer teach {removing.subjectName} in this class.
+              {removing.teacherName} will no longer teach {removing.subjectName} in this classroom.
             </>
           }
           confirmLabel="Remove"
@@ -199,7 +199,7 @@ function SubjectRegistrationModal({ classId, subject, onClose }: SubjectRegistra
         setView(data);
         setSelected(new Set(data.students.filter((student) => student.registered).map((student) => student.studentId)));
       })
-      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Failed to load the class roster"));
+      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Failed to load the classroom roster"));
   }, [classId, subject.id]);
 
   function toggle(studentId: string) {
@@ -238,7 +238,7 @@ function SubjectRegistrationModal({ classId, subject, onClose }: SubjectRegistra
         )}
         {view !== null && view.students.length === 0 && (
           <EmptyState
-            title="No students on this class's current roster"
+            title="No students on this classroom's current roster"
             description="Nothing to register yet."
           />
         )}

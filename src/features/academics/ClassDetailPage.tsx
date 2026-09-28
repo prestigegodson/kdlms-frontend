@@ -92,7 +92,7 @@ export function ClassDetailPage() {
       .catch((error: unknown) =>
         setState({
           kind: "error",
-          message: error instanceof ApiError ? error.message : "Failed to load class",
+          message: error instanceof ApiError ? error.message : "Failed to load classroom",
         }),
       );
   }
@@ -107,7 +107,7 @@ export function ClassDetailPage() {
     listClassStudents(classId)
       .then(setRoster)
       .catch((error: unknown) =>
-        setActionError(error instanceof ApiError ? error.message : "Failed to load the class roster"),
+        setActionError(error instanceof ApiError ? error.message : "Failed to load the classroom roster"),
       );
   }
 
@@ -196,7 +196,7 @@ export function ClassDetailPage() {
   if (state.kind === "loading") {
     return (
       <div className="space-y-6">
-        <PageHeader title="Class details" backTo="/school/academics/classes" />
+        <PageHeader title="Classroom details" backTo="/school/academics/classrooms" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
@@ -209,7 +209,7 @@ export function ClassDetailPage() {
   if (state.kind === "error") {
     return (
       <div className="space-y-6">
-        <PageHeader title="Class details" backTo="/school/academics/classes" />
+        <PageHeader title="Classroom details" backTo="/school/academics/classrooms" />
         <Alert variant="error">{state.message}</Alert>
       </div>
     );
@@ -231,7 +231,7 @@ export function ClassDetailPage() {
       <PageHeader
         title={schoolClass.name}
         description={description}
-        backTo="/school/academics/classes"
+        backTo="/school/academics/classrooms"
         actions={
           <Badge variant={schoolClass.status === "ACTIVE" ? "success" : "neutral"}>
             {schoolClass.status}
@@ -369,7 +369,7 @@ export function ClassDetailPage() {
       {unassigningTeacher && (
         <ConfirmDialog
           title="Unassign the class teacher?"
-          message={<>{schoolClass.classTeacherName} will no longer be this class's teacher.</>}
+          message={<>{schoolClass.classTeacherName} will no longer be this classroom's teacher.</>}
           confirmLabel="Unassign"
           variant="danger"
           onConfirm={confirmUnassignClassTeacher}

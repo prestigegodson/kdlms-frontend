@@ -227,9 +227,9 @@ export function TransportTab() {
       <Card>
         <h2 className="mb-4 font-display text-lg font-semibold text-slate-900">Riders</h2>
 
-        <FormField label="Class" htmlFor="billing-transport-class" className="mb-4 max-w-sm">
+        <FormField label="Classroom" htmlFor="billing-transport-class" className="mb-4 max-w-sm">
           <Select id="billing-transport-class" value={classId} onChange={(event) => setClassId(event.target.value)}>
-            <option value="">Select a class…</option>
+            <option value="">Select a classroom…</option>
             {classes.map((schoolClass) => (
               <option key={schoolClass.id} value={schoolClass.id}>
                 {schoolClass.name}
@@ -241,11 +241,11 @@ export function TransportTab() {
         {ridersError && <Alert variant="error">{ridersError}</Alert>}
 
         {!classId || !sessionId ? (
-          <EmptyState title="Select a class" description="Pick a class to assign its riders." />
+          <EmptyState title="Select a classroom" description="Pick a classroom to assign its riders." />
         ) : !ridersView ? (
           <Skeleton className="h-10 w-full" />
         ) : ridersView.students.length === 0 ? (
-          <EmptyState title="No students" description="This class has no active roster for this session." />
+          <EmptyState title="No students" description="This classroom has no active roster for this session." />
         ) : ridersView.routes.length === 0 ? (
           <EmptyState title="No routes yet" description="Add a route above before assigning riders." />
         ) : (

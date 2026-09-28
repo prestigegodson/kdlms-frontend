@@ -1,4 +1,4 @@
-import { createBrowserRouter, type RouteObject } from "react-router";
+import { createBrowserRouter, Navigate, useParams, type RouteObject } from "react-router";
 import { NotFoundPage } from "@/components/ui/NotFoundPage";
 import { RouteErrorBoundary } from "@/components/ui/RouteErrorBoundary";
 import { ClassDetailPage } from "@/features/academics/ClassDetailPage";
@@ -90,6 +90,12 @@ import { WardLessonNotesRoute } from "@/routes/WardLessonNotesRoute";
  * `createBrowserRouter` instance can't start at an arbitrary path and
  * leaks state between test runs.
  */
+/** Old class-detail URL (`academics/classes/:classId`, pre-rename) redirects to the new classroom-detail URL. */
+function RedirectOldClassDetailUrl() {
+  const { classId } = useParams();
+  return <Navigate to={`/school/academics/classrooms/${classId}`} replace />;
+}
+
 export const routes: RouteObject[] = [
   {
     element: <RootLayout />,
@@ -186,16 +192,18 @@ export const routes: RouteObject[] = [
             ),
           },
           {
-            path: "academics/levels",
+            path: "academics/classes",
             element: (
               <RequireRole roles={["SCHOOL_ADMIN"]}>
                 <LevelsPage />
               </RequireRole>
             ),
           },
+          { path: "academics/levels", element: <Navigate to="/school/academics/classes" replace /> },
           { path: "academics/subjects", element: <SubjectsPage /> },
-          { path: "academics/classes", element: <ClassesPage /> },
-          { path: "academics/classes/:classId", element: <ClassDetailPage /> },
+          { path: "academics/classrooms", element: <ClassesPage /> },
+          { path: "academics/classrooms/:classId", element: <ClassDetailPage /> },
+          { path: "academics/classes/:classId", element: <RedirectOldClassDetailUrl /> },
           {
             path: "academics/teachers",
             element: (

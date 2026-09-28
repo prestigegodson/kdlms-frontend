@@ -269,7 +269,7 @@ export function ResultTemplatesPage() {
       {deleting && (
         <ConfirmDialog
           title="Delete this template?"
-          message={`"${deleting.name}" will be permanently deleted. This only works while no school has it assigned to a level.`}
+          message={`"${deleting.name}" will be permanently deleted. This only works while no school has it assigned to a class.`}
           confirmLabel="Delete"
           variant="danger"
           onClose={() => setDeleting(null)}
@@ -401,7 +401,7 @@ function CreateTemplateModal({ schools, onClose, onCreated }: CreateTemplateModa
         </FormField>
         <p className="text-xs text-slate-500">
           The mode and stage can't be changed after creation - a different shape needs a new template. The school it's
-          available to can be changed later, but only while no school has it assigned to a level. The starter layout
+          available to can be changed later, but only while no school has it assigned to a class. The starter layout
           is just a starting point on the canvas - rearrange or clear it freely.
         </p>
         <div className="flex justify-end gap-2">

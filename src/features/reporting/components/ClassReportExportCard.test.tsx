@@ -49,7 +49,7 @@ describe("ClassReportExportCard", () => {
     vi.mocked(reportsApi.getClassReportExport).mockResolvedValue(null);
     render(<ClassReportExportCard classId="class-1" termId="term-1" scope="TERM" />);
 
-    expect(await screen.findByRole("button", { name: "Generate class reports" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Generate classroom reports" })).toBeInTheDocument();
   });
 
   it("creates a job and shows the running progress bar once RUNNING", async () => {
@@ -64,7 +64,7 @@ describe("ClassReportExportCard", () => {
     });
     render(<ClassReportExportCard classId="class-1" termId="term-1" scope="TERM" />);
 
-    await user.click(await screen.findByRole("button", { name: "Generate class reports" }));
+    await user.click(await screen.findByRole("button", { name: "Generate classroom reports" }));
     expect(reportsApi.createClassReportExport).toHaveBeenCalledWith("class-1", "term-1", "TERM");
     expect(await screen.findByText("Queued…")).toBeInTheDocument();
 

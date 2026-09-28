@@ -252,7 +252,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
                   <TableHeaderCell>Name</TableHeaderCell>
                   <TableHeaderCell>Admission no.</TableHeaderCell>
                   <TableHeaderCell>Age</TableHeaderCell>
-                  <TableHeaderCell>Class</TableHeaderCell>
+                  <TableHeaderCell>Classroom</TableHeaderCell>
                   <TableHeaderCell>Status</TableHeaderCell>
                   <TableHeaderCell></TableHeaderCell>
                 </TableRow>
@@ -269,7 +269,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
                     </TableCell>
                     <TableCell label="Admission no.">{student.admissionNumber}</TableCell>
                     <TableCell label="Age">{formatAge(student.dateOfBirth)}</TableCell>
-                    <TableCell label="Class">{student.currentClassName ?? "—"}</TableCell>
+                    <TableCell label="Classroom">{student.currentClassName ?? "—"}</TableCell>
                     <TableCell label="Status">
                       <Badge
                         variant={
@@ -357,9 +357,9 @@ function StudentFilterFields({
           </Select>
         </FormField>
       )}
-      <FormField label="Class" htmlFor={`${idPrefix}-class`}>
+      <FormField label="Classroom" htmlFor={`${idPrefix}-class`}>
         <Select id={`${idPrefix}-class`} value={classId} onChange={(event) => onClassChange(event.target.value)}>
-          <option value="">All classes</option>
+          <option value="">All classrooms</option>
           {classOptions.map((schoolClass) => (
             <option key={schoolClass.id} value={schoolClass.id}>
               {schoolClass.name}
@@ -431,12 +431,12 @@ function TeacherRoster() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Students" description="The current roster for a class you teach." />
+      <PageHeader title="Students" description="The current roster for a classroom you teach." />
 
       {myClasses !== null && myClasses.length === 0 && (
         <EmptyState
           icon={Users}
-          title="No classes yet"
+          title="No classrooms yet"
           description="You have no class-teacher or subject-teacher assignments yet."
         />
       )}
@@ -444,7 +444,7 @@ function TeacherRoster() {
       {myClasses !== null && myClasses.length > 0 && (
         <StickySubHeader>
           <FormField
-            label="Class"
+            label="Classroom"
             htmlFor="roster-class"
             className="min-w-0 flex-1 lg:max-w-xs"
             labelClassName="sr-only lg:not-sr-only"
@@ -467,7 +467,7 @@ function TeacherRoster() {
       )}
       {classId && state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {classId && state.kind === "loaded" && state.roster.length === 0 && (
-        <EmptyState icon={GraduationCap} title="No students yet" description="No one is enrolled in this class this session." />
+        <EmptyState icon={GraduationCap} title="No students yet" description="No one is enrolled in this classroom this session." />
       )}
       {classId && state.kind === "loaded" && state.roster.length > 0 && (
         <Card className="p-0">

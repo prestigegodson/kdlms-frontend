@@ -46,7 +46,7 @@ export function LevelTemplateTable({ levels, onAssign, onClear, onPreview, edita
     <Table>
       <TableHead>
         <TableRow>
-          <TableHeaderCell>Level</TableHeaderCell>
+          <TableHeaderCell>Class</TableHeaderCell>
           <TableHeaderCell>Mode</TableHeaderCell>
           <TableHeaderCell>Template</TableHeaderCell>
           <TableHeaderCell>Preview</TableHeaderCell>
@@ -55,7 +55,7 @@ export function LevelTemplateTable({ levels, onAssign, onClear, onPreview, edita
       <TableBody>
         {levels.map((level) => (
           <TableRow key={level.levelId}>
-            <TableCell label="Level" className="font-medium text-slate-900">
+            <TableCell label="Class" className="font-medium text-slate-900">
               {level.levelName}
             </TableCell>
             <TableCell label="Mode">

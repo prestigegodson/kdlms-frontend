@@ -56,7 +56,7 @@ export function TemplateAvailabilityModal({ template, schools, onClose, onSaved 
           />
         </FormField>
         <p className="text-xs text-slate-500">
-          Locked once a school has assigned this template to a level.
+          Locked once a school has assigned this template to a class.
         </p>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

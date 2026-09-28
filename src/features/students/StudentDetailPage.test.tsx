@@ -361,7 +361,7 @@ describe("StudentDetailPage", () => {
     renderAsSchoolAdmin();
     await screen.findByRole("heading", { name: "Ada Obi" });
 
-    await user.click(screen.getByRole("button", { name: "Transfer class" }));
+    await user.click(screen.getByRole("button", { name: "Transfer classroom" }));
     const dialog = await screen.findByRole("dialog");
 
     expect(classesApi.listClasses).toHaveBeenCalledWith("branch-1", "level-primary", 0, 200);

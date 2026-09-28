@@ -182,7 +182,7 @@ export function ProspectiveBillTab() {
       return null;
     }
     if (!levelId || !termId) {
-      setActionError("Select a level and a term.");
+      setActionError("Select a class and a term.");
       return null;
     }
 
@@ -303,8 +303,8 @@ export function ProspectiveBillTab() {
         branchReady && (
           <EmptyState
             icon={Receipt}
-            title="Select a level and a term"
-            description="Pick the branch, level, session and term to quote fees for, as though this child were a brand-new admission."
+            title="Select a class and a term"
+            description="Pick the branch, class, session and term to quote fees for, as though this child were a brand-new admission."
           />
         )
       ) : (

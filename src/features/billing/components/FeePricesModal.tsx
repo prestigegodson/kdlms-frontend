@@ -178,7 +178,7 @@ export function FeePricesModal({
 
         {applicableLevels.length === 0 ? (
           <Alert variant="warning">
-            This fee has no active levels to price - add one to it from the Fees tab first.
+            This fee has no active classes to price - add one to it from the Fees tab first.
           </Alert>
         ) : (
           <>

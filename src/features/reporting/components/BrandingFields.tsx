@@ -37,6 +37,10 @@ export function BrandingFields({ values, onChange }: BrandingFieldsProps) {
         fileId={values.principalSignatureFileId}
         onChange={(id) => set("principalSignatureFileId", id)}
       />
+      <p className="text-xs text-slate-500">
+        Used as the default commenter for any class with no commenter set below - e.g. "Head of Nursery" instead of
+        "Principal" for schools with no principal.
+      </p>
     </div>
   );
 }

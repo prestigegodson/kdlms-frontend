@@ -60,6 +60,7 @@ const EDITABLE_SHEET: RemarksSheetView = {
   termId: "term-1",
   classTeacherEditable: true,
   principalRemarkEditable: false,
+  headRemarkTitle: "Principal",
   traitCategories: [],
   rows: [
     {

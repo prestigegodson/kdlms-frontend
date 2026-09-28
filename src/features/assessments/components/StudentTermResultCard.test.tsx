@@ -16,6 +16,7 @@ const TERM_RESULT: StudentTermResultView = {
   total: 88,
   average: 88,
   position: 1,
+  principalRemarkTitle: "Principal",
   traits: [],
 };
 
@@ -42,6 +43,18 @@ describe("StudentTermResultCard", () => {
     expect(screen.getByText("18 / 20")).toBeInTheDocument();
     expect(screen.queryByText(/Total:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Position/)).not.toBeInTheDocument();
+  });
+
+  it("heads the printed remark with the resolved commenter's title, not a hard-coded 'Principal'", () => {
+    const withCustomCommenter: StudentTermResultView = {
+      ...TERM_RESULT,
+      principalRemark: "A pleasing result.",
+      principalRemarkTitle: "Head of Nursery",
+    };
+    render(<StudentTermResultCard result={withCustomCommenter} />);
+
+    expect(screen.getByText("Head of Nursery's remark")).toBeInTheDocument();
+    expect(screen.getByText("A pleasing result.")).toBeInTheDocument();
   });
 
   it("shows no Class avg column when no subject carries one", () => {

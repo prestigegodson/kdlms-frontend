@@ -110,7 +110,7 @@ export function RegisterStudentModal({
                 </Select>
               </FormField>
             )}
-            <FormField label="Class" htmlFor="register-class">
+            <FormField label="Classroom" htmlFor="register-class">
               <Select
                 id="register-class"
                 required
@@ -118,7 +118,7 @@ export function RegisterStudentModal({
                 onChange={(event) => setClassId(event.target.value)}
               >
                 <option value="" disabled>
-                  Select a class…
+                  Select a classroom…
                 </option>
                 {classesInBranch.map((schoolClass) => (
                   <option key={schoolClass.id} value={schoolClass.id}>

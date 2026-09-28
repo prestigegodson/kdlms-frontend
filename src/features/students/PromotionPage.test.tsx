@@ -156,10 +156,10 @@ describe("PromotionPage", () => {
 
     renderPage();
 
-    await user.selectOptions(await screen.findByLabelText("Source class"), "class-1");
+    await user.selectOptions(await screen.findByLabelText("Source classroom"), "class-1");
     await screen.findByText("Ada Obi");
     await user.selectOptions(screen.getByLabelText("Target session"), "session-2");
-    await user.selectOptions(screen.getByLabelText("Target class"), "class-2");
+    await user.selectOptions(screen.getByLabelText("Target classroom"), "class-2");
 
     await user.click(screen.getByRole("button", { name: /Promote 1 student/ }));
 
@@ -187,7 +187,7 @@ describe("PromotionPage", () => {
     await user.click(screen.getByLabelText("Select Ada Obi"));
 
     await user.selectOptions(screen.getByLabelText("Target session"), "session-2");
-    await user.selectOptions(screen.getByLabelText("Target class"), "class-2");
+    await user.selectOptions(screen.getByLabelText("Target classroom"), "class-2");
     await user.click(screen.getByRole("button", { name: /Place 1 student/ }));
 
     expect(studentsApi.placeStudents).toHaveBeenCalledWith({
@@ -212,8 +212,8 @@ describe("PromotionPage", () => {
 
     renderPage();
 
-    await user.click(screen.getByRole("button", { name: "Graduate a class" }));
-    await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
+    await user.click(screen.getByRole("button", { name: "Graduate a classroom" }));
+    await user.selectOptions(await screen.findByLabelText("Classroom"), "class-1");
     await screen.findByText("Ada Obi");
     await user.click(screen.getByLabelText("Select Bola Ade"));
 

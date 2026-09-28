@@ -68,7 +68,7 @@ export function FeeFormModal({ fee, nextPosition, onClose, onSaved }: FeeFormMod
           })),
         ),
       )
-      .catch((err: unknown) => setLevelsError(err instanceof ApiError ? err.message : "Failed to load levels"));
+      .catch((err: unknown) => setLevelsError(err instanceof ApiError ? err.message : "Failed to load classes"));
   }, []);
 
   function handleKindChange(nextKind: FeeKind) {
@@ -172,7 +172,7 @@ export function FeeFormModal({ fee, nextPosition, onClose, onSaved }: FeeFormMod
 
         {isTransport ? (
           <Alert variant="info">
-            A school-bus fee is always every-session, every-term, and applies to riders on any level - configure its
+            A school-bus fee is always every-session, every-term, and applies to riders on any class - configure its
             terms only if this fee shouldn't run all year.
           </Alert>
         ) : null}
@@ -230,11 +230,11 @@ export function FeeFormModal({ fee, nextPosition, onClose, onSaved }: FeeFormMod
         )}
 
         {!isTransport && (
-          <FormField label="Levels">
+          <FormField label="Classes">
             {levelOptions === null ? (
-              <p className="text-sm text-slate-500">Loading levels…</p>
+              <p className="text-sm text-slate-500">Loading classes…</p>
             ) : levelOptions.length === 0 ? (
-              <p className="text-sm text-slate-500">No active levels found.</p>
+              <p className="text-sm text-slate-500">No active classes found.</p>
             ) : (
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {levelOptions.map((level) => (

@@ -80,3 +80,40 @@ export function clearLevelTemplate(levelId: string): Promise<LevelTemplateAssign
 export function previewLevelSample(levelId: string): Promise<string> {
   return apiFetchText(`${BASE}/levels/${levelId}/preview`);
 }
+
+/**
+ * Mirrors backend reporting.application.port.in.ManageRemarkCommentersUseCase.RemarkCommenterView -
+ * who signs a level's "principal remark" slot. `branchId` undefined means
+ * this row is the level's school-wide default; a further row may override
+ * it for one branch. See CLAUDE.md's Domain Rules for the resolution order
+ * (branch override -> level default -> the school's own Principal).
+ */
+export interface RemarkCommenterView {
+  levelId: string;
+  levelName: string;
+  branchId?: string;
+  branchName?: string;
+  title: string;
+  name: string;
+  signatureFileId?: string;
+}
+
+export interface RemarkCommenterEntry {
+  levelId: string;
+  branchId?: string | null;
+  title: string;
+  name: string;
+  signatureFileId?: string | null;
+}
+
+export function listRemarkCommenters(): Promise<RemarkCommenterView[]> {
+  return apiFetch<RemarkCommenterView[]>(`${BASE}/remark-commenters`);
+}
+
+/** Full-replace: `entries` is the school's complete new set - every level's default and every branch override, in one payload. */
+export function saveRemarkCommenters(entries: RemarkCommenterEntry[]): Promise<RemarkCommenterView[]> {
+  return apiFetch<RemarkCommenterView[]>(`${BASE}/remark-commenters`, {
+    method: "PUT",
+    body: JSON.stringify({ entries }),
+  });
+}

@@ -99,11 +99,11 @@ export function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Reports" description="Preview and download personalized result reports for a class." />
+      <PageHeader title="Reports" description="Preview and download personalized result reports for a classroom." />
 
       {classes === null && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading classes…
+          <Spinner /> Loading classrooms…
         </div>
       )}
       {classes !== null && (classes.length > 0 || showsBranchFilter) && (

@@ -73,7 +73,7 @@ export function AdminAttendancePanel({ initialClassId }: AdminAttendancePanelPro
     <div className="space-y-6">
       <PageHeader
         title="Attendance"
-        description="Review a class's daily register or its totals for a term."
+        description="Review a classroom's daily register or its totals for a term."
       />
 
       {(!showsBranchFilter || branchReady) && <AttendanceTodayCard branchId={branchId} />}
@@ -89,7 +89,7 @@ export function AdminAttendancePanel({ initialClassId }: AdminAttendancePanelPro
 
       {classes === null && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading classes…
+          <Spinner /> Loading classrooms…
         </div>
       )}
 
@@ -171,7 +171,7 @@ function DayRegisterTab({ classOptions, initialClassId }: { classOptions: ClassO
       {register && register.rows.length === 0 && (
         <EmptyState
           title="No students enrolled"
-          description="No students are enrolled in this class for this session."
+          description="No students are enrolled in this classroom for this session."
         />
       )}
       {register && register.rows.length > 0 && register.rows.every((row) => !row.status) && (

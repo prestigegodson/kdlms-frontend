@@ -51,10 +51,10 @@ describe("BillExportCard", () => {
     vi.mocked(billingApi.createBillExport).mockResolvedValue(job({ status: "QUEUED" }));
     render(<BillExportCard levelId="level-1" branchId="branch-1" termId="term-1" />);
 
-    expect(await screen.findByText("Level bills")).toBeInTheDocument();
+    expect(await screen.findByText("Class bills")).toBeInTheDocument();
     expect(screen.getByText(/advance bills for those not yet promoted/)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Generate level bills" }));
+    await user.click(screen.getByRole("button", { name: "Generate class bills" }));
 
     expect(billingApi.createBillExport).toHaveBeenCalledWith("level-1", "term-1", "branch-1");
   });
@@ -71,7 +71,7 @@ describe("BillExportCard", () => {
     });
     render(<BillExportCard levelId="level-1" branchId="branch-1" termId="term-1" />);
 
-    await user.click(await screen.findByRole("button", { name: "Generate level bills" }));
+    await user.click(await screen.findByRole("button", { name: "Generate class bills" }));
     expect(billingApi.createBillExport).toHaveBeenCalledWith("level-1", "term-1", "branch-1");
     expect(await screen.findByText("Queued…")).toBeInTheDocument();
 

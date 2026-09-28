@@ -208,8 +208,8 @@ function MySubjects() {
             <TableHead>
               <TableRow>
                 <TableHeaderCell>Subject</TableHeaderCell>
+                <TableHeaderCell>Classroom</TableHeaderCell>
                 <TableHeaderCell>Class</TableHeaderCell>
-                <TableHeaderCell>Level</TableHeaderCell>
                 <TableHeaderCell>Actions</TableHeaderCell>
               </TableRow>
             </TableHead>
@@ -219,8 +219,8 @@ function MySubjects() {
                   <TableCell label="Subject" className="font-medium text-slate-900">
                     {assignment.subjectName}
                   </TableCell>
-                  <TableCell label="Class">{assignment.className}</TableCell>
-                  <TableCell label="Level">{assignment.levelName ?? "—"}</TableCell>
+                  <TableCell label="Classroom">{assignment.className}</TableCell>
+                  <TableCell label="Class">{assignment.levelName ?? "—"}</TableCell>
                   <TableCell label="Actions">
                     <div className="flex justify-end md:justify-start">
                       <ActionMenu
@@ -313,7 +313,7 @@ function AdminSubjects() {
     <div className="space-y-6">
       <PageHeader
         title="Subjects"
-        description="The subject catalogue for each level, sectioned by group."
+        description="The subject catalogue for each class, sectioned by group."
         actions={
           canManage && (
             <>
@@ -321,7 +321,7 @@ function AdminSubjects() {
                 Manage groups
               </Button>
               <Button variant="secondary" onClick={() => setCopying(true)} disabled={!levelId || levels.length < 2}>
-                Copy from level…
+                Copy from class…
               </Button>
               <Button onClick={() => setCreateOpen(true)} disabled={!levelId}>
                 Add subject
@@ -333,13 +333,13 @@ function AdminSubjects() {
 
       {levelsStatus !== "loaded" && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading levels…
+          <Spinner /> Loading classes…
         </div>
       )}
       {levelsStatus === "loaded" && levels.length > 0 && (
         <StickySubHeader>
           <FormField
-            label="Level"
+            label="Class"
             htmlFor="subject-level-filter"
             className="min-w-0 flex-1 lg:max-w-xs"
             labelClassName="sr-only lg:not-sr-only"
@@ -361,7 +361,7 @@ function AdminSubjects() {
         <EmptyState
           icon={BookOpen}
           title="No subjects yet"
-          description="Add a subject for this level to get started."
+          description="Add a subject for this class to get started."
         />
       )}
       {state.kind === "loaded" && state.subjects.length > 0 && (
@@ -492,7 +492,7 @@ function AdminSubjects() {
       {copying && levelId && (
         <CopySubjectsModal
           targetLevelId={levelId}
-          targetLevelName={levels.find((level) => level.id === levelId)?.displayName ?? "this level"}
+          targetLevelName={levels.find((level) => level.id === levelId)?.displayName ?? "this class"}
           levels={levels}
           onClose={() => setCopying(false)}
           onCopied={() => {
@@ -506,7 +506,7 @@ function AdminSubjects() {
           title="Delete this subject?"
           message={
             <>
-              <strong>{deleting.name}</strong> will be removed, along with any teacher assigned to it in a class.
+              <strong>{deleting.name}</strong> will be removed, along with any teacher assigned to it in a classroom.
               This can't be undone.
             </>
           }
@@ -657,7 +657,7 @@ function SubjectFormModal({ title, initial, groups, onClose, onSubmit, onSaved }
             Selective - only registered students take it
           </label>
           <p className="mt-1 text-xs text-slate-500">
-            Leave unchecked for a mandatory subject every student at this level takes. Once any score or rating has
+            Leave unchecked for a mandatory subject every student at this class takes. Once any score or rating has
             been recorded, this can no longer be changed.
           </p>
         </FormField>
@@ -750,7 +750,7 @@ function SubjectGroupsModal({ levelId, groups, onClose, onChanged }: SubjectGrou
       <div className="space-y-4">
         {error && <Alert variant="error">{error}</Alert>}
 
-        {groups.length === 0 && <p className="text-sm text-slate-500">No groups yet for this level.</p>}
+        {groups.length === 0 && <p className="text-sm text-slate-500">No groups yet for this class.</p>}
         {groups.length > 0 && (
           <ul className="divide-y divide-slate-100 rounded-control border border-slate-200">
             {groups.map((group) => (

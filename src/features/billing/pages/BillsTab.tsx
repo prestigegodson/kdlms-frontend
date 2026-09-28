@@ -74,7 +74,7 @@ export function BillsTab() {
     if (levelId) {
       getLevelBills(levelId, termId, branchId)
         .then(setRoster)
-        .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load level bills"));
+        .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load class bills"));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- branchId is read for the summary/roster fetch, not a re-trigger of its own
   }, [levelId, termId]);
@@ -105,8 +105,8 @@ export function BillsTab() {
         branchReady && (
           <EmptyState
             icon={Receipt}
-            title="Select a level and term"
-            description="Pick a branch, session, term, and level to see its bills."
+            title="Select a class and term"
+            description="Pick a branch, session, term, and class to see its bills."
           />
         )
       ) : (
@@ -138,13 +138,13 @@ export function BillsTab() {
                 <Skeleton className="h-10 w-full" />
               </div>
             ) : roster.length === 0 ? (
-              <EmptyState icon={Receipt} title="No students at this level in this branch" />
+              <EmptyState icon={Receipt} title="No students at this class in this branch" />
             ) : (
               <Table>
                 <TableHead>
                   <TableRow>
                     <TableHeaderCell>Student</TableHeaderCell>
-                    <TableHeaderCell>Class</TableHeaderCell>
+                    <TableHeaderCell>Classroom</TableHeaderCell>
                     <TableHeaderCell>Admission no.</TableHeaderCell>
                     <TableHeaderCell>Status</TableHeaderCell>
                     <TableHeaderCell numeric>Total</TableHeaderCell>
@@ -155,7 +155,7 @@ export function BillsTab() {
                   {roster.map((row) => (
                     <TableRow key={row.studentId} onClick={() => editing.openPreview(row.studentId)}>
                       <TableCell label="Student">{row.studentName}</TableCell>
-                      <TableCell label="Class">{row.className}</TableCell>
+                      <TableCell label="Classroom">{row.className}</TableCell>
                       <TableCell label="Admission no.">{row.admissionNumber}</TableCell>
                       <TableCell label="Status">
                         <div className="flex flex-wrap gap-1">

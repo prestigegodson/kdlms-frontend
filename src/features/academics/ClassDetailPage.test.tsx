@@ -198,7 +198,7 @@ describe("ClassDetailPage - class teacher assignment", () => {
 
     renderAsSchoolAdmin();
 
-    expect(await screen.findByText("Class details")).toBeInTheDocument();
+    expect(await screen.findByText("Classroom details")).toBeInTheDocument();
   });
 
   it("shows the assign dropdown when the class has no teacher yet", async () => {

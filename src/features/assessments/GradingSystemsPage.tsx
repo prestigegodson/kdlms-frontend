@@ -38,7 +38,7 @@ export function GradingSystemsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Grading systems"
-        description="How each level is graded - numeric scores or a qualitative rating scale."
+        description="How each class is graded - numeric scores or a qualitative rating scale."
       />
 
       {state.kind === "loading" && (
@@ -50,8 +50,8 @@ export function GradingSystemsPage() {
       {state.kind === "loaded" && state.systems.length === 0 && (
         <EmptyState
           icon={Scale}
-          title="No levels yet"
-          description="Add a level on the Levels page before configuring grading."
+          title="No classes yet"
+          description="Add a class on the Classes page before configuring grading."
         />
       )}
       {state.kind === "loaded" && state.systems.length > 0 && (

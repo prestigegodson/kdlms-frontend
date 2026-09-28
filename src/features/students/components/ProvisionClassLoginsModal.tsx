@@ -37,7 +37,7 @@ export function ProvisionClassLoginsModal({
       setResult(outcome);
       onProvisioned();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to provision logins for this class");
+      setError(err instanceof ApiError ? err.message : "Failed to provision logins for this classroom");
     } finally {
       setSubmitting(false);
     }
@@ -106,7 +106,7 @@ export function ProvisionClassLoginsModal({
         ) : (
           <>
             <p className="text-sm text-slate-700">
-              This provisions a portal login for every active student on this class's current-term
+              This provisions a portal login for every active student on this classroom's current-term
               roster who doesn't already have one, and emails each one's guardians their sign-in
               details. A student with no active guardian has their temporary password shown here
               instead - share it with them directly.

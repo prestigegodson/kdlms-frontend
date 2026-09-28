@@ -108,7 +108,7 @@ export function CopyAdvanceBillPlansModal({ open, onClose, targetSessionId, onCo
                   {outcome.success ? (
                     <span className="text-slate-600">
                       {" "}
-                      &mdash; {outcome.copied} level{outcome.copied === 1 ? "" : "s"} copied
+                      &mdash; {outcome.copied} class{outcome.copied === 1 ? "" : "es"} copied
                       {outcome.skipped > 0 ? `, ${outcome.skipped} already planned skipped` : ""}
                     </span>
                   ) : (

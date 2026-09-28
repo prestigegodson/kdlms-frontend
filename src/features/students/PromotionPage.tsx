@@ -62,7 +62,7 @@ export function PromotionPage() {
     <div className="space-y-6">
       <PageHeader
         title="Promote, place or graduate students"
-        description="Move a whole class into a new session, search for and place individual students, or graduate an exit class."
+        description="Move a whole classroom into a new session, search for and place individual students, or graduate an exit classroom."
         backTo="/school/students"
       />
 
@@ -72,7 +72,7 @@ export function PromotionPage() {
           onClick={() => setMode("promote")}
           className={`rounded-control px-3 py-1.5 text-sm font-medium ${mode === "promote" ? "bg-brand-50 text-brand-800" : "text-slate-500 hover:bg-slate-100"}`}
         >
-          Promote a class
+          Promote a classroom
         </button>
         <button
           type="button"
@@ -86,7 +86,7 @@ export function PromotionPage() {
           onClick={() => setMode("graduate")}
           className={`rounded-control px-3 py-1.5 text-sm font-medium ${mode === "graduate" ? "bg-brand-50 text-brand-800" : "text-slate-500 hover:bg-slate-100"}`}
         >
-          Graduate a class
+          Graduate a classroom
         </button>
       </div>
 
@@ -127,7 +127,7 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
         setRoster(page.content);
         setSelected(new Set(page.content.map((student) => student.id)));
       })
-      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Failed to load the class roster"));
+      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Failed to load the classroom roster"));
   }, [sourceClassId, sourceSessionId]);
 
   function toggle(studentId: string) {
@@ -183,7 +183,7 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
               ))}
             </Select>
           </FormField>
-          <FormField label="Source class" htmlFor="promote-source-class">
+          <FormField label="Source classroom" htmlFor="promote-source-class">
             <Select
               id="promote-source-class"
               value={sourceClassId}
@@ -192,7 +192,7 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
                 setResult(null);
               }}
             >
-              <option value="">Select a class…</option>
+              <option value="">Select a classroom…</option>
               {classes.map((schoolClass) => (
                 <option key={schoolClass.id} value={schoolClass.id}>
                   {schoolClass.name}
@@ -214,13 +214,13 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
               ))}
             </Select>
           </FormField>
-          <FormField label="Target class" htmlFor="promote-target-class">
+          <FormField label="Target classroom" htmlFor="promote-target-class">
             <Select
               id="promote-target-class"
               value={targetClassId}
               onChange={(event) => setTargetClassId(event.target.value)}
             >
-              <option value="">Select a class…</option>
+              <option value="">Select a classroom…</option>
               {classes.map((schoolClass) => (
                 <option key={schoolClass.id} value={schoolClass.id}>
                   {schoolClass.name}
@@ -240,8 +240,8 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
       )}
       {sourceClassId && roster !== null && roster.length === 0 && (
         <EmptyState
-          title="No active students in this class"
-          description="Choose a different source class."
+          title="No active students in this classroom"
+          description="Choose a different source classroom."
         />
       )}
       {sourceClassId && roster !== null && roster.length > 0 && (
@@ -352,9 +352,9 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
               ))}
             </Select>
           </FormField>
-          <FormField label="Target class" htmlFor="place-target-class">
+          <FormField label="Target classroom" htmlFor="place-target-class">
             <Select id="place-target-class" value={targetClassId} onChange={(event) => setTargetClassId(event.target.value)}>
-              <option value="">Select a class…</option>
+              <option value="">Select a classroom…</option>
               {classes.map((schoolClass) => (
                 <option key={schoolClass.id} value={schoolClass.id}>
                   {schoolClass.name}
@@ -385,7 +385,7 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
           onToggle={toggle}
           onSelectAll={() => setSelected(new Set(candidates.map((student) => student.id)))}
           onSelectNone={() => setSelected(new Set())}
-          secondaryColumnLabel="Current class"
+          secondaryColumnLabel="Current classroom"
         />
       )}
 
@@ -427,7 +427,7 @@ function GraduateClassPanel({ classes }: { classes: SchoolClassView[] }) {
         setRoster(page.content);
         setSelected(new Set(page.content.map((student) => student.id)));
       })
-      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Failed to load the class roster"));
+      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Failed to load the classroom roster"));
   }, [classId]);
 
   function toggle(studentId: string) {
@@ -448,7 +448,7 @@ function GraduateClassPanel({ classes }: { classes: SchoolClassView[] }) {
     setConfirming(false);
   }
 
-  const className = classes.find((schoolClass) => schoolClass.id === classId)?.name ?? "this class";
+  const className = classes.find((schoolClass) => schoolClass.id === classId)?.name ?? "this classroom";
 
   useFilterChip("graduate-class", classes.find((schoolClass) => schoolClass.id === classId)?.name);
 
@@ -456,7 +456,7 @@ function GraduateClassPanel({ classes }: { classes: SchoolClassView[] }) {
     <div className="space-y-6">
       <StickySubHeader>
         <div className={PICKER_GRID_CLASS}>
-          <FormField label="Class" htmlFor="graduate-class">
+          <FormField label="Classroom" htmlFor="graduate-class">
             <Select
               id="graduate-class"
               value={classId}
@@ -465,7 +465,7 @@ function GraduateClassPanel({ classes }: { classes: SchoolClassView[] }) {
                 setResult(null);
               }}
             >
-              <option value="">Select a class…</option>
+              <option value="">Select a classroom…</option>
               {classes.map((schoolClass) => (
                 <option key={schoolClass.id} value={schoolClass.id}>
                   {schoolClass.name}
@@ -484,7 +484,7 @@ function GraduateClassPanel({ classes }: { classes: SchoolClassView[] }) {
         </div>
       )}
       {classId && roster !== null && roster.length === 0 && (
-        <EmptyState title="No active students in this class" description="Choose a different class." />
+        <EmptyState title="No active students in this classroom" description="Choose a different classroom." />
       )}
       {classId && roster !== null && roster.length > 0 && (
         <StudentPicker

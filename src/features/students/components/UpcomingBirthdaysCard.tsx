@@ -109,7 +109,7 @@ export function UpcomingBirthdaysCard({
             title="No upcoming birthdays"
             description={
               classId
-                ? "No one in this class has a birthday in the next 7 days."
+                ? "No one in this classroom has a birthday in the next 7 days."
                 : "No birthdays in the next 7 days."
             }
           />

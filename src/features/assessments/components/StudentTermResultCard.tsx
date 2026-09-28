@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { classAverageCellText, scoreCellText } from "@/features/assessments/finalScore";
+import { possessive } from "@/utils/text";
 
 const TRAIT_CATEGORY_LABELS: Record<TraitRatingView["category"], string> = {
   AFFECTIVE: "Affective disposition",
@@ -121,7 +122,9 @@ export function StudentTermResultCard({ result }: StudentTermResultCardProps) {
             )}
             {result.principalRemark && (
               <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Principal's remark</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {possessive(result.principalRemarkTitle)} remark
+                </h3>
                 <p className="mt-1 text-sm text-slate-700">{result.principalRemark}</p>
               </div>
             )}

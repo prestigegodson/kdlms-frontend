@@ -88,7 +88,7 @@ describe("LevelsPage", () => {
     expect(await screen.findByText("Pre School")).toBeInTheDocument();
     expect(screen.getByText("Primary")).toBeInTheDocument();
     expect(screen.getByText("Junior Secondary")).toBeInTheDocument();
-    expect(screen.getByText("2 subjects · 1 class")).toBeInTheDocument();
+    expect(screen.getByText("2 subjects · 1 classroom")).toBeInTheDocument();
 
     const juniorSecondaryRow = screen.getByText("Junior Secondary").closest("li") as HTMLElement;
     expect(within(juniorSecondaryRow).getByText("Secondary")).toBeInTheDocument();
@@ -184,7 +184,7 @@ describe("LevelsPage", () => {
     renderAsSchoolAdmin();
     await screen.findByText("Pre School");
 
-    await user.click(screen.getByRole("button", { name: "Add level" }));
+    await user.click(screen.getByRole("button", { name: "Add class" }));
     const dialog = await screen.findByRole("dialog");
 
     await user.selectOptions(within(dialog).getByLabelText("Stage"), "Secondary");

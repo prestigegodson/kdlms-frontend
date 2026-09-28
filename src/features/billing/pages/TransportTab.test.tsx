@@ -205,7 +205,7 @@ describe("TransportTab", () => {
     });
     render(<TransportTab />);
 
-    await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
+    await user.selectOptions(await screen.findByLabelText("Classroom"), "class-1");
     await user.selectOptions(await screen.findByLabelText("Ada Obi route"), "route-1");
     await user.selectOptions(await screen.findByLabelText("Ada Obi direction"), "TO_AND_FRO");
     await user.click(screen.getByRole("button", { name: "Save changes" }));

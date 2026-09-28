@@ -238,8 +238,8 @@ export function StudentBillAdjustmentsModal({
         {view.advance && (
           <Alert variant="info" title="Advance bill">
             This student isn't enrolled in {view.sessionName ?? "this session"} yet - they're being billed in
-            advance at {view.levelName}, the level their class is planned to bill at, not their current class's own
-            level.
+            advance at {view.levelName}, the class their classroom is planned to bill at, not their current
+            classroom's own class.
           </Alert>
         )}
         {view.published && (

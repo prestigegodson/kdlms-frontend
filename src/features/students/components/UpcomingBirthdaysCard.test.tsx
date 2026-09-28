@@ -104,7 +104,7 @@ describe("UpcomingBirthdaysCard", () => {
     renderCard({ classId: "class-1", showHeader: false });
 
     expect(await screen.findByText("No upcoming birthdays")).toBeInTheDocument();
-    expect(screen.getByText("No one in this class has a birthday in the next 7 days.")).toBeInTheDocument();
+    expect(screen.getByText("No one in this classroom has a birthday in the next 7 days.")).toBeInTheDocument();
   });
 
   it("shows the plural header even when there are no upcoming birthdays", async () => {

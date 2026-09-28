@@ -16,6 +16,7 @@ import { type RemarkField, RemarkEntryRow } from "@/features/assessments/compone
 import { TraitEntryRow } from "@/features/assessments/components/TraitEntryRow";
 import { TraitScaleLegend } from "@/features/assessments/components/TraitScaleLegend";
 import { UnsavedChangesBar } from "@/features/assessments/components/UnsavedChangesBar";
+import { possessive } from "@/utils/text";
 
 /** traitId -> scaleOptionId, `""` meaning not yet rated. */
 export type TraitDraft = Record<string, string>;
@@ -70,6 +71,11 @@ interface RemarksEntryGridProps {
 export function RemarksEntryGrid({ sheet, field, onSaved }: RemarksEntryGridProps) {
   const editable = field === "classTeacher" ? sheet.classTeacherEditable : sheet.principalRemarkEditable;
   const traitTabs = field === "classTeacher" ? sheet.traitCategories : [];
+  // "Class teacher's remark", or the class's resolved "<Title>'s remark" -
+  // "Principal's remark" unless a level/branch commenter is configured (see
+  // CLAUDE.md's Domain Rules). Computed once here so the header cell and
+  // every row's own label can never disagree.
+  const remarkLabel = field === "classTeacher" ? "Class teacher's remark" : `${possessive(sheet.headRemarkTitle)} remark`;
 
   const [drafts, setDrafts] = useState<Record<string, Draft>>(() => draftsFromSheet(sheet, field));
   const [dirty, setDirty] = useState<Set<string>>(new Set());
@@ -186,7 +192,7 @@ export function RemarksEntryGrid({ sheet, field, onSaved }: RemarksEntryGridProp
               ? activeCategory.traits.map((trait) => <TableHeaderCell key={trait.id}>{trait.name}</TableHeaderCell>)
               : (
                   <>
-                    <TableHeaderCell>{field === "classTeacher" ? "Class teacher's remark" : "Principal's remark"}</TableHeaderCell>
+                    <TableHeaderCell>{remarkLabel}</TableHeaderCell>
                     {field === "principal" && <TableHeaderCell>Class teacher's remark</TableHeaderCell>}
                   </>
                 )}
@@ -209,6 +215,7 @@ export function RemarksEntryGrid({ sheet, field, onSaved }: RemarksEntryGridProp
                 key={row.enrollmentId}
                 row={row}
                 field={field}
+                label={remarkLabel}
                 value={drafts[row.enrollmentId]?.remark ?? ""}
                 editable={editable}
                 dirty={dirty.has(row.enrollmentId)}

@@ -95,13 +95,13 @@ export function TeacherRegisterPanel({ initialClassId }: TeacherRegisterPanelPro
 
       {classes === null && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading your classes…
+          <Spinner /> Loading your classrooms…
         </div>
       )}
       {classes !== null && classes.length === 0 && (
         <EmptyState
           icon={ClipboardList}
-          title="No classes to register"
+          title="No classrooms to register"
           description="You'll see this page once you're assigned as a class teacher."
         />
       )}

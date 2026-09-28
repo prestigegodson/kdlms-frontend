@@ -96,7 +96,7 @@ describe("AttendancePage", () => {
     renderAs("SCHOOL_ADMIN");
 
     expect(
-      await screen.findByText("Review a class's daily register or its totals for a term."),
+      await screen.findByText("Review a classroom's daily register or its totals for a term."),
     ).toBeInTheDocument();
     expect(await screen.findByText("Today’s attendance")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Mark register" })).not.toBeInTheDocument();

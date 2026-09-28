@@ -35,7 +35,11 @@ export const REPORT_BLOCKS: ReportBlockDefinition[] = [
   { id: "GRADE_KEY", label: "Grade key", mode: "NUMERIC", description: "Grade boundaries and remarks" },
   { id: "RATING_LEGEND", label: "Rating legend", mode: "QUALITATIVE", description: "Rating scale and descriptions" },
   { id: "SIGNATURE_CLASS_TEACHER", label: "Class teacher signature", description: "Signature image and name" },
-  { id: "SIGNATURE_PRINCIPAL", label: "Principal signature", description: "Signature image and name" },
+  {
+    id: "SIGNATURE_PRINCIPAL",
+    label: "Principal/head signature",
+    description: "Signature image and name - Principal, unless a level/branch commenter is configured under Report Settings",
+  },
   {
     id: "SIGNATURE_IMAGE_CLASS_TEACHER",
     label: "Class teacher signature (image only)",
@@ -43,7 +47,7 @@ export const REPORT_BLOCKS: ReportBlockDefinition[] = [
   },
   {
     id: "SIGNATURE_IMAGE_PRINCIPAL",
-    label: "Principal signature (image only)",
+    label: "Principal/head signature (image only)",
     description: "Just the signature image, no name beneath it",
   },
   {
@@ -53,8 +57,18 @@ export const REPORT_BLOCKS: ReportBlockDefinition[] = [
   },
   {
     id: "REMARK_PRINCIPAL",
-    label: "Principal's remark",
-    description: "The term's holistic remark - closes up when never written for a student",
+    label: "Principal/head's remark",
+    description: "The term's holistic remark, headed \"<Title>'s remark\" (\"Principal's remark\" by default) - closes up when never written for a student",
+  },
+  {
+    id: "HEAD_TITLE",
+    label: "Remark commenter title",
+    description: "The resolved commenter's title alone, e.g. \"Head of Nursery\" - \"Principal\" unless a level/branch commenter is configured under Report Settings",
+  },
+  {
+    id: "HEAD_NAME",
+    label: "Remark commenter name",
+    description: "The resolved commenter's name alone, falling back to the school's own principal name - closes up when neither is set",
   },
   {
     id: "AFFECTIVE_TRAITS",
@@ -102,7 +116,9 @@ export const REPORT_TOKENS: Array<{ key: string; description: string }> = [
   { key: "attendance.daysMarked", description: "Days a register was taken" },
   { key: "attendance.rate", description: "Attendance rate" },
   { key: "teacher.name", description: "Class teacher's name" },
-  { key: "principal.name", description: "Principal's name" },
+  { key: "principal.name", description: "Principal's name (always the real principal - see head.name)" },
+  { key: "head.title", description: "Who signs the remark today - \"Principal\" unless a level/branch commenter is configured" },
+  { key: "head.name", description: "That commenter's own name" },
   { key: "remark.classTeacher", description: "Class teacher's remark" },
-  { key: "remark.principal", description: "Principal's remark" },
+  { key: "remark.principal", description: "The principal/head's remark" },
 ];

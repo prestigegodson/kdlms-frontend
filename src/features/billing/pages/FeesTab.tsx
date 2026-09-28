@@ -82,7 +82,7 @@ export function FeesTab() {
             <TableRow>
               <TableHeaderCell>Name</TableHeaderCell>
               <TableHeaderCell>Applies</TableHeaderCell>
-              <TableHeaderCell>Levels</TableHeaderCell>
+              <TableHeaderCell>Classes</TableHeaderCell>
               <TableHeaderCell>Compulsory</TableHeaderCell>
               <TableHeaderCell>Status</TableHeaderCell>
               {canManage && <TableHeaderCell>Actions</TableHeaderCell>}
@@ -105,9 +105,9 @@ export function FeesTab() {
                     ? `Terms ${fee.termNumbers?.join(", ") ?? ""}`
                     : "Admission term"}
                 </TableCell>
-                <TableCell label="Levels">
+                <TableCell label="Classes">
                   {fee.kind === "TRANSPORT"
-                    ? "Every level"
+                    ? "Every class"
                     : fee.levels.map((level) => level.levelName).join(", ")}
                 </TableCell>
                 <TableCell label="Compulsory">

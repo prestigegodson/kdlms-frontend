@@ -38,6 +38,7 @@ const RESULT_1 = {
     total: 176,
     average: 88,
     position: 1,
+    principalRemarkTitle: "Principal",
     traits: [],
   },
   gradingSystem: {

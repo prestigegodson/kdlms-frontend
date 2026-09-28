@@ -132,13 +132,13 @@ export function CopySubjectsModal({
         <div className="space-y-4">
           {error && <Alert variant="error">{error}</Alert>}
 
-          <FormField label="Copy from level" htmlFor="copy-subjects-source">
+          <FormField label="Copy from class" htmlFor="copy-subjects-source">
             <LevelSelect
               id="copy-subjects-source"
               levels={sourceOptions}
               value={sourceLevelId}
               onChange={selectSource}
-              allOptionLabel="Select a level…"
+              allOptionLabel="Select a class…"
             />
           </FormField>
 
@@ -149,7 +149,7 @@ export function CopySubjectsModal({
           )}
 
           {!loadingSubjects && sourceLevelId && subjects.length === 0 && (
-            <p className="text-sm text-slate-500">This level has no active subjects to copy.</p>
+            <p className="text-sm text-slate-500">This class has no active subjects to copy.</p>
           )}
 
           {!loadingSubjects && subjects.length > 0 && (

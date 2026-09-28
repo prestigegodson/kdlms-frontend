@@ -7,6 +7,8 @@ export type RemarkField = "classTeacher" | "principal";
 interface RemarkEntryRowProps {
   row: RemarkSheetRow;
   field: RemarkField;
+  /** The column's own heading - "Class teacher's remark", or the class's resolved "<Title>'s remark" for the principal composer (see `RemarksEntryGrid`). */
+  label: string;
   value: string;
   editable: boolean;
   dirty: boolean;
@@ -21,9 +23,7 @@ interface RemarkEntryRowProps {
  * `TraitEntryRow` instead of as extra columns here - see
  * `RemarksEntryGrid`'s tab switch.
  */
-export function RemarkEntryRow({ row, field, value, editable, dirty, onChange }: RemarkEntryRowProps) {
-  const label = field === "classTeacher" ? "Class teacher's remark" : "Principal's remark";
-
+export function RemarkEntryRow({ row, field, label, value, editable, dirty, onChange }: RemarkEntryRowProps) {
   return (
     <TableRow className={dirty ? "border-l-2 border-l-brand-500" : ""}>
       <TableCell label="Student">

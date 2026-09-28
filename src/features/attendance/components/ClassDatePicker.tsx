@@ -47,13 +47,13 @@ export function ClassDatePicker({
 
   return (
     <div className="grid min-w-0 flex-1 gap-2 lg:grid-cols-2 lg:gap-4">
-      <FormField label="Class" htmlFor="attendance-class">
+      <FormField label="Classroom" htmlFor="attendance-class">
         <Select
           id="attendance-class"
           value={classId}
           onChange={(event) => onClassChange(event.target.value)}
         >
-          <option value="">Select a class…</option>
+          <option value="">Select a classroom…</option>
           {classes.map((option) => (
             <option key={option.id} value={option.id}>
               {option.name}

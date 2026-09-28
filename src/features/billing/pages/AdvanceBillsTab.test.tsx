@@ -279,8 +279,8 @@ describe("AdvanceBillsTab", () => {
     render(<AdvanceBillsTab />);
     // Both selects exist immediately; their options populate once the async listLevels/
     // listSessions fetches resolve - wait for an actual option before selecting it.
-    await within(screen.getByLabelText("Level")).findByText("Primary");
-    await user.selectOptions(screen.getByLabelText("Level"), "level-primary");
+    await within(screen.getByLabelText("Class")).findByText("Primary");
+    await user.selectOptions(screen.getByLabelText("Class"), "level-primary");
     await within(screen.getByLabelText("Session to advance-bill")).findByText("2027/2028");
     await user.selectOptions(screen.getByLabelText("Session to advance-bill"), "session-2");
   }
@@ -288,7 +288,7 @@ describe("AdvanceBillsTab", () => {
   it("prompts to select a level and a session before showing anything else", async () => {
     render(<AdvanceBillsTab />);
 
-    expect(await screen.findByText("Select a level and a session")).toBeInTheDocument();
+    expect(await screen.findByText("Select a class and a session")).toBeInTheDocument();
   });
 
   it("saves the billing level for the selected source level", async () => {
@@ -355,7 +355,7 @@ describe("AdvanceBillsTab", () => {
     await selectLevelAndSession(user);
     await user.selectOptions(await screen.findByLabelText("Term"), "term-1");
 
-    expect(await screen.findByText("Level bills")).toBeInTheDocument();
+    expect(await screen.findByText("Class bills")).toBeInTheDocument();
     // branchId is undefined for a BRANCH_ADMIN - the server derives their branch from the token,
     // the same `useBranchScope` contract every other call in this tab already follows.
     await waitFor(() =>
@@ -376,7 +376,7 @@ describe("AdvanceBillsTab", () => {
     await selectLevelAndSession(user);
     await user.selectOptions(await screen.findByLabelText("Term"), "term-1");
 
-    expect(await screen.findByText("No billing level set yet")).toBeInTheDocument();
+    expect(await screen.findByText("No billing class set yet")).toBeInTheDocument();
   });
 
   it("shows a 'nothing to bill' empty state when every student is already promoted", async () => {
@@ -403,13 +403,13 @@ describe("AdvanceBillsTab", () => {
     expect(billingApi.getAdvanceBillPlans).toHaveBeenCalledTimes(1);
 
     // Switch to a level with no plan row - the "no classes" alert, not a stuck skeleton.
-    await user.selectOptions(await screen.findByLabelText("Level"), "level-secondary");
-    expect(await screen.findByText("This level has no classes in this branch to advance-bill.")).toBeInTheDocument();
+    await user.selectOptions(await screen.findByLabelText("Class"), "level-secondary");
+    expect(await screen.findByText("This class has no classrooms in this branch to advance-bill.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Bills at")).not.toBeInTheDocument();
 
     // Switch back - the picker returns immediately with the level's saved billing level, with no
     // extra fetch (the level axis never re-triggers `getAdvanceBillPlans`).
-    await user.selectOptions(await screen.findByLabelText("Level"), "level-primary");
+    await user.selectOptions(await screen.findByLabelText("Class"), "level-primary");
     expect(await screen.findByLabelText("Bills at")).toHaveValue("level-secondary");
     expect(billingApi.getAdvanceBillPlans).toHaveBeenCalledTimes(1);
   });
@@ -422,7 +422,7 @@ describe("AdvanceBillsTab", () => {
     await user.selectOptions(await screen.findByLabelText("Term"), "term-1");
     await screen.findByText("Ada Obi");
 
-    await user.selectOptions(await screen.findByLabelText("Level"), "level-secondary");
+    await user.selectOptions(await screen.findByLabelText("Class"), "level-secondary");
 
     expect(screen.getByLabelText("Term")).toHaveValue("term-1");
     await waitFor(() =>

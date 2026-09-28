@@ -92,6 +92,7 @@ const RESULT_1 = {
   total: 88,
   average: 88,
   position: 1,
+  principalRemarkTitle: "Principal",
   traits: [],
 };
 

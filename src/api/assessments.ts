@@ -144,6 +144,8 @@ export interface StudentTermResultView {
   position?: number;
   classTeacherRemark?: string;
   principalRemark?: string;
+  /** Who signs `principalRemark` - "Principal" unless a level/branch commenter is configured. Never blank. */
+  principalRemarkTitle: string;
   /** Empty when the level has neither behavioural-trait category enabled, or this student hasn't been rated yet. */
   traits: TraitRatingView[];
 }
@@ -200,6 +202,8 @@ export interface RemarksSheetView {
   termId: string;
   classTeacherEditable: boolean;
   principalRemarkEditable: boolean;
+  /** The class's live commenter title - "Principal" unless a level/branch commenter is configured. Never blank. */
+  headRemarkTitle: string;
   traitCategories: TraitCategorySheet[];
   rows: RemarkSheetRow[];
 }

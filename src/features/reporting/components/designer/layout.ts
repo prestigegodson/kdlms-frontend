@@ -33,6 +33,8 @@ export const REPORT_BLOCK_NAMES = [
   "SIGNATURE_IMAGE_PRINCIPAL",
   "REMARK_CLASS_TEACHER",
   "REMARK_PRINCIPAL",
+  "HEAD_TITLE",
+  "HEAD_NAME",
   "AFFECTIVE_TRAITS",
   "PSYCHOMOTOR_TRAITS",
   "TRAIT_LEGEND",
@@ -201,6 +203,7 @@ export const REPORT_CONDITION_FLAGS = [
   "HAS_AFFECTIVE_TRAITS",
   "HAS_PSYCHOMOTOR_TRAITS",
   "HAS_TRAIT_SCALE",
+  "HAS_HEAD_NAME",
 ] as const;
 
 export type ReportConditionFlag = (typeof REPORT_CONDITION_FLAGS)[number];
@@ -275,6 +278,8 @@ export const BLOCK_LABELS: Record<ReportBlockName, string> = {
   SIGNATURE_IMAGE_PRINCIPAL: "Principal signature (image only)",
   REMARK_CLASS_TEACHER: "Class teacher's remark",
   REMARK_PRINCIPAL: "Principal's remark",
+  HEAD_TITLE: "Remark commenter title",
+  HEAD_NAME: "Remark commenter name",
   AFFECTIVE_TRAITS: "Affective disposition table",
   PSYCHOMOTOR_TRAITS: "Psychomotor skills table",
   TRAIT_LEGEND: "Behavioural traits key",
@@ -297,6 +302,7 @@ export const CONDITION_FLAG_LABELS: Record<ReportConditionFlag, string> = {
   HAS_AFFECTIVE_TRAITS: "Affective ratings",
   HAS_PSYCHOMOTOR_TRAITS: "Psychomotor ratings",
   HAS_TRAIT_SCALE: "Behavioural traits key",
+  HAS_HEAD_NAME: "Remark commenter name",
 };
 
 /** `IS_*`-shaped flags read as "Yes"/"No" in the inspector rather than "Present"/"Not present" - "Mid-term result / Yes" reads naturally, "Mid-term result / Present" doesn't. */

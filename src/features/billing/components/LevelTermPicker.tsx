@@ -93,9 +93,9 @@ export function LevelTermPicker({
 
   return (
     <div className="grid min-w-0 flex-1 gap-2 lg:grid-flow-col lg:auto-cols-fr lg:gap-4">
-      <FormField label="Level" htmlFor={`${idPrefix}-level`}>
+      <FormField label="Class" htmlFor={`${idPrefix}-level`}>
         <Select id={`${idPrefix}-level`} value={levelId} onChange={(event) => onLevelChange(event.target.value)}>
-          <option value="">Select a level…</option>
+          <option value="">Select a class…</option>
           {levels.map((level) => (
             <option key={level.id} value={level.id}>
               {level.displayName}

@@ -129,8 +129,8 @@ async function selectLevelAndTerm(user: ReturnType<typeof userEvent.setup>) {
   // Both selects exist immediately; their options populate once the async listLevels/
   // listSessions fetches resolve - wait for an actual option before selecting it (the
   // AdvanceBillsTab convention).
-  await within(screen.getByLabelText("Level")).findByText("Primary");
-  await user.selectOptions(screen.getByLabelText("Level"), "level-primary");
+  await within(screen.getByLabelText("Class")).findByText("Primary");
+  await user.selectOptions(screen.getByLabelText("Class"), "level-primary");
   await within(screen.getByLabelText("Session")).findByText("2027/2028");
   await user.selectOptions(screen.getByLabelText("Session"), "session-1");
   await within(await screen.findByLabelText("Term")).findByText("First Term");

@@ -116,7 +116,7 @@ export function AttendanceTodayCard({ date = todayIso(), branchId }: AttendanceT
         </div>
       )}
       {overview && overview.totalClasses === 0 && (
-        <p className="mt-3 text-sm text-slate-500">No classes exist yet.</p>
+        <p className="mt-3 text-sm text-slate-500">No classrooms exist yet.</p>
       )}
       {overview && overview.totalClasses > 0 && (
         <div className="mt-4 divide-y divide-slate-100">

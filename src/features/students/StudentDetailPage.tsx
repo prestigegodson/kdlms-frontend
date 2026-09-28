@@ -528,7 +528,7 @@ function EnrollmentHistoryCard({
               className="text-sm font-medium text-brand-500 hover:text-brand-600"
               onClick={() => setTransferring(true)}
             >
-              Transfer class
+              Transfer classroom
             </button>
           )
         }
@@ -541,7 +541,7 @@ function EnrollmentHistoryCard({
         {history !== null && history.length === 0 && (
           <EmptyState
             title="No enrollment history"
-            description="This student has never been enrolled in a class."
+            description="This student has never been enrolled in a classroom."
           />
         )}
         {history !== null && history.length > 0 && (
@@ -549,7 +549,7 @@ function EnrollmentHistoryCard({
             <TableHead>
               <TableRow>
                 <TableHeaderCell>Session</TableHeaderCell>
-                <TableHeaderCell>Class</TableHeaderCell>
+                <TableHeaderCell>Classroom</TableHeaderCell>
                 <TableHeaderCell>Type</TableHeaderCell>
                 <TableHeaderCell>Status</TableHeaderCell>
                 <TableHeaderCell>Enrolled</TableHeaderCell>
@@ -638,22 +638,22 @@ function TransferClassModal({ student, onClose, onSaved }: TransferClassModalPro
   }
 
   return (
-    <Modal open onClose={onClose} title="Transfer to another class">
+    <Modal open onClose={onClose} title="Transfer to another classroom">
       <form className="space-y-4" onSubmit={handleSubmit}>
         {error && <Alert variant="error">{error}</Alert>}
         <p className="text-sm text-slate-500">
-          Moves {student.fullName} to a different class in{" "}
-          {student.currentLevelName ?? "the same level"}, within the same branch and current
-          session. Use promotion or placement to move them to another level.
+          Moves {student.fullName} to a different classroom in{" "}
+          {student.currentLevelName ?? "the same class"}, within the same branch and current
+          session. Use promotion or placement to move them to another class.
         </p>
         {classOptions !== null && classOptions.length === 0 && (
           <Alert variant="warning">
-            No other active class in {student.currentLevelName ?? "this level"} is available in
+            No other active classroom in {student.currentLevelName ?? "this class"} is available in
             this branch.
           </Alert>
         )}
         {classOptions !== null && classOptions.length > 0 && (
-          <FormField label="Target class" htmlFor="transfer-class">
+          <FormField label="Target classroom" htmlFor="transfer-class">
             <Select
               id="transfer-class"
               required
@@ -944,7 +944,7 @@ function SubjectsCard({ student, canManage, onActionError }: SubjectsCardProps) 
         {noEnrollment && (
           <EmptyState
             title="No current enrollment"
-            description="This student has no active class enrollment to show subjects for."
+            description="This student has no active classroom enrollment to show subjects for."
           />
         )}
         {subjects !== null && (

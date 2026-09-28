@@ -19,6 +19,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { type BrandingValues, BrandingFields } from "@/features/reporting/components/BrandingFields";
 import { LevelTemplateTable } from "@/features/reporting/components/LevelTemplateTable";
+import { RemarkCommentersCard } from "@/features/reporting/components/RemarkCommentersCard";
 import { ReportPreviewFrame } from "@/features/reporting/components/ReportPreviewFrame";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -53,7 +54,7 @@ export function ReportSettingsPage() {
   function loadLevels() {
     listLevelTemplates()
       .then(setLevels)
-      .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load levels"));
+      .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load classes"));
   }
 
   useEffect(() => {
@@ -161,15 +162,15 @@ export function ReportSettingsPage() {
 
       <Card className="p-0">
         <div className="p-6 pb-0">
-          <h2 className="font-display text-lg font-medium text-slate-900">Result templates by level</h2>
+          <h2 className="font-display text-lg font-medium text-slate-900">Result templates by class</h2>
           <p className="mt-1 text-sm text-slate-500">
-            A level with no template selected uses the platform's default template for its assessment mode.
+            A class with no template selected uses the platform's default template for its assessment mode.
           </p>
         </div>
         <div className="p-6">
           {levels === null ? (
             <div className="flex items-center gap-2 text-sm text-slate-500">
-              <Spinner /> Loading levels…
+              <Spinner /> Loading classes…
             </div>
           ) : (
             <LevelTemplateTable
@@ -182,6 +183,8 @@ export function ReportSettingsPage() {
           )}
         </div>
       </Card>
+
+      <RemarkCommentersCard levels={levels ?? []} editable={editable} />
 
       {previewLevel && (
         <Modal

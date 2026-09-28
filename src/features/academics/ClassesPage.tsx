@@ -82,7 +82,7 @@ function AdminClasses({ role }: { role: Role | undefined }) {
       .catch((error: unknown) =>
         setState({
           kind: "error",
-          message: error instanceof ApiError ? error.message : "Failed to load classes",
+          message: error instanceof ApiError ? error.message : "Failed to load classrooms",
         }),
       );
   }
@@ -111,9 +111,9 @@ function AdminClasses({ role }: { role: Role | undefined }) {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Classes"
-        description="Classes for each level and branch."
-        actions={canManage && <Button onClick={() => setCreateOpen(true)}>Add class</Button>}
+        title="Classrooms"
+        description="Classrooms for each class and branch."
+        actions={canManage && <Button onClick={() => setCreateOpen(true)}>Add classroom</Button>}
       />
 
       <StickySubHeader>
@@ -130,13 +130,13 @@ function AdminClasses({ role }: { role: Role | undefined }) {
               </Select>
             </FormField>
           )}
-          <FormField label="Level" htmlFor="class-level-filter">
+          <FormField label="Class" htmlFor="class-level-filter">
             <LevelSelect
               id="class-level-filter"
               levels={levels}
               value={levelId}
               onChange={setLevelId}
-              allOptionLabel="All levels"
+              allOptionLabel="All classes"
             />
           </FormField>
         </div>
@@ -146,12 +146,12 @@ function AdminClasses({ role }: { role: Role | undefined }) {
 
       {state.kind === "loading" && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading classes…
+          <Spinner /> Loading classrooms…
         </div>
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {state.kind === "loaded" && state.classes.length === 0 && (
-        <EmptyState icon={Library} title="No classes yet" description="Add a class to get started." />
+        <EmptyState icon={Library} title="No classrooms yet" description="Add a classroom to get started." />
       )}
       {state.kind === "loaded" && state.classes.length > 0 && (
         <Card className="p-0">
@@ -159,7 +159,7 @@ function AdminClasses({ role }: { role: Role | undefined }) {
             <TableHead>
               <TableRow>
                 <TableHeaderCell>Name</TableHeaderCell>
-                <TableHeaderCell>Level</TableHeaderCell>
+                <TableHeaderCell>Class</TableHeaderCell>
                 <TableHeaderCell>Class teacher</TableHeaderCell>
                 <TableHeaderCell>Status</TableHeaderCell>
                 {canManage && <TableHeaderCell>Actions</TableHeaderCell>}
@@ -168,11 +168,11 @@ function AdminClasses({ role }: { role: Role | undefined }) {
             </TableHead>
             <TableBody>
               {state.classes.map((schoolClass) => (
-                <TableRow key={schoolClass.id} to={`/school/academics/classes/${schoolClass.id}`}>
+                <TableRow key={schoolClass.id} to={`/school/academics/classrooms/${schoolClass.id}`}>
                   <TableCell label="Name" className="font-medium text-slate-900">
                     {schoolClass.name}
                   </TableCell>
-                  <TableCell label="Level">{levelNames.get(schoolClass.levelId) ?? "—"}</TableCell>
+                  <TableCell label="Class">{levelNames.get(schoolClass.levelId) ?? "—"}</TableCell>
                   <TableCell label="Class teacher">{schoolClass.classTeacherName ?? "—"}</TableCell>
                   <TableCell label="Status">
                     <Badge variant={schoolClass.status === "ACTIVE" ? "success" : "neutral"}>
@@ -215,7 +215,7 @@ function AdminClasses({ role }: { role: Role | undefined }) {
 
       {createOpen && (
         <ClassFormModal
-          title="Add class"
+          title="Add classroom"
           branches={branches}
           levels={levels}
           selectedLevelId={levelId || undefined}
@@ -262,25 +262,25 @@ function TeacherClasses() {
       .catch((error: unknown) =>
         setState({
           kind: "error",
-          message: error instanceof ApiError ? error.message : "Failed to load your classes",
+          message: error instanceof ApiError ? error.message : "Failed to load your classrooms",
         }),
       );
   }, []);
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My classes" description="Classes you class-teach or subject-teach." />
+      <PageHeader title="My classrooms" description="Classrooms you class-teach or subject-teach." />
 
       {state.kind === "loading" && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading your classes…
+          <Spinner /> Loading your classrooms…
         </div>
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {state.kind === "loaded" && state.classes.length === 0 && (
         <EmptyState
           icon={Library}
-          title="No classes yet"
+          title="No classrooms yet"
           description="You have no class-teacher or subject-teacher assignments yet."
         />
       )}
@@ -290,18 +290,18 @@ function TeacherClasses() {
             <TableHead>
               <TableRow>
                 <TableHeaderCell>Name</TableHeaderCell>
-                <TableHeaderCell>Level</TableHeaderCell>
+                <TableHeaderCell>Class</TableHeaderCell>
                 <TableHeaderCell>Your role</TableHeaderCell>
                 <TableHeaderCell></TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {state.classes.map((schoolClass) => (
-                <TableRow key={schoolClass.classId} to={`/school/academics/classes/${schoolClass.classId}`}>
+                <TableRow key={schoolClass.classId} to={`/school/academics/classrooms/${schoolClass.classId}`}>
                   <TableCell label="Name" className="font-medium text-slate-900">
                     {schoolClass.className}
                   </TableCell>
-                  <TableCell label="Level">{schoolClass.levelName ?? "—"}</TableCell>
+                  <TableCell label="Class">{schoolClass.levelName ?? "—"}</TableCell>
                   <TableCell label="Your role">
                     <div className="flex flex-wrap gap-2">
                       {schoolClass.isClassTeacher && <Badge variant="success">Class teacher</Badge>}
@@ -367,7 +367,7 @@ function ClassFormModal({
       await onSubmit({ branchId: showBranchField ? branchId : undefined, levelId, name });
       onSaved();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to save class");
+      setError(err instanceof ApiError ? err.message : "Failed to save classroom");
     } finally {
       setSubmitting(false);
     }
@@ -393,7 +393,7 @@ function ClassFormModal({
             </Select>
           </FormField>
         )}
-        <FormField label="Level" htmlFor="class-level">
+        <FormField label="Class" htmlFor="class-level">
           <LevelSelect id="class-level" levels={levels} value={levelId} onChange={setLevelId} activeOnly required />
         </FormField>
         <FormField label="Name" htmlFor="class-name">
@@ -439,20 +439,20 @@ function RenameClassModal({ schoolClass, levels, onClose, onSaved }: RenameClass
       await updateClass(schoolClass.id, { name, levelId });
       onSaved();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to save class");
+      setError(err instanceof ApiError ? err.message : "Failed to save classroom");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal open onClose={onClose} title="Edit class">
+    <Modal open onClose={onClose} title="Edit classroom">
       <form className="space-y-4" onSubmit={handleSubmit}>
         {error && <Alert variant="error">{error}</Alert>}
         <FormField label="Name" htmlFor="class-rename">
           <Input id="class-rename" required value={name} onChange={(event) => setName(event.target.value)} />
         </FormField>
-        <FormField label="Level" htmlFor="class-level">
+        <FormField label="Class" htmlFor="class-level">
           <LevelSelect id="class-level" levels={levels} value={levelId} onChange={setLevelId} activeOnly required />
         </FormField>
         <div className="flex justify-end gap-2">

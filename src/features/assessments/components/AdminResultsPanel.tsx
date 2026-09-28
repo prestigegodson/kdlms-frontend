@@ -30,6 +30,7 @@ import { ScopeToggle } from "@/features/assessments/components/ScopeToggle";
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
 import { useBranchScope } from "@/features/branches/useBranchScope";
 import { useAuthStore } from "@/stores/authStore";
+import { possessive } from "@/utils/text";
 import { BarChart3 } from "lucide-react";
 
 interface AdminResultsPanelProps {
@@ -194,7 +195,9 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
 
       {canRecordPrincipalRemark && remarksSheet && (
         <div className="space-y-4">
-          <h2 className="font-display text-lg font-medium text-slate-900">Principal's remarks</h2>
+          <h2 className="font-display text-lg font-medium text-slate-900">
+            {possessive(remarksSheet.headRemarkTitle)} remarks
+          </h2>
           <RemarksEntryGrid sheet={remarksSheet} field="principal" onSaved={handleRemarksSaved} />
           {remarkOutcomes && (
             <SaveOutcomeList

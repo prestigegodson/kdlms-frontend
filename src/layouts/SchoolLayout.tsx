@@ -62,8 +62,8 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"],
   },
   {
-    label: "Levels",
-    href: "/school/academics/levels",
+    label: "Classes",
+    href: "/school/academics/classes",
     icon: Layers,
     group: "Academics",
     // School-wide, not branch-scoped - see auth/permissions.ts's manageLevels.
@@ -80,8 +80,8 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER"],
   },
   {
-    label: "Classes",
-    href: "/school/academics/classes",
+    label: "Classrooms",
+    href: "/school/academics/classrooms",
     icon: Library,
     group: "Academics",
     roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER"],

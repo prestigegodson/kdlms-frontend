@@ -228,7 +228,7 @@ describe("BillsTab", () => {
     const user = userEvent.setup();
     render(<BillsTab />);
 
-    await user.selectOptions(await screen.findByLabelText("Level"), "level-1");
+    await user.selectOptions(await screen.findByLabelText("Class"), "level-1");
 
     expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
     expect(screen.getByText("Bola Ade")).toBeInTheDocument();
@@ -240,7 +240,7 @@ describe("BillsTab", () => {
     const user = userEvent.setup();
     render(<BillsTab />);
 
-    await user.selectOptions(await screen.findByLabelText("Level"), "level-1");
+    await user.selectOptions(await screen.findByLabelText("Class"), "level-1");
 
     expect(await screen.findByText("Primary 1A")).toBeInTheDocument();
     expect(screen.getByText("Primary 1B")).toBeInTheDocument();
@@ -250,7 +250,7 @@ describe("BillsTab", () => {
     const user = userEvent.setup();
     render(<BillsTab />);
 
-    await user.selectOptions(await screen.findByLabelText("Level"), "level-1");
+    await user.selectOptions(await screen.findByLabelText("Class"), "level-1");
 
     expect(await screen.findByText("No bill")).toBeInTheDocument();
     expect(screen.getByText("Billed")).toBeInTheDocument();
@@ -260,7 +260,7 @@ describe("BillsTab", () => {
     const user = userEvent.setup();
     render(<BillsTab />);
 
-    await user.selectOptions(await screen.findByLabelText("Level"), "level-1");
+    await user.selectOptions(await screen.findByLabelText("Class"), "level-1");
     await user.click(await screen.findByText("Ada Obi"));
 
     expect(billingApi.getStudentBill).toHaveBeenCalledWith("student-1", "term-1");
@@ -273,7 +273,7 @@ describe("BillsTab", () => {
     vi.mocked(billingApi.getLevelBills).mockResolvedValue([{ ...ROSTER[0], advance: true }]);
     render(<BillsTab />);
 
-    await user.selectOptions(await screen.findByLabelText("Level"), "level-1");
+    await user.selectOptions(await screen.findByLabelText("Class"), "level-1");
 
     expect(await screen.findByText("Advance")).toBeInTheDocument();
   });
@@ -282,7 +282,7 @@ describe("BillsTab", () => {
     const user = userEvent.setup();
     render(<BillsTab />);
 
-    await user.selectOptions(await screen.findByLabelText("Level"), "level-1");
+    await user.selectOptions(await screen.findByLabelText("Class"), "level-1");
     await user.click((await screen.findAllByRole("button", { name: "Edit bill" }))[0]);
 
     expect(billingApi.getStudentBillAdjustments).toHaveBeenCalledWith("student-1", "term-1");
