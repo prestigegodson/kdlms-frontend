@@ -4,8 +4,9 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import type { Role } from "@/api/types";
 import { RequireRole } from "@/routes/RequireRole";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetTeacherScopeStore, useTeacherScopeStore } from "@/stores/teacherScopeStore";
 
-function renderGuarded(roles: Role[]) {
+function renderGuarded(roles: Role[], allowLevelHead = false) {
   const router = createMemoryRouter(
     [
       { path: "/login", element: <div>Login page</div> },
@@ -16,7 +17,7 @@ function renderGuarded(roles: Role[]) {
       {
         path: "/protected",
         element: (
-          <RequireRole roles={roles}>
+          <RequireRole roles={roles} allowLevelHead={allowLevelHead}>
             <div>Protected content</div>
           </RequireRole>
         ),
@@ -27,9 +28,81 @@ function renderGuarded(roles: Role[]) {
   render(<RouterProvider router={router} />);
 }
 
+function signInAsTeacher() {
+  useAuthStore.setState({
+    user: { id: "1", email: "t@b.com", firstName: "T", lastName: "B", role: "TEACHER" },
+    accessToken: "t",
+    refreshToken: "r",
+  });
+}
+
 describe("RequireRole", () => {
   beforeEach(() => {
     resetAuthStore();
+    resetTeacherScopeStore();
+  });
+
+  describe("allowLevelHead", () => {
+    it("admits a TEACHER who heads a level", async () => {
+      signInAsTeacher();
+      useTeacherScopeStore.setState({
+        status: "loaded",
+        capabilities: {
+          isClassTeacher: false,
+          classTeacherClassIds: [],
+          subjectTeacherClassIds: [],
+          headOfLevelIds: ["level-1"],
+        },
+      });
+
+      renderGuarded(["SCHOOL_ADMIN", "BRANCH_ADMIN"], true);
+
+      expect(await screen.findByText("Protected content")).toBeInTheDocument();
+    });
+
+    it("sends an ordinary TEACHER home", async () => {
+      signInAsTeacher();
+      useTeacherScopeStore.setState({
+        status: "loaded",
+        capabilities: {
+          isClassTeacher: true,
+          classTeacherClassIds: ["c"],
+          subjectTeacherClassIds: [],
+          headOfLevelIds: [],
+        },
+      });
+
+      renderGuarded(["SCHOOL_ADMIN", "BRANCH_ADMIN"], true);
+
+      expect(await screen.findByText("School home")).toBeInTheDocument();
+    });
+
+    it("renders nothing while the teacher's capabilities are still loading, rather than redirecting early", () => {
+      signInAsTeacher();
+      useTeacherScopeStore.setState({ status: "loading", capabilities: null });
+
+      renderGuarded(["SCHOOL_ADMIN", "BRANCH_ADMIN"], true);
+
+      expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
+      expect(screen.queryByText("School home")).not.toBeInTheDocument();
+    });
+
+    it("never admits a headship without the flag", async () => {
+      signInAsTeacher();
+      useTeacherScopeStore.setState({
+        status: "loaded",
+        capabilities: {
+          isClassTeacher: false,
+          classTeacherClassIds: [],
+          subjectTeacherClassIds: [],
+          headOfLevelIds: ["level-1"],
+        },
+      });
+
+      renderGuarded(["SCHOOL_ADMIN", "BRANCH_ADMIN"]);
+
+      expect(await screen.findByText("School home")).toBeInTheDocument();
+    });
   });
 
   it("redirects to /login when there is no session", async () => {

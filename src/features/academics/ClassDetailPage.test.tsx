@@ -528,7 +528,7 @@ describe("ClassDetailPage - provision portal logins", () => {
       capabilities: {
         isClassTeacher: true,
         classTeacherClassIds: ["class-1"],
-        subjectTeacherClassIds: [],
+        subjectTeacherClassIds: [], headOfLevelIds: [],
       },
       status: "loaded",
     });
@@ -546,7 +546,12 @@ describe("ClassDetailPage - provision portal logins", () => {
 
     renderAsTeacher();
     useTeacherScopeStore.setState({
-      capabilities: { isClassTeacher: false, classTeacherClassIds: [], subjectTeacherClassIds: ["class-1"] },
+      capabilities: {
+        isClassTeacher: false,
+        classTeacherClassIds: [],
+        subjectTeacherClassIds: ["class-1"],
+        headOfLevelIds: [],
+      },
       status: "loaded",
     });
 

@@ -4,11 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserSummary } from "@/api/auth";
 import * as branchesApi from "@/api/branches";
 import type { BranchView } from "@/api/branches";
+import * as levelHeadshipsApi from "@/api/levelHeadships";
+import * as levelsApi from "@/api/levels";
+import type { LevelView } from "@/api/levels";
 import * as usersApi from "@/api/users";
 import type { CreateUserResult } from "@/api/users";
 import { TeachersPage } from "@/features/teachers/TeachersPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import { resetBranchStore } from "@/stores/branchStore";
+import { resetLevelStore } from "@/stores/levelStore";
 
 vi.mock("@/api/users", async () => {
   const actual = await vi.importActual<typeof import("@/api/users")>("@/api/users");
@@ -26,6 +30,30 @@ vi.mock("@/api/branches", async () => {
   const actual = await vi.importActual<typeof import("@/api/branches")>("@/api/branches");
   return { ...actual, listBranches: vi.fn() };
 });
+
+vi.mock("@/api/levels", async () => {
+  const actual = await vi.importActual<typeof import("@/api/levels")>("@/api/levels");
+  return { ...actual, listLevels: vi.fn() };
+});
+
+vi.mock("@/api/levelHeadships", () => ({
+  listLevelHeadships: vi.fn(),
+  replaceLevelHeadships: vi.fn(),
+  listSchoolLevelHeadships: vi.fn(),
+}));
+
+const PRIMARY: LevelView = {
+  id: "level-primary",
+  baseLevel: "PRIMARY",
+  displayName: "Primary",
+  rank: 4,
+  status: "ACTIVE",
+  subjectCount: 0,
+  classCount: 0,
+  subjectGroupCount: 0,
+};
+
+const SECONDARY: LevelView = { ...PRIMARY, id: "level-secondary", baseLevel: "SECONDARY", displayName: "Secondary", rank: 5 };
 
 const MAIN_BRANCH: BranchView = {
   id: "branch-1",
@@ -101,6 +129,98 @@ describe("TeachersPage", () => {
       totalPages: 1,
       number: 0,
       size: 50,
+    });
+    vi.mocked(levelHeadshipsApi.listSchoolLevelHeadships).mockResolvedValue([]);
+  });
+
+  describe("Head of level", () => {
+    beforeEach(() => {
+      resetLevelStore();
+      vi.mocked(levelsApi.listLevels).mockResolvedValue([PRIMARY, SECONDARY]);
+    });
+
+    it("lets a SCHOOL_ADMIN replace a teacher's headed levels", async () => {
+      mockTeachers([TEACHER]);
+      vi.mocked(levelHeadshipsApi.listLevelHeadships).mockResolvedValue([
+        { levelId: PRIMARY.id, levelName: PRIMARY.displayName },
+      ]);
+      vi.mocked(levelHeadshipsApi.replaceLevelHeadships).mockResolvedValue([]);
+      const user = userEvent.setup();
+
+      renderAsSchoolAdmin();
+      await user.click(await screen.findByRole("button", { name: "Head of level" }));
+
+      const primary = await screen.findByRole("checkbox", { name: "Primary" });
+      expect(primary).toBeChecked();
+      await user.click(primary);
+      await user.click(screen.getByRole("checkbox", { name: "Secondary" }));
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(levelHeadshipsApi.replaceLevelHeadships).toHaveBeenCalledWith("teacher-1", [
+        SECONDARY.id,
+      ]);
+    });
+
+    it("shows each head's levels in a column and can narrow the list to heads only", async () => {
+      const other: UserSummary = { ...TEACHER, id: "teacher-2", email: "tunde@school.example", firstName: "Tunde" };
+      mockTeachers([TEACHER, other]);
+      vi.mocked(levelHeadshipsApi.listSchoolLevelHeadships).mockResolvedValue([
+        {
+          teacherId: "teacher-1",
+          teacherName: "Sonia B",
+          branchId: "branch-1",
+          levelId: PRIMARY.id,
+          levelName: "Primary",
+          levelActive: true,
+        },
+        {
+          teacherId: "teacher-1",
+          teacherName: "Sonia B",
+          branchId: "branch-1",
+          levelId: SECONDARY.id,
+          levelName: "Secondary",
+          levelActive: false,
+        },
+      ]);
+      const user = userEvent.setup();
+
+      renderAsSchoolAdmin();
+
+      await screen.findByText("sonia@school.example");
+      const table = screen.getByRole("table");
+      expect(await within(table).findByText("Primary")).toBeInTheDocument();
+      expect(within(table).getByText(/Secondary/)).toHaveTextContent("Secondary (archived)");
+      expect(within(table).getByText("tunde@school.example")).toBeInTheDocument();
+
+      await user.click(screen.getByRole("checkbox", { name: "Heads of level only" }));
+
+      expect(screen.getByText("sonia@school.example")).toBeInTheDocument();
+      expect(screen.queryByText("tunde@school.example")).not.toBeInTheDocument();
+    });
+
+    it("refreshes the column after a teacher's headships are saved", async () => {
+      mockTeachers([TEACHER]);
+      vi.mocked(levelHeadshipsApi.listLevelHeadships).mockResolvedValue([]);
+      vi.mocked(levelHeadshipsApi.replaceLevelHeadships).mockResolvedValue([]);
+      const user = userEvent.setup();
+
+      renderAsSchoolAdmin();
+      await user.click(await screen.findByRole("button", { name: "Head of level" }));
+      await user.click(await screen.findByRole("checkbox", { name: "Primary" }));
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      await vi.waitFor(() => expect(levelHeadshipsApi.listSchoolLevelHeadships).toHaveBeenCalledTimes(2));
+    });
+
+    it("isn't offered to a BRANCH_ADMIN", async () => {
+      mockTeachers([TEACHER]);
+
+      renderAsBranchAdmin();
+
+      expect(await screen.findByText("sonia@school.example")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Head of level" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("checkbox", { name: "Heads of level only" })).not.toBeInTheDocument();
+      expect(levelHeadshipsApi.listSchoolLevelHeadships).not.toHaveBeenCalled();
     });
   });
 

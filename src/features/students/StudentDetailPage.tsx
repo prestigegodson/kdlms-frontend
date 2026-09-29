@@ -82,8 +82,8 @@ const RELATIONSHIPS = ["FATHER", "MOTHER", "GUARDIAN", "OTHER"] as const;
 export function StudentDetailPage() {
   const { studentId } = useParams<{ studentId: string }>();
   const role = useAuthStore((state) => state.user?.role);
-  const canManage = can.manageStudents(role);
   const teacherCapabilities = useTeacherScopeStore((state) => state.capabilities);
+  const canManage = can.manageStudents(role, teacherCapabilities);
   const studentLoginsEntitled = useFeatureStore((state) => state.studentLogins);
   const canManageLogins = can.manageStudentLogins(role, teacherCapabilities, studentLoginsEntitled);
 
@@ -254,7 +254,7 @@ export function StudentDetailPage() {
 
         <GuardiansCard
           studentId={student.id}
-          canManage={canManage}
+          canManage={can.manageGuardians(role)}
           onActionError={setActionError}
         />
       </div>
@@ -267,7 +267,12 @@ export function StudentDetailPage() {
         onActionError={setActionError}
       />
 
-      <MedicalCard studentId={student.id} canManage={canManage} onActionError={setActionError} />
+      {/* Medical details and guardian links stay admin-only writes - read-only for a Head of Level. */}
+      <MedicalCard
+        studentId={student.id}
+        canManage={can.manageStudentMedical(role)}
+        onActionError={setActionError}
+      />
 
       <SubjectsCard student={student} canManage={canManage} onActionError={setActionError} />
 

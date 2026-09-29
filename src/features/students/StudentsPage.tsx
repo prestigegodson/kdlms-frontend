@@ -11,6 +11,7 @@ import { can } from "@/auth/permissions";
 import { ArrowLeftRight, GraduationCap, SlidersHorizontal, Users } from "lucide-react";
 import { useBranchFilter } from "@/features/branches/useBranchFilter";
 import { LevelSelect } from "@/features/academics/components/LevelSelect";
+import { useHeadedLevels, useIsLevelHead } from "@/features/levelHeads/useLevelHead";
 import { RegisterStudentModal } from "@/features/students/components/RegisterStudentModal";
 import { StudentMedicalModal } from "@/features/students/components/StudentMedicalModal";
 import { Alert } from "@/components/ui/Alert";
@@ -29,6 +30,7 @@ import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { useAuthStore } from "@/stores/authStore";
 import { useLevelStore } from "@/stores/levelStore";
+import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 import { formatAge } from "@/utils/date";
 
 const PAGE_SIZE = 20;
@@ -45,27 +47,32 @@ type ListState =
  */
 export function StudentsPage() {
   const role = useAuthStore((state) => state.user?.role);
+  // A Head of Level gets the registry - the server narrows it to their levels' students.
+  const levelHead = useIsLevelHead();
 
-  if (role === "TEACHER") {
+  if (role === "TEACHER" && !levelHead) {
     return <TeacherRoster />;
   }
 
-  // INVENTORY_MANAGER is branch-confined server-side exactly like BRANCH_ADMIN (see
+  // Every role but SCHOOL_ADMIN is branch-confined server-side (see
   // AuthenticatedUser.branchScope()) - hide the branch picker for the same reason.
-  return <AdminStudents isBranchScoped={role === "BRANCH_ADMIN" || role === "INVENTORY_MANAGER"} />;
+  return <AdminStudents isBranchScoped={role !== "SCHOOL_ADMIN"} />;
 }
 
 type HasGuardianFilter = "" | "true" | "false";
 
 function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   const role = useAuthStore((state) => state.user?.role);
-  const canManage = can.manageStudents(role);
-  const canPromote = can.managePromotions(role);
+  const capabilities = useTeacherScopeStore((state) => state.capabilities);
+  const canManage = can.manageStudents(role, capabilities);
+  const canPromote = can.managePromotions(role, capabilities);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const { ready: branchReady, branches, branchId, defaultBranchId, setBranchId } = useBranchFilter();
   const levels = useLevelStore((storeState) => storeState.levels);
+  // A Head of Level's registry, filters, and registration are their own levels only.
+  const headedLevels = useHeadedLevels(levels);
   const fetchLevels = useLevelStore((storeState) => storeState.fetchIfNeeded);
   const [classes, setClasses] = useState<SchoolClassView[] | null>(null);
   const [levelId, setLevelId] = useState("");
@@ -205,7 +212,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
           idPrefix="student-filter"
           isBranchScoped={isBranchScoped}
           branches={branches}
-          levels={levels}
+          levels={headedLevels}
           classOptions={classOptionsInLevel}
           branchId={branchId}
           onBranchChange={resetToFirstPage(setBranchId)}
@@ -227,7 +234,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
               idPrefix="student-filter-sheet"
               isBranchScoped={isBranchScoped}
               branches={branches}
-              levels={levels}
+              levels={headedLevels}
               classOptions={classOptionsInLevel}
               branchId={branchId}
               onBranchChange={resetToFirstPage(setBranchId)}
@@ -320,7 +327,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
       {createOpen && (
         <RegisterStudentModal
           branches={branches ?? []}
-          levels={levels}
+          levels={headedLevels}
           classes={classOptions}
           showBranchField={!isBranchScoped}
           onClose={() => setCreateOpen(false)}

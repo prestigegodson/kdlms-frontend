@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ApiError } from "@/api/client";
 import { getSchoolDashboard, type SchoolDashboardView } from "@/api/dashboard";
-import { can } from "@/auth/permissions";
+import { can, isLevelHead } from "@/auth/permissions";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -19,6 +19,7 @@ import { TermProgressCard } from "@/features/dashboard/components/TermProgressCa
 import { AgeDistributionCard } from "@/features/students/components/AgeDistributionCard";
 import { UpcomingBirthdaysCard } from "@/features/students/components/UpcomingBirthdaysCard";
 import { useAuthStore } from "@/stores/authStore";
+import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 
 type LoadState =
   | { kind: "loading" }
@@ -78,6 +79,9 @@ export function SchoolDashboardPage() {
         </div>
       )}
 
+      {state.kind === "loaded" && state.view.admin && state.view.teacher && (
+        <h2 className="text-base font-semibold text-slate-900">Your levels</h2>
+      )}
       {state.kind === "loaded" && state.view.admin && (
         <AdminDashboard admin={state.view.admin} currentTerm={state.view.currentTerm} nextTerm={state.view.nextTerm} />
       )}
@@ -99,6 +103,10 @@ const MAX_UNPUBLISHED_ROWS = 8;
 
 function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
   const role = useAuthStore((state) => state.user?.role);
+  const capabilities = useTeacherScopeStore((state) => state.capabilities);
+  // A Head of Level's tiles are their own levels (server-narrowed); their teacher section below
+  // already carries the birthdays card, and the age distribution is a branch-wide admin read.
+  const levelHead = isLevelHead(role, capabilities);
   const { classesMarked, totalClasses, present, absent, late, excused } = admin.attendanceToday;
   const totalMarked = present + absent + late + excused;
   const attendanceRate = totalMarked === 0 ? null : Math.round(((present + late) / totalMarked) * 100);
@@ -157,10 +165,10 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-1 lg:grid-cols-2">
         <NeedsAttentionCard setupGaps={admin.setupGaps} />
 
-        <UpcomingBirthdaysCard linkable={can.manageStudents(role)} />
+        {!levelHead && <UpcomingBirthdaysCard linkable={can.manageStudents(role)} />}
       </div>
 
-      <AgeDistributionCard />
+      {!levelHead && <AgeDistributionCard />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-1 lg:grid-cols-2">
       {admin.publicationProgress && (

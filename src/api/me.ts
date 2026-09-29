@@ -43,6 +43,8 @@ export interface TeacherCapabilities {
   subjectTeacherClassIds: string[];
   currentTermNumber?: number;
   currentTermName?: string;
+  /** The ACTIVE levels this teacher heads in their own branch (Head of Level) - empty for an ordinary teacher. */
+  headOfLevelIds: string[];
 }
 
 /** Every class the caller class-teaches or subject-teaches. */

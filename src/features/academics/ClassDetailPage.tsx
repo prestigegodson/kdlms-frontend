@@ -58,8 +58,8 @@ export function ClassDetailPage() {
   const navigate = useNavigate();
   const role = useAuthStore((state) => state.user?.role);
   const currentUserId = useAuthStore((state) => state.user?.id);
-  const canManage = can.manageAcademics(role);
   const teacherCapabilities = useTeacherScopeStore((state) => state.capabilities);
+  const canManage = can.manageAcademics(role, teacherCapabilities);
   const canManageSubjectRegistrations = can.manageStudentSubjects(role, teacherCapabilities);
   const showAttendanceLink = can.viewAttendance(role, teacherCapabilities);
   const showResultsLink = can.viewResults(role);
@@ -344,7 +344,7 @@ export function ClassDetailPage() {
 
       {showBirthdays && (
         <Accordion title="Upcoming birthdays">
-          <UpcomingBirthdaysCard classId={schoolClass.id} linkable={can.manageStudents(role)} showHeader={false} />
+          <UpcomingBirthdaysCard classId={schoolClass.id} linkable={can.manageStudents(role, teacherCapabilities)} showHeader={false} />
         </Accordion>
       )}
 

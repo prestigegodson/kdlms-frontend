@@ -3,6 +3,28 @@ import type { Role } from "@/api/types";
 /** The subset of a TEACHER's assignment shape that gates UI - see stores/teacherScopeStore.ts. */
 export interface TeacherScope {
   isClassTeacher: boolean;
+  /** Levels this TEACHER heads (Head of Level) - absent/empty for an ordinary teacher. */
+  headOfLevelIds?: string[];
+}
+
+/**
+ * A Head of Level: a TEACHER assigned to one or more levels of their own
+ * branch, with BRANCH_ADMIN-equivalent academic access narrowed to those
+ * levels. Not a role of its own - the JWT still says TEACHER - so every
+ * academic admin check below admits it through the caller's TeacherScope.
+ * The level narrowing itself is server-side; this only decides which
+ * controls to offer.
+ */
+export function isLevelHead(
+  role: Role | undefined,
+  scope: TeacherScope | null | undefined,
+): boolean {
+  return role === "TEACHER" && (scope?.headOfLevelIds?.length ?? 0) > 0;
+}
+
+/** SCHOOL_ADMIN, BRANCH_ADMIN, or a Head of Level - admin-shaped reach over (some of) the academic section. */
+function isAcademicAdmin(role: Role | undefined, scope: TeacherScope | null | undefined): boolean {
+  return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || isLevelHead(role, scope);
 }
 
 /**
@@ -14,8 +36,16 @@ export interface TeacherScope {
  * matrix in CLAUDE.md's Roles section.
  */
 export const can = {
-  /** Sessions & terms, class/subject/teacher-assignment writes - SCHOOL_ADMIN and BRANCH_ADMIN only. */
-  manageAcademics(role: Role | undefined): boolean {
+  /**
+   * Class/subject/teacher-assignment writes - SCHOOL_ADMIN and BRANCH_ADMIN, plus a Head of Level
+   * for their own levels (pass `scope`). Sessions & terms stay admin-only - see `manageSessions`.
+   */
+  manageAcademics(role: Role | undefined, scope: TeacherScope | null = null): boolean {
+    return isAcademicAdmin(role, scope);
+  },
+
+  /** Sessions & terms writes - SCHOOL_ADMIN and BRANCH_ADMIN only; a Head of Level reads them like any TEACHER. */
+  manageSessions(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
   },
 
@@ -24,13 +54,23 @@ export const can = {
    * group management). A TEACHER never sees this - they get "My Subjects"
    * instead, scoped to their own assignments (see api/me.ts).
    */
-  viewSubjectCatalogue(role: Role | undefined): boolean {
-    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  viewSubjectCatalogue(role: Role | undefined, scope: TeacherScope | null = null): boolean {
+    return isAcademicAdmin(role, scope);
   },
 
   /** The teacher directory (create/list teacher accounts) - not TEACHER-visible. */
   manageTeachers(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /** Reading the teacher directory - admins, plus a Head of Level (read-only, their own levels' teachers). */
+  viewTeachers(role: Role | undefined, scope: TeacherScope | null = null): boolean {
+    return isAcademicAdmin(role, scope);
+  },
+
+  /** Making a TEACHER Head of Level for one or more levels - SCHOOL_ADMIN only. */
+  manageLevelHeads(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN";
   },
 
   /** Branch management - SCHOOL_ADMIN only (a BRANCH_ADMIN is confined to their own branch, not branch admin itself). */
@@ -78,7 +118,7 @@ export const can = {
    * account has no attendance to view.
    */
   viewAttendance(role: Role | undefined, scope: TeacherScope | null): boolean {
-    if (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN") {
+    if (isAcademicAdmin(role, scope)) {
       return true;
     }
     return role === "TEACHER" && (scope?.isClassTeacher ?? false);
@@ -89,8 +129,16 @@ export const can = {
     return role === "TEACHER" && (scope?.isClassTeacher ?? false);
   },
 
-  /** Register/edit/graduate/withdraw students, and same-session transfer - SCHOOL_ADMIN and BRANCH_ADMIN only. */
-  manageStudents(role: Role | undefined): boolean {
+  /**
+   * Register/edit/graduate/withdraw students, and same-session transfer - SCHOOL_ADMIN and
+   * BRANCH_ADMIN, plus a Head of Level for their own levels' students.
+   */
+  manageStudents(role: Role | undefined, scope: TeacherScope | null = null): boolean {
+    return isAcademicAdmin(role, scope);
+  },
+
+  /** Editing a student's medical & emergency details - SCHOOL_ADMIN and BRANCH_ADMIN only (read-only for a Head of Level). */
+  manageStudentMedical(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
   },
 
@@ -108,9 +156,9 @@ export const can = {
     );
   },
 
-  /** Bulk promotion and search-and-place - SCHOOL_ADMIN and BRANCH_ADMIN only. */
-  managePromotions(role: Role | undefined): boolean {
-    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  /** Bulk promotion and search-and-place - SCHOOL_ADMIN and BRANCH_ADMIN, plus a Head of Level between levels they head. */
+  managePromotions(role: Role | undefined, scope: TeacherScope | null = null): boolean {
+    return isAcademicAdmin(role, scope);
   },
 
   /** Guardian provisioning and ward linking - not TEACHER-visible. */
@@ -126,7 +174,7 @@ export const can = {
    * gates whether the UI offers the control at all.
    */
   manageStudentSubjects(role: Role | undefined, scope: TeacherScope | null): boolean {
-    if (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN") {
+    if (isAcademicAdmin(role, scope)) {
       return true;
     }
     return role === "TEACHER" && (scope?.isClassTeacher ?? false);
@@ -144,7 +192,7 @@ export const can = {
     if (!entitled) {
       return false;
     }
-    if (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN") {
+    if (isAcademicAdmin(role, scope)) {
       return true;
     }
     return role === "TEACHER" && (scope?.isClassTeacher ?? false);
@@ -156,7 +204,7 @@ export const can = {
    * `markAttendance`'s scoping; a subject-teacher-only account gets nothing).
    */
   viewBirthdays(role: Role | undefined, scope: TeacherScope | null): boolean {
-    if (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN") {
+    if (isAcademicAdmin(role, scope)) {
       return true;
     }
     return role === "TEACHER" && (scope?.isClassTeacher ?? false);
@@ -214,13 +262,13 @@ export const can = {
    * `principal_remark` is a physically separate column a teacher can never
    * write, and an admin can never edit the teacher's half).
    */
-  recordPrincipalRemark(role: Role | undefined): boolean {
-    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  recordPrincipalRemark(role: Role | undefined, scope: TeacherScope | null = null): boolean {
+    return isAcademicAdmin(role, scope);
   },
 
-  /** The guardian-visibility publication gate - SCHOOL_ADMIN and BRANCH_ADMIN only. */
-  publishResults(role: Role | undefined): boolean {
-    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  /** The guardian-visibility publication gate - SCHOOL_ADMIN and BRANCH_ADMIN, plus a Head of Level for their levels. */
+  publishResults(role: Role | undefined, scope: TeacherScope | null = null): boolean {
+    return isAcademicAdmin(role, scope);
   },
 
   /** Designing master result templates on the layout canvas - SYSTEM_ADMIN only, outside tenant scope entirely. */
@@ -278,7 +326,7 @@ export const can = {
     if (!entitled) {
       return false;
     }
-    if (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "GUARDIAN") {
+    if (isAcademicAdmin(role, scope) || role === "GUARDIAN") {
       return true;
     }
     return role === "TEACHER" && (scope?.isClassTeacher ?? false);
@@ -342,8 +390,8 @@ export const can = {
    * and verifiable end-to-end - the same call `managePeriodGrid` made in
    * Phase 12B.
    */
-  manageTimetable(role: Role | undefined, entitled: boolean): boolean {
-    return entitled && (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN");
+  manageTimetable(role: Role | undefined, entitled: boolean, scope: TeacherScope | null = null): boolean {
+    return entitled && isAcademicAdmin(role, scope);
   },
 
   /**
@@ -406,11 +454,11 @@ export const can = {
    * shape: a subject's own subject teacher may write and see the note but never review it, even
    * their own.
    */
-  reviewLessonNotes(role: Role | undefined, entitled: boolean): boolean {
+  reviewLessonNotes(role: Role | undefined, entitled: boolean, scope: TeacherScope | null = null): boolean {
     if (!entitled) {
       return false;
     }
-    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+    return isAcademicAdmin(role, scope);
   },
 
   /**

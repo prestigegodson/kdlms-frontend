@@ -41,6 +41,7 @@ import {
   LEARNING_RESOURCE_STATUS_VARIANT,
   learningResourceAvailabilityBadge,
 } from "@/features/learning/learningResourceStatus";
+import { useIsLevelHead } from "@/features/levelHeads/useLevelHead";
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
 import { formatInstant } from "@/utils/date";
@@ -69,7 +70,9 @@ export function LearningResourcesPage() {
   const canAuthor = can.authorLearningResources(role, entitled);
   const canAuthorMedia = can.authorLearningMedia(role, entitled, learningMedia);
   const canViewCompletions = can.viewLearningCompletions(role, entitled);
-  const isTeacher = role === "TEACHER";
+  // A Head of Level uses the admin class list - the server unions their levels' classes with the ones they teach.
+  const levelHead = useIsLevelHead();
+  const isTeacher = role === "TEACHER" && !levelHead;
   const { ready: branchReady, branchId } = useBranchScope();
 
   const [adminClasses, setAdminClasses] = useState<SchoolClassView[] | null>(null);

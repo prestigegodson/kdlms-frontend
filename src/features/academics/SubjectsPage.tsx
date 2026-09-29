@@ -39,6 +39,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } fro
 import { CopySubjectsModal } from "@/features/academics/components/CopySubjectsModal";
 import { LevelSelect } from "@/features/academics/components/LevelSelect";
 import { ALL_TERM_NUMBERS, termNumbersLabel } from "@/features/academics/subjectTerms";
+import { LevelHeadViewSwitch } from "@/features/levelHeads/LevelHeadViewSwitch";
+import { useHeadedLevels, useIsLevelHead } from "@/features/levelHeads/useLevelHead";
 import { useAcademicContextStore } from "@/stores/academicContextStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
@@ -57,11 +59,23 @@ const UNGROUPED_LABEL = "Ungrouped";
  * school's subject groups (alphabetical, ungrouped subjects trailing) -
  * previewing how a result sheet will later section subjects. A TEACHER
  * never sees this admin catalogue (GET /api/v1/subjects is admin-only) -
- * they get "My Subjects" instead, scoped to their own assignments.
+ * they get "My Subjects" instead, scoped to their own assignments. A Head of
+ * Level gets both, the catalogue narrowed to the levels they head.
  */
 export function SubjectsPage() {
   const role = useAuthStore((state) => state.user?.role);
+  const levelHead = useIsLevelHead();
 
+  // A Head of Level both teaches (My subjects) and manages their levels' catalogue.
+  if (levelHead) {
+    return (
+      <LevelHeadViewSwitch
+        ariaLabel="Subject views"
+        teachingView={<MySubjects />}
+        levelsView={<AdminSubjects />}
+      />
+    );
+  }
   if (role === "TEACHER") {
     return <MySubjects />;
   }
@@ -241,10 +255,12 @@ function MySubjects() {
 
 function AdminSubjects() {
   const role = useAuthStore((state) => state.user?.role);
-  const canManage = can.manageAcademics(role);
+  const capabilities = useTeacherScopeStore((state) => state.capabilities);
+  const canManage = can.manageAcademics(role, capabilities);
   const canDelete = can.deleteSubjects(role);
 
-  const levels = useLevelStore((storeState) => storeState.levels);
+  // A Head of Level's catalogue is their own levels only - the server narrows the same way.
+  const levels = useHeadedLevels(useLevelStore((storeState) => storeState.levels));
   const levelsStatus = useLevelStore((storeState) => storeState.status);
   const fetchLevels = useLevelStore((storeState) => storeState.fetchIfNeeded);
   const refreshLevels = useLevelStore((storeState) => storeState.refresh);

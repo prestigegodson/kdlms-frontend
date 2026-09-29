@@ -2,10 +2,13 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as branchesApi from "@/api/branches";
+import * as levelHeadshipsApi from "@/api/levelHeadships";
 import * as levelsApi from "@/api/levels";
 import type { LevelView } from "@/api/levels";
 import { LevelsPage } from "@/features/academics/LevelsPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetBranchStore } from "@/stores/branchStore";
 import { resetLevelStore } from "@/stores/levelStore";
 
 vi.mock("@/api/levels", async () => {
@@ -21,6 +24,13 @@ vi.mock("@/api/levels", async () => {
     deleteLevel: vi.fn(),
   };
 });
+
+vi.mock("@/api/branches", async () => {
+  const actual = await vi.importActual<typeof import("@/api/branches")>("@/api/branches");
+  return { ...actual, listBranches: vi.fn() };
+});
+
+vi.mock("@/api/levelHeadships", () => ({ listSchoolLevelHeadships: vi.fn() }));
 
 const PRE_SCHOOL: LevelView = {
   id: "level-1",
@@ -79,7 +89,49 @@ describe("LevelsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetLevelStore();
+    resetBranchStore();
     vi.mocked(levelsApi.listLevels).mockResolvedValue([PRE_SCHOOL, PRIMARY, JUNIOR_SECONDARY]);
+    vi.mocked(levelHeadshipsApi.listSchoolLevelHeadships).mockResolvedValue([]);
+    vi.mocked(branchesApi.listBranches).mockResolvedValue({
+      content: [
+        { id: "branch-1", schoolId: "school-1", name: "Main Branch", main: true, status: "ACTIVE" },
+        { id: "branch-2", schoolId: "school-1", name: "Annex", main: false, status: "ACTIVE" },
+      ],
+      totalElements: 2,
+      totalPages: 1,
+      number: 0,
+      size: 50,
+    });
+  });
+
+  it("names each level's heads with their branch, and says when a level has none", async () => {
+    vi.mocked(levelHeadshipsApi.listSchoolLevelHeadships).mockResolvedValue([
+      {
+        teacherId: "t-1",
+        teacherName: "Amaka Head",
+        branchId: "branch-1",
+        levelId: "level-2",
+        levelName: "Primary",
+        levelActive: true,
+      },
+      {
+        teacherId: "t-2",
+        teacherName: "Obi Lead",
+        branchId: "branch-2",
+        levelId: "level-2",
+        levelName: "Primary",
+        levelActive: true,
+      },
+    ]);
+
+    renderAsSchoolAdmin();
+
+    const primaryRow = (await screen.findByText("Primary")).closest("li") as HTMLElement;
+    expect(
+      await within(primaryRow).findByText("Amaka Head (Main Branch), Obi Lead (Annex)"),
+    ).toBeInTheDocument();
+    const preSchoolRow = screen.getByText("Pre School").closest("li") as HTMLElement;
+    expect(within(preSchoolRow).getByText("No head of level assigned")).toBeInTheDocument();
   });
 
   it("lists levels in rank order, with a stage badge only where the name has diverged from it", async () => {

@@ -44,7 +44,7 @@ const DEFAULT_TERM_NAMES = ["First Term", "Second Term", "Third Term"];
  */
 export function SessionsPage() {
   const role = useAuthStore((state) => state.user?.role);
-  const canManage = can.manageAcademics(role);
+  const canManage = can.manageSessions(role);
 
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [createOpen, setCreateOpen] = useState(false);

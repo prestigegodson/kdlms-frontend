@@ -465,7 +465,7 @@ describe("SubjectsPage", () => {
       capabilities: {
         isClassTeacher: false,
         classTeacherClassIds: [],
-        subjectTeacherClassIds: ["class-1"],
+        subjectTeacherClassIds: ["class-1"], headOfLevelIds: [],
         currentTermNumber: 1,
         currentTermName: "First Term",
       },
@@ -481,7 +481,12 @@ describe("SubjectsPage", () => {
     vi.mocked(meApi.listMySubjects).mockResolvedValue([TERM_ONE_ASSIGNMENT]);
     useTeacherScopeStore.setState({
       status: "loaded",
-      capabilities: { isClassTeacher: false, classTeacherClassIds: [], subjectTeacherClassIds: ["class-1"] },
+      capabilities: {
+        isClassTeacher: false,
+        classTeacherClassIds: [],
+        subjectTeacherClassIds: ["class-1"],
+        headOfLevelIds: [],
+      },
     });
 
     renderAsTeacher();

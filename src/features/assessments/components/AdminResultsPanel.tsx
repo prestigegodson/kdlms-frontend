@@ -30,6 +30,7 @@ import { ScopeToggle } from "@/features/assessments/components/ScopeToggle";
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
 import { useBranchScope } from "@/features/branches/useBranchScope";
 import { useAuthStore } from "@/stores/authStore";
+import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 import { possessive } from "@/utils/text";
 import { BarChart3 } from "lucide-react";
 
@@ -41,8 +42,9 @@ interface AdminResultsPanelProps {
 /** An admin's read-only view: pick a class + term, see the broadsheet, and publish/unpublish results for guardians. */
 export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {}) {
   const role = useAuthStore((state) => state.user?.role);
-  const canPublish = can.publishResults(role);
-  const canRecordPrincipalRemark = can.recordPrincipalRemark(role);
+  const capabilities = useTeacherScopeStore((state) => state.capabilities);
+  const canPublish = can.publishResults(role, capabilities);
+  const canRecordPrincipalRemark = can.recordPrincipalRemark(role, capabilities);
   const { ready: branchReady, branchId } = useBranchScope();
 
   const [classes, setClasses] = useState<SchoolClassView[] | null>(null);

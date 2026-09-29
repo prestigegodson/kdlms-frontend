@@ -26,7 +26,7 @@ import {
   Users,
 } from "lucide-react";
 import { useEffect } from "react";
-import { can } from "@/auth/permissions";
+import { can, isLevelHead } from "@/auth/permissions";
 import { SubscriptionBanner } from "@/features/subscription/SubscriptionBanner";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useAcademicContextStore } from "@/stores/academicContextStore";
@@ -192,8 +192,7 @@ const NAV_ITEMS: NavItem[] = [
     // all read from.
     visible: () => {
       const role = useAuthStore.getState().user?.role;
-      const isClassTeacher = useTeacherScopeStore.getState().capabilities?.isClassTeacher ?? false;
-      return can.viewAttendance(role, { isClassTeacher });
+      return can.viewAttendance(role, useTeacherScopeStore.getState().capabilities);
     },
   },
   {
@@ -216,9 +215,8 @@ const NAV_ITEMS: NavItem[] = [
     // see auth/permissions.ts's viewMessages, the single source of truth.
     visible: () => {
       const role = useAuthStore.getState().user?.role;
-      const isClassTeacher = useTeacherScopeStore.getState().capabilities?.isClassTeacher ?? false;
       const entitled = useFeatureStore.getState().communication;
-      return can.viewMessages(role, { isClassTeacher }, entitled);
+      return can.viewMessages(role, useTeacherScopeStore.getState().capabilities, entitled);
     },
     badge: () => useUnreadMessagesStore.getState().count,
   },
@@ -235,7 +233,12 @@ const NAV_ITEMS: NavItem[] = [
     href: "/school/academics/teachers",
     icon: Users,
     group: "People",
-    roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"],
+    // Admins, plus a Head of Level (read-only, their own levels' teachers) - see
+    // auth/permissions.ts's viewTeachers.
+    visible: () => {
+      const role = useAuthStore.getState().user?.role;
+      return can.viewTeachers(role, useTeacherScopeStore.getState().capabilities);
+    },
   },
   {
     label: "Students",
@@ -401,6 +404,15 @@ export function SchoolLayout() {
     fetchUnreadMessages,
     fetchPendingLessonNotes,
   ]);
+
+  // A Head of Level reviews their own levels' lesson notes, so they get the admin review badge too -
+  // known only once their capabilities have loaded, hence a separate effect from the role switch above.
+  const levelHead = isLevelHead(role, teacherCapabilities);
+  useEffect(() => {
+    if (levelHead) {
+      fetchPendingLessonNotes();
+    }
+  }, [levelHead, fetchPendingLessonNotes]);
 
   const contextLabel =
     role === "TEACHER"

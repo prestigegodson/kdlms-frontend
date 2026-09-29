@@ -21,6 +21,7 @@ import { ClassTermPicker } from "@/features/assessments/components/ClassTermPick
 import { quizStatusLabel, quizStatusVariant } from "@/features/takeHomeQuizzes/takeHomeQuizStatus";
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
 import { useBranchScope } from "@/features/branches/useBranchScope";
+import { useIsLevelHead } from "@/features/levelHeads/useLevelHead";
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
 import { formatInstant } from "@/utils/date";
@@ -42,7 +43,9 @@ export function TakeHomeQuizzesPage() {
   const role = useAuthStore((state) => state.user?.role);
   const entitled = useFeatureStore((state) => state.takeHomeQuiz);
   const canAuthor = can.authorTakeHomeQuizzes(role, entitled);
-  const isTeacher = role === "TEACHER";
+  // A Head of Level uses the admin class list - the server unions their levels' classes with the ones they teach.
+  const levelHead = useIsLevelHead();
+  const isTeacher = role === "TEACHER" && !levelHead;
   const { ready: branchReady, branchId } = useBranchScope();
 
   const [adminClasses, setAdminClasses] = useState<SchoolClassView[] | null>(null);

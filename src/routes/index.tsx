@@ -207,7 +207,7 @@ export const routes: RouteObject[] = [
           {
             path: "academics/teachers",
             element: (
-              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]} allowLevelHead>
                 <TeachersPage />
               </RequireRole>
             ),
@@ -239,7 +239,7 @@ export const routes: RouteObject[] = [
           {
             path: "students/promotion",
             element: (
-              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]} allowLevelHead>
                 <PromotionPage />
               </RequireRole>
             ),
@@ -247,7 +247,7 @@ export const routes: RouteObject[] = [
           {
             path: "students/:studentId",
             element: (
-              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]} allowLevelHead>
                 <StudentDetailPage />
               </RequireRole>
             ),
@@ -255,7 +255,7 @@ export const routes: RouteObject[] = [
           {
             path: "students/:studentId/results/:sessionId",
             element: (
-              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]} allowLevelHead>
                 <StudentResultHistoryPage />
               </RequireRole>
             ),

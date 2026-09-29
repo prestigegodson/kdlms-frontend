@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import type { UserSummary } from "@/api/auth";
 import type { BranchView } from "@/api/branches";
 import { ApiError } from "@/api/client";
+import { listSchoolLevelHeadships, type SchoolLevelHeadshipView } from "@/api/levelHeadships";
 import {
   createTeacher,
   getTeacherRemovalImpact,
@@ -15,8 +16,10 @@ import {
 import { can } from "@/auth/permissions";
 import { Users } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CredentialsReveal } from "@/components/ui/CredentialsReveal";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -31,6 +34,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } fro
 import { TableSkeleton } from "@/components/ui/TableSkeleton";
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
 import { useBranchScope } from "@/features/branches/useBranchScope";
+import { LevelHeadshipsModal } from "@/features/teachers/components/LevelHeadshipsModal";
 import { useAuthStore } from "@/stores/authStore";
 import { useBranchStore } from "@/stores/branchStore";
 
@@ -43,7 +47,9 @@ type ListState =
 export function TeachersPage() {
   const role = useAuthStore((state) => state.user?.role);
   const canManage = can.manageTeachers(role);
-  const isBranchScoped = role === "BRANCH_ADMIN";
+  const canManageLevelHeads = can.manageLevelHeads(role);
+  // Every role but SCHOOL_ADMIN (BRANCH_ADMIN, and a Head of Level reading their levels' teachers) is branch-confined.
+  const isBranchScoped = role !== "SCHOOL_ADMIN";
   const showsBranchFilter = can.selectBranch(role);
   const { ready: branchReady, branchId } = useBranchScope();
   const branches = useBranchStore((storeState) => storeState.branches);
@@ -51,10 +57,14 @@ export function TeachersPage() {
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<UserSummary | null>(null);
+  const [assigningLevels, setAssigningLevels] = useState<UserSummary | null>(null);
   const [signing, setSigning] = useState<UserSummary | null>(null);
   const [removing, setRemoving] = useState<UserSummary | null>(null);
   const [removalImpact, setRemovalImpact] = useState<TeacherRemovalImpact | null>(null);
   const [removalError, setRemovalError] = useState<string | null>(null);
+  // teacherId -> the levels they head, in level order. Only fetched for a role that can see headships.
+  const [headships, setHeadships] = useState<Map<string, SchoolLevelHeadshipView[]>>(new Map());
+  const [headsOnly, setHeadsOnly] = useState(false);
 
   function fetchTeachers() {
     if (!branchReady) return;
@@ -69,6 +79,22 @@ export function TeachersPage() {
   }
 
   useEffect(fetchTeachers, [branchReady, branchId]);
+
+  function fetchHeadships() {
+    if (!branchReady || !canManageLevelHeads) return;
+    listSchoolLevelHeadships(branchId)
+      .then((rows) => {
+        const byTeacher = new Map<string, SchoolLevelHeadshipView[]>();
+        for (const row of rows) {
+          byTeacher.set(row.teacherId, [...(byTeacher.get(row.teacherId) ?? []), row]);
+        }
+        setHeadships(byTeacher);
+      })
+      // The column is supplementary - the teacher list still renders if this read fails.
+      .catch(() => setHeadships(new Map()));
+  }
+
+  useEffect(fetchHeadships, [branchReady, branchId, canManageLevelHeads]);
 
   function load() {
     setState({ kind: "loading" });
@@ -98,17 +124,30 @@ export function TeachersPage() {
     load();
   }
 
+  const visibleTeachers =
+    state.kind === "loaded"
+      ? state.teachers.filter((teacher) => !headsOnly || headships.has(teacher.id))
+      : [];
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Teachers"
-        description="Every teacher account at your school."
+        description={
+          canManage ? "Every teacher account at your school." : "The teachers of the levels you head."
+        }
         actions={canManage && <Button onClick={() => setCreateOpen(true)}>Add teacher</Button>}
       />
 
-      {showsBranchFilter && (
+      {(showsBranchFilter || canManageLevelHeads) && (
         <StickySubHeader>
-          <BranchFilter id="teachers-branch" />
+          {showsBranchFilter && <BranchFilter id="teachers-branch" />}
+          {canManageLevelHeads && (
+            <label className="flex items-center gap-2 self-end pb-2 text-sm text-slate-700">
+              <Checkbox checked={headsOnly} onChange={(event) => setHeadsOnly(event.target.checked)} />
+              Heads of level only
+            </label>
+          )}
         </StickySubHeader>
       )}
 
@@ -120,9 +159,22 @@ export function TeachersPage() {
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {removalError && <Alert variant="error">{removalError}</Alert>}
       {state.kind === "loaded" && state.teachers.length === 0 && (
-        <EmptyState icon={Users} title="No teachers yet" description="Add a teacher to get started." />
+        <EmptyState
+          icon={Users}
+          title="No teachers yet"
+          description={
+            canManage ? "Add a teacher to get started." : "No one teaches at the levels you head yet."
+          }
+        />
       )}
-      {state.kind === "loaded" && state.teachers.length > 0 && (
+      {state.kind === "loaded" && state.teachers.length > 0 && visibleTeachers.length === 0 && (
+        <EmptyState
+          icon={Users}
+          title="No heads of level"
+          description="Use a teacher's Head of level action to put them in charge of one or more levels."
+        />
+      )}
+      {state.kind === "loaded" && visibleTeachers.length > 0 && (
         <Card className="p-0">
           <Table>
             <TableHead>
@@ -130,11 +182,12 @@ export function TeachersPage() {
                 <TableHeaderCell>Name</TableHeaderCell>
                 <TableHeaderCell>Email</TableHeaderCell>
                 {!isBranchScoped && <TableHeaderCell>Branch</TableHeaderCell>}
+                {canManageLevelHeads && <TableHeaderCell>Head of level</TableHeaderCell>}
                 {canManage && <TableHeaderCell>Actions</TableHeaderCell>}
               </TableRow>
             </TableHead>
             <TableBody>
-              {state.teachers.map((teacher) => (
+              {visibleTeachers.map((teacher) => (
                 <TableRow key={teacher.id}>
                   <TableCell label="Name" className="font-medium text-slate-900">
                     {teacher.firstName} {teacher.lastName}
@@ -142,6 +195,11 @@ export function TeachersPage() {
                   <TableCell label="Email">{teacher.email}</TableCell>
                   {!isBranchScoped && (
                     <TableCell label="Branch">{branchName(teacher.branchId)}</TableCell>
+                  )}
+                  {canManageLevelHeads && (
+                    <TableCell label="Head of level">
+                      <HeadedLevels headships={headships.get(teacher.id)} />
+                    </TableCell>
                   )}
                   {canManage && (
                     <TableCell label="Actions">
@@ -153,6 +211,15 @@ export function TeachersPage() {
                         >
                           Edit
                         </button>
+                        {canManageLevelHeads && (
+                          <button
+                            type="button"
+                            className="text-slate-500 hover:text-slate-700"
+                            onClick={() => setAssigningLevels(teacher)}
+                          >
+                            Head of level
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="text-slate-500 hover:text-slate-700"
@@ -197,6 +264,16 @@ export function TeachersPage() {
           onSaved={load}
         />
       )}
+      {assigningLevels && (
+        <LevelHeadshipsModal
+          teacher={assigningLevels}
+          onClose={() => setAssigningLevels(null)}
+          onSaved={() => {
+            setAssigningLevels(null);
+            fetchHeadships();
+          }}
+        />
+      )}
       {signing && (
         <TeacherSignatureModal
           teacher={signing}
@@ -220,6 +297,23 @@ export function TeachersPage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** The levels a teacher heads, as chips - an archived level is kept but grants nothing, so it's marked. */
+function HeadedLevels({ headships }: { headships?: SchoolLevelHeadshipView[] }) {
+  if (!headships || headships.length === 0) {
+    return <span className="text-slate-400">—</span>;
+  }
+  return (
+    <div className="flex flex-wrap gap-1">
+      {headships.map((headship) => (
+        <Badge key={headship.levelId} variant={headship.levelActive ? "brand" : "neutral"}>
+          {headship.levelName}
+          {!headship.levelActive && " (archived)"}
+        </Badge>
+      ))}
     </div>
   );
 }

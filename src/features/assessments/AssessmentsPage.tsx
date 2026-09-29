@@ -6,6 +6,8 @@ import { useAuthStore } from "@/stores/authStore";
 import { AdminResultsPanel } from "@/features/assessments/components/AdminResultsPanel";
 import { RemarksPanel } from "@/features/assessments/components/RemarksPanel";
 import { TeacherEntryPanel } from "@/features/assessments/components/TeacherEntryPanel";
+import { LevelHeadViewSwitch } from "@/features/levelHeads/LevelHeadViewSwitch";
+import { useIsLevelHead } from "@/features/levelHeads/useLevelHead";
 
 type TeacherTab = "scores" | "remarks";
 
@@ -20,7 +22,8 @@ type TeacherTab = "scores" | "remarks";
  * An optional `?classId=` (from ClassDetailPage's "Results & broadsheet"
  * quick link) seeds the initial class selection; an optional `?subjectId=`
  * (from SubjectsPage's "Record assessment" row action) additionally seeds
- * the subject, TEACHER-only - the admin panel is class-level.
+ * the subject, TEACHER-only - the admin panel is class-level. A Head of Level
+ * is both, so they get the two as a "My levels"/"My classes" tab pair.
  */
 export function AssessmentsPage() {
   const role = useAuthStore((state) => state.user?.role);
@@ -28,29 +31,40 @@ export function AssessmentsPage() {
   const initialClassId = searchParams.get("classId") ?? undefined;
   const initialSubjectId = searchParams.get("subjectId") ?? undefined;
   const [tab, setTab] = useState<TeacherTab>("scores");
+  const levelHead = useIsLevelHead();
 
-  if (role === "TEACHER") {
+  const teachingView = (
+    <div className="space-y-6">
+      <PageHeader title="Assessments" description="Record scores and termly remarks for your classes." />
+
+      <Tabs
+        ariaLabel="Assessment views"
+        value={tab}
+        onChange={setTab}
+        items={[
+          { value: "scores", label: "Scores" },
+          { value: "remarks", label: "Remarks" },
+        ]}
+      />
+
+      {tab === "scores" ? (
+        <TeacherEntryPanel initialClassId={initialClassId} initialSubjectId={initialSubjectId} />
+      ) : (
+        <RemarksPanel initialClassId={initialClassId} />
+      )}
+    </div>
+  );
+  if (levelHead) {
     return (
-      <div className="space-y-6">
-        <PageHeader title="Assessments" description="Record scores and termly remarks for your classes." />
-
-        <Tabs
-          ariaLabel="Assessment views"
-          value={tab}
-          onChange={setTab}
-          items={[
-            { value: "scores", label: "Scores" },
-            { value: "remarks", label: "Remarks" },
-          ]}
-        />
-
-        {tab === "scores" ? (
-          <TeacherEntryPanel initialClassId={initialClassId} initialSubjectId={initialSubjectId} />
-        ) : (
-          <RemarksPanel initialClassId={initialClassId} />
-        )}
-      </div>
+      <LevelHeadViewSwitch
+        ariaLabel="Assessment scopes"
+        teachingView={teachingView}
+        levelsView={<AdminResultsPanel initialClassId={initialClassId} />}
+      />
     );
+  }
+  if (role === "TEACHER") {
+    return teachingView;
   }
   return <AdminResultsPanel initialClassId={initialClassId} />;
 }

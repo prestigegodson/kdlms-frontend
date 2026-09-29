@@ -9,6 +9,7 @@ import {
   reorderLevels,
 } from "@/api/levels";
 import { ApiError } from "@/api/client";
+import { listSchoolLevelHeadships, type SchoolLevelHeadshipView } from "@/api/levelHeadships";
 import { can } from "@/auth/permissions";
 import { ArrowDown, ArrowUp, Layers } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
@@ -24,6 +25,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { useAuthStore } from "@/stores/authStore";
+import { useBranchStore } from "@/stores/branchStore";
 import { useLevelStore } from "@/stores/levelStore";
 
 /** The five platform stages a level can be created against - fixed, unlike display names. */
@@ -61,6 +63,7 @@ function describeUsage(level: LevelView): string {
 export function LevelsPage() {
   const role = useAuthStore((state) => state.user?.role);
   const canManage = can.manageLevels(role);
+  const canSeeHeads = can.manageLevelHeads(role);
 
   const levels = useLevelStore((state) => state.levels);
   const status = useLevelStore((state) => state.status);
@@ -72,10 +75,49 @@ export function LevelsPage() {
   const [deleting, setDeleting] = useState<LevelView | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [reordering, setReordering] = useState(false);
+  // levelId -> its heads across every branch; null until loaded (or when the read failed - the
+  // level list still renders, just without the heads line).
+  const [headsByLevel, setHeadsByLevel] = useState<Map<string, SchoolLevelHeadshipView[]> | null>(null);
+  const branches = useBranchStore((state) => state.branches);
+  const fetchBranches = useBranchStore((state) => state.fetchIfNeeded);
 
   useEffect(() => {
     fetchIfNeeded();
   }, [fetchIfNeeded]);
+
+  useEffect(() => {
+    if (!canSeeHeads) return;
+    fetchBranches();
+    let cancelled = false;
+    listSchoolLevelHeadships()
+      .then((rows) => {
+        if (cancelled) return;
+        const byLevel = new Map<string, SchoolLevelHeadshipView[]>();
+        for (const row of rows) {
+          byLevel.set(row.levelId, [...(byLevel.get(row.levelId) ?? []), row]);
+        }
+        setHeadsByLevel(byLevel);
+      })
+      .catch(() => {
+        if (!cancelled) setHeadsByLevel(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [canSeeHeads, fetchBranches]);
+
+  function describeHeads(levelId: string): string | null {
+    const heads = headsByLevel?.get(levelId);
+    if (!heads || heads.length === 0) return null;
+    // The branch only disambiguates once there's more than one to tell apart.
+    const showBranch = branches.length > 1;
+    return heads
+      .map((head) => {
+        const branch = branches.find((candidate) => candidate.id === head.branchId)?.name;
+        return showBranch && branch ? `${head.teacherName} (${branch})` : head.teacherName;
+      })
+      .join(", ");
+  }
 
   async function toggleActive(level: LevelView) {
     setActionError(null);
@@ -159,6 +201,7 @@ export function LevelsPage() {
                     {level.status === "INACTIVE" && <Badge variant="neutral">Archived</Badge>}
                   </div>
                   <p className="mt-0.5 text-xs text-slate-500">{describeUsage(level)}</p>
+                  {headsByLevel && <HeadsLine heads={describeHeads(level.id)} />}
                 </div>
 
                 {canManage && (
@@ -268,6 +311,22 @@ export function LevelsPage() {
         />
       )}
     </div>
+  );
+}
+
+/** A level's heads, or a muted "none" line - `heads` is the already-joined name list. */
+function HeadsLine({ heads }: { heads: string | null }) {
+  return (
+    <p className="mt-0.5 text-xs">
+      {heads ? (
+        <span className="text-slate-700">
+          <span className="text-slate-500">Head of level: </span>
+          {heads}
+        </span>
+      ) : (
+        <span className="text-slate-400">No head of level assigned</span>
+      )}
+    </p>
   );
 }
 

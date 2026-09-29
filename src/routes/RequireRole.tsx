@@ -1,11 +1,18 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router";
 import type { Role } from "@/api/types";
+import { isLevelHead } from "@/auth/permissions";
 import { homePathForRole } from "@/routes/roleHome";
 import { useAuthStore } from "@/stores/authStore";
+import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 
 interface RequireRoleProps {
   roles: Role[];
+  /**
+   * Also admit a Head of Level (a TEACHER heading at least one level) - known only once their
+   * capabilities have loaded (SchoolLayout fetches them), so this renders nothing until then.
+   */
+  allowLevelHead?: boolean;
   children: ReactNode;
 }
 
@@ -23,9 +30,11 @@ interface RequireRoleProps {
  * persisted session has been read from storage (see authStore's
  * `hydrated`), to avoid a flash-redirect on reload.
  */
-export function RequireRole({ roles, children }: RequireRoleProps) {
+export function RequireRole({ roles, allowLevelHead = false, children }: RequireRoleProps) {
   const user = useAuthStore((state) => state.user);
   const hydrated = useAuthStore((state) => state.hydrated);
+  const capabilities = useTeacherScopeStore((state) => state.capabilities);
+  const scopeStatus = useTeacherScopeStore((state) => state.status);
   const location = useLocation();
 
   if (!hydrated) {
@@ -41,6 +50,14 @@ export function RequireRole({ roles, children }: RequireRoleProps) {
   }
 
   if (!roles.includes(user.role)) {
+    if (allowLevelHead && user.role === "TEACHER") {
+      if (scopeStatus === "idle" || scopeStatus === "loading") {
+        return null;
+      }
+      if (isLevelHead(user.role, capabilities)) {
+        return <>{children}</>;
+      }
+    }
     return <Navigate to={homePathForRole(user.role)} replace />;
   }
 

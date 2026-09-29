@@ -1,6 +1,62 @@
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/api/types";
-import { can, type TeacherScope } from "@/auth/permissions";
+import { can, isLevelHead, type TeacherScope } from "@/auth/permissions";
+
+describe("Head of Level", () => {
+  const head: TeacherScope = { isClassTeacher: false, headOfLevelIds: ["level-primary"] };
+  const plainTeacher: TeacherScope = { isClassTeacher: true, headOfLevelIds: [] };
+
+  it("is a TEACHER with at least one headed level - never another role, never an empty list", () => {
+    expect(isLevelHead("TEACHER", head)).toBe(true);
+    expect(isLevelHead("TEACHER", plainTeacher)).toBe(false);
+    expect(isLevelHead("TEACHER", { isClassTeacher: true })).toBe(false);
+    expect(isLevelHead("TEACHER", null)).toBe(false);
+    expect(isLevelHead("BRANCH_ADMIN", head)).toBe(false);
+    expect(isLevelHead("INVENTORY_MANAGER", head)).toBe(false);
+  });
+
+  it("gets BRANCH_ADMIN-equivalent academic controls", () => {
+    expect(can.manageAcademics("TEACHER", head)).toBe(true);
+    expect(can.viewSubjectCatalogue("TEACHER", head)).toBe(true);
+    expect(can.manageStudents("TEACHER", head)).toBe(true);
+    expect(can.managePromotions("TEACHER", head)).toBe(true);
+    expect(can.publishResults("TEACHER", head)).toBe(true);
+    expect(can.recordPrincipalRemark("TEACHER", head)).toBe(true);
+    expect(can.viewTeachers("TEACHER", head)).toBe(true);
+    expect(can.viewAttendance("TEACHER", head)).toBe(true);
+    expect(can.manageTimetable("TEACHER", true, head)).toBe(true);
+    expect(can.reviewLessonNotes("TEACHER", true, head)).toBe(true);
+    expect(can.viewMessages("TEACHER", head, true)).toBe(true);
+  });
+
+  it("does not get the admin-only writes the agreed defaults keep back", () => {
+    expect(can.manageTeachers("TEACHER")).toBe(false);
+    expect(can.manageLevelHeads("TEACHER")).toBe(false);
+    expect(can.manageSessions("TEACHER")).toBe(false);
+    expect(can.manageStudentMedical("TEACHER")).toBe(false);
+    expect(can.manageGuardians("TEACHER")).toBe(false);
+    expect(can.deleteSubjects("TEACHER")).toBe(false);
+    expect(can.manageLevels("TEACHER")).toBe(false);
+    expect(can.viewBilling("TEACHER", true)).toBe(false);
+    expect(can.viewInventory("TEACHER")).toBe(false);
+    // Recording and marking stay tied to their own teaching assignments, never to the headship.
+    expect(can.markAttendance("TEACHER", head)).toBe(false);
+    expect(can.composeMessages("TEACHER", head, true)).toBe(false);
+  });
+
+  it("leaves an ordinary teacher's academic admin controls closed", () => {
+    expect(can.manageAcademics("TEACHER", plainTeacher)).toBe(false);
+    expect(can.manageStudents("TEACHER", plainTeacher)).toBe(false);
+    expect(can.publishResults("TEACHER", plainTeacher)).toBe(false);
+    expect(can.viewTeachers("TEACHER", plainTeacher)).toBe(false);
+    expect(can.reviewLessonNotes("TEACHER", true, plainTeacher)).toBe(false);
+  });
+
+  it("makes only a SCHOOL_ADMIN able to assign headships", () => {
+    expect(can.manageLevelHeads("SCHOOL_ADMIN")).toBe(true);
+    expect(can.manageLevelHeads("BRANCH_ADMIN")).toBe(false);
+  });
+});
 
 describe("can.viewMessages", () => {
   it("is false for every role when the school isn't entitled, regardless of role or scope", () => {

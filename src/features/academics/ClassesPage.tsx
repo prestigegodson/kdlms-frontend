@@ -29,8 +29,10 @@ import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { LevelSelect } from "@/features/academics/components/LevelSelect";
 import { useBranchFilter } from "@/features/branches/useBranchFilter";
+import { useHeadedLevels, useIsLevelHead } from "@/features/levelHeads/useLevelHead";
 import { useAuthStore } from "@/stores/authStore";
 import { useLevelStore } from "@/stores/levelStore";
+import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 
 type ListState =
   | { kind: "loading" }
@@ -45,8 +47,11 @@ type ListState =
  */
 export function ClassesPage() {
   const role = useAuthStore((state) => state.user?.role);
+  // A Head of Level gets the admin list - the server returns their levels' classes
+  // unioned with every class they teach, so nothing of their teacher view is lost.
+  const levelHead = useIsLevelHead();
 
-  if (role === "TEACHER") {
+  if (role === "TEACHER" && !levelHead) {
     return <TeacherClasses />;
   }
 
@@ -54,11 +59,15 @@ export function ClassesPage() {
 }
 
 function AdminClasses({ role }: { role: Role | undefined }) {
-  const canManage = can.manageAcademics(role);
-  const isBranchScoped = role === "BRANCH_ADMIN";
+  const capabilities = useTeacherScopeStore((state) => state.capabilities);
+  const canManage = can.manageAcademics(role, capabilities);
+  // Every role but SCHOOL_ADMIN is branch-confined server-side (a Head of Level is a TEACHER).
+  const isBranchScoped = role !== "SCHOOL_ADMIN";
 
   const { ready: branchReady, branches, branchId, defaultBranchId, setBranchId } = useBranchFilter();
   const levels = useLevelStore((storeState) => storeState.levels);
+  // Create/move targets - a Head of Level may only place a class at a level they head.
+  const headedLevels = useHeadedLevels(levels);
   const fetchLevels = useLevelStore((storeState) => storeState.fetchIfNeeded);
   const [levelId, setLevelId] = useState("");
   const [state, setState] = useState<ListState>({ kind: "loading" });
@@ -217,7 +226,7 @@ function AdminClasses({ role }: { role: Role | undefined }) {
         <ClassFormModal
           title="Add classroom"
           branches={branches}
-          levels={levels}
+          levels={headedLevels}
           selectedLevelId={levelId || undefined}
           selectedBranchId={branchId || defaultBranchId || undefined}
           showBranchField={!isBranchScoped}
@@ -235,7 +244,7 @@ function AdminClasses({ role }: { role: Role | undefined }) {
         <RenameClassModal
           key={editing.id}
           schoolClass={editing}
-          levels={levels}
+          levels={headedLevels}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
