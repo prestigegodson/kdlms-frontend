@@ -15,6 +15,8 @@ interface LevelSelectProps {
   activeOnly?: boolean;
   /** Adds a leading `value=""` option with this label (e.g. "All levels") - for list filters, not required create-form fields. */
   allOptionLabel?: string;
+  /** Adds a leading, non-selectable `value=""` prompt (e.g. "Select class") - for create forms that start with no level chosen. */
+  placeholder?: string;
   required?: boolean;
 }
 
@@ -23,11 +25,16 @@ interface LevelSelectProps {
  * Classes) - presentational only, like Pagination/SearchInput: the caller
  * fetches (via stores/levelStore.ts) and owns the selected value.
  */
-export function LevelSelect({ id, levels, value, onChange, activeOnly, allOptionLabel, required }: LevelSelectProps) {
+export function LevelSelect({ id, levels, value, onChange, activeOnly, allOptionLabel, placeholder, required }: LevelSelectProps) {
   const options = activeOnly ? levels.filter((level) => level.status === "ACTIVE") : levels;
 
   return (
     <Select id={id} required={required} value={value} onChange={(event) => onChange(event.target.value)}>
+      {placeholder && (
+        <option value="" disabled>
+          {placeholder}
+        </option>
+      )}
       {allOptionLabel && <option value="">{allOptionLabel}</option>}
       {options.map((level) => (
         <option key={level.id} value={level.id}>

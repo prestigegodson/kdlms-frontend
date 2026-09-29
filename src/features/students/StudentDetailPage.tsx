@@ -343,6 +343,7 @@ function EditStudentModal({ student, onClose, onSaved }: EditStudentModalProps) 
   const [otherName, setOtherName] = useState(student.otherName ?? "");
   const [gender, setGender] = useState<"FEMALE" | "MALE">(student.gender);
   const [dateOfBirth, setDateOfBirth] = useState(student.dateOfBirth ?? "");
+  const [admissionNumber, setAdmissionNumber] = useState(student.admissionNumber);
   const [admissionDate, setAdmissionDate] = useState(student.admissionDate);
   const [address, setAddress] = useState(student.address ?? "");
   const [submitting, setSubmitting] = useState(false);
@@ -361,6 +362,7 @@ function EditStudentModal({ student, onClose, onSaved }: EditStudentModalProps) 
         dateOfBirth: dateOfBirth || undefined,
         admissionDate,
         address: address || undefined,
+        admissionNumber: admissionNumber.trim(),
       });
       onSaved();
     } catch (err) {
@@ -415,6 +417,20 @@ function EditStudentModal({ student, onClose, onSaved }: EditStudentModalProps) 
             <DateInput id="edit-dob" max={todayIso()} value={dateOfBirth} onChange={setDateOfBirth} />
           </FormField>
         </div>
+        <FormField
+          label="Admission number"
+          htmlFor="edit-admission-number"
+          description="Changing this doesn't change the student's portal login ID."
+        >
+          <Input
+            id="edit-admission-number"
+            required
+            maxLength={50}
+            aria-describedby="edit-admission-number-description"
+            value={admissionNumber}
+            onChange={(event) => setAdmissionNumber(event.target.value)}
+          />
+        </FormField>
         <FormField label="Admission date" htmlFor="edit-admission-date">
           <DateInput
             id="edit-admission-date"

@@ -121,6 +121,7 @@ export function RegisterStudentModal({
                 id="register-level"
                 required
                 activeOnly
+                placeholder="Select class"
                 levels={levels}
                 value={levelId}
                 onChange={(value) => {

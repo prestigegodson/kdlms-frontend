@@ -53,6 +53,8 @@ export interface UpdateStudentRequest {
   dateOfBirth?: string;
   admissionDate: string;
   address?: string;
+  /** Omitted or unchanged leaves the admission number as is; a new value must be unused in the school (422 otherwise). */
+  admissionNumber?: string;
 }
 
 export type BloodGroup =

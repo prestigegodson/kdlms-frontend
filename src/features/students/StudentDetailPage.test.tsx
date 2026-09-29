@@ -32,6 +32,7 @@ vi.mock("@/api/students", async () => {
     graduateStudent: vi.fn(),
     transferStudentClass: vi.fn(),
     getStudentMedical: vi.fn(),
+    updateStudent: vi.fn(),
     updateStudentMedical: vi.fn(),
     getStudentSubjects: vi.fn(),
     replaceStudentSubjects: vi.fn(),
@@ -215,6 +216,30 @@ describe("StudentDetailPage", () => {
     await user.click(row);
 
     expect(await screen.findByText("Result history page")).toBeInTheDocument();
+  });
+
+  it("edits the admission number from the edit modal", async () => {
+    vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+    vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+    vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+    vi.mocked(studentsApi.updateStudent).mockResolvedValue({ ...STUDENT_VIEW, admissionNumber: "BFA/2026/0042" });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByRole("heading", { name: "Ada Obi" });
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog");
+    const field = within(dialog).getByLabelText("Admission number");
+    expect(field).toHaveValue("BFA/2026/0001");
+    await user.clear(field);
+    await user.type(field, " BFA/2026/0042 ");
+    await user.click(within(dialog).getByRole("button", { name: "Save changes" }));
+
+    expect(studentsApi.updateStudent).toHaveBeenCalledWith(
+      "student-1",
+      expect.objectContaining({ admissionNumber: "BFA/2026/0042" }),
+    );
   });
 
   it("shows an empty state and edits medical information", async () => {
