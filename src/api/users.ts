@@ -65,6 +65,23 @@ export function listSchoolAdmins(schoolId: string, page = 0, size = 20): Promise
   );
 }
 
+/**
+ * Edits a school's SCHOOL_ADMIN - the system-admin twin of
+ * {@link updateAdministrator}, which only reaches BRANCH_ADMIN/
+ * INVENTORY_MANAGER. Changing the email signs the admin out of their
+ * current session - see the backend's {@code ManageUsersUseCase#updateSchoolAdmin}.
+ */
+export function updateSchoolAdmin(
+  schoolId: string,
+  userId: string,
+  request: UpdateAdministratorRequest,
+): Promise<SchoolUserView> {
+  return apiFetch<SchoolUserView>(`/api/v1/admin/schools/${schoolId}/users/${userId}`, {
+    method: "PUT",
+    body: JSON.stringify(request),
+  });
+}
+
 /** {@code temporaryPassword} is generated server-side and returned exactly once. */
 export interface ResetPasswordResult {
   user: SchoolUserView;

@@ -23,6 +23,7 @@ import {
   createSchoolAdmin,
   listSchoolAdmins,
   resetUserPassword,
+  updateSchoolAdmin,
   type CreateUserResult,
   type SchoolUserView,
 } from "@/api/users";
@@ -459,6 +460,7 @@ function SchoolAdminsCard({ schoolId, refreshKey }: { schoolId: string; refreshK
   const [pendingReset, setPendingReset] = useState<SchoolUserView | null>(null);
   const [justReset, setJustReset] = useState<{ email: string; temporaryPassword: string } | null>(null);
   const [impersonating, setImpersonating] = useState<SchoolUserView | null>(null);
+  const [editing, setEditing] = useState<SchoolUserView | null>(null);
 
   function fetchAdmins() {
     listSchoolAdmins(schoolId)
@@ -493,8 +495,9 @@ function SchoolAdminsCard({ schoolId, refreshKey }: { schoolId: string; refreshK
       <div className="p-6 pb-0">
         <h2 className="text-sm font-semibold text-slate-900">Admins</h2>
         <p className="mt-1 text-sm text-slate-500">
-          This school's SCHOOL_ADMIN and BRANCH_ADMIN users. Reset a password for one who's locked
-          out, or impersonate an active SCHOOL_ADMIN to see the portal exactly as they do.
+          This school's SCHOOL_ADMIN and BRANCH_ADMIN users. Edit a SCHOOL_ADMIN's name or email,
+          reset a password for one who's locked out, or impersonate an active SCHOOL_ADMIN to see
+          the portal exactly as they do.
         </p>
       </div>
 
@@ -551,6 +554,11 @@ function SchoolAdminsCard({ schoolId, refreshKey }: { schoolId: string; refreshK
                   </TableCell>
                   <TableCell label="Actions">
                     <div className="flex flex-wrap gap-2">
+                      {admin.role === "SCHOOL_ADMIN" && (
+                        <Button variant="secondary" onClick={() => setEditing(admin)}>
+                          Edit
+                        </Button>
+                      )}
                       <Button variant="secondary" onClick={() => setPendingReset(admin)}>
                         Reset password
                       </Button>
@@ -594,7 +602,99 @@ function SchoolAdminsCard({ schoolId, refreshKey }: { schoolId: string; refreshK
           onClose={() => setImpersonating(null)}
         />
       )}
+
+      {editing && (
+        <EditSchoolAdminModal
+          schoolId={schoolId}
+          admin={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            load();
+          }}
+        />
+      )}
     </Card>
+  );
+}
+
+interface EditSchoolAdminModalProps {
+  schoolId: string;
+  admin: SchoolUserView;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+/** Full-replace edit of a school's SCHOOL_ADMIN - the system-admin twin of AdministratorsPage's own edit form. */
+function EditSchoolAdminModal({ schoolId, admin, onClose, onSaved }: EditSchoolAdminModalProps) {
+  const [firstName, setFirstName] = useState(admin.firstName);
+  const [lastName, setLastName] = useState(admin.lastName);
+  const [email, setEmail] = useState(admin.email);
+  const [phone, setPhone] = useState(admin.phone ?? "");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    try {
+      await updateSchoolAdmin(schoolId, admin.id, { firstName, lastName, email, phone: phone || undefined });
+      onSaved();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to update administrator");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Edit administrator">
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        {error && <Alert variant="error">{error}</Alert>}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField label="First name" htmlFor="school-admin-first-name">
+            <Input
+              id="school-admin-first-name"
+              required
+              value={firstName}
+              onChange={(event) => setFirstName(event.target.value)}
+            />
+          </FormField>
+          <FormField label="Last name" htmlFor="school-admin-last-name">
+            <Input
+              id="school-admin-last-name"
+              required
+              value={lastName}
+              onChange={(event) => setLastName(event.target.value)}
+            />
+          </FormField>
+        </div>
+        <FormField label="Email" htmlFor="school-admin-email">
+          <Input
+            id="school-admin-email"
+            type="email"
+            required
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+        </FormField>
+        <p className="-mt-2 text-xs text-slate-500">
+          Changing the email signs this administrator out of their current session.
+        </p>
+        <FormField label="Phone" htmlFor="school-admin-phone">
+          <Input id="school-admin-phone" value={phone} onChange={(event) => setPhone(event.target.value)} />
+        </FormField>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={submitting}>
+            {submitting ? "Saving…" : "Save changes"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

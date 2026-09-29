@@ -28,6 +28,7 @@ vi.mock("@/api/users", async () => {
     ...actual,
     listSchoolAdmins: vi.fn(),
     resetUserPassword: vi.fn(),
+    updateSchoolAdmin: vi.fn(),
     impersonate: vi.fn(),
   };
 });
@@ -193,6 +194,50 @@ describe("SchoolDetailPage", () => {
 
     await user.click(await screen.findByRole("button", { name: /Show credentials/ }));
     expect(await screen.findByText("fresh-temp-pass")).toBeInTheDocument();
+  });
+
+  it("offers Edit only for a SCHOOL_ADMIN row, never a BRANCH_ADMIN row", async () => {
+    renderDetailPage(ACTIVE_SCHOOL, [BRANCH_ADMIN, ACTIVE_SCHOOL_ADMIN]);
+
+    const branchAdminRow = (await screen.findByText("sam@bsa.example")).closest("tr");
+    const schoolAdminRow = screen.getByText("grace@bsa.example").closest("tr");
+    expect(within(branchAdminRow!).queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    expect(within(schoolAdminRow!).getByRole("button", { name: "Edit" })).toBeInTheDocument();
+  });
+
+  it("edits a school admin's name and email and reloads the list", async () => {
+    vi.mocked(usersApi.updateSchoolAdmin).mockResolvedValue({
+      ...ACTIVE_SCHOOL_ADMIN,
+      firstName: "Grace",
+      lastName: "Okafor",
+      email: "grace.new@bsa.example",
+    });
+
+    renderDetailPage(ACTIVE_SCHOOL, [ACTIVE_SCHOOL_ADMIN]);
+    const user = userEvent.setup();
+
+    const schoolAdminRow = (await screen.findByText("grace@bsa.example")).closest("tr");
+    await user.click(within(schoolAdminRow!).getByRole("button", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Edit administrator")).toBeInTheDocument();
+
+    const lastNameInput = within(dialog).getByLabelText("Last name");
+    await user.clear(lastNameInput);
+    await user.type(lastNameInput, "Okafor");
+    const emailInput = within(dialog).getByLabelText("Email");
+    await user.clear(emailInput);
+    await user.type(emailInput, "grace.new@bsa.example");
+
+    await user.click(within(dialog).getByRole("button", { name: "Save changes" }));
+
+    expect(usersApi.updateSchoolAdmin).toHaveBeenCalledWith(ACTIVE_SCHOOL.id, ACTIVE_SCHOOL_ADMIN.id, {
+      firstName: "Grace",
+      lastName: "Okafor",
+      email: "grace.new@bsa.example",
+      phone: undefined,
+    });
+    // The list is reloaded after saving - listSchoolAdmins is called again beyond the initial load.
+    expect(usersApi.listSchoolAdmins).toHaveBeenCalledTimes(2);
   });
 
   it("offers Impersonate only for an active SCHOOL_ADMIN, never a BRANCH_ADMIN or a disabled admin", async () => {
