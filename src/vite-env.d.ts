@@ -25,3 +25,6 @@ interface WindowEventMap {
   beforeinstallprompt: BeforeInstallPromptEvent;
   appinstalled: Event;
 }
+
+/** Baked in by vite.config.ts's `define` at build time - see useVersionCheck.ts. */
+declare const __APP_VERSION__: string;

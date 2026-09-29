@@ -9,6 +9,7 @@ import { ImpersonationBanner } from "@/layouts/ImpersonationBanner";
 import { InstallBanner } from "@/layouts/InstallBanner";
 import { InstallInstructionsModal } from "@/layouts/InstallInstructionsModal";
 import { MobileTabBar } from "@/layouts/MobileTabBar";
+import { UpdateBanner } from "@/layouts/UpdateBanner";
 import { UserMenu } from "@/layouts/UserMenu";
 import { useAppBarStore } from "@/stores/appBarStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -490,6 +491,7 @@ export function PortalShell({
                   </div>
                 </Alert>
               )}
+              <UpdateBanner />
               <InstallBanner />
               {banner}
               {children ?? <Outlet />}
