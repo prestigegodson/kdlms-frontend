@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { StatTile } from "@/components/ui/StatTile";
 import { formatMoney } from "@/utils/currency";
-import { formatDateRange } from "@/utils/date";
+import { formatDateRange, formatLongDate } from "@/utils/date";
 
 type LoadState =
   | { kind: "loading" }
@@ -71,8 +71,9 @@ export function SubscriptionPage() {
               <div>
                 <p className="text-sm font-medium text-slate-900">{state.summary.packageName}</p>
                 <p className="text-sm text-slate-500">
-                  {formatDateRange(state.summary.startDate, state.summary.endDate)} (
-                  {state.summary.daysRemaining} days left)
+                  {state.summary.freemium
+                    ? `Since ${formatLongDate(state.summary.startDate)}`
+                    : `${formatDateRange(state.summary.startDate, state.summary.endDate)} (${state.summary.daysRemaining} days left)`}
                 </p>
               </div>
               <Badge variant={STATUS_VARIANT[state.summary.status]}>{state.summary.status}</Badge>

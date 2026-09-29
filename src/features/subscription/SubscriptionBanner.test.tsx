@@ -35,6 +35,7 @@ const ACTIVE_SUMMARY: SubscriptionSummaryView = {
   aiLessonNotes: false,
   aiGenerationLimit: 0,
   billing: false,
+  freemium: false,
 };
 
 describe("SubscriptionBanner", () => {

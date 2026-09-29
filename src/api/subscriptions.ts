@@ -50,6 +50,8 @@ export interface SubscriptionSummaryView {
   aiLessonNotes: boolean;
   aiGenerationLimit: number;
   billing: boolean;
+  /** Mirrors the school's own `freemium` flag - see school API's doc comment. */
+  freemium: boolean;
 }
 
 function adminBase(schoolId: string): string {
