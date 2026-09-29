@@ -140,7 +140,8 @@ describe("StudentBillAdjustmentsModal", () => {
 
     await waitFor(() => expect(billingApi.saveStudentBillAdjustments).toHaveBeenCalled());
     const [, , fees] = vi.mocked(billingApi.saveStudentBillAdjustments).mock.calls[0];
-    expect(fees).toContainEqual({ feeId: "fee-1", selected: false, overrideAmount: 4500, thisTermOnly: false });
+    // A new override defaults to this term only, not standing - see billing-module.md's Phase 25.
+    expect(fees).toContainEqual({ feeId: "fee-1", selected: false, overrideAmount: 4500, thisTermOnly: true });
   });
 
   it("adding a custom charge and saving submits it with its own scope", async () => {

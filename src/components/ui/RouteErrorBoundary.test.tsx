@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RouteErrorBoundary } from "@/components/ui/RouteErrorBoundary";
@@ -41,7 +41,8 @@ describe("RouteErrorBoundary", () => {
     renderThrowing(new Error("Failed to fetch dynamically imported module"));
 
     expect(await screen.findByText("A new version is available")).toBeInTheDocument();
-    expect(reloadOnceModule.reloadOnce).toHaveBeenCalledTimes(1);
+    // reloadOnce runs in a passive effect, which can flush after the message is already on screen.
+    await waitFor(() => expect(reloadOnceModule.reloadOnce).toHaveBeenCalledTimes(1));
   });
 
   it("shows the 404 page for an actual unmatched route", () => {

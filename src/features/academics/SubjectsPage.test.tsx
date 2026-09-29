@@ -602,10 +602,10 @@ describe("SubjectsPage", () => {
       renderAsSchoolAdmin();
       await screen.findByText(/No subjects yet/);
 
-      await user.click(screen.getByRole("button", { name: "Copy from level…" }));
+      await user.click(screen.getByRole("button", { name: "Copy from class…" }));
       const dialog = await screen.findByRole("dialog", { name: "Copy subjects to Primary" });
 
-      await user.selectOptions(within(dialog).getByLabelText("Copy from level"), "Secondary");
+      await user.selectOptions(within(dialog).getByLabelText("Copy from class"), "Secondary");
       await within(dialog).findByText("Physics");
       expect(within(dialog).getByLabelText("Select all 2")).toBeChecked();
 
@@ -637,10 +637,10 @@ describe("SubjectsPage", () => {
       renderAsSchoolAdmin();
       await screen.findByText(/No subjects yet/);
 
-      await user.click(screen.getByRole("button", { name: "Copy from level…" }));
+      await user.click(screen.getByRole("button", { name: "Copy from class…" }));
       const dialog = await screen.findByRole("dialog", { name: "Copy subjects to Primary" });
 
-      await user.selectOptions(within(dialog).getByLabelText("Copy from level"), "Secondary");
+      await user.selectOptions(within(dialog).getByLabelText("Copy from class"), "Secondary");
       await within(dialog).findByText("Physics");
       await user.click(within(dialog).getByRole("button", { name: "Copy" }));
 
@@ -661,7 +661,7 @@ describe("SubjectsPage", () => {
       renderAsSchoolAdmin();
       await screen.findByText(/No subjects yet/);
 
-      expect(screen.getByRole("button", { name: "Copy from level…" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Copy from class…" })).toBeDisabled();
     });
   });
 });

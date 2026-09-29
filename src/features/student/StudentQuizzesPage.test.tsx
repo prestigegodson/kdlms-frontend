@@ -71,7 +71,10 @@ describe("StudentQuizzesPage", () => {
 
     await screen.findByText("Grammar quiz");
     expect(screen.getByText("Grammar quiz").closest("a")).toBeNull();
-    expect(screen.getByText("Submitted · awaiting results")).toBeInTheDocument();
+    // A disabled DrillRow swaps its status badge for the disabled reason.
+    expect(
+      screen.getByText("Submitted · Results will appear once your teacher releases them"),
+    ).toBeInTheDocument();
   });
 
   it("requests the next page when paging forward", async () => {

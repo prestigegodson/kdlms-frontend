@@ -15,7 +15,7 @@ vi.mock("@/api/inventory", async () => {
 
 vi.mock("@/api/students", async () => {
   const actual = await vi.importActual<typeof import("@/api/students")>("@/api/students");
-  return { ...actual, listStudents: vi.fn() };
+  return { ...actual, quickSearchStudents: vi.fn() };
 });
 
 const UNIFORM_LEVEL: StockLevelView = {
@@ -80,13 +80,7 @@ describe("StockIssueModal", () => {
   });
 
   it("issues stock to a searched student", async () => {
-    vi.mocked(studentsApi.listStudents).mockResolvedValue({
-      content: [GRACE],
-      totalElements: 1,
-      totalPages: 1,
-      number: 0,
-      size: 10,
-    });
+    vi.mocked(studentsApi.quickSearchStudents).mockResolvedValue([GRACE]);
     vi.mocked(inventoryApi.issueStock).mockResolvedValue(MOVEMENT);
     const onSaved = vi.fn();
     const onClose = vi.fn();

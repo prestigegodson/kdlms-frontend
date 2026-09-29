@@ -15,7 +15,7 @@ describe("auth api - login", () => {
   });
 
   function stubFetch() {
-    const fetchMock = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
+    const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(
         new Response(JSON.stringify({ accessToken: "a", refreshToken: "r", user: {} }), {
           status: 200,

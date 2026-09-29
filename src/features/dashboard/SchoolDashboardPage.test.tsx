@@ -400,7 +400,7 @@ describe("SchoolDashboardPage", () => {
     expect(screen.getByText("Ada Obi").closest("a")).toHaveAttribute("href", "/school/students/student-ada");
   });
 
-  it("omits the upcoming-birthdays card on the admin dashboard when there are none in the window", async () => {
+  it("keeps the upcoming-birthdays card on the admin dashboard, with an empty state, when there are none in the window", async () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
       admin: {
         activeStudents: 0,
@@ -416,7 +416,8 @@ describe("SchoolDashboardPage", () => {
     renderPage();
 
     await screen.findByText("Active students");
-    expect(screen.queryByText("Upcoming birthdays")).not.toBeInTheDocument();
+    expect(screen.getByText("Upcoming birthdays")).toBeInTheDocument();
+    expect(await screen.findByText("No upcoming birthdays")).toBeInTheDocument();
   });
 
   it("shows the upcoming-birthdays card on the teacher dashboard without a link to student detail", async () => {

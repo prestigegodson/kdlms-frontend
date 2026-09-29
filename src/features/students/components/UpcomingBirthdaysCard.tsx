@@ -18,7 +18,7 @@ import { initialsOfFullName } from "@/utils/initials";
 interface UpcomingBirthdaysCardProps {
   /** Narrows to one class's birthdays (the class detail page). Omitted for the role-shaped dashboard list. */
   classId?: string;
-  /** Renders nothing when there's nothing to show - the dashboard card's convention (`NeedsAttentionCard`'s precedent). Off by default for the class-page section, which shows an `EmptyState` instead since its `Accordion` header is already there. */
+  /** Renders nothing when there's nothing to show (`NeedsAttentionCard`'s precedent). Off by default: both the dashboard card and the class-page section show an `EmptyState` instead, so an empty window reads as "none coming up" rather than a missing card. */
   hideWhenEmpty?: boolean;
   /** Whether a row links to the student's detail page - an admin caller only; a TEACHER has no such route. */
   linkable?: boolean;

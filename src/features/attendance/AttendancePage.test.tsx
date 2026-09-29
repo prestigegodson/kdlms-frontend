@@ -88,7 +88,7 @@ describe("AttendancePage", () => {
   it("shows the marking flow, with no marking controls visible, for a TEACHER with no class-taught classes", async () => {
     renderAs("TEACHER");
 
-    expect(await screen.findByText("No classes to register")).toBeInTheDocument();
+    expect(await screen.findByText("No classrooms to register")).toBeInTheDocument();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
   });
 
