@@ -21,11 +21,13 @@ describe("SchoolSettingsPage", () => {
       schoolId: "school-1",
       allowWeekendAttendance: false,
       allowWeekendTimetable: false,
+      guardianLessonNotesEnabled: false,
     });
     vi.mocked(schoolSettingsApi.updateSchoolSettings).mockResolvedValue({
       schoolId: "school-1",
       allowWeekendAttendance: true,
       allowWeekendTimetable: false,
+      guardianLessonNotesEnabled: false,
     });
     const user = userEvent.setup();
     render(<SchoolSettingsPage />);
@@ -41,6 +43,7 @@ describe("SchoolSettingsPage", () => {
     expect(schoolSettingsApi.updateSchoolSettings).toHaveBeenCalledWith({
       allowWeekendAttendance: true,
       allowWeekendTimetable: false,
+      guardianLessonNotesEnabled: false,
     });
     expect(await screen.findByText("Settings updated.")).toBeInTheDocument();
   });
@@ -50,11 +53,13 @@ describe("SchoolSettingsPage", () => {
       schoolId: "school-1",
       allowWeekendAttendance: false,
       allowWeekendTimetable: false,
+      guardianLessonNotesEnabled: false,
     });
     vi.mocked(schoolSettingsApi.updateSchoolSettings).mockResolvedValue({
       schoolId: "school-1",
       allowWeekendAttendance: false,
       allowWeekendTimetable: true,
+      guardianLessonNotesEnabled: false,
     });
     const user = userEvent.setup();
     render(<SchoolSettingsPage />);
@@ -70,6 +75,39 @@ describe("SchoolSettingsPage", () => {
     expect(schoolSettingsApi.updateSchoolSettings).toHaveBeenCalledWith({
       allowWeekendAttendance: false,
       allowWeekendTimetable: true,
+      guardianLessonNotesEnabled: false,
+    });
+    expect(await screen.findByText("Settings updated.")).toBeInTheDocument();
+  });
+
+  it("toggles the guardian lesson notes setting independently of the weekend ones", async () => {
+    vi.mocked(schoolSettingsApi.getSchoolSettings).mockResolvedValue({
+      schoolId: "school-1",
+      allowWeekendAttendance: false,
+      allowWeekendTimetable: false,
+      guardianLessonNotesEnabled: false,
+    });
+    vi.mocked(schoolSettingsApi.updateSchoolSettings).mockResolvedValue({
+      schoolId: "school-1",
+      allowWeekendAttendance: false,
+      allowWeekendTimetable: false,
+      guardianLessonNotesEnabled: true,
+    });
+    const user = userEvent.setup();
+    render(<SchoolSettingsPage />);
+
+    const checkbox = await screen.findByRole("checkbox", { name: "Let guardians view approved lesson notes" });
+    expect(checkbox).not.toBeChecked();
+
+    await user.click(checkbox);
+    expect(checkbox).toBeChecked();
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(schoolSettingsApi.updateSchoolSettings).toHaveBeenCalledWith({
+      allowWeekendAttendance: false,
+      allowWeekendTimetable: false,
+      guardianLessonNotesEnabled: true,
     });
     expect(await screen.findByText("Settings updated.")).toBeInTheDocument();
   });

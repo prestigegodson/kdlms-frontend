@@ -5,12 +5,16 @@ export interface SchoolSettingsView {
   schoolId: string;
   allowWeekendAttendance: boolean;
   allowWeekendTimetable: boolean;
+  /** Lets guardians read their wards' approved lesson notes. Off by default; also needs the Lesson notes plan feature. */
+  guardianLessonNotesEnabled: boolean;
 }
 
 /** A full replace, like the rest of this resource - omitting a field clears it. */
 export interface SaveSchoolSettingsRequest {
   allowWeekendAttendance: boolean;
   allowWeekendTimetable: boolean;
+  /** Lets guardians read their wards' approved lesson notes. Off by default; also needs the Lesson notes plan feature. */
+  guardianLessonNotesEnabled: boolean;
 }
 
 const BASE = "/api/v1/school/settings";

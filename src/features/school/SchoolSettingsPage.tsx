@@ -47,6 +47,7 @@ export function SchoolSettingsPage() {
       const updated = await updateSchoolSettings({
         allowWeekendAttendance: state.settings.allowWeekendAttendance,
         allowWeekendTimetable: state.settings.allowWeekendTimetable,
+        guardianLessonNotesEnabled: state.settings.guardianLessonNotesEnabled,
       });
       setState({ kind: "loaded", settings: updated });
       // The attendance date picker reads this same store - push the save straight in
@@ -126,6 +127,23 @@ export function SchoolSettingsPage() {
             By default, timetable periods can only be scheduled Monday through Friday. Turn this on if
             your school runs Saturday or Sunday classes. A timetable entry already saved on a weekend
             stays correctable even if this is turned back off.
+          </p>
+
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <Checkbox
+              checked={settings.guardianLessonNotesEnabled}
+              onChange={(event) =>
+                setState({
+                  kind: "loaded",
+                  settings: { ...settings, guardianLessonNotesEnabled: event.target.checked },
+                })
+              }
+            />
+            Let guardians view approved lesson notes
+          </label>
+          <p className="text-sm text-slate-500">
+            Off by default. When turned on, guardians can read their wards' approved lesson notes in the
+            guardian portal. This also requires the Lesson notes feature on your school's plan.
           </p>
 
           <Button type="submit" disabled={saving}>
