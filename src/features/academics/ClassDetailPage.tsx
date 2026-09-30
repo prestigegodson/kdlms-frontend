@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import type { UserSummary } from "@/api/auth";
 import { listBranches, type BranchView } from "@/api/branches";
 import {
+  assignAssistantTeacher,
   assignClassTeacher,
   assignSubjectTeacher,
   getClass,
@@ -11,6 +12,7 @@ import {
   type RosterStudentView,
   type SchoolClassView,
   type SubjectTeacherView,
+  unassignAssistantTeacher,
   unassignClassTeacher,
   unassignSubjectTeacher,
 } from "@/api/classes";
@@ -41,13 +43,22 @@ import { useFeatureStore } from "@/stores/featureStore";
 import { useLevelStore } from "@/stores/levelStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 
+/** Which teacher slot an unassign confirmation is for. */
+type TeacherSlotKind = "classTeacher" | "assistant";
+
+const SLOT_COPY: Record<TeacherSlotKind, { title: string; noun: string }> = {
+  classTeacher: { title: "Class teacher", noun: "class teacher" },
+  assistant: { title: "Co-Teacher", noun: "co-teacher" },
+};
+
 type LoadState =
   | { kind: "loading" }
   | { kind: "loaded"; schoolClass: SchoolClassView }
   | { kind: "error"; message: string };
 
 /**
- * Class detail: an at-a-glance summary, class-teacher assignment, the
+ * Class detail: an at-a-glance summary, class-teacher and assistant-teacher
+ * assignment (the assistant holds identical class-teacher access), the
  * enrolled-students roster, and the per-subject teacher assignment grid. A
  * TEACHER only ever reaches a class they're assigned to (the backend 404s
  * otherwise - see ClassAccessGuard) and sees everything here read-only;
@@ -81,7 +92,7 @@ export function ClassDetailPage() {
   const [assignments, setAssignments] = useState<SubjectTeacherView[] | null>(null);
   const [subjects, setSubjects] = useState<SubjectView[] | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [unassigningTeacher, setUnassigningTeacher] = useState(false);
+  const [unassigningSlot, setUnassigningSlot] = useState<TeacherSlotKind | null>(null);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [provisionLoginsOpen, setProvisionLoginsOpen] = useState(false);
 
@@ -160,24 +171,24 @@ export function ClassDetailPage() {
     fetchClass();
   }
 
-  async function handleAssignClassTeacher(teacherId: string) {
+  async function handleAssignTeacher(slot: TeacherSlotKind, teacherId: string) {
     if (!classId) return;
     setActionError(null);
     try {
-      await assignClassTeacher(classId, teacherId);
+      await (slot === "classTeacher" ? assignClassTeacher : assignAssistantTeacher)(classId, teacherId);
       load();
     } catch (error) {
       setActionError(error instanceof ApiError ? error.message : "That action failed");
     }
   }
 
-  async function confirmUnassignClassTeacher() {
-    if (!classId) return;
+  async function confirmUnassignTeacher() {
+    if (!classId || !unassigningSlot) return;
     // Deliberately not caught here - ConfirmDialog's own onConfirm handling
     // surfaces a rejection inline in the dialog and keeps it open, the same
     // pattern BranchesPage's confirmDeactivate uses.
-    await unassignClassTeacher(classId);
-    setUnassigningTeacher(false);
+    await (unassigningSlot === "classTeacher" ? unassignClassTeacher : unassignAssistantTeacher)(classId);
+    setUnassigningSlot(null);
     load();
   }
 
@@ -224,7 +235,11 @@ export function ClassDetailPage() {
   const boys = roster?.filter((student) => student.gender === "MALE").length ?? 0;
   const girls = roster?.filter((student) => student.gender === "FEMALE").length ?? 0;
   const assignedSubjectCount = assignments?.length ?? 0;
-  const showBirthdays = can.viewClassBirthdays(role, schoolClass.classTeacherId === currentUserId);
+  const showBirthdays = can.viewClassBirthdays(
+    role,
+    currentUserId !== undefined &&
+      (schoolClass.classTeacherId === currentUserId || schoolClass.assistantTeacherId === currentUserId),
+  );
 
   return (
     <div className="space-y-6">
@@ -254,7 +269,12 @@ export function ClassDetailPage() {
           icon={BookOpen}
           hint={subjects ? `${assignedSubjectCount} with a teacher` : undefined}
         />
-        <StatTile label="Class teacher" value={schoolClass.classTeacherName ?? "Unassigned"} icon={UserCheck} />
+        <StatTile
+          label="Class teacher"
+          value={schoolClass.classTeacherName ?? "Unassigned"}
+          icon={UserCheck}
+          hint={schoolClass.assistantTeacherName ? `Co-Teacher: ${schoolClass.assistantTeacherName}` : undefined}
+        />
       </div>
 
       {(showAttendanceLink || showResultsLink || canProvisionLogins) && (
@@ -286,42 +306,31 @@ export function ClassDetailPage() {
       )}
 
       <Accordion title="Class teacher" defaultOpen>
-        {schoolClass.classTeacherName ? (
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-slate-900">{schoolClass.classTeacherName}</p>
-            {canManage && (
-              <Button variant="secondary" onClick={() => setUnassigningTeacher(true)}>
-                Unassign
-              </Button>
-            )}
-          </div>
-        ) : (
-          <p className="text-sm text-slate-500">No class teacher assigned yet.</p>
-        )}
+        <TeacherSlot
+          slot="classTeacher"
+          teacherId={schoolClass.classTeacherId}
+          teacherName={schoolClass.classTeacherName}
+          // The other slot's teacher can't fill this one too - the backend rejects it.
+          candidates={branchTeachers.filter((teacher) => teacher.id !== schoolClass.assistantTeacherId)}
+          canManage={canManage && teachers !== null}
+          onAssign={(teacherId) => handleAssignTeacher("classTeacher", teacherId)}
+          onUnassign={() => setUnassigningSlot("classTeacher")}
+        />
+      </Accordion>
 
-        {canManage && teachers !== null && !schoolClass.classTeacherId && (
-          <div className="mt-4 max-w-sm">
-            <FormField label="Assign a class teacher" htmlFor="class-teacher-select">
-              <Select
-                id="class-teacher-select"
-                value=""
-                onChange={(event) => event.target.value && handleAssignClassTeacher(event.target.value)}
-              >
-                <option value="">Select a teacher…</option>
-                {branchTeachers.map((teacher) => (
-                  <option key={teacher.id} value={teacher.id}>
-                    {teacher.firstName} {teacher.lastName}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            {branchTeachers.length === 0 && (
-              <p className="mt-1 text-xs text-slate-500">
-                No teachers in this branch yet - add one on the Teachers page.
-              </p>
-            )}
-          </div>
-        )}
+      <Accordion title="Co-Teacher" defaultOpen={canManage || Boolean(schoolClass.assistantTeacherId)}>
+        <p className="mb-3 text-xs text-slate-500">
+          A co-teacher can do everything the class teacher can. Printed reports name the class teacher only.
+        </p>
+        <TeacherSlot
+          slot="assistant"
+          teacherId={schoolClass.assistantTeacherId}
+          teacherName={schoolClass.assistantTeacherName}
+          candidates={branchTeachers.filter((teacher) => teacher.id !== schoolClass.classTeacherId)}
+          canManage={canManage && teachers !== null}
+          onAssign={(teacherId) => handleAssignTeacher("assistant", teacherId)}
+          onUnassign={() => setUnassigningSlot("assistant")}
+        />
       </Accordion>
 
       <Accordion
@@ -366,14 +375,19 @@ export function ClassDetailPage() {
         )}
       </Accordion>
 
-      {unassigningTeacher && (
+      {unassigningSlot && (
         <ConfirmDialog
-          title="Unassign the class teacher?"
-          message={<>{schoolClass.classTeacherName} will no longer be this classroom's teacher.</>}
+          title={`Unassign the ${SLOT_COPY[unassigningSlot].noun}?`}
+          message={
+            <>
+              {unassigningSlot === "classTeacher" ? schoolClass.classTeacherName : schoolClass.assistantTeacherName}{" "}
+              will no longer be this classroom's {SLOT_COPY[unassigningSlot].noun}.
+            </>
+          }
           confirmLabel="Unassign"
           variant="danger"
-          onConfirm={confirmUnassignClassTeacher}
-          onClose={() => setUnassigningTeacher(false)}
+          onConfirm={confirmUnassignTeacher}
+          onClose={() => setUnassigningSlot(null)}
         />
       )}
 
@@ -397,5 +411,62 @@ export function ClassDetailPage() {
         }}
       />
     </div>
+  );
+}
+
+interface TeacherSlotProps {
+  slot: TeacherSlotKind;
+  teacherId?: string;
+  teacherName?: string;
+  /** Branch teachers eligible for this slot - already excludes whoever holds the other slot. */
+  candidates: UserSummary[];
+  canManage: boolean;
+  onAssign: (teacherId: string) => void;
+  onUnassign: () => void;
+}
+
+/** One teacher slot on a classroom - the class teacher or the assistant teacher - with its assign/unassign controls. */
+function TeacherSlot({ slot, teacherId, teacherName, candidates, canManage, onAssign, onUnassign }: TeacherSlotProps) {
+  const { noun } = SLOT_COPY[slot];
+  const selectId = `${slot}-select`;
+  return (
+    <>
+      {teacherName ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-slate-900">{teacherName}</p>
+          {canManage && (
+            <Button variant="secondary" onClick={onUnassign}>
+              Unassign
+            </Button>
+          )}
+        </div>
+      ) : (
+        <p className="text-sm text-slate-500">No {noun} assigned yet.</p>
+      )}
+
+      {canManage && !teacherId && (
+        <div className="mt-4 max-w-sm">
+          <FormField label={`Assign a ${noun}`} htmlFor={selectId}>
+            <Select
+              id={selectId}
+              value=""
+              onChange={(event) => event.target.value && onAssign(event.target.value)}
+            >
+              <option value="">Select a teacher…</option>
+              {candidates.map((teacher) => (
+                <option key={teacher.id} value={teacher.id}>
+                  {teacher.firstName} {teacher.lastName}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          {candidates.length === 0 && (
+            <p className="mt-1 text-xs text-slate-500">
+              No other teachers in this branch yet - add one on the Teachers page.
+            </p>
+          )}
+        </div>
+      )}
+    </>
   );
 }

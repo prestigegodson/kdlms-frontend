@@ -91,7 +91,7 @@ describe("AssessmentsPage", () => {
 
   it("seeds the class and subject from ?classId=&subjectId= (SubjectsPage's \"Record assessment\" row action)", async () => {
     vi.mocked(meApi.listMyClasses).mockResolvedValue([
-      { classId: "class-1", className: "JSS 1A", branchId: "branch-1", levelId: "level-1", isClassTeacher: true, subjectIds: ["subject-1"] },
+      { classId: "class-1", className: "JSS 1A", branchId: "branch-1", levelId: "level-1", isClassTeacher: true, isAssistantTeacher: false, subjectIds: ["subject-1"] },
     ]);
     vi.mocked(meApi.listRecordableSubjects).mockResolvedValue([
       { id: "subject-1", schoolId: "school-1", levelId: "level-1", name: "Mathematics", selective: false, termNumbers: [1, 2, 3], status: "ACTIVE" },

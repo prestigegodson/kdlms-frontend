@@ -277,6 +277,7 @@ describe("StudentsPage", () => {
       levelId: "level-1",
       className: "Primary 1",
       isClassTeacher: true,
+      isAssistantTeacher: false,
       subjectIds: [],
     };
     const rosterStudent: RosterStudentView = {
@@ -303,6 +304,7 @@ describe("StudentsPage", () => {
       levelId: "level-1",
       className: "Primary 1",
       isClassTeacher: true,
+      isAssistantTeacher: false,
       subjectIds: [],
     };
     const rosterStudent: RosterStudentView = {

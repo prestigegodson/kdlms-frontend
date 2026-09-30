@@ -93,7 +93,7 @@ describe("TakeHomeQuizzesPage", () => {
 
   it("lists a TEACHER's quizzes once a class and term are selected", async () => {
     vi.mocked(meApi.listMyClasses).mockResolvedValue([
-      { classId: "class-1", className: "JSS 1A", branchId: "branch-1", levelId: "level-1", isClassTeacher: true, subjectIds: ["subject-1"] },
+      { classId: "class-1", className: "JSS 1A", branchId: "branch-1", levelId: "level-1", isClassTeacher: true, isAssistantTeacher: false, subjectIds: ["subject-1"] },
     ]);
     vi.mocked(sessionsApi.listSessions).mockResolvedValue({
       content: [
@@ -150,7 +150,7 @@ describe("TakeHomeQuizzesPage", () => {
 
   it("seeds the class and subject from ?classId=&subjectId= (SubjectsPage's row action)", async () => {
     vi.mocked(meApi.listMyClasses).mockResolvedValue([
-      { classId: "class-1", className: "JSS 1A", branchId: "branch-1", levelId: "level-1", isClassTeacher: true, subjectIds: ["subject-1"] },
+      { classId: "class-1", className: "JSS 1A", branchId: "branch-1", levelId: "level-1", isClassTeacher: true, isAssistantTeacher: false, subjectIds: ["subject-1"] },
     ]);
     vi.mocked(sessionsApi.listSessions).mockResolvedValue({
       content: [

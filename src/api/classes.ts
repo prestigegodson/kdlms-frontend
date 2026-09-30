@@ -16,6 +16,9 @@ export interface SchoolClassView {
   name: string;
   classTeacherId?: string;
   classTeacherName?: string;
+  /** The optional assistant teacher - identical class-teacher access, never the same person as the class teacher. */
+  assistantTeacherId?: string;
+  assistantTeacherName?: string;
   status: ClassStatus;
 }
 
@@ -86,6 +89,17 @@ export function assignClassTeacher(classId: string, teacherId: string): Promise<
 
 export function unassignClassTeacher(classId: string): Promise<SchoolClassView> {
   return apiFetch<SchoolClassView>(`${BASE}/${classId}/class-teacher`, { method: "DELETE" });
+}
+
+export function assignAssistantTeacher(classId: string, teacherId: string): Promise<SchoolClassView> {
+  return apiFetch<SchoolClassView>(`${BASE}/${classId}/assistant-teacher`, {
+    method: "PUT",
+    body: JSON.stringify({ teacherId }),
+  });
+}
+
+export function unassignAssistantTeacher(classId: string): Promise<SchoolClassView> {
+  return apiFetch<SchoolClassView>(`${BASE}/${classId}/assistant-teacher`, { method: "DELETE" });
 }
 
 export function activateClass(classId: string): Promise<void> {

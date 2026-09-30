@@ -124,6 +124,7 @@ describe("LearningResourcesPage", () => {
         branchId: "branch-1",
         levelId: "level-1",
         isClassTeacher: true,
+        isAssistantTeacher: false,
         subjectIds: ["subject-1"],
       },
     ]);

@@ -28,6 +28,8 @@ vi.mock("@/api/classes", async () => {
     getClass: vi.fn(),
     assignClassTeacher: vi.fn(),
     unassignClassTeacher: vi.fn(),
+    assignAssistantTeacher: vi.fn(),
+    unassignAssistantTeacher: vi.fn(),
     listSubjectTeachers: vi.fn(),
     getSubjectRegistrations: vi.fn(),
     setSubjectRegistrations: vi.fn(),
@@ -226,6 +228,67 @@ describe("ClassDetailPage - class teacher assignment", () => {
     expect((await screen.findAllByText("Sonia B")).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("button", { name: "Unassign" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Assign a class teacher")).not.toBeInTheDocument();
+  });
+
+  it("assigns an assistant teacher, never offering the class teacher for that slot", async () => {
+    const AIDE: UserSummary = { ...TEACHER, id: "teacher-2", email: "aide@school.example", firstName: "Aide", lastName: "T" };
+    vi.mocked(usersApi.listTeachers).mockResolvedValue({
+      content: [TEACHER, AIDE],
+      totalElements: 2,
+      totalPages: 1,
+      number: 0,
+      size: 200,
+    });
+    vi.mocked(classesApi.getClass).mockResolvedValue({
+      ...BASE_CLASS,
+      classTeacherId: "teacher-1",
+      classTeacherName: "Sonia B",
+    });
+    vi.mocked(classesApi.assignAssistantTeacher).mockResolvedValue({
+      ...BASE_CLASS,
+      classTeacherId: "teacher-1",
+      classTeacherName: "Sonia B",
+      assistantTeacherId: "teacher-2",
+      assistantTeacherName: "Aide T",
+    });
+
+    renderAsSchoolAdmin();
+
+    expect(await screen.findByText("No co-teacher assigned yet.")).toBeInTheDocument();
+    const select = await screen.findByLabelText("Assign a co-teacher");
+    await waitFor(() => expect(within(select).getByRole("option", { name: "Aide T" })).toBeInTheDocument());
+    expect(within(select).queryByRole("option", { name: "Sonia B" })).not.toBeInTheDocument();
+
+    await userEvent.selectOptions(select, "teacher-2");
+
+    expect(classesApi.assignAssistantTeacher).toHaveBeenCalledWith("class-1", "teacher-2");
+  });
+
+  it("shows the assigned assistant teacher with its own Unassign confirmation", async () => {
+    vi.mocked(classesApi.getClass).mockResolvedValue({
+      ...BASE_CLASS,
+      classTeacherId: "teacher-1",
+      classTeacherName: "Sonia B",
+      assistantTeacherId: "teacher-2",
+      assistantTeacherName: "Aide T",
+    });
+    vi.mocked(classesApi.unassignAssistantTeacher).mockResolvedValue({
+      ...BASE_CLASS,
+      classTeacherId: "teacher-1",
+      classTeacherName: "Sonia B",
+    });
+
+    renderAsSchoolAdmin();
+
+    expect(await screen.findByText("Co-Teacher: Aide T")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Unassign" })).toHaveLength(2);
+
+    await userEvent.click(screen.getAllByRole("button", { name: "Unassign" })[1]);
+    expect(await screen.findByText("Unassign the co-teacher?")).toBeInTheDocument();
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Unassign" }));
+
+    await waitFor(() => expect(classesApi.unassignAssistantTeacher).toHaveBeenCalledWith("class-1"));
+    expect(classesApi.unassignClassTeacher).not.toHaveBeenCalled();
   });
 
   it("badges a selective subject and lets an admin manage its registered students", async () => {

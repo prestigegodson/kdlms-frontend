@@ -17,7 +17,10 @@ export interface TeacherClassView {
   levelId: string;
   levelName?: string;
   className: string;
+  /** True for the class teacher and the assistant teacher alike - both hold class-teacher access. */
   isClassTeacher: boolean;
+  /** Narrows `isClassTeacher`: the caller is this class's assistant teacher, not its lead class teacher. */
+  isAssistantTeacher: boolean;
   subjectIds: string[];
 }
 

@@ -182,7 +182,12 @@ function AdminClasses({ role }: { role: Role | undefined }) {
                     {schoolClass.name}
                   </TableCell>
                   <TableCell label="Class">{levelNames.get(schoolClass.levelId) ?? "—"}</TableCell>
-                  <TableCell label="Class teacher">{schoolClass.classTeacherName ?? "—"}</TableCell>
+                  <TableCell label="Class teacher">
+                    {schoolClass.classTeacherName ?? "—"}
+                    {schoolClass.assistantTeacherName && (
+                      <p className="text-xs text-slate-500">Co-Teacher: {schoolClass.assistantTeacherName}</p>
+                    )}
+                  </TableCell>
                   <TableCell label="Status">
                     <Badge variant={schoolClass.status === "ACTIVE" ? "success" : "neutral"}>
                       {schoolClass.status}
@@ -313,7 +318,12 @@ function TeacherClasses() {
                   <TableCell label="Class">{schoolClass.levelName ?? "—"}</TableCell>
                   <TableCell label="Your role">
                     <div className="flex flex-wrap gap-2">
-                      {schoolClass.isClassTeacher && <Badge variant="success">Class teacher</Badge>}
+                      {schoolClass.isClassTeacher &&
+                        (schoolClass.isAssistantTeacher ? (
+                          <Badge variant="info">Co-Teacher</Badge>
+                        ) : (
+                          <Badge variant="success">Class teacher</Badge>
+                        ))}
                       {schoolClass.subjectIds.length > 0 && (
                         <Badge variant="neutral">
                           Subject teacher ({schoolClass.subjectIds.length})

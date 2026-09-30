@@ -31,6 +31,7 @@ const CLASS: TeacherClassView = {
   levelId: "level-1",
   className: "JSS 1A",
   isClassTeacher: true,
+  isAssistantTeacher: false,
   subjectIds: [],
 };
 

@@ -8,10 +8,12 @@ import * as classesApi from "@/api/classes";
 import type { SchoolClassView } from "@/api/classes";
 import * as levelsApi from "@/api/levels";
 import type { LevelView } from "@/api/levels";
+import * as meApi from "@/api/me";
 import { ClassesPage } from "@/features/academics/ClassesPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import { resetBranchStore } from "@/stores/branchStore";
 import { resetLevelStore } from "@/stores/levelStore";
+import { resetTeacherScopeStore } from "@/stores/teacherScopeStore";
 
 vi.mock("@/api/classes", async () => {
   const actual = await vi.importActual<typeof import("@/api/classes")>("@/api/classes");
@@ -23,6 +25,11 @@ vi.mock("@/api/classes", async () => {
     activateClass: vi.fn(),
     deactivateClass: vi.fn(),
   };
+});
+
+vi.mock("@/api/me", async () => {
+  const actual = await vi.importActual<typeof import("@/api/me")>("@/api/me");
+  return { ...actual, listMyClasses: vi.fn() };
 });
 
 vi.mock("@/api/branches", async () => {
@@ -104,6 +111,26 @@ function renderAsSchoolAdmin() {
     ],
     { initialEntries: ["/"] },
   );
+  render(<RouterProvider router={router} />);
+}
+
+function renderAsTeacher() {
+  resetAuthStore();
+  resetTeacherScopeStore();
+  useAuthStore.setState({
+    user: {
+      id: "teacher-1",
+      email: "sonia@school.example",
+      firstName: "Sonia",
+      lastName: "B",
+      role: "TEACHER",
+      schoolId: "school-1",
+      branchId: "branch-1",
+    },
+    accessToken: "access",
+    refreshToken: "refresh",
+  });
+  const router = createMemoryRouter([{ path: "/", element: <ClassesPage /> }], { initialEntries: ["/"] });
   render(<RouterProvider router={router} />);
 }
 
@@ -206,5 +233,36 @@ describe("ClassesPage", () => {
     await user.click(row);
 
     expect(await screen.findByText("Class detail page")).toBeInTheDocument();
+  });
+
+  it("shows an admin each class's assistant teacher under its class teacher", async () => {
+    mockClasses([
+      { ...CLASS_VIEW, classTeacherName: "Sonia B", assistantTeacherId: "teacher-2", assistantTeacherName: "Aide T" },
+    ]);
+
+    renderAsSchoolAdmin();
+
+    expect(await screen.findByText("Sonia B")).toBeInTheDocument();
+    expect(screen.getByText("Co-Teacher: Aide T")).toBeInTheDocument();
+  });
+
+  it("badges a teacher's own role as assistant teacher rather than class teacher", async () => {
+    vi.mocked(meApi.listMyClasses).mockResolvedValue([
+      {
+        classId: "class-1",
+        branchId: "branch-1",
+        levelId: "level-1",
+        levelName: "Primary",
+        className: "Little Star 1",
+        isClassTeacher: true,
+        isAssistantTeacher: true,
+        subjectIds: [],
+      },
+    ]);
+
+    renderAsTeacher();
+
+    expect(await screen.findByText("Co-Teacher")).toBeInTheDocument();
+    expect(screen.queryByText("Class teacher")).not.toBeInTheDocument();
   });
 });
