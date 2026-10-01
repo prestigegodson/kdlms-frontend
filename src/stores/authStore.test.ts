@@ -3,6 +3,7 @@ import * as authApi from "@/api/auth";
 import { apiFetch } from "@/api/client";
 import * as usersApi from "@/api/users";
 import { initAuth, resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetLevelStore, useLevelStore } from "@/stores/levelStore";
 import { useStudentStore } from "@/stores/studentStore";
 
 vi.mock("@/api/auth");
@@ -16,6 +17,30 @@ const SYSTEM_ADMIN = {
   role: "SYSTEM_ADMIN",
 } as const;
 
+/** A previous school's level list, as levelStore would hold it after any level-aware page loaded. */
+function seedStaleLevels(): void {
+  useLevelStore.setState({
+    levels: [
+      {
+        id: "school-a-level",
+        baseLevel: "PRIMARY",
+        displayName: "School A Primary",
+        rank: 1,
+        status: "ACTIVE",
+        subjectCount: 0,
+        classCount: 0,
+        subjectGroupCount: 0,
+      },
+    ],
+    status: "loaded",
+  });
+}
+
+function expectLevelStoreReset(): void {
+  expect(useLevelStore.getState().levels).toEqual([]);
+  expect(useLevelStore.getState().status).toBe("idle");
+}
+
 const USER = {
   id: "1",
   email: "a@b.com",
@@ -27,6 +52,7 @@ const USER = {
 describe("authStore", () => {
   beforeEach(() => {
     resetAuthStore();
+    resetLevelStore();
     vi.clearAllMocks();
   });
 
@@ -112,6 +138,16 @@ describe("authStore", () => {
     expect(useStudentStore.getState().status).toBe("idle");
   });
 
+  it("logout resets the level store, so another school's account never sees the previous school's levels", () => {
+    vi.mocked(authApi.logout).mockResolvedValue(undefined);
+    useAuthStore.setState({ user: USER, accessToken: "access", refreshToken: "refresh" });
+    seedStaleLevels();
+
+    useAuthStore.getState().logout();
+
+    expectLevelStoreReset();
+  });
+
   describe("impersonation", () => {
     beforeEach(() => {
       useAuthStore.setState({
@@ -147,6 +183,37 @@ describe("authStore", () => {
         accessToken: "sysadmin-access",
         refreshToken: "sysadmin-refresh",
       });
+    });
+
+    it("startImpersonation resets the level store, so a second impersonated school never shows the first's levels", async () => {
+      vi.mocked(usersApi.impersonate).mockResolvedValue({
+        accessToken: "impersonation-access",
+        sessionId: "session-2",
+        expiresAt: "2026-01-01T01:00:00Z",
+        schoolName: "School B",
+        user: USER,
+      });
+      seedStaleLevels();
+
+      await useAuthStore.getState().startImpersonation("school-b", "admin-b", "Support ticket #456");
+
+      expectLevelStoreReset();
+    });
+
+    it("stopImpersonation resets the level store", async () => {
+      vi.mocked(authApi.stopImpersonation).mockResolvedValue(undefined);
+      useAuthStore.setState({
+        user: USER,
+        accessToken: "impersonation-access",
+        refreshToken: null,
+        impersonation: { sessionId: "session-1", expiresAt: "2026-01-01T01:00:00Z" },
+        stashedSession: { user: SYSTEM_ADMIN, accessToken: "sysadmin-access", refreshToken: "sysadmin-refresh" },
+      });
+      seedStaleLevels();
+
+      await useAuthStore.getState().stopImpersonation();
+
+      expectLevelStoreReset();
     });
 
     it("stopImpersonation calls the backend and restores the stashed session", async () => {

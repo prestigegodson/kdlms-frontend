@@ -7,6 +7,7 @@ import * as usersApi from "@/api/users";
 import { useAcademicContextStore } from "@/stores/academicContextStore";
 import { useBranchStore } from "@/stores/branchStore";
 import { useFeatureStore } from "@/stores/featureStore";
+import { useLevelStore } from "@/stores/levelStore";
 import { usePendingLessonNotesStore } from "@/stores/pendingLessonNotesStore";
 import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
@@ -110,6 +111,7 @@ function resetSessionScopedStores(): void {
   useUnreadMessagesStore.getState().reset();
   usePendingLessonNotesStore.getState().reset();
   useBranchStore.getState().reset();
+  useLevelStore.getState().reset();
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -148,7 +150,7 @@ export const useAuthStore = create<AuthState>()(
         // the previous one's cached class/subject-teacher capabilities,
         // current-session/term label, linked wards, own student profile,
         // school settings, gated feature flags, brand mark, unread-messages
-        // count, pending-lesson-note count, or selected branch.
+        // count, pending-lesson-note count, selected branch, or level list.
         resetSessionScopedStores();
         if (token) {
           // Best-effort: the local session is already cleared either way.
