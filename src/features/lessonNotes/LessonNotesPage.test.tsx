@@ -8,6 +8,7 @@ import * as sessionsApi from "@/api/sessions";
 import * as subjectsApi from "@/api/subjects";
 import { LessonNotesPage } from "@/features/lessonNotes/LessonNotesPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetBranchStore, useBranchStore } from "@/stores/branchStore";
 import { resetLevelStore } from "@/stores/levelStore";
 
 vi.mock("@/api/lessonNotes", async () => {
@@ -60,6 +61,8 @@ describe("LessonNotesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetLevelStore();
+    resetBranchStore();
+    useBranchStore.setState({ status: "loaded", branches: [], selectedBranchId: null });
     vi.mocked(lessonNotesApi.getMyLessonNoteSubjects).mockResolvedValue([]);
     vi.mocked(subjectsApi.listSubjects).mockResolvedValue({
       content: [],
@@ -99,6 +102,47 @@ describe("LessonNotesPage", () => {
 
     expect(await screen.findByText("Nothing to review")).toBeInTheDocument();
     expect(lessonNotesApi.getReviewQueue).toHaveBeenCalled();
+  });
+
+  it("gives a SCHOOL_ADMIN a branch filter and scopes the review queue to the selected branch", async () => {
+    useBranchStore.setState({
+      status: "loaded",
+      branches: [
+        { id: "branch-1", schoolId: "school-1", name: "Main Campus", main: true, status: "ACTIVE" },
+        { id: "branch-2", schoolId: "school-1", name: "Lekki Campus", main: false, status: "ACTIVE" },
+      ],
+      selectedBranchId: "branch-1",
+    });
+    renderAs("SCHOOL_ADMIN");
+    await screen.findByText("Nothing to review");
+    expect(lessonNotesApi.getReviewQueue).toHaveBeenLastCalledWith(
+      undefined,
+      undefined,
+      "SUBMITTED",
+      0,
+      20,
+      "branch-1",
+    );
+
+    await userEvent.selectOptions(screen.getByLabelText("Branch"), "Lekki Campus");
+
+    await vi.waitFor(() =>
+      expect(lessonNotesApi.getReviewQueue).toHaveBeenLastCalledWith(
+        undefined,
+        undefined,
+        "SUBMITTED",
+        0,
+        20,
+        "branch-2",
+      ),
+    );
+  });
+
+  it("shows no branch filter to a TEACHER, whose branch the server derives", async () => {
+    renderAs("TEACHER");
+
+    await screen.findByText("No subjects assigned");
+    expect(screen.queryByLabelText("Branch")).not.toBeInTheDocument();
   });
 
   it("shows the school-wide catalogue empty state for a SCHOOL_ADMIN on the Browse by subject tab", async () => {
@@ -171,7 +215,8 @@ describe("LessonNotesPage", () => {
       await user.click(screen.getByRole("button", { name: /Copy note/ }));
 
       expect(await screen.findByText(/1 skipped/)).toBeInTheDocument();
-      expect(lessonNotesApi.copyLessonNotes).toHaveBeenCalledWith("term-0", "term-1", ["subject-1"]);
+      // No branchId for a TEACHER - the server confines them to their own branch.
+      expect(lessonNotesApi.copyLessonNotes).toHaveBeenCalledWith("term-0", "term-1", ["subject-1"], undefined);
     });
   });
 });

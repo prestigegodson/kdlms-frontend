@@ -14,6 +14,8 @@ interface AiGenerateSheetProps {
   subjectId: string;
   termId: string;
   weekNumber: number;
+  /** The branch the note belongs to - see `LessonNoteEditorPage`'s own `branchId`. */
+  branchId?: string;
   /** Pre-fills the sheet's own Topic field from whatever the teacher has already typed in the main form, if anything. */
   initialTopic: string;
   onClose: () => void;
@@ -36,6 +38,7 @@ export function AiGenerateSheet({
   subjectId,
   termId,
   weekNumber,
+  branchId,
   initialTopic,
   onClose,
   onApply,
@@ -83,7 +86,7 @@ export function AiGenerateSheet({
             setStatus("error");
           },
         },
-        { signal: controller.signal },
+        { signal: controller.signal, branchId },
       );
     } catch (caught) {
       if (controller.signal.aborted) {

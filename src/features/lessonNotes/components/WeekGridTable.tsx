@@ -6,6 +6,8 @@ interface WeekGridTableProps {
   weeks: LessonNoteWeekView[];
   subjectId: string;
   termId: string;
+  /** Carried into a new week's editor link so a SCHOOL_ADMIN saves into the branch they're browsing. */
+  branchId?: string;
 }
 
 function formatRange(weekStart: string, weekEnd: string): string {
@@ -20,7 +22,7 @@ function formatRange(weekStart: string, weekEnd: string): string {
  * weekNumber in the query string otherwise (a not-yet-authored week has no
  * id to route on).
  */
-export function WeekGridTable({ weeks, subjectId, termId }: WeekGridTableProps) {
+export function WeekGridTable({ weeks, subjectId, termId, branchId }: WeekGridTableProps) {
   return (
     <Table>
       <TableHead>
@@ -36,7 +38,8 @@ export function WeekGridTable({ weeks, subjectId, termId }: WeekGridTableProps) 
           const editorId = week.noteId ?? "new";
           const to =
             `/school/lesson-notes/${editorId}` +
-            `?subjectId=${subjectId}&termId=${termId}&weekNumber=${week.weekNumber}`;
+            `?subjectId=${subjectId}&termId=${termId}&weekNumber=${week.weekNumber}` +
+            (branchId ? `&branchId=${branchId}` : "");
           return (
             <TableRow key={week.weekNumber} to={to}>
               <TableCell label="Week">Week {week.weekNumber}</TableCell>

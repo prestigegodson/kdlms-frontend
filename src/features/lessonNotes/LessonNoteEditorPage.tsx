@@ -114,6 +114,10 @@ export function LessonNoteEditorPage() {
   const isNew = !noteId || noteId === "new";
 
   const [note, setNote] = useState<LessonNoteView | null>(null);
+  // Lesson notes are branch-scoped: an existing note carries its own branch; a new week's link
+  // carries the branch a SCHOOL_ADMIN was browsing (absent for everyone else - the server uses
+  // their own branch).
+  const branchId = note?.branchId ?? searchParams.get("branchId") ?? undefined;
   const [topic, setTopic] = useState("");
   const [content, setContent] = useState<LessonNoteContentView>(EMPTY_CONTENT);
   const [aiGenerated, setAiGenerated] = useState(false);
@@ -228,11 +232,17 @@ export function LessonNoteEditorPage() {
             step.learnerActivity.trim() !== "",
         ),
       };
-      const saved = await saveLessonNote(subjectId, termId, weekNumber, {
-        topic,
-        content: cleaned,
-        aiGenerated,
-      });
+      const saved = await saveLessonNote(
+        subjectId,
+        termId,
+        weekNumber,
+        {
+          topic,
+          content: cleaned,
+          aiGenerated,
+        },
+        branchId,
+      );
       applyNote(saved);
       if (isNew) {
         navigate(
@@ -540,6 +550,7 @@ export function LessonNoteEditorPage() {
           subjectId={subjectId}
           termId={termId}
           weekNumber={weekNumber}
+          branchId={branchId}
           initialTopic={topic}
           onClose={() => setAiSheetOpen(false)}
           onApply={applyGenerated}

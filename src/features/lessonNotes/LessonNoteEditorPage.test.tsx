@@ -1,7 +1,8 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import * as lessonNotesApi from "@/api/lessonNotes";
 import { LessonNoteEditorPage } from "@/features/lessonNotes/LessonNoteEditorPage";
 import { LESSON_NOTE_FIELD_HELP } from "@/features/lessonNotes/lessonNoteFieldHelp";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
@@ -16,7 +17,15 @@ beforeAll(() => {
   Range.prototype.getClientRects = () => ({ length: 0, item: () => null, [Symbol.iterator]: function* () {} }) as unknown as DOMRectList;
 });
 
-function renderNewNote() {
+vi.mock("@/api/lessonNotes", async () => {
+  const actual = await vi.importActual<typeof import("@/api/lessonNotes")>("@/api/lessonNotes");
+  return { ...actual, saveLessonNote: vi.fn() };
+});
+
+function renderNewNote(
+  role: "TEACHER" | "SCHOOL_ADMIN" = "TEACHER",
+  entry = "/school/lesson-notes/new?subjectId=s1&termId=t1&weekNumber=3",
+) {
   resetAuthStore();
   useAuthStore.setState({
     user: {
@@ -24,7 +33,7 @@ function renderNewNote() {
       email: "teacher@school.example",
       firstName: "A",
       lastName: "B",
-      role: "TEACHER",
+      role,
       schoolId: "school-1",
     },
     accessToken: "access",
@@ -32,7 +41,7 @@ function renderNewNote() {
   });
   const router = createMemoryRouter(
     [{ path: "/school/lesson-notes/:noteId", element: <LessonNoteEditorPage /> }],
-    { initialEntries: ["/school/lesson-notes/new?subjectId=s1&termId=t1&weekNumber=3"] },
+    { initialEntries: [entry] },
   );
   render(<RouterProvider router={router} />);
 }
@@ -105,5 +114,22 @@ describe("LessonNoteEditorPage format toggle", () => {
       expect(editable).toHaveTextContent("Solve three problems");
     });
     expect(screen.queryByText(/hasn't been copied into this document yet/)).not.toBeInTheDocument();
+  });
+});
+
+// Lesson notes are branch-scoped: a new week opened from a SCHOOL_ADMIN's branch-filtered week
+// grid carries `?branchId=`, which must reach the save so the note lands in that branch.
+describe("LessonNoteEditorPage branch scoping", () => {
+  it("forwards the week grid's branchId when saving a new note", async () => {
+    vi.mocked(lessonNotesApi.saveLessonNote).mockRejectedValue(new Error("stop here"));
+    renderNewNote("SCHOOL_ADMIN", "/school/lesson-notes/new?subjectId=s1&termId=t1&weekNumber=3&branchId=b2");
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByLabelText("Topic"), "Fractions");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(lessonNotesApi.saveLessonNote).toHaveBeenCalledWith("s1", "t1", 3, expect.anything(), "b2"),
+    );
   });
 });

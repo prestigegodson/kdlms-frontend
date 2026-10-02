@@ -60,6 +60,7 @@ const SUBJECTS = [
 
 const NOTE_DETAIL: LessonNoteView = {
   id: "note-1",
+  branchId: "branch-1",
   subjectId: "subject-math",
   subjectName: "Mathematics",
   levelId: "level-1",

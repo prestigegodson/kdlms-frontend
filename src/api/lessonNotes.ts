@@ -84,6 +84,8 @@ export interface LessonNoteActionsView {
 /** Mirrors backend lessonnote.application.port.in.LessonNoteView. `status` crosses as its enum name. */
 export interface LessonNoteView {
   id: string;
+  /** The branch that owns this note - each branch authors its own scheme of work. */
+  branchId: string;
   subjectId: string;
   subjectName: string;
   levelId: string;
@@ -103,6 +105,7 @@ export interface LessonNoteView {
 /** Mirrors backend lessonnote.application.port.in.LessonNoteQueueView - one row of the review queue. */
 export interface LessonNoteQueueView {
   id: string;
+  branchId: string;
   subjectId: string;
   subjectName: string | null;
   levelId: string;
@@ -167,9 +170,18 @@ export interface CopyLessonNotesResult {
 
 const BASE = "/api/v1/lesson-notes";
 
+/**
+ * Lesson notes are branch-scoped: `branchId` names the branch a SCHOOL_ADMIN is working in (the
+ * server requires it from them) and is omitted for everyone else, whose own branch the server
+ * derives from their token - the `useBranchScope` contract.
+ */
+function branchParam(branchId: string | undefined): string {
+  return branchId ? `&branchId=${branchId}` : "";
+}
+
 /** One row per week of the term, whether or not a note exists for it yet - the grid is derived from the term, not from saved notes. */
-export function getWeekGrid(subjectId: string, termId: string): Promise<LessonNoteWeekView[]> {
-  return apiFetch<LessonNoteWeekView[]>(`${BASE}?subjectId=${subjectId}&termId=${termId}`);
+export function getWeekGrid(subjectId: string, termId: string, branchId?: string): Promise<LessonNoteWeekView[]> {
+  return apiFetch<LessonNoteWeekView[]>(`${BASE}?subjectId=${subjectId}&termId=${termId}${branchParam(branchId)}`);
 }
 
 export function getLessonNote(noteId: string): Promise<LessonNoteView> {
@@ -182,11 +194,15 @@ export function saveLessonNote(
   termId: string,
   weekNumber: number,
   request: SaveLessonNoteRequest,
+  branchId?: string,
 ): Promise<LessonNoteView> {
-  return apiFetch<LessonNoteView>(`${BASE}?subjectId=${subjectId}&termId=${termId}&weekNumber=${weekNumber}`, {
-    method: "PUT",
-    body: JSON.stringify(request),
-  });
+  return apiFetch<LessonNoteView>(
+    `${BASE}?subjectId=${subjectId}&termId=${termId}&weekNumber=${weekNumber}${branchParam(branchId)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(request),
+    },
+  );
 }
 
 const ME_BASE = "/api/v1/me/lesson-note-subjects";
@@ -223,22 +239,24 @@ export function reopenLessonNote(noteId: string): Promise<LessonNoteView> {
   return apiFetch<LessonNoteView>(`${BASE}/${noteId}/reopen`, { method: "POST" });
 }
 
-/** The admin review queue - every filter optional. */
+/** The admin review queue - every filter optional; an omitted `branchId` is every branch for a SCHOOL_ADMIN. */
 export function getReviewQueue(
   levelId?: string,
   termId?: string,
   status?: LessonNoteStatus,
   page = 0,
   size = 20,
+  branchId?: string,
 ): Promise<Page<LessonNoteQueueView>> {
   const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (branchId) params.set("branchId", branchId);
   if (levelId) params.set("levelId", levelId);
   if (termId) params.set("termId", termId);
   if (status) params.set("status", status);
   return apiFetch<Page<LessonNoteQueueView>>(`${BASE}/review-queue?${params.toString()}`);
 }
 
-/** The admin nav-badge count - SUBMITTED notes awaiting review. */
+/** The admin nav-badge count - SUBMITTED notes awaiting review, school-wide for a SCHOOL_ADMIN, own branch otherwise. */
 export function getPendingLessonNoteCount(): Promise<PendingCountView> {
   return apiFetch<PendingCountView>(`${BASE}/pending-count`);
 }
@@ -255,10 +273,11 @@ export function copyLessonNotes(
   sourceTermId: string,
   targetTermId: string,
   subjectIds: string[],
+  branchId?: string,
 ): Promise<CopyLessonNotesResult> {
   return apiFetch<CopyLessonNotesResult>(`${BASE}/copy`, {
     method: "POST",
-    body: JSON.stringify({ sourceTermId, targetTermId, subjectIds }),
+    body: JSON.stringify({ branchId: branchId ?? null, sourceTermId, targetTermId, subjectIds }),
   });
 }
 
@@ -276,10 +295,10 @@ export function generateLessonNote(
   weekNumber: number,
   request: GenerateLessonNoteRequest,
   handlers: GenerateLessonNoteHandlers,
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; branchId?: string },
 ): Promise<void> {
   return apiStream(
-    `${BASE}/generate?subjectId=${subjectId}&termId=${termId}&weekNumber=${weekNumber}`,
+    `${BASE}/generate?subjectId=${subjectId}&termId=${termId}&weekNumber=${weekNumber}${branchParam(options?.branchId)}`,
     (event, data) => {
       if (event === "delta") {
         handlers.onDelta((JSON.parse(data) as { text: string }).text);

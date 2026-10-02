@@ -21,6 +21,8 @@ interface CopyLessonNotesModalProps {
   onClose: () => void;
   /** The term currently being viewed - always the copy's target. */
   targetTermId: string;
+  /** The branch whose notes are copied (within that branch) - a SCHOOL_ADMIN's pick; omitted for a branch-confined caller. */
+  branchId?: string;
   subjectOptions: CopyLessonNotesModalSubjectOption[];
   /** Pre-checked so the common "copy just this subject" case needs no extra clicks. */
   defaultSubjectId?: string;
@@ -41,6 +43,7 @@ export function CopyLessonNotesModal({
   open,
   onClose,
   targetTermId,
+  branchId,
   subjectOptions,
   defaultSubjectId,
   onCopied,
@@ -79,7 +82,7 @@ export function CopyLessonNotesModal({
     setSubmitting(true);
     setError(null);
     try {
-      const result = await copyLessonNotes(sourceTermId, targetTermId, Array.from(selectedSubjectIds));
+      const result = await copyLessonNotes(sourceTermId, targetTermId, Array.from(selectedSubjectIds), branchId);
       setOutcomes(result.outcomes);
       if (result.outcomes.some((outcome) => outcome.success)) {
         onCopied();

@@ -17,6 +17,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Pagination } from "@/components/ui/Pagination";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
+import { BranchFilter } from "@/features/branches/components/BranchFilter";
+import { useBranchScope } from "@/features/branches/useBranchScope";
 import { CopyLessonNotesModal } from "@/features/lessonNotes/components/CopyLessonNotesModal";
 import { ReviewQueueFilters } from "@/features/lessonNotes/components/ReviewQueueFilters";
 import { ReviewQueueTable } from "@/features/lessonNotes/components/ReviewQueueTable";
@@ -34,6 +36,11 @@ const PAGE_SIZE = 20;
  * kept as a second tab rather than replaced so an admin can still see one
  * subject's whole term at a glance. `role="tablist"` + a local `TabButton`,
  * per `TeacherTimetablePanel`'s "My timetable"/"Class timetable" precedent.
+ *
+ * Lesson notes are branch-scoped: both tabs carry the shared `BranchFilter`,
+ * which renders only for a SCHOOL_ADMIN (one branch at a time, no "All
+ * branches", the Assessments/Attendance shape) - a BRANCH_ADMIN or Head of
+ * Level gets no picker, since the server confines them to their own branch.
  */
 export function AdminLessonNotePanel() {
   const [tab, setTab] = useState<AdminTab>("queue");
@@ -57,6 +64,7 @@ export function AdminLessonNotePanel() {
 
 /** The review queue - defaults to SUBMITTED, since that's the whole point of a queue. */
 function ReviewQueuePanel() {
+  const { ready: branchReady, branchId } = useBranchScope();
   const [levelId, setLevelId] = useState("");
   const [termId, setTermId] = useState("");
   const [status, setStatus] = useState("SUBMITTED");
@@ -71,13 +79,24 @@ function ReviewQueuePanel() {
     };
   }
 
+  // A branch switch returns to the first page during render (AdminTimetablePanel's
+  // `selectionKey` pattern) - the branch lives in `branchStore`, not in a local setter
+  // `resetToFirstPage` could wrap.
+  const [lastBranchId, setLastBranchId] = useState(branchId);
+  if (branchId !== lastBranchId) {
+    setLastBranchId(branchId);
+    setPageIndex(0);
+  }
+
   useEffect(() => {
+    if (!branchReady) return;
     getReviewQueue(
       levelId || undefined,
       termId || undefined,
       (status || undefined) as LessonNoteStatus | undefined,
       pageIndex,
       PAGE_SIZE,
+      branchId,
     )
       .then((result) => {
         setPage(result);
@@ -86,11 +105,12 @@ function ReviewQueuePanel() {
       .catch((error: unknown) =>
         setLoadError(error instanceof ApiError ? error.message : "Failed to load the review queue"),
       );
-  }, [levelId, termId, status, pageIndex]);
+  }, [branchReady, branchId, levelId, termId, status, pageIndex]);
 
   return (
     <div className="space-y-6">
       <StickySubHeader collapsible>
+        <BranchFilter id="lesson-notes-queue-branch" />
         <ReviewQueueFilters
           levelId={levelId}
           onLevelChange={resetToFirstPage(setLevelId)}
@@ -130,12 +150,14 @@ function ReviewQueuePanel() {
 /**
  * Phase 16B's original view - subjects come from the school-wide catalogue
  * (`listSubjects()`, no `levelId` narrows to one level), unlike
- * `TeacherLessonNotePanel`'s own-assignment-only source, since an admin's
- * access is school-wide (no branch scoping - see `LessonNoteAccessGuard`'s
- * Javadoc). Level names come from `levelStore` to disambiguate subjects
- * that share a name across levels.
+ * `TeacherLessonNotePanel`'s own-assignment-only source, since subjects are
+ * school-wide even though notes are not: the week grid shows the selected
+ * branch's notes (a SCHOOL_ADMIN's `BranchFilter` pick, else the caller's own
+ * branch - see `LessonNoteAccessGuard#resolveBranch`). Level names come from
+ * `levelStore` to disambiguate subjects that share a name across levels.
  */
 function BrowseBySubjectPanel() {
+  const { ready: branchReady, branchId } = useBranchScope();
   const levels = useLevelStore((state) => state.levels);
   const fetchLevels = useLevelStore((state) => state.fetchIfNeeded);
 
@@ -160,7 +182,7 @@ function BrowseBySubjectPanel() {
   // A subject/term change resets the loaded grid during render (see
   // AdminTimetablePanel's `selectionKey` comment for this pattern) rather
   // than in an effect; the effect below only fetches.
-  const selectionKey = `${subjectId}|${termId}`;
+  const selectionKey = `${branchId ?? ""}|${subjectId}|${termId}`;
   const [lastSelectionKey, setLastSelectionKey] = useState(selectionKey);
   if (selectionKey !== lastSelectionKey) {
     setLastSelectionKey(selectionKey);
@@ -169,13 +191,13 @@ function BrowseBySubjectPanel() {
   }
 
   useEffect(() => {
-    if (!subjectId || !termId) return;
-    getWeekGrid(subjectId, termId)
+    if (!branchReady || !subjectId || !termId) return;
+    getWeekGrid(subjectId, termId, branchId)
       .then(setWeeks)
       .catch((error: unknown) =>
         setLoadError(error instanceof ApiError ? error.message : "Failed to load lesson notes"),
       );
-  }, [subjectId, termId, reloadToken]);
+  }, [branchReady, branchId, subjectId, termId, reloadToken]);
 
   const levelNameOf = (levelId: string) => levels.find((level) => level.id === levelId)?.displayName;
   const subjectOptions = (subjects ?? []).map((subject) => ({
@@ -203,6 +225,7 @@ function BrowseBySubjectPanel() {
       {subjects !== null && subjects.length > 0 && (
         <>
           <StickySubHeader collapsible>
+            <BranchFilter id="lesson-notes-browse-branch" />
             <SubjectTermPicker
               subjects={subjectOptions}
               subjectId={subjectId}
@@ -222,7 +245,7 @@ function BrowseBySubjectPanel() {
 
           {loadError && <Alert variant="error">{loadError}</Alert>}
 
-          {weeks && weeks.length > 0 && <WeekGridTable weeks={weeks} subjectId={subjectId} termId={termId} />}
+          {weeks && weeks.length > 0 && <WeekGridTable weeks={weeks} subjectId={subjectId} termId={termId} branchId={branchId} />}
           {weeks && weeks.length === 0 && (
             <EmptyState
               icon={NotebookPen}
@@ -238,6 +261,7 @@ function BrowseBySubjectPanel() {
           open={copyModalOpen}
           onClose={() => setCopyModalOpen(false)}
           targetTermId={termId}
+          branchId={branchId}
           subjectOptions={subjectOptions}
           defaultSubjectId={subjectId || undefined}
           onCopied={() => setReloadToken((token) => token + 1)}
