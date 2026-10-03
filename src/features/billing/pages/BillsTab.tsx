@@ -15,6 +15,7 @@ import { BillExportCard } from "@/features/billing/components/BillExportCard";
 import { LevelTermPicker } from "@/features/billing/components/LevelTermPicker";
 import { PublishBillsCard } from "@/features/billing/components/PublishBillsCard";
 import { StudentBillModals } from "@/features/billing/components/StudentBillModals";
+import { TermPaymentStatusBadge } from "@/features/billing/components/TermPaymentStatusBadge";
 import { useStudentBillEditing } from "@/features/billing/useStudentBillEditing";
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
 import { useBranchScope } from "@/features/branches/useBranchScope";
@@ -43,11 +44,13 @@ export function BillsTab() {
   const [roster, setRoster] = useState<BillSummaryView[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const editing = useStudentBillEditing(termId, () => {
+  function refreshRoster() {
     if (levelId) {
       getLevelBills(levelId, termId, branchId).then(setRoster).catch(() => undefined);
     }
-  });
+  }
+
+  const editing = useStudentBillEditing(termId, refreshRoster);
 
   // A branch change clears the level selection during render (the AdminResultsPanel idiom) - a
   // level's roster from the previous branch would otherwise 404 once the branch has re-scoped.
@@ -76,8 +79,7 @@ export function BillsTab() {
         .then(setRoster)
         .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load class bills"));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- branchId is read for the summary/roster fetch, not a re-trigger of its own
-  }, [levelId, termId]);
+  }, [levelId, termId, branchId]);
 
   return (
     <div className="space-y-6">
@@ -148,12 +150,19 @@ export function BillsTab() {
                     <TableHeaderCell>Admission no.</TableHeaderCell>
                     <TableHeaderCell>Status</TableHeaderCell>
                     <TableHeaderCell numeric>Total</TableHeaderCell>
+                    <TableHeaderCell numeric>Paid</TableHeaderCell>
+                    <TableHeaderCell numeric>Balance</TableHeaderCell>
                     {canEditStudentBills && <TableHeaderCell>{/* Edit bill */}</TableHeaderCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {roster.map((row) => (
-                    <TableRow key={row.studentId} onClick={() => editing.openPreview(row.studentId)}>
+                    <TableRow
+                      key={row.studentId}
+                      onClick={() =>
+                        editing.openPreview(row.studentId, { name: row.studentName, admissionNumber: row.admissionNumber })
+                      }
+                    >
                       <TableCell label="Student">{row.studentName}</TableCell>
                       <TableCell label="Classroom">{row.className}</TableCell>
                       <TableCell label="Admission no.">{row.admissionNumber}</TableCell>
@@ -163,10 +172,32 @@ export function BillsTab() {
                             {row.billable ? "Billed" : "No bill"}
                           </Badge>
                           {row.advance && <Badge variant="info">Advance</Badge>}
+                          {(row.billable || row.confirmedPaid > 0 || row.pendingAmount > 0) && (
+                            <TermPaymentStatusBadge
+                              status={row.termPaymentStatus}
+                              hasPending={row.hasPending}
+                              inCredit={row.inCredit}
+                            />
+                          )}
                         </div>
                       </TableCell>
                       <TableCell label="Total" numeric>
                         {row.billable ? formatMoney(row.total, row.currency) : "—"}
+                      </TableCell>
+                      <TableCell label="Paid" numeric>
+                        {formatMoney(row.confirmedPaid, row.currency)}
+                        {row.pendingAmount > 0 && (
+                          <span className="block text-xs text-slate-500">
+                            +{formatMoney(row.pendingAmount, row.currency)} pending
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell label="Balance" numeric>
+                        {row.balance === null
+                          ? "—"
+                          : row.balance < 0
+                            ? `Credit ${formatMoney(Math.abs(row.balance), row.currency)}`
+                            : formatMoney(row.balance, row.currency)}
                       </TableCell>
                       {canEditStudentBills && (
                         <TableCell label="Edit bill">
@@ -195,7 +226,7 @@ export function BillsTab() {
         </>
       )}
 
-      <StudentBillModals termId={termId} editing={editing} />
+      <StudentBillModals termId={termId} editing={editing} branchId={branchId} onPaymentsChanged={refreshRoster} />
     </div>
   );
 }

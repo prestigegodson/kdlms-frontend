@@ -56,4 +56,20 @@ describe("Accordion", () => {
     expect(actionClicks).toBe(1);
     expect(screen.getByRole("button", { name: "Guardians" })).toHaveAttribute("aria-expanded", "false");
   });
+
+  it("collapses at every size when collapsible is always", async () => {
+    const user = userEvent.setup();
+    render(
+      <Accordion title="By class" collapsible="always">
+        <p>Class breakdown</p>
+      </Accordion>,
+    );
+
+    const body = screen.getByText("Class breakdown").parentElement;
+    expect(body).toHaveClass("hidden");
+    expect(body).not.toHaveClass("mobile:hidden");
+
+    await user.click(screen.getByRole("button", { name: "By class" }));
+    expect(body).not.toHaveClass("hidden");
+  });
 });

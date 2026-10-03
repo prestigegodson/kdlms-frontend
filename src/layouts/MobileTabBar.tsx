@@ -21,7 +21,8 @@ interface MobileTabBarProps {
  * The bottom tab bar shown below `lg`, replacing the hamburger as the one
  * mobile nav affordance alongside the drawer it opens (mobile-plan.md
  * A1). Renders up to 4 of `items` whose `primary` includes the current
- * role, in nav order, then a 5th "More" tab that opens PortalShell's
+ * role - topped up from `primaryFallback` items when fewer than 4 primaries
+ * are visible - in nav order, then a 5th "More" tab that opens PortalShell's
  * existing drawer - omitted when every visible item already has a tab (see
  * `SystemAdminLayout`, whose 4 items are all primary).
  */
@@ -34,7 +35,7 @@ export function MobileTabBar({
   drawerOpen,
   portalName,
 }: MobileTabBarProps) {
-  const tabs = role ? items.filter((item) => item.primary?.includes(role)).slice(0, 4) : [];
+  const tabs = role ? selectTabs(items, role) : [];
   const showMore = items.length > tabs.length;
   // "More" reads as active whenever the current page isn't one of the tabs
   // shown, so the tab bar always shows exactly one active affordance.
@@ -89,4 +90,18 @@ export function MobileTabBar({
       )}
     </nav>
   );
+}
+
+/**
+ * Up to 4 `primary` items, then `primaryFallback` items filling whatever
+ * seats remain - the chosen set rendered in nav-array order, so a fallback
+ * keeps its natural position rather than trailing the primaries.
+ */
+function selectTabs(items: NavItem[], role: Role): NavItem[] {
+  const chosen = new Set(items.filter((item) => item.primary?.includes(role)).slice(0, 4));
+  for (const item of items) {
+    if (chosen.size >= 4) break;
+    if (item.primaryFallback?.includes(role)) chosen.add(item);
+  }
+  return items.filter((item) => chosen.has(item));
 }

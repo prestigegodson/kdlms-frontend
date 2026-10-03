@@ -1,4 +1,5 @@
 import { ApiError, apiFetch, apiFetchBlob } from "@/api/client";
+import type { TermPaymentState } from "@/api/feePayments";
 
 /**
  * Mirrors backend billing.domain.FeeApplicability. FIRST_TERM_ONLY means the student's OWN
@@ -233,6 +234,15 @@ export interface BillSummaryView {
   total: number;
   currency: string;
   advance: boolean;
+  /** Phase 45F: Σ non-voided confirmed payments for this term. */
+  confirmedPaid: number;
+  /** Phase 45F: Σ still-pending claims for this term. */
+  pendingAmount: number;
+  /** Phase 45F: live total − confirmedPaid; null when not billable, negative is a credit. */
+  balance: number | null;
+  termPaymentStatus: TermPaymentState;
+  hasPending: boolean;
+  inCredit: boolean;
 }
 
 /** Mirrors backend billing.application.port.in.BranchBillingSummaryView.LevelSummary. */

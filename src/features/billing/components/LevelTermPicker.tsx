@@ -21,6 +21,8 @@ interface LevelTermPickerProps {
    * that isn't current yet, so it starts with everything unselected. Defaults to `false`.
    */
   defaultCurrentSession?: boolean;
+  /** The level select's empty option - defaults to "Select a class…"; the Payments tab passes "All classes" since its level filter is optional. */
+  levelPlaceholder?: string;
   /** Distinguishes element ids when both `BillsTab` and `AdvanceBillsTab`'s pickers could otherwise collide. */
   idPrefix: string;
 }
@@ -41,6 +43,7 @@ export function LevelTermPicker({
   onTermChange,
   sessionLabel = "Session",
   defaultCurrentSession = false,
+  levelPlaceholder = "Select a class…",
   idPrefix,
 }: LevelTermPickerProps) {
   const [levels, setLevels] = useState<LevelView[]>([]);
@@ -95,7 +98,7 @@ export function LevelTermPicker({
     <div className="grid min-w-0 flex-1 gap-2 lg:grid-flow-col lg:auto-cols-fr lg:gap-4">
       <FormField label="Class" htmlFor={`${idPrefix}-level`}>
         <Select id={`${idPrefix}-level`} value={levelId} onChange={(event) => onLevelChange(event.target.value)}>
-          <option value="">Select a class…</option>
+          <option value="">{levelPlaceholder}</option>
           {levels.map((level) => (
             <option key={level.id} value={level.id}>
               {level.displayName}

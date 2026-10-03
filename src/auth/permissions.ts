@@ -754,17 +754,36 @@ export const can = {
   },
 
   /**
-   * A guardian's read of their own ward's published, billable bills - a **separate** check from
-   * `viewBilling`, not GUARDIAN added to it, the `viewWardLessonNotes`/`viewWardTakeHomeQuizzes`
-   * precedent `viewBilling`'s own Javadoc-style comment above pre-announced: the guardian path
-   * (`MyWardBillsUseCase`/`GET /api/v1/me/wards/{id}/bills`) is authorized entirely through the
-   * `shared` SPI `GuardianWards`, an entirely separate backend path from `BillingAccessGuard`
-   * (which `viewBilling` names, and which `BillingAccessGuardTest` asserts refuses a GUARDIAN
-   * caller outright). Gated on the school's Billing entitlement, the same full-lockout shape
-   * every other check here uses.
+   * A guardian's Fees page (Phase 45G, replacing the Phase 21G Bills page) - their own ward's
+   * bills, payments, balances and receipts. A **separate** check from `viewBilling`, not GUARDIAN
+   * added to it: the guardian path (`MyWardFeesUseCase`/`GET /api/v1/me/wards/{id}/fees`, and the
+   * older `MyWardBillsUseCase` bill read the page's "View bill" still uses) is authorized entirely
+   * through the `shared` SPI `GuardianWards`, an entirely separate backend path from
+   * `BillingAccessGuard` (which `viewBilling` names, and which `BillingAccessGuardTest` asserts
+   * refuses a GUARDIAN caller outright). Gated on the school's Billing entitlement, the same
+   * full-lockout shape every other check here uses.
    */
-  viewWardBills(role: Role | undefined, entitled: boolean): boolean {
+  viewWardFees(role: Role | undefined, entitled: boolean): boolean {
     return entitled && role === "GUARDIAN";
+  },
+
+  /**
+   * A guardian logging, editing or withdrawing a fee payment for their ward (Phase 45G/45H) -
+   * `viewWardFees`'s body today, kept as its own check so the write side can narrow later without
+   * touching nav. Per-term "already paid in full" is the backend's `canLogPayment`, not this.
+   */
+  logWardPayment(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && role === "GUARDIAN";
+  },
+
+  /**
+   * Reviewing, recording, voiding and correcting fee payments, and reading the payments queue,
+   * collection summary and CSV export (Phase 45I) - SCHOOL_ADMIN (any branch) or BRANCH_ADMIN
+   * (its own branch's allocations only, enforced server-side per allocation). Mirrors
+   * `FeePaymentController`'s class-level `@PreAuthorize`; no TEACHER/INVENTORY_MANAGER (D15).
+   */
+  manageFeePayments(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN");
   },
 
   /**
@@ -841,7 +860,7 @@ export const can = {
 
   /**
    * The student portal's own Timetable tab - gated on the school's Timetables package
-   * entitlement, the `viewWardBills`/`viewTimetable` shape.
+   * entitlement, the `viewWardFees`/`viewTimetable` shape.
    */
   viewStudentTimetable(role: Role | undefined, entitled: boolean): boolean {
     return entitled && role === "STUDENT";

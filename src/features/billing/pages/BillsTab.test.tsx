@@ -7,6 +7,8 @@ import * as levelsApi from "@/api/levels";
 import type { LevelView } from "@/api/levels";
 import * as sessionsApi from "@/api/sessions";
 import type { AcademicSessionView, TermView } from "@/api/sessions";
+import * as paymentsApi from "@/api/staffFeePayments";
+import { ledger } from "@/features/billing/components/payments/testFixtures";
 import { BillsTab } from "@/features/billing/pages/BillsTab";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import { resetBranchStore } from "@/stores/branchStore";
@@ -23,6 +25,11 @@ vi.mock("@/api/billing", async () => {
     getStudentBillAdjustments: vi.fn(),
     saveStudentBillAdjustments: vi.fn(),
   };
+});
+
+vi.mock("@/api/staffFeePayments", async () => {
+  const actual = await vi.importActual<typeof import("@/api/staffFeePayments")>("@/api/staffFeePayments");
+  return { ...actual, getStudentPaymentLedger: vi.fn(), voidAllocation: vi.fn(), getPendingPaymentCount: vi.fn() };
 });
 
 vi.mock("@/api/levels", async () => {
@@ -86,6 +93,12 @@ const ROSTER: BillSummaryView[] = [
     total: 5000,
     currency: "NGN",
     advance: false,
+    confirmedPaid: 2000,
+    pendingAmount: 500,
+    balance: 3000,
+    termPaymentStatus: "PART_PAID",
+    hasPending: true,
+    inCredit: false,
   },
   {
     studentId: "student-2",
@@ -96,6 +109,12 @@ const ROSTER: BillSummaryView[] = [
     total: 0,
     currency: "NGN",
     advance: false,
+    confirmedPaid: 0,
+    pendingAmount: 0,
+    balance: null,
+    termPaymentStatus: "UNPAID",
+    hasPending: false,
+    inCredit: false,
   },
 ];
 
@@ -213,6 +232,8 @@ describe("BillsTab", () => {
     vi.mocked(billingApi.getLevelBills).mockResolvedValue(ROSTER);
     vi.mocked(billingApi.getStudentBill).mockResolvedValue(BILL);
     vi.mocked(billingApi.getStudentBillAdjustments).mockResolvedValue(ADJUSTMENTS);
+    vi.mocked(paymentsApi.getStudentPaymentLedger).mockResolvedValue(ledger());
+    vi.mocked(paymentsApi.getPendingPaymentCount).mockResolvedValue({ count: 0 });
     vi.mocked(billingApi.getBillPublication).mockResolvedValue({
       branchId: "branch-1",
       branchName: "Main Campus",
@@ -289,5 +310,57 @@ describe("BillsTab", () => {
     expect(await screen.findByText("Edit bill · Ada Obi")).toBeInTheDocument();
     expect(screen.getByText("Excursion")).toBeInTheDocument();
     expect(billingApi.getStudentBill).not.toHaveBeenCalled();
+  });
+
+  it("shows each row's paid, pending and balance with its term payment status", async () => {
+    const user = userEvent.setup();
+    vi.mocked(billingApi.getLevelBills).mockResolvedValue([
+      ROSTER[0],
+      { ...ROSTER[1], billable: true, total: 4000, confirmedPaid: 5000, balance: -1000, termPaymentStatus: "PAID_IN_FULL", inCredit: true },
+    ]);
+    render(<BillsTab />);
+
+    await user.selectOptions(await screen.findByLabelText("Class"), "level-1");
+
+    expect(await screen.findByText("Part-paid · pending")).toBeInTheDocument();
+    expect(screen.getByText("₦2,000.00")).toBeInTheDocument();
+    expect(screen.getByText("+₦500.00 pending")).toBeInTheDocument();
+    expect(screen.getByText("₦3,000.00")).toBeInTheDocument();
+    expect(screen.getByText("Credit")).toBeInTheDocument();
+    expect(screen.getByText("Credit ₦1,000.00")).toBeInTheDocument();
+  });
+
+  it("lists the student's payments in the bill preview, and voids one only with a reason", async () => {
+    const user = userEvent.setup();
+    vi.mocked(paymentsApi.voidAllocation).mockResolvedValue({} as paymentsApi.StaffFeePaymentView);
+    render(<BillsTab />);
+
+    await user.selectOptions(await screen.findByLabelText("Class"), "level-1");
+    await user.click(await screen.findByText("Ada Obi"));
+
+    expect(await screen.findByRole("button", { name: "Download receipt RCT/2026/00001" })).toBeInTheDocument();
+    expect(paymentsApi.getStudentPaymentLedger).toHaveBeenCalledWith("student-1", "term-1");
+
+    await user.click(screen.getByRole("button", { name: "Void" }));
+    const confirm = screen.getByRole("button", { name: "Void payment" });
+    expect(confirm).toBeDisabled();
+    await user.type(screen.getByLabelText("Reason"), "Cheque bounced");
+    await user.click(confirm);
+
+    expect(paymentsApi.voidAllocation).toHaveBeenCalledWith("alloc-1", "Cheque bounced");
+    expect(await screen.findByText("Payment updated.")).toBeInTheDocument();
+    expect(paymentsApi.getStudentPaymentLedger).toHaveBeenCalledTimes(2);
+  });
+
+  it("still shows a non-billable student's payments when their bill can't be loaded", async () => {
+    const user = userEvent.setup();
+    vi.mocked(billingApi.getStudentBill).mockRejectedValue(new Error("not billable"));
+    render(<BillsTab />);
+
+    await user.selectOptions(await screen.findByLabelText("Class"), "level-1");
+    await user.click(await screen.findByText("Bola Ade"));
+
+    expect(await screen.findByRole("button", { name: /Record payment/ })).toBeInTheDocument();
+    expect(paymentsApi.getStudentPaymentLedger).toHaveBeenCalledWith("student-2", "term-1");
   });
 });

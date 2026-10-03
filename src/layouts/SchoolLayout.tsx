@@ -32,6 +32,7 @@ import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useAcademicContextStore } from "@/stores/academicContextStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
+import { usePendingFeePaymentsStore } from "@/stores/pendingFeePaymentsStore";
 import { usePendingLessonNotesStore } from "@/stores/pendingLessonNotesStore";
 import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
@@ -303,6 +304,8 @@ const NAV_ITEMS: NavItem[] = [
       const entitled = useFeatureStore.getState().billing;
       return can.viewBilling(role, entitled);
     },
+    // Fee payments awaiting review (Phase 45I) - an in-app badge only, admins never get an email (D16).
+    badge: () => usePendingFeePaymentsStore.getState().count,
   },
   {
     label: "Inventory",
@@ -371,9 +374,11 @@ export function SchoolLayout() {
   useFeatureStore((state) => state.lessonNotes);
   useFeatureStore((state) => state.takeHomeQuiz);
   useFeatureStore((state) => state.onDemandLearning);
-  useFeatureStore((state) => state.billing);
   useUnreadMessagesStore((state) => state.count);
   usePendingLessonNotesStore((state) => state.count);
+  usePendingFeePaymentsStore((state) => state.count);
+  const fetchPendingFeePayments = usePendingFeePaymentsStore((state) => state.fetchIfNeeded);
+  const billingEntitled = useFeatureStore((state) => state.billing);
 
   useEffect(() => {
     if (role === "TEACHER") {
@@ -404,6 +409,15 @@ export function SchoolLayout() {
     fetchUnreadMessages,
     fetchPendingLessonNotes,
   ]);
+
+  // The fee-payments badge waits for the entitlement flags - an unentitled school's count would
+  // only ever 403 (full lockout, D1).
+  const canManageFeePayments = can.manageFeePayments(role, billingEntitled);
+  useEffect(() => {
+    if (canManageFeePayments) {
+      fetchPendingFeePayments();
+    }
+  }, [canManageFeePayments, fetchPendingFeePayments]);
 
   // A Head of Level reviews their own levels' lesson notes, so they get the admin review badge too -
   // known only once their capabilities have loaded, hence a separate effect from the role switch above.

@@ -52,6 +52,14 @@ export interface NavItem {
    * via the tab bar's "More" tab, which opens the same drawer.
    */
   primary?: Role[];
+  /**
+   * Roles for which this item takes a bottom tab only when fewer than 4
+   * `primary` items are visible for that role - a seat-filler, never a
+   * displacer. E.g. the guardian's Attendance: Fees displaced it from the
+   * bar, but when a school isn't entitled to Billing (or Messages), it slots
+   * back into the gap. Rendered in nav-array order alongside the primaries.
+   */
+  primaryFallback?: Role[];
 }
 
 interface PortalShellProps {

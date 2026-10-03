@@ -142,6 +142,12 @@ const PREVIEW_WITH_STUDENTS: AdvanceBillPreviewView = {
       total: 20000,
       currency: "NGN",
       advance: true,
+      confirmedPaid: 0,
+      pendingAmount: 0,
+      balance: 20000,
+      termPaymentStatus: "UNPAID",
+      hasPending: false,
+      inCredit: false,
     },
   ],
 };

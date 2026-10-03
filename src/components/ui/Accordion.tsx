@@ -4,8 +4,13 @@ import { useId, useState } from "react";
 
 interface AccordionProps {
   title: string;
-  /** Starts expanded below `md`. Has no effect at `md` and above, where the panel is always expanded. */
+  /**
+   * Starts expanded. With `collapsible="mobile"` this only matters below `md`, where the panel is
+   * always expanded; with `collapsible="always"` it applies at every size.
+   */
   defaultOpen?: boolean;
+  /** `"mobile"` (default) collapses only below `md`; `"always"` collapses at every screen size. */
+  collapsible?: "mobile" | "always";
   /** Rendered alongside the title, outside the toggle button so its own clicks never collapse the panel. */
   actions?: ReactNode;
   children: ReactNode;
@@ -24,11 +29,20 @@ interface AccordionProps {
  * from `md` up (`pointer-events-none`) rather than driven by a real
  * breakpoint check, since toggling `open` there wouldn't change anything
  * visible anyway - the body's `mobile:hidden` class only ever applies below
- * the `mobile` variant's 767.98px.
+ * the `mobile` variant's 767.98px. `collapsible="always"` opts out of that and
+ * makes the panel collapse at every size (still CSS-gated, via `hidden`).
  */
-export function Accordion({ title, defaultOpen = false, actions, children, className = "" }: AccordionProps) {
+export function Accordion({
+  title,
+  defaultOpen = false,
+  collapsible = "mobile",
+  actions,
+  children,
+  className = "",
+}: AccordionProps) {
   const [open, setOpen] = useState(defaultOpen);
   const bodyId = useId();
+  const always = collapsible === "always";
 
   return (
     <div className={`rounded-card border border-slate-200 bg-white shadow-sm ${className}`}>
@@ -38,17 +52,19 @@ export function Accordion({ title, defaultOpen = false, actions, children, class
           aria-expanded={open}
           aria-controls={bodyId}
           onClick={() => setOpen((value) => !value)}
-          className="flex min-h-14 flex-1 cursor-default items-center justify-between gap-2 py-1 pointer-events-none text-left mobile:cursor-pointer mobile:pointer-events-auto"
+          className={`flex min-h-14 flex-1 items-center justify-between gap-2 py-1 text-left ${
+            always ? "cursor-pointer" : "cursor-default pointer-events-none mobile:cursor-pointer mobile:pointer-events-auto"
+          }`}
         >
           <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
           <ChevronDown
-            className={`hidden h-4 w-4 shrink-0 text-slate-400 transition-transform mobile:block ${open ? "rotate-180" : ""}`}
+            className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${always ? "block" : "hidden mobile:block"} ${open ? "rotate-180" : ""}`}
             aria-hidden="true"
           />
         </button>
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </div>
-      <div id={bodyId} className={`p-6 ${open ? "" : "mobile:hidden"}`}>
+      <div id={bodyId} className={`p-6 ${open ? "" : always ? "hidden" : "mobile:hidden"}`}>
         {children}
       </div>
     </div>

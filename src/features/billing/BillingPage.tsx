@@ -5,12 +5,14 @@ import { Tabs } from "@/components/ui/Tabs";
 import { AdvanceBillsTab } from "@/features/billing/pages/AdvanceBillsTab";
 import { BillsTab } from "@/features/billing/pages/BillsTab";
 import { FeesTab } from "@/features/billing/pages/FeesTab";
+import { PaymentsTab } from "@/features/billing/pages/PaymentsTab";
 import { PricesTab } from "@/features/billing/pages/PricesTab";
 import { ProspectiveBillTab } from "@/features/billing/pages/ProspectiveBillTab";
 import { SettingsTab } from "@/features/billing/pages/SettingsTab";
 import { TransportTab } from "@/features/billing/pages/TransportTab";
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
+import { usePendingFeePaymentsStore } from "@/stores/pendingFeePaymentsStore";
 
 // Bills | Advance bills | Prospective bill | Fees | Prices | Transport | Settings - the
 // documented order (billing-module.md); 21B/21C shipped only the tabs they actually built rather
@@ -21,8 +23,9 @@ import { useFeatureStore } from "@/stores/featureStore";
 // after Advance bills for the same reason - generating a bill, just for a child who isn't a
 // `students` row at all yet, priced as a brand-new admission - a stateless one-off quote with no
 // roster of its own. Transport (Phase 22) sits after Prices since it is itself a pricing screen,
-// just for the school-bus fee's own axis.
-type Tab = "bills" | "advance" | "prospective" | "fees" | "prices" | "transport" | "settings";
+// just for the school-bus fee's own axis. Payments (Phase 45I) sits right after Bills - reviewing
+// what guardians paid against those bills is the other everyday half of the same job.
+type Tab = "bills" | "payments" | "advance" | "prospective" | "fees" | "prices" | "transport" | "settings";
 
 /**
  * The school's fee catalogue and billing configuration - one page, tabbed,
@@ -45,10 +48,12 @@ export function BillingPage() {
   const canManagePrices = can.manageFeePrices(role, entitled);
   const canManageTransport = can.manageTransport(role, entitled);
   const canManageSettings = can.manageBillingSettings(role, entitled);
+  const canManagePayments = can.manageFeePayments(role, entitled);
+  const pendingPayments = usePendingFeePaymentsStore((state) => state.count);
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Fees & Bills" description="Define fees and configure how bills are paid." />
+      <PageHeader title="Fees & Bills" description="Define fees, bill students, and review payments." />
 
       <Tabs
         ariaLabel="Billing views"
@@ -56,6 +61,7 @@ export function BillingPage() {
         onChange={setTab}
         items={[
           { value: "bills", label: "Bills" },
+          ...(canManagePayments ? [{ value: "payments" as const, label: "Payments", badge: pendingPayments }] : []),
           ...(canManageAdvanceBills ? [{ value: "advance" as const, label: "Advance bills" }] : []),
           ...(canGenerateProspectiveBills ? [{ value: "prospective" as const, label: "Prospective bill" }] : []),
           { value: "fees", label: "Fees" },
@@ -66,6 +72,7 @@ export function BillingPage() {
       />
 
       {tab === "bills" && <BillsTab />}
+      {tab === "payments" && canManagePayments && <PaymentsTab />}
       {tab === "advance" && canManageAdvanceBills && <AdvanceBillsTab />}
       {tab === "prospective" && canGenerateProspectiveBills && <ProspectiveBillTab />}
       {tab === "fees" && <FeesTab />}

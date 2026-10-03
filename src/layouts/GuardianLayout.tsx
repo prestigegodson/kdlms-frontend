@@ -6,8 +6,8 @@ import {
   FileCheck2,
   MessageSquare,
   NotebookPen,
-  ReceiptText,
   Users,
+  Wallet,
 } from "lucide-react";
 import { useEffect } from "react";
 import { can } from "@/auth/permissions";
@@ -18,7 +18,25 @@ import { useUnreadMessagesStore } from "@/stores/unreadMessagesStore";
 const NAV_ITEMS: NavItem[] = [
   { label: "My Wards", href: "/guardian", icon: Users, primary: ["GUARDIAN"] },
   { label: "Results", href: "/guardian/results", icon: ClipboardCheck, primary: ["GUARDIAN"] },
-  { label: "Attendance", href: "/guardian/attendance", icon: ClipboardList, primary: ["GUARDIAN"] },
+  {
+    label: "Fees",
+    href: "/guardian/fees",
+    icon: Wallet,
+    primary: ["GUARDIAN"],
+    // Bills and payments together (Phase 45G, fee-payment.md D22) - promoted to the tab bar in
+    // Attendance's place. Gated on the school's Billing entitlement, the same full-lockout shape
+    // Messages uses - see auth/permissions.ts's viewWardFees.
+    visible: () => can.viewWardFees("GUARDIAN", useFeatureStore.getState().billing),
+  },
+  {
+    label: "Attendance",
+    href: "/guardian/attendance",
+    icon: ClipboardList,
+    // A seat-filler, not a primary: Fees took its tab, but when Fees or Messages is hidden (the
+    // school isn't entitled to Billing/Communication) it slots back into the free seat - see
+    // NavItem.primaryFallback.
+    primaryFallback: ["GUARDIAN"],
+  },
   {
     label: "Messages",
     href: "/guardian/messages",
@@ -34,7 +52,7 @@ const NAV_ITEMS: NavItem[] = [
     href: "/guardian/timetable",
     icon: CalendarDays,
     // Overflow-only (drawer via the tab bar's More tab) - My Wards/Results/
-    // Attendance/Messages already fill the tab bar's four-destination limit
+    // Fees/Messages already fill the tab bar's four-destination limit
     // (CLAUDE.md's mobile nav rule). Gated on the school's Timetables
     // package entitlement, the same full-lockout shape `viewMessages` uses -
     // see auth/permissions.ts's viewTimetable.
@@ -57,17 +75,6 @@ const NAV_ITEMS: NavItem[] = [
     // for why. Gated on the school's take-home-quiz entitlement, the same full-lockout shape
     // viewTimetable/viewWardLessonNotes use - see auth/permissions.ts's viewWardTakeHomeQuizzes.
     visible: () => can.viewWardTakeHomeQuizzes("GUARDIAN", useFeatureStore.getState().takeHomeQuiz),
-  },
-  {
-    label: "Bills",
-    href: "/guardian/bills",
-    icon: ReceiptText,
-    // Overflow-only (drawer via the tab bar's More tab) - see the Timetable item's comment above
-    // for why (the tab bar's four-destination limit is already spent on My Wards/Results/
-    // Attendance/Messages). Gated on the school's Billing entitlement, the same full-lockout
-    // shape viewTimetable/viewWardLessonNotes/viewWardTakeHomeQuizzes use - see
-    // auth/permissions.ts's viewWardBills.
-    visible: () => can.viewWardBills("GUARDIAN", useFeatureStore.getState().billing),
   },
   {
     label: "Notifications",

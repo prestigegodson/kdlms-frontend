@@ -50,3 +50,26 @@ export function formatAmount(amount: number | null | undefined): string {
   }
   return PLAIN_AMOUNT_FORMATTER.format(amount);
 }
+
+const SYMBOLS = new Map<string, string>();
+
+/**
+ * Just the currency's symbol, for a money input's leading adornment: "NGN" -> "₦". Uses the same
+ * pinned "en-NG" locale as {@link formatMoney}, so the prefix and the formatted amounts elsewhere
+ * on the screen always agree. Falls back to the code itself for one Intl can't format.
+ */
+export function currencySymbol(currency: string): string {
+  let symbol = SYMBOLS.get(currency);
+  if (symbol === undefined) {
+    try {
+      symbol =
+        new Intl.NumberFormat("en-NG", { style: "currency", currency })
+          .formatToParts(0)
+          .find((part) => part.type === "currency")?.value ?? currency;
+    } catch {
+      symbol = currency;
+    }
+    SYMBOLS.set(currency, symbol);
+  }
+  return symbol;
+}

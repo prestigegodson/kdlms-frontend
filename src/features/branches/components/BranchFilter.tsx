@@ -44,7 +44,9 @@ export function BranchFilter({ id, className = "min-w-0 flex-1 lg:max-w-[12rem]"
 
   return (
     <FormField label="Branch" htmlFor={id} className={className}>
-      <Select id={id} value={selectedBranchId ?? ""} onChange={(event) => select(event.target.value)}>
+      <Select id={id} value={selectedBranchId ?? ""} onChange={(event) => {
+        select(event.target.value);
+      }}>
         {branches.map((branch) => (
           <option key={branch.id} value={branch.id}>
             {branch.name}

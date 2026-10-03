@@ -21,6 +21,9 @@ import { downloadBlob } from "@/utils/download";
  */
 export function useStudentBillEditing(termId: string, onSaved: () => void) {
   const [previewStudentId, setPreviewStudentId] = useState<string | null>(null);
+  // Who the preview is for when the caller knows (a roster row) - the bill itself 404s for a
+  // non-billable student, whose payments section still needs a name to record against.
+  const [previewStudent, setPreviewStudent] = useState<{ name: string; admissionNumber: string } | null>(null);
   const [previewBill, setPreviewBill] = useState<BillView | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
@@ -30,8 +33,9 @@ export function useStudentBillEditing(termId: string, onSaved: () => void) {
   const [adjustmentsView, setAdjustmentsView] = useState<StudentBillAdjustmentsView | null>(null);
   const [adjustmentsError, setAdjustmentsError] = useState<string | null>(null);
 
-  function openPreview(studentId: string) {
+  function openPreview(studentId: string, student?: { name: string; admissionNumber: string }) {
     setPreviewStudentId(studentId);
+    setPreviewStudent(student ?? null);
     setPreviewBill(null);
     setPreviewError(null);
     setDownloadPdfError(null);
@@ -81,6 +85,7 @@ export function useStudentBillEditing(termId: string, onSaved: () => void) {
 
   return {
     previewStudentId,
+    previewStudent,
     previewBill,
     previewError,
     downloadingPdf,

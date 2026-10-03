@@ -162,15 +162,23 @@ async function fetchWithAuth(path: string, options: RequestOptions): Promise<Res
     } catch {
       // Response wasn't JSON (e.g. a non-problem-detail 5xx); fall through with no parsed body.
     }
-    // response.statusText is never used as a message - it comes from the transport (a browser's
-    // or proxy's own wording, sometimes empty), not from this app's backend, so it can never be
-    // trusted as something to show a user. Only a curated kdlms.com/problems/... detail is.
-    if (isTrustedProblem(problem)) {
-      throw new ApiError(response.status, problem.detail, problem);
-    }
-    throw new ApiError(response.status, GENERIC_ERROR_MESSAGE, problem, true);
+    throw toApiError(response.status, problem);
   }
   return response;
+}
+
+/**
+ * The one place a non-2xx status + (maybe) parsed problem body becomes an {@link ApiError} -
+ * shared by {@link fetchWithAuth} and {@link apiUploadWithProgress}'s XHR path so the two can't
+ * drift. The transport's own statusText is never used as a message - it comes from the browser or
+ * a proxy, not this app's backend, so it can never be trusted as something to show a user. Only a
+ * curated kdlms.com/problems/... detail is.
+ */
+function toApiError(status: number, problem: ProblemDetail | undefined): ApiError {
+  if (isTrustedProblem(problem)) {
+    return new ApiError(status, problem.detail, problem);
+  }
+  return new ApiError(status, GENERIC_ERROR_MESSAGE, problem, true);
 }
 
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -373,4 +381,80 @@ export function apiUpload<T>(
     }
   }
   return apiFetch<T>(path, { method: "POST", ...options, body: formData });
+}
+
+/** An upload's progress so far - `totalBytes` is the request body's size as the browser computed it. */
+export interface UploadProgress {
+  loadedBytes: number;
+  totalBytes: number;
+}
+
+interface XhrResult {
+  status: number;
+  body: string;
+}
+
+function sendXhr(
+  path: string,
+  method: string,
+  body: FormData,
+  onProgress?: (progress: UploadProgress) => void,
+): Promise<XhrResult> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, `${BASE_URL}${path}`);
+    // Same header rules as fetch: buildHeaders never sets a Content-Type for a FormData body, so
+    // the browser writes the multipart boundary itself.
+    buildHeaders({ body }).forEach((value, key) => xhr.setRequestHeader(key, value));
+    if (onProgress) {
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          onProgress({ loadedBytes: event.loaded, totalBytes: event.total });
+        }
+      };
+    }
+    xhr.onload = () => resolve({ status: xhr.status, body: xhr.responseText });
+    // A plain Error, never an ApiError - getErrorMessage then shows the caller's own fallback
+    // ("check your connection and try again") rather than a backend-shaped message.
+    xhr.onerror = () => reject(new Error("Network request failed"));
+    xhr.onabort = () => reject(new Error("Request aborted"));
+    xhr.send(body);
+  });
+}
+
+/**
+ * Multipart upload that reports upload progress - `fetch` can't, so this is the app's one
+ * `XMLHttpRequest` path (the guardian's fee-payment proof, Phase 45H, which can be several
+ * phone photos over a slow connection). Otherwise the same contract as {@link apiFetch}: bearer
+ * token, one single-flight refresh-and-retry on a 401, {@link ApiError} on any other non-2xx,
+ * and an empty body resolving to `undefined`.
+ */
+export async function apiUploadWithProgress<T>(
+  path: string,
+  method: "POST" | "PUT",
+  body: FormData,
+  onProgress?: (progress: UploadProgress) => void,
+): Promise<T> {
+  let result = await sendXhr(path, method, body, onProgress);
+  if (result.status === 401) {
+    const refreshed = await refreshOnce();
+    if (refreshed) {
+      result = await sendXhr(path, method, body, onProgress);
+    } else {
+      unauthorizedHandler?.();
+    }
+  }
+  if (result.status < 200 || result.status >= 300) {
+    let problem: ProblemDetail | undefined;
+    try {
+      problem = JSON.parse(result.body) as ProblemDetail;
+    } catch {
+      // Not JSON - fall through with no parsed body.
+    }
+    throw toApiError(result.status, problem);
+  }
+  if (!result.body) {
+    return undefined as T;
+  }
+  return JSON.parse(result.body) as T;
 }

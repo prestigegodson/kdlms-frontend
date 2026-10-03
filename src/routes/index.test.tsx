@@ -269,7 +269,7 @@ describe("router", () => {
       expect(await screen.findByRole("heading", { name: "My Wards" })).toBeInTheDocument();
     });
 
-    it("shows the Bills nav item once billing is entitled, but never as a tab-bar primary", async () => {
+    it("shows the Fees nav item once billing is entitled, promoted to the tab bar", async () => {
       // The feature store is a module-level singleton that caches its fetch across tests
       // (fetchIfNeeded is a no-op once "loaded") - reset it so this test's own billing:true
       // stub is actually consulted rather than an earlier test's cached answer.
@@ -306,10 +306,9 @@ describe("router", () => {
       renderAt("/guardian");
 
       expect(await screen.findByRole("heading", { name: "My Wards" })).toBeInTheDocument();
-      // Reaches the sidebar/drawer only - never MobileTabBar, since Bills carries no `primary`
-      // (the tab bar's four-destination cap is already spent on My Wards/Results/Attendance/
-      // Messages - see GuardianLayout.tsx).
-      await waitFor(() => expect(screen.getAllByText("Bills")).toHaveLength(1));
+      // Fees (bills and payments together, Phase 45G D22) is a GUARDIAN `primary`, so it reaches
+      // both the sidebar and MobileTabBar - in Attendance's old tab-bar seat.
+      await waitFor(() => expect(screen.getAllByText("Fees")).toHaveLength(2));
     });
   });
 

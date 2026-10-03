@@ -217,6 +217,32 @@ describe("PortalShell tab bar", () => {
     expect(within(tabBar()).queryByRole("button", { name: /More/ })).not.toBeInTheDocument();
   });
 
+  it("lets a primaryFallback item fill a free seat, in nav order", () => {
+    const items: NavItem[] = [
+      { label: "Dashboard", href: "/school", primary: ["SCHOOL_ADMIN"] },
+      { label: "Fees", href: "/school/fees", primary: ["SCHOOL_ADMIN"], visible: () => false },
+      { label: "Attendance", href: "/school/attendance", primaryFallback: ["SCHOOL_ADMIN"] },
+      { label: "Messages", href: "/school/messages", primary: ["SCHOOL_ADMIN"] },
+    ];
+    renderShell({ pathname: "/school", items });
+
+    const labels = within(tabBar())
+      .getAllByRole("link")
+      .map((link) => link.textContent);
+    expect(labels).toEqual(["Dashboard", "Attendance", "Messages"]);
+  });
+
+  it("keeps a primaryFallback item off the bar once 4 primaries are visible", () => {
+    const items: NavItem[] = [
+      { label: "Attendance", href: "/school/attendance", primaryFallback: ["SCHOOL_ADMIN"] },
+      ...TAB_NAV_ITEMS,
+    ];
+    renderShell({ pathname: "/school", items });
+
+    expect(within(tabBar()).queryByText("Attendance")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Attendance").length).toBeGreaterThan(0);
+  });
+
   it("marks exactly one tab current, reusing PortalShell's shared activeHref", () => {
     renderShell({ pathname: "/school/students", items: TAB_NAV_ITEMS });
 

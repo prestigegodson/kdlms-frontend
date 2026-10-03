@@ -8,6 +8,7 @@ import { useAcademicContextStore } from "@/stores/academicContextStore";
 import { useBranchStore } from "@/stores/branchStore";
 import { useFeatureStore } from "@/stores/featureStore";
 import { useLevelStore } from "@/stores/levelStore";
+import { usePendingFeePaymentsStore } from "@/stores/pendingFeePaymentsStore";
 import { usePendingLessonNotesStore } from "@/stores/pendingLessonNotesStore";
 import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
@@ -110,6 +111,7 @@ function resetSessionScopedStores(): void {
   useSchoolBrandingStore.getState().reset();
   useUnreadMessagesStore.getState().reset();
   usePendingLessonNotesStore.getState().reset();
+  usePendingFeePaymentsStore.getState().reset();
   useBranchStore.getState().reset();
   useLevelStore.getState().reset();
 }

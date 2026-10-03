@@ -12,7 +12,8 @@ import type { ResultScope } from "@/api/types";
 /**
  * Self-service views for the currently authenticated GUARDIAN - ward
  * listing, ward term results/attendance/timetable/lesson notes, ward report
- * preview/PDF, ward bills. Mirrors backend student.adapter.in.web.MyWardsController,
+ * preview/PDF, ward bills (the Fees page's "View bill" - the per-term fee cards themselves live in
+ * `api/feePayments.ts`). Mirrors backend student.adapter.in.web.MyWardsController,
  * assessment.adapter.in.web.MyWardResultsController,
  * attendance.adapter.in.web.MyWardAttendanceController,
  * reporting.adapter.in.web.MyWardReportsController,
@@ -199,27 +200,6 @@ export function getWardTakeHomeQuizzes(studentId: string, termId: string): Promi
 /** One quiz's result in full, read-only - 404s unless it's RESULTS_PUBLISHED and applicable to this ward. */
 export function getWardTakeHomeQuiz(studentId: string, quizId: string): Promise<WardTakeHomeQuizView> {
   return apiFetch<WardTakeHomeQuizView>(`${BASE}/${studentId}/take-home-quizzes/${quizId}`);
-}
-
-/**
- * One published+billable term on a ward's bill list. Mirrors backend
- * billing.application.port.in.WardBillSummaryView - no student fields, since a ward-scoped list
- * is always about the one path-scoped student.
- */
-export interface WardBillSummaryView {
-  sessionId: string;
-  sessionName: string;
-  termId: string;
-  termName: string;
-  termNumber: number;
-  billReference: string;
-  total: number;
-  currency: string;
-}
-
-/** Every published+billable term across every session this ward has ever been enrolled in, newest first. */
-export function listWardBills(studentId: string): Promise<WardBillSummaryView[]> {
-  return apiFetch<WardBillSummaryView[]>(`${BASE}/${studentId}/bills`);
 }
 
 /** One term's bill in full - 404s unless the ward link, the term, its branch+term publication, and billability all hold. */

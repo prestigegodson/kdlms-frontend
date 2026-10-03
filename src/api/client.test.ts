@@ -5,6 +5,7 @@ import {
   apiFetch,
   apiFetchBlob,
   apiFetchText,
+  apiUploadWithProgress,
   getErrorMessage,
   setAccessTokenProvider,
 } from "@/api/client";
@@ -226,5 +227,100 @@ describe("Accept header negotiation", () => {
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).status).toBe(404);
     expect((error as ApiError).problem?.detail).toBe("Student not found");
+  });
+});
+
+/** Just enough of XMLHttpRequest for apiUploadWithProgress: scripted responses, one per send. */
+class FakeXhr {
+  static responses: { status: number; body: string; progress?: [number, number][] }[] = [];
+  static sent: { method: string; url: string; headers: Record<string, string> }[] = [];
+  upload: { onprogress: ((event: { lengthComputable: boolean; loaded: number; total: number }) => void) | null } = {
+    onprogress: null,
+  };
+  onload: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  onabort: (() => void) | null = null;
+  status = 0;
+  responseText = "";
+  private method = "";
+  private url = "";
+  private headers: Record<string, string> = {};
+
+  open(method: string, url: string) {
+    this.method = method;
+    this.url = url;
+  }
+
+  setRequestHeader(key: string, value: string) {
+    this.headers[key.toLowerCase()] = value;
+  }
+
+  send() {
+    FakeXhr.sent.push({ method: this.method, url: this.url, headers: this.headers });
+    const response = FakeXhr.responses.shift();
+    queueMicrotask(() => {
+      if (!response) {
+        this.onerror?.();
+        return;
+      }
+      for (const [loaded, total] of response.progress ?? []) {
+        this.upload.onprogress?.({ lengthComputable: true, loaded, total });
+      }
+      this.status = response.status;
+      this.responseText = response.body;
+      this.onload?.();
+    });
+  }
+}
+
+describe("apiUploadWithProgress", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    setAccessTokenProvider(() => null);
+    FakeXhr.responses = [];
+    FakeXhr.sent = [];
+  });
+
+  it("reports upload progress, sends the bearer token, and parses the JSON body", async () => {
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+    setAccessTokenProvider(() => "token-1");
+    FakeXhr.responses = [{ status: 201, body: JSON.stringify({ id: "p1" }), progress: [[50, 200], [200, 200]] }];
+    const onProgress = vi.fn();
+
+    await expect(apiUploadWithProgress("/api/v1/me/fee-payments", "POST", new FormData(), onProgress)).resolves.toEqual({
+      id: "p1",
+    });
+    expect(onProgress.mock.calls).toEqual([[{ loadedBytes: 50, totalBytes: 200 }], [{ loadedBytes: 200, totalBytes: 200 }]]);
+    expect(FakeXhr.sent[0].method).toBe("POST");
+    expect(FakeXhr.sent[0].headers.authorization).toBe("Bearer token-1");
+    expect(FakeXhr.sent[0].headers["content-type"]).toBeUndefined();
+  });
+
+  it("throws an ApiError carrying a curated problem detail", async () => {
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+    FakeXhr.responses = [
+      {
+        status: 422,
+        body: JSON.stringify({
+          type: "https://kdlms.com/problems/business-rule-violation",
+          title: "Unprocessable",
+          status: 422,
+          detail: "The payment date cannot be in the future.",
+        }),
+      },
+    ];
+
+    const promise = apiUploadWithProgress("/api/v1/me/fee-payments", "POST", new FormData());
+    await expect(promise).rejects.toBeInstanceOf(ApiError);
+    await expect(promise).rejects.toMatchObject({ status: 422, message: "The payment date cannot be in the future." });
+  });
+
+  it("rejects with a plain (non-API) error on a network failure", async () => {
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+
+    const error = await apiUploadWithProgress("/api/v1/me/fee-payments", "POST", new FormData()).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toBeInstanceOf(ApiError);
+    expect(getErrorMessage(error, "fallback")).toBe("fallback");
   });
 });

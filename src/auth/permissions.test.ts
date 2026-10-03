@@ -494,20 +494,20 @@ describe("can.publishBills", () => {
   });
 });
 
-describe("can.viewWardBills", () => {
+describe("can.viewWardFees", () => {
   it("is true only for an entitled GUARDIAN", () => {
-    expect(can.viewWardBills("GUARDIAN", true)).toBe(true);
+    expect(can.viewWardFees("GUARDIAN", true)).toBe(true);
   });
 
   it("is false when the school isn't entitled", () => {
-    expect(can.viewWardBills("GUARDIAN", false)).toBe(false);
+    expect(can.viewWardFees("GUARDIAN", false)).toBe(false);
   });
 
   it("is false for every staff role, even when entitled - a separate backend path from viewBilling", () => {
-    expect(can.viewWardBills("SCHOOL_ADMIN", true)).toBe(false);
-    expect(can.viewWardBills("BRANCH_ADMIN", true)).toBe(false);
-    expect(can.viewWardBills("TEACHER", true)).toBe(false);
-    expect(can.viewWardBills(undefined, true)).toBe(false);
+    expect(can.viewWardFees("SCHOOL_ADMIN", true)).toBe(false);
+    expect(can.viewWardFees("BRANCH_ADMIN", true)).toBe(false);
+    expect(can.viewWardFees("TEACHER", true)).toBe(false);
+    expect(can.viewWardFees(undefined, true)).toBe(false);
   });
 });
 
@@ -552,6 +552,15 @@ describe("can.viewStudentTimetable", () => {
     expect(can.viewStudentTimetable("SCHOOL_ADMIN", true)).toBe(false);
     expect(can.viewStudentTimetable("TEACHER", true)).toBe(false);
     expect(can.viewStudentTimetable(undefined, true)).toBe(false);
+  });
+});
+
+describe("can.logWardPayment", () => {
+  it("is true only for an entitled GUARDIAN", () => {
+    expect(can.logWardPayment("GUARDIAN", true)).toBe(true);
+    expect(can.logWardPayment("GUARDIAN", false)).toBe(false);
+    expect(can.logWardPayment("SCHOOL_ADMIN", true)).toBe(false);
+    expect(can.logWardPayment("BRANCH_ADMIN", true)).toBe(false);
   });
 });
 
@@ -793,7 +802,8 @@ describe("can - a STUDENT is denied every staff/guardian capability", () => {
     manageBillingSettings: () => can.manageBillingSettings("STUDENT", true),
     publishBills: () => can.publishBills("STUDENT", true),
     editStudentBills: () => can.editStudentBills("STUDENT", true),
-    viewWardBills: () => can.viewWardBills("STUDENT", true),
+    viewWardFees: () => can.viewWardFees("STUDENT", true),
+    logWardPayment: () => can.logWardPayment("STUDENT", true),
     viewInventory: () => can.viewInventory("STUDENT"),
     manageInventoryCatalogue: () => can.manageInventoryCatalogue("STUDENT"),
     manageInventoryStock: () => can.manageInventoryStock("STUDENT"),
@@ -803,5 +813,19 @@ describe("can - a STUDENT is denied every staff/guardian capability", () => {
 
   it.each(Object.entries(staffAndGuardianChecks))("%s is false for STUDENT", (_name, check) => {
     expect(check()).toBe(false);
+  });
+});
+
+describe("can.manageFeePayments", () => {
+  it("allows school and branch admins when billing is entitled", () => {
+    expect(can.manageFeePayments("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.manageFeePayments("BRANCH_ADMIN", true)).toBe(true);
+  });
+
+  it("refuses every other role and an unentitled school", () => {
+    expect(can.manageFeePayments("TEACHER", true)).toBe(false);
+    expect(can.manageFeePayments("INVENTORY_MANAGER", true)).toBe(false);
+    expect(can.manageFeePayments("GUARDIAN", true)).toBe(false);
+    expect(can.manageFeePayments("SCHOOL_ADMIN", false)).toBe(false);
   });
 });
