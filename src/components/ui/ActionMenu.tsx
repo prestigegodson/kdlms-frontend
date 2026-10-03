@@ -253,7 +253,7 @@ export function ActionMenu({ items, label = "Actions", ariaLabel }: ActionMenuPr
               const Icon = item.icon;
               return (
                 <button
-                  key={item.label}
+                  key={`${index}-${item.label}`}
                   ref={(element) => {
                     itemRefs.current[index] = element;
                   }}

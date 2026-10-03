@@ -6,6 +6,7 @@ import {
   FileCheck2,
   MessageSquare,
   NotebookPen,
+  Receipt,
   Users,
   Wallet,
 } from "lucide-react";
@@ -19,20 +20,21 @@ const NAV_ITEMS: NavItem[] = [
   { label: "My Wards", href: "/guardian", icon: Users, primary: ["GUARDIAN"] },
   { label: "Results", href: "/guardian/results", icon: ClipboardCheck, primary: ["GUARDIAN"] },
   {
-    label: "Fees",
-    href: "/guardian/fees",
-    icon: Wallet,
+    label: "Bills",
+    href: "/guardian/bills",
+    icon: Receipt,
     primary: ["GUARDIAN"],
-    // Bills and payments together (Phase 45G, fee-payment.md D22) - promoted to the tab bar in
-    // Attendance's place. Gated on the school's Billing entitlement, the same full-lockout shape
-    // Messages uses - see auth/permissions.ts's viewWardFees.
+    // Per-term bills and balances (Phase 45G's Fees page, with payments split out to their own
+    // page below) - in the tab bar in Attendance's place. Gated on the school's Billing
+    // entitlement, the same full-lockout shape Messages uses - see auth/permissions.ts's
+    // viewWardFees.
     visible: () => can.viewWardFees("GUARDIAN", useFeatureStore.getState().billing),
   },
   {
     label: "Attendance",
     href: "/guardian/attendance",
     icon: ClipboardList,
-    // A seat-filler, not a primary: Fees took its tab, but when Fees or Messages is hidden (the
+    // A seat-filler, not a primary: Bills took its tab, but when Bills or Messages is hidden (the
     // school isn't entitled to Billing/Communication) it slots back into the free seat - see
     // NavItem.primaryFallback.
     primaryFallback: ["GUARDIAN"],
@@ -48,11 +50,19 @@ const NAV_ITEMS: NavItem[] = [
     badge: () => useUnreadMessagesStore.getState().count,
   },
   {
+    label: "Payments",
+    href: "/guardian/payments",
+    icon: Wallet,
+    // Overflow-only (drawer via the tab bar's More tab) - every payment across all wards, in one
+    // table. Same Billing gate as Bills above.
+    visible: () => can.viewWardFees("GUARDIAN", useFeatureStore.getState().billing),
+  },
+  {
     label: "Timetable",
     href: "/guardian/timetable",
     icon: CalendarDays,
     // Overflow-only (drawer via the tab bar's More tab) - My Wards/Results/
-    // Fees/Messages already fill the tab bar's four-destination limit
+    // Bills/Messages already fill the tab bar's four-destination limit
     // (CLAUDE.md's mobile nav rule). Gated on the school's Timetables
     // package entitlement, the same full-lockout shape `viewMessages` uses -
     // see auth/permissions.ts's viewTimetable.

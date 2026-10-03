@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { listClasses, type SchoolClassView } from "@/api/classes";
 import { ApiError } from "@/api/client";
 import {
@@ -12,8 +12,10 @@ import {
 } from "@/api/guardians";
 import { listSessions, type AcademicSessionView } from "@/api/sessions";
 import {
+  deleteStudent,
   type EnrollmentView,
   getStudent,
+  getStudentDeletionEligibility,
   getStudentCredentials,
   getStudentMedical,
   getStudentSubjects,
@@ -86,6 +88,8 @@ export function StudentDetailPage() {
   const canManage = can.manageStudents(role, teacherCapabilities);
   const studentLoginsEntitled = useFeatureStore((state) => state.studentLogins);
   const canManageLogins = can.manageStudentLogins(role, teacherCapabilities, studentLoginsEntitled);
+  const canDelete = can.deleteStudents(role);
+  const navigate = useNavigate();
 
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [actionError, setActionError] = useState<string | null>(null);
@@ -93,6 +97,8 @@ export function StudentDetailPage() {
   const [editingPhoto, setEditingPhoto] = useState(false);
   const [confirmingGraduate, setConfirmingGraduate] = useState(false);
   const [confirmingWithdraw, setConfirmingWithdraw] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deletable, setDeletable] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   function fetchStudent() {
@@ -108,6 +114,21 @@ export function StudentDetailPage() {
   }
 
   useEffect(fetchStudent, [studentId]);
+
+  useEffect(() => {
+    if (!studentId || !canDelete) return;
+    let cancelled = false;
+    getStudentDeletionEligibility(studentId)
+      .then((eligibility) => {
+        if (!cancelled) setDeletable(eligibility.deletable);
+      })
+      .catch(() => {
+        if (!cancelled) setDeletable(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [studentId, canDelete, refreshKey]);
 
   function load() {
     fetchStudent();
@@ -126,6 +147,13 @@ export function StudentDetailPage() {
     await withdrawStudent(studentId);
     setConfirmingWithdraw(false);
     load();
+  }
+
+  async function confirmDelete() {
+    if (!studentId) return;
+    await deleteStudent(studentId);
+    setConfirmingDelete(false);
+    navigate("/school/students");
   }
 
   async function handleReinstate() {
@@ -197,6 +225,11 @@ export function StudentDetailPage() {
             {canManage && student.status === "WITHDRAWN" && (
               <Button variant="secondary" onClick={handleReinstate}>
                 Reinstate
+              </Button>
+            )}
+            {canDelete && deletable && (
+              <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
+                Delete
               </Button>
             )}
           </>
@@ -330,6 +363,23 @@ export function StudentDetailPage() {
           variant="danger"
           onConfirm={confirmWithdraw}
           onClose={() => setConfirmingWithdraw(false)}
+        />
+      )}
+      {confirmingDelete && (
+        <ConfirmDialog
+          title="Delete this student?"
+          message={
+            <>
+              <strong>{student.fullName}</strong> ({student.admissionNumber}) will be permanently
+              deleted, along with their enrollment, guardian links, photo, and portal login. Linked
+              guardian accounts are kept. This cannot be undone.
+            </>
+          }
+          confirmLabel="Delete student"
+          variant="danger"
+          confirmationText={student.admissionNumber}
+          onConfirm={confirmDelete}
+          onClose={() => setConfirmingDelete(false)}
         />
       )}
     </div>

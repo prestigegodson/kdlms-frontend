@@ -1,9 +1,9 @@
-import type { WardFeePaymentView, WardFeeTermView } from "@/api/feePayments";
+import { Link } from "react-router";
+import type { WardFeeTermView } from "@/api/feePayments";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { TermPaymentStatusBadge } from "@/features/billing/components/TermPaymentStatusBadge";
-import { WardPaymentRow } from "@/features/guardian/components/WardPaymentRow";
 import { formatMoney } from "@/utils/currency";
 
 interface WardFeeTermCardProps {
@@ -12,9 +12,6 @@ interface WardFeeTermCardProps {
   canLog: boolean;
   onLogPayment: () => void;
   onViewBill: () => void;
-  onEditPayment: (payment: WardFeePaymentView) => void;
-  onWithdrawPayment: (payment: WardFeePaymentView) => void;
-  onResubmitPayment: (payment: WardFeePaymentView) => void;
 }
 
 function Figure({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) {
@@ -27,20 +24,13 @@ function Figure({ label, value, emphasis = false }: { label: string; value: stri
 }
 
 /**
- * One term on the guardian Fees page (Phase 45G) - billed / paid / balance at a glance, the
- * actions to log a payment or open the bill, and the term's payment history. A term with no
+ * One term on the guardian Bills page (Phase 45G) - billed / paid / balance at a glance and the
+ * actions to log a payment or open the bill. The term's payment history itself lives on the
+ * Payments page (a table across every ward), linked from here. A term with no
  * published, billable bill still gets a card (payments against it are amount-only), with "No bill"
  * in place of the billed and balance figures; a negative balance reads as a credit.
  */
-export function WardFeeTermCard({
-  term,
-  canLog,
-  onLogPayment,
-  onViewBill,
-  onEditPayment,
-  onWithdrawPayment,
-  onResubmitPayment,
-}: WardFeeTermCardProps) {
+export function WardFeeTermCard({ term, canLog, onLogPayment, onViewBill }: WardFeeTermCardProps) {
   const hasBill = term.billed != null;
   const balanceLabel = term.balance != null && term.balance < 0 ? "Credit" : "Balance";
   const balanceValue = term.balance == null ? "No bill" : formatMoney(Math.abs(term.balance), term.currency);
@@ -87,21 +77,12 @@ export function WardFeeTermCard({
       )}
 
       {term.payments.length > 0 && (
-        <section aria-label="Payments" className="border-t border-slate-100 pt-3">
-          <h3 className="mb-2 text-sm font-medium text-slate-700">Payments</h3>
-          <ul className="divide-y divide-slate-100">
-            {term.payments.map((payment) => (
-              <WardPaymentRow
-                key={payment.allocationId}
-                payment={payment}
-                currency={term.currency}
-                onEdit={() => onEditPayment(payment)}
-                onWithdraw={() => onWithdrawPayment(payment)}
-                onResubmit={() => onResubmitPayment(payment)}
-              />
-            ))}
-          </ul>
-        </section>
+        <p className="border-t border-slate-100 pt-3 text-sm text-slate-600">
+          {term.payments.length} {term.payments.length === 1 ? "payment" : "payments"} logged for this term ·{" "}
+          <Link to="/guardian/payments" className="font-medium text-brand-700 hover:underline">
+            View payments
+          </Link>
+        </p>
       )}
     </Card>
   );

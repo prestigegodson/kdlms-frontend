@@ -269,7 +269,7 @@ describe("router", () => {
       expect(await screen.findByRole("heading", { name: "My Wards" })).toBeInTheDocument();
     });
 
-    it("shows the Fees nav item once billing is entitled, promoted to the tab bar", async () => {
+    it("shows the Bills nav item (tab bar) and Payments (overflow) once billing is entitled", async () => {
       // The feature store is a module-level singleton that caches its fetch across tests
       // (fetchIfNeeded is a no-op once "loaded") - reset it so this test's own billing:true
       // stub is actually consulted rather than an earlier test's cached answer.
@@ -306,9 +306,10 @@ describe("router", () => {
       renderAt("/guardian");
 
       expect(await screen.findByRole("heading", { name: "My Wards" })).toBeInTheDocument();
-      // Fees (bills and payments together, Phase 45G D22) is a GUARDIAN `primary`, so it reaches
-      // both the sidebar and MobileTabBar - in Attendance's old tab-bar seat.
-      await waitFor(() => expect(screen.getAllByText("Fees")).toHaveLength(2));
+      // Bills is a GUARDIAN `primary`, so it reaches both the sidebar and MobileTabBar - in
+      // Attendance's old tab-bar seat; Payments is overflow-only, so it's in the sidebar alone.
+      await waitFor(() => expect(screen.getAllByText("Bills")).toHaveLength(2));
+      expect(screen.getAllByText("Payments")).toHaveLength(1);
     });
   });
 

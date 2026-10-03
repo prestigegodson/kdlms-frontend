@@ -143,6 +143,15 @@ export const can = {
   },
 
   /**
+   * Hard-deleting a mistakenly registered student who has nothing recorded yet - SCHOOL_ADMIN and
+   * BRANCH_ADMIN (own branch) only, never a Head of Level. The server decides per student whether
+   * it's still deletable (`GET /api/v1/students/{id}/deletion-eligibility`).
+   */
+  deleteStudents(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /**
    * The student registry (registration + browsing). A TEACHER gets their own
    * read-only class roster instead, via `GET /api/v1/me/classes/{id}/students`.
    * An INVENTORY_MANAGER gets the same read-only registry browsing as a

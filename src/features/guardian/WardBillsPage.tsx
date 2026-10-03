@@ -1,38 +1,41 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Wallet } from "lucide-react";
 import { getErrorMessage } from "@/api/client";
-import { getWardFees, withdrawFeePayment, type WardFeePaymentView, type WardFeeTermView } from "@/api/feePayments";
+import { getWardFees, type WardFeeTermView } from "@/api/feePayments";
 import { downloadWardBillPdf, getWardBill } from "@/api/wards";
 import type { BillView } from "@/api/billing";
 import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Pagination } from "@/components/ui/Pagination";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { BillCard } from "@/features/billing/components/BillCard";
 import { LogPaymentSheet, type LogPaymentIntent } from "@/features/guardian/components/LogPaymentSheet";
 import { WardFeeTermCard } from "@/features/guardian/components/WardFeeTermCard";
 import { WardSelector } from "@/features/guardian/components/WardSelector";
+import { usePageParam } from "@/hooks/usePageParam";
 import { useFeatureStore } from "@/stores/featureStore";
 import { useWardStore } from "@/stores/wardStore";
 import { downloadBlob } from "@/utils/download";
-import { formatMoney } from "@/utils/currency";
-import { formatLongDate } from "@/utils/date";
+import { paginate } from "@/utils/paginate";
+
+const TERMS_PER_PAGE = 6;
 
 /**
- * A ward's school fees, term by term (Phase 45G, replacing the Phase 21G Bills page) - each
- * eligible term as a card with billed / paid / balance, the bill itself, and the payments the
- * guardian (or another linked guardian, or the school) logged against it. The cards come
+ * A ward's bills, term by term (Phase 45G's Fees page, split back into Bills + Payments) - each
+ * eligible term as a card with billed / paid / balance and the bill itself. The payments logged
+ * against a term live on `WardPaymentsPage`, a table across every ward. The cards come
  * newest-first from `GET /api/v1/me/wards/{id}/fees`, so `WardSelector` alone docks in the
  * `StickySubHeader`, the `WardBillsPage` shape this page grew out of. "View bill" reuses
- * `BillCard` in a `Modal` with the same Download PDF idiom that page had.
+ * `BillCard` in a `Modal` with the same Download PDF idiom that page had. The cards are paged
+ * client-side (`paginate`, `?page=` via `usePageParam`) since they already arrive whole.
  */
-export function WardFeesPage() {
+export function WardBillsPage() {
   const { wards, selectedWardId, status, errorMessage: wardsError, fetchIfNeeded, retry } = useWardStore();
   const billingEntitled = useFeatureStore((state) => state.billing);
   const canLog = can.logWardPayment("GUARDIAN", billingEntitled);
@@ -53,6 +56,18 @@ export function WardFeesPage() {
     setTerms(null);
     setTermsError(null);
   }
+
+  const [pageIndex, setPageIndex] = usePageParam();
+  const page = paginate(terms ?? [], pageIndex, TERMS_PER_PAGE);
+
+  // `?page=` lives in the URL, so it can't be reset during render like the cards above - a real
+  // ward switch (not the first mount, which may carry a deep-linked page) sends it back to page 1.
+  const pagedSelectionKey = useRef(selectionKey);
+  useEffect(() => {
+    if (pagedSelectionKey.current === selectionKey) return;
+    pagedSelectionKey.current = selectionKey;
+    setPageIndex(0);
+  }, [selectionKey, setPageIndex]);
 
   const loadTerms = useCallback((studentId: string) => {
     return getWardFees(studentId)
@@ -108,26 +123,17 @@ export function WardFeesPage() {
     }
   }
 
-  // ----- Log / edit / resubmit / withdraw -----
+  // ----- Log payment -----
   const [formIntent, setFormIntent] = useState<LogPaymentIntent | null>(null);
-  const [withdrawing, setWithdrawing] = useState<{ payment: WardFeePaymentView; currency: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-
-  async function confirmWithdraw() {
-    if (!withdrawing) return;
-    await withdrawFeePayment(withdrawing.payment.paymentId);
-    setWithdrawing(null);
-    setNotice("Payment withdrawn.");
-    refresh();
-  }
 
   const hasWards = status === "loaded" && wards.length > 0;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Fees"
-        description="Your ward's bills, payments and balances."
+        title="Bills"
+        description="Your ward's bills and balances."
         actions={
           hasWards &&
           canLog && (
@@ -172,13 +178,13 @@ export function WardFeesPage() {
         <EmptyState
           icon={Wallet}
           title="No terms yet"
-          description="Fees appear here once your ward is enrolled for a term."
+          description="Bills appear here once your ward is enrolled for a term."
         />
       )}
 
       {terms && terms.length > 0 && selectedWardId && (
         <div className="space-y-4">
-          {terms.map((term) => (
+          {page.content.map((term) => (
             <WardFeeTermCard
               key={term.termId}
               term={term}
@@ -188,20 +194,9 @@ export function WardFeesPage() {
                 setFormIntent({ kind: "new", studentId: selectedWardId, term });
               }}
               onViewBill={() => openBill(term.termId)}
-              onEditPayment={(payment) => {
-                setNotice(null);
-                setFormIntent({ kind: "edit", studentId: selectedWardId, term, payment });
-              }}
-              onWithdrawPayment={(payment) => {
-                setNotice(null);
-                setWithdrawing({ payment, currency: term.currency });
-              }}
-              onResubmitPayment={(payment) => {
-                setNotice(null);
-                setFormIntent({ kind: "resubmit", studentId: selectedWardId, term, payment });
-              }}
             />
           ))}
+          {page.totalPages > 1 && <Pagination page={page} onPageChange={setPageIndex} />}
         </div>
       )}
 
@@ -234,25 +229,6 @@ export function WardFeesPage() {
         }}
       />
 
-      {withdrawing && (
-        <ConfirmDialog
-          title="Withdraw payment"
-          message={
-            <>
-              Withdraw your {formatMoney(withdrawing.payment.totalAmount, withdrawing.currency)} payment of{" "}
-              {formatLongDate(withdrawing.payment.paymentDate)}? The proof you attached will be deleted
-              {withdrawing.payment.childCount > 1
-                ? `, and it's withdrawn for all ${withdrawing.payment.childCount} children`
-                : ""}
-              .
-            </>
-          }
-          confirmLabel="Withdraw"
-          variant="danger"
-          onConfirm={confirmWithdraw}
-          onClose={() => setWithdrawing(null)}
-        />
-      )}
     </div>
   );
 }

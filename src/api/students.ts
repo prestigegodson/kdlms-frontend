@@ -289,6 +289,22 @@ export function reinstateStudent(studentId: string): Promise<void> {
   return apiFetch<void>(`${BASE}/${studentId}/reinstate`, { method: "PATCH" });
 }
 
+/** Mirrors backend student.application.port.in.StudentDeletionEligibilityView. */
+export interface StudentDeletionEligibilityView {
+  deletable: boolean;
+  blockers: string[];
+}
+
+/** Whether a hard delete would succeed right now - SCHOOL_ADMIN, or BRANCH_ADMIN for their own branch. */
+export function getStudentDeletionEligibility(studentId: string): Promise<StudentDeletionEligibilityView> {
+  return apiFetch<StudentDeletionEligibilityView>(`${BASE}/${studentId}/deletion-eligibility`);
+}
+
+/** Hard-deletes a mistakenly registered student who has nothing recorded against them yet. */
+export function deleteStudent(studentId: string): Promise<void> {
+  return apiFetch<void>(`${BASE}/${studentId}`, { method: "DELETE" });
+}
+
 export function listStudentEnrollments(studentId: string): Promise<EnrollmentView[]> {
   return apiFetch<EnrollmentView[]>(`${BASE}/${studentId}/enrollments`);
 }

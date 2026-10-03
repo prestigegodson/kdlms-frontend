@@ -41,6 +41,8 @@ vi.mock("@/api/students", async () => {
     provisionStudentCredentials: vi.fn(),
     resetStudentCredentials: vi.fn(),
     revokeStudentCredentials: vi.fn(),
+    getStudentDeletionEligibility: vi.fn(),
+    deleteStudent: vi.fn(),
   };
 });
 
@@ -160,6 +162,7 @@ function renderAsSchoolAdmin() {
     [
       { path: "/school/students/:studentId", element: <StudentDetailPage /> },
       { path: "/school/students/:studentId/results/:sessionId", element: <div>Result history page</div> },
+      { path: "/school/students", element: <div>Student registry page</div> },
     ],
     { initialEntries: ["/school/students/student-1"] },
   );
@@ -184,6 +187,43 @@ describe("StudentDetailPage", () => {
     vi.mocked(studentsApi.getStudentMedical).mockResolvedValue(EMPTY_MEDICAL_VIEW);
     // Fetched by the new SubjectsCard section - not under test in most cases here.
     vi.mocked(studentsApi.getStudentSubjects).mockResolvedValue(EMPTY_SUBJECTS_VIEW);
+    vi.mocked(studentsApi.getStudentDeletionEligibility).mockResolvedValue({
+      deletable: false,
+      blockers: ["the student has attendance recorded"],
+    });
+  });
+
+  it("hides Delete for a student who already has records", async () => {
+    vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+    vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+    vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+
+    renderAsSchoolAdmin();
+    await screen.findByRole("heading", { name: "Ada Obi" });
+    await waitFor(() => expect(studentsApi.getStudentDeletionEligibility).toHaveBeenCalledWith("student-1"));
+
+    expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+  });
+
+  it("deletes a record-free student after typing the admission number to confirm", async () => {
+    vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+    vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+    vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+    vi.mocked(studentsApi.getStudentDeletionEligibility).mockResolvedValue({ deletable: true, blockers: [] });
+    vi.mocked(studentsApi.deleteStudent).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await user.click(await screen.findByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog");
+    const confirm = within(dialog).getByRole("button", { name: "Delete student" });
+    expect(confirm).toBeDisabled();
+
+    await user.type(within(dialog).getByLabelText(/to confirm/), "BFA/2026/0001");
+    await user.click(confirm);
+
+    expect(studentsApi.deleteStudent).toHaveBeenCalledWith("student-1");
+    expect(await screen.findByText("Student registry page")).toBeInTheDocument();
   });
 
   it("shows bio, enrollment history, linked guardians, and medical info", async () => {

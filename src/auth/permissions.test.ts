@@ -34,6 +34,7 @@ describe("Head of Level", () => {
     expect(can.manageLevelHeads("TEACHER")).toBe(false);
     expect(can.manageSessions("TEACHER")).toBe(false);
     expect(can.manageStudentMedical("TEACHER")).toBe(false);
+    expect(can.deleteStudents("TEACHER")).toBe(false);
     expect(can.manageGuardians("TEACHER")).toBe(false);
     expect(can.deleteSubjects("TEACHER")).toBe(false);
     expect(can.manageLevels("TEACHER")).toBe(false);
@@ -827,5 +828,13 @@ describe("can.manageFeePayments", () => {
     expect(can.manageFeePayments("INVENTORY_MANAGER", true)).toBe(false);
     expect(can.manageFeePayments("GUARDIAN", true)).toBe(false);
     expect(can.manageFeePayments("SCHOOL_ADMIN", false)).toBe(false);
+  });
+
+  it("lets only school and branch admins delete a record-free student", () => {
+    expect(can.deleteStudents("SCHOOL_ADMIN")).toBe(true);
+    expect(can.deleteStudents("BRANCH_ADMIN")).toBe(true);
+    expect(can.deleteStudents("TEACHER")).toBe(false);
+    expect(can.deleteStudents("INVENTORY_MANAGER")).toBe(false);
+    expect(can.deleteStudents(undefined)).toBe(false);
   });
 });

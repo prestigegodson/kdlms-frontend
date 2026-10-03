@@ -6,7 +6,7 @@ import * as feePaymentsApi from "@/api/feePayments";
 import type { WardFeePaymentView, WardFeeTermView } from "@/api/feePayments";
 import * as wardsApi from "@/api/wards";
 import type { BillView } from "@/api/billing";
-import { WardFeesPage } from "@/features/guardian/WardFeesPage";
+import { WardBillsPage } from "@/features/guardian/WardBillsPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import { resetFeatureStore, useFeatureStore } from "@/stores/featureStore";
 import { resetWardStore } from "@/stores/wardStore";
@@ -22,9 +22,6 @@ vi.mock("@/api/feePayments", async () => {
   return {
     ...actual,
     getWardFees: vi.fn(),
-    withdrawFeePayment: vi.fn(),
-    downloadFeeReceiptPdf: vi.fn(),
-    downloadFeePaymentAttachment: vi.fn(),
   };
 });
 
@@ -132,11 +129,11 @@ function renderPage() {
     accessToken: "access",
     refreshToken: "refresh",
   });
-  const router = createMemoryRouter([{ path: "/", element: <WardFeesPage /> }], { initialEntries: ["/"] });
+  const router = createMemoryRouter([{ path: "/", element: <WardBillsPage /> }], { initialEntries: ["/"] });
   render(<RouterProvider router={router} />);
 }
 
-describe("WardFeesPage", () => {
+describe("WardBillsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetWardStore();
@@ -164,6 +161,33 @@ describe("WardFeesPage", () => {
     expect(within(card).getByText("₦10,000.00")).toBeInTheDocument();
     expect(within(card).getByText("₦40,000.00")).toBeInTheDocument();
     expect(within(card).getByRole("button", { name: "Log payment" })).toBeInTheDocument();
+  });
+
+  it("pages the term cards six at a time", async () => {
+    const terms = Array.from({ length: 8 }, (_, i) =>
+      term({ termId: `term-${i}`, termName: `Term ${i + 1}`, sessionName: "2026/2027" }),
+    );
+    vi.mocked(feePaymentsApi.getWardFees).mockResolvedValue(terms);
+
+    renderPage();
+
+    expect(await screen.findByLabelText("Term 1, 2026/2027")).toBeInTheDocument();
+    expect(screen.getByLabelText("Term 6, 2026/2027")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Term 7, 2026/2027")).not.toBeInTheDocument();
+    expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Next page" }));
+
+    expect(await screen.findByLabelText("Term 7, 2026/2027")).toBeInTheDocument();
+    expect(screen.getByLabelText("Term 8, 2026/2027")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Term 1, 2026/2027")).not.toBeInTheDocument();
+  });
+
+  it("shows no pagination when every term fits on one page", async () => {
+    renderPage();
+
+    expect(await screen.findByLabelText("First Term, 2026/2027")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next page" })).not.toBeInTheDocument();
   });
 
   it("shows No bill for a term without a published bill, and hides View bill", async () => {
@@ -221,82 +245,23 @@ describe("WardFeesPage", () => {
     expect(await screen.findByRole("dialog", { name: "Log payment" })).toBeInTheDocument();
   });
 
-  it("offers Edit and Withdraw only on a payment the guardian can still edit", async () => {
+  it("links to the Payments page instead of listing a term's payments", async () => {
     vi.mocked(feePaymentsApi.getWardFees).mockResolvedValue([
       term({
         pendingAmount: 20000,
         hasPending: true,
-        payments: [
-          payment(),
-          payment({ paymentId: "p2", allocationId: "a2", canEdit: false, submittedByMe: false }),
-        ],
+        payments: [payment(), payment({ paymentId: "p2", allocationId: "a2" })],
       }),
     ]);
 
     renderPage();
 
-    await screen.findByText("₦20,000.00 pending confirmation");
-    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(1);
-    expect(screen.getAllByRole("button", { name: "Withdraw" })).toHaveLength(1);
-  });
-
-  it("withdraws a pending payment after confirming, then refetches", async () => {
-    vi.mocked(feePaymentsApi.getWardFees).mockResolvedValue([term({ payments: [payment()] })]);
-    vi.mocked(feePaymentsApi.withdrawFeePayment).mockResolvedValue(undefined);
-    const user = userEvent.setup();
-    renderPage();
-
-    await user.click(await screen.findByRole("button", { name: "Withdraw" }));
-    const dialog = await screen.findByRole("dialog", { name: "Withdraw payment" });
-    await user.click(within(dialog).getByRole("button", { name: "Withdraw" }));
-
-    await waitFor(() => expect(feePaymentsApi.withdrawFeePayment).toHaveBeenCalledWith("p1"));
-    expect(await screen.findByText("Payment withdrawn.")).toBeInTheDocument();
-    expect(feePaymentsApi.getWardFees).toHaveBeenCalledTimes(2);
-  });
-
-  it("shows a rejection's reason and offers Resubmit to its submitter", async () => {
-    vi.mocked(feePaymentsApi.getWardFees).mockResolvedValue([
-      term({
-        payments: [payment({ status: "REJECTED", canEdit: false, reason: "Teller is unreadable" })],
-      }),
-    ]);
-    const user = userEvent.setup();
-    renderPage();
-
-    expect(await screen.findByText(/Teller is unreadable/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Resubmit" }));
-
-    expect(await screen.findByRole("dialog", { name: "Resubmit payment" })).toBeInTheDocument();
-  });
-
-  it("downloads a confirmed payment's receipt", async () => {
-    vi.mocked(feePaymentsApi.getWardFees).mockResolvedValue([
-      term({
-        payments: [
-          payment({
-            status: "CONFIRMED",
-            canEdit: false,
-            confirmedAmount: 10000,
-            settlement: "PARTIAL",
-            receipts: [
-              { receiptId: "r1", receiptNumber: "RCT/2026/00001", status: "ISSUED", issuedAt: "2026-09-21T09:00:00Z" },
-            ],
-          }),
-        ],
-      }),
-    ]);
-    const blob = new Blob(["%PDF-"]);
-    vi.mocked(feePaymentsApi.downloadFeeReceiptPdf).mockResolvedValue(blob);
-    const user = userEvent.setup();
-    renderPage();
-
-    expect(await screen.findByText("Confirmed · part payment")).toBeInTheDocument();
-    expect(screen.getByText("You logged ₦20,000.00")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /Receipt RCT\/2026\/00001/ }));
-
-    await waitFor(() => expect(downloadBlob).toHaveBeenCalledWith(blob, "receipt-RCT-2026-00001.pdf"));
-    expect(feePaymentsApi.downloadFeeReceiptPdf).toHaveBeenCalledWith("r1");
+    const card = await screen.findByLabelText("First Term, 2026/2027");
+    expect(within(card).getByText("₦20,000.00 pending confirmation")).toBeInTheDocument();
+    expect(within(card).getByText(/2 payments logged for this term/)).toBeInTheDocument();
+    expect(within(card).getByRole("link", { name: "View payments" })).toHaveAttribute("href", "/guardian/payments");
+    expect(within(card).queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "Withdraw" })).not.toBeInTheDocument();
   });
 
   it("opens the bill from View bill and downloads its PDF", async () => {
