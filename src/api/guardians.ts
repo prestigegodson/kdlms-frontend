@@ -94,6 +94,25 @@ export function disableGuardian(guardianId: string): Promise<void> {
   return apiFetch<void>(`${BASE}/${guardianId}/disable`, { method: "PATCH" });
 }
 
+/** Mirrors backend student.application.port.in.GuardianDeletionEligibilityView. */
+export interface GuardianDeletionEligibilityView {
+  deletable: boolean;
+  blockers: string[];
+}
+
+/** Whether a delete would succeed right now - refused while the guardian has a fee payment at this school. */
+export function getGuardianDeletionEligibility(guardianId: string): Promise<GuardianDeletionEligibilityView> {
+  return apiFetch<GuardianDeletionEligibilityView>(`${BASE}/${guardianId}/deletion-eligibility`);
+}
+
+/**
+ * Removes the guardian's profile and ward links at this school. Their login is
+ * removed too unless they still have a profile at another school.
+ */
+export function deleteGuardian(guardianId: string): Promise<void> {
+  return apiFetch<void>(`${BASE}/${guardianId}`, { method: "DELETE" });
+}
+
 export function listGuardianWards(guardianId: string): Promise<WardView[]> {
   return apiFetch<WardView[]>(`${BASE}/${guardianId}/students`);
 }

@@ -176,6 +176,15 @@ export const can = {
   },
 
   /**
+   * Deleting a guardian's profile at this school - SCHOOL_ADMIN and BRANCH_ADMIN (guardians with a
+   * ward in their own branch). The server decides per guardian whether it's still deletable
+   * (`GET /api/v1/guardians/{id}/deletion-eligibility`) - refused once they've submitted a fee payment.
+   */
+  deleteGuardians(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /**
    * Registering students for a selective subject - both admin roles plus a
    * TEACHER who class-teaches at least one class (mirrors `markAttendance`'s
    * scoping; a subject-teacher-only account gets nothing). The real

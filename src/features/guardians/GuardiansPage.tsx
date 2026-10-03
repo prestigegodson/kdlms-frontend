@@ -17,6 +17,7 @@ import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { TableSkeleton } from "@/components/ui/TableSkeleton";
 import { useAuthStore } from "@/stores/authStore";
+import { DeleteGuardianDialog } from "@/features/guardians/components/DeleteGuardianDialog";
 import { GuardianFormModal } from "@/features/guardians/components/GuardianFormModal";
 import { WardsModal } from "@/features/guardians/components/WardsModal";
 
@@ -31,6 +32,7 @@ type ListState =
 export function GuardiansPage() {
   const role = useAuthStore((state) => state.user?.role);
   const canManage = can.manageGuardians(role);
+  const canDelete = can.deleteGuardians(role);
 
   const [query, setQuery] = useState("");
   const [pageIndex, setPageIndex] = useState(0);
@@ -38,6 +40,7 @@ export function GuardiansPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<GuardianView | null>(null);
   const [viewingWardsOf, setViewingWardsOf] = useState<GuardianView | null>(null);
+  const [deleting, setDeleting] = useState<GuardianView | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   function fetchGuardians() {
@@ -167,6 +170,15 @@ export function GuardiansPage() {
                             {guardian.active ? "Disable" : "Enable"}
                           </button>
                         )}
+                        {canDelete && (
+                          <button
+                            type="button"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => setDeleting(guardian)}
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -192,6 +204,9 @@ export function GuardiansPage() {
           onClose={() => setEditing(null)}
           onSaved={load}
         />
+      )}
+      {deleting && (
+        <DeleteGuardianDialog guardian={deleting} onClose={() => setDeleting(null)} onDeleted={load} />
       )}
       {viewingWardsOf && <WardsModal guardian={viewingWardsOf} onClose={() => setViewingWardsOf(null)} />}
     </div>

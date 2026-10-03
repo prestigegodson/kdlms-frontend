@@ -17,6 +17,8 @@ vi.mock("@/api/guardians", async () => {
     enableGuardian: vi.fn(),
     disableGuardian: vi.fn(),
     listGuardianWards: vi.fn(),
+    getGuardianDeletionEligibility: vi.fn(),
+    deleteGuardian: vi.fn(),
   };
 });
 
@@ -199,5 +201,42 @@ describe("GuardiansPage", () => {
       "guardian-1",
       expect.objectContaining({ communicationEmailsEnabled: false }),
     );
+  });
+
+  it("deletes a guardian with no payment record after confirmation", async () => {
+    mockGuardians([GUARDIAN_VIEW]);
+    vi.mocked(guardiansApi.getGuardianDeletionEligibility).mockResolvedValue({ deletable: true, blockers: [] });
+    vi.mocked(guardiansApi.deleteGuardian).mockResolvedValue();
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Chidi Obi");
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog", { name: "Delete this guardian?" });
+    expect(guardiansApi.deleteGuardian).not.toHaveBeenCalled();
+    await user.click(await within(dialog).findByRole("button", { name: "Delete guardian" }));
+
+    expect(guardiansApi.deleteGuardian).toHaveBeenCalledWith("guardian-1");
+    expect(guardiansApi.listGuardians).toHaveBeenCalledTimes(2);
+  });
+
+  it("explains why a guardian with a fee payment can't be deleted", async () => {
+    mockGuardians([GUARDIAN_VIEW]);
+    vi.mocked(guardiansApi.getGuardianDeletionEligibility).mockResolvedValue({
+      deletable: false,
+      blockers: ["the guardian has fee payments recorded"],
+    });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Chidi Obi");
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog", { name: "Delete this guardian?" });
+
+    expect(await within(dialog).findByText(/the guardian has fee payments recorded/)).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Delete guardian" })).not.toBeInTheDocument();
+    expect(guardiansApi.deleteGuardian).not.toHaveBeenCalled();
   });
 });
