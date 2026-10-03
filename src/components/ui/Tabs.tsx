@@ -18,6 +18,7 @@ export function Tabs<T extends string>({ ariaLabel, value, onChange, items }: Ta
   return (
     <div
       role="tablist"
+      data-tour="page-tabs"
       aria-label={ariaLabel}
       className="flex gap-1 overflow-x-auto overscroll-x-contain border-b border-slate-200"
     >

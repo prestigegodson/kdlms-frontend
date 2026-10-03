@@ -8,6 +8,7 @@ import { useAcademicContextStore } from "@/stores/academicContextStore";
 import { useBranchStore } from "@/stores/branchStore";
 import { useFeatureStore } from "@/stores/featureStore";
 import { useLevelStore } from "@/stores/levelStore";
+import { useOnboardingStore } from "@/stores/onboardingStore";
 import { usePendingFeePaymentsStore } from "@/stores/pendingFeePaymentsStore";
 import { usePendingLessonNotesStore } from "@/stores/pendingLessonNotesStore";
 import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
@@ -114,6 +115,7 @@ function resetSessionScopedStores(): void {
   usePendingFeePaymentsStore.getState().reset();
   useBranchStore.getState().reset();
   useLevelStore.getState().reset();
+  useOnboardingStore.getState().reset();
 }
 
 export const useAuthStore = create<AuthState>()(

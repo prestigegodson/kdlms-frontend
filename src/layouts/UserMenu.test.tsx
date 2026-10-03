@@ -67,6 +67,22 @@ describe("UserMenu", () => {
     expect(screen.getByRole("menuitem", { name: "Log out" })).toBeInTheDocument();
   });
 
+  it("opens the portal's how-to guides", async () => {
+    const router = createMemoryRouter(
+      [
+        { path: "/admin/help", element: <div>How-to guides page</div> },
+        { path: "/admin/schools", element: <UserMenu user={USER} /> },
+      ],
+      { initialEntries: ["/admin/schools"] },
+    );
+    render(<RouterProvider router={router} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Account menu" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "How-to guides" }));
+
+    expect(screen.getByText("How-to guides page")).toBeInTheDocument();
+  });
+
   it("closes on Escape", async () => {
     const user = userEvent.setup();
     renderMenu();

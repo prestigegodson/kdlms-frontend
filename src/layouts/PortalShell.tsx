@@ -4,6 +4,10 @@ import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 
 import { Link, Outlet, useLocation } from "react-router";
 import type { Role } from "@/api/types";
 import { Alert } from "@/components/ui/Alert";
+import { HelpButton } from "@/features/onboarding/components/HelpButton";
+import { TourRunner } from "@/features/onboarding/components/TourRunner";
+import { WelcomeModal } from "@/features/onboarding/components/WelcomeModal";
+import { portalForPath } from "@/features/onboarding/eligibility";
 import { useInstallApp } from "@/hooks/useInstallApp";
 import { ImpersonationBanner } from "@/layouts/ImpersonationBanner";
 import { InstallBanner } from "@/layouts/InstallBanner";
@@ -14,6 +18,7 @@ import { UserMenu } from "@/layouts/UserMenu";
 import { useAppBarStore } from "@/stores/appBarStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useNavGroupsStore } from "@/stores/navGroupsStore";
+import { useOnboardingStore } from "@/stores/onboardingStore";
 import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 
 export interface NavItem {
@@ -206,11 +211,27 @@ export function PortalShell({
   const [drawerPathname, setDrawerPathname] = useState(location.pathname);
   const drawerRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
+  const portal = portalForPath(location.pathname);
+  const fetchOnboarding = useOnboardingStore((state) => state.fetchIfNeeded);
+  const setVisibleNavHrefs = useOnboardingStore((state) => state.setVisibleNavHrefs);
 
   const visibleNavItems = navItems.filter(
     (item) =>
       (!item.roles || (user && item.roles.includes(user.role))) && (!item.visible || item.visible()),
   );
+
+  // Onboarding guides (features/onboarding) are offered only for pages whose nav item is visible
+  // here, so every role/entitlement gate above gates its guide too.
+  const visibleNavHrefsKey = visibleNavItems.map((item) => item.href).join("|");
+  useEffect(() => {
+    setVisibleNavHrefs(visibleNavHrefsKey ? visibleNavHrefsKey.split("|") : []);
+  }, [visibleNavHrefsKey, setVisibleNavHrefs]);
+
+  useEffect(() => {
+    if (user) {
+      fetchOnboarding();
+    }
+  }, [user, fetchOnboarding]);
 
   const groups: { name: string | null; items: NavItem[] }[] = [];
   for (const item of visibleNavItems) {
@@ -399,7 +420,9 @@ export function PortalShell({
             without this, `renderNav`'s `overflow-y-auto` had no bounded box
             to actually scroll, since `align-items: stretch` on the flex row
             above stretched the aside to page height, not viewport height). */}
-        <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-64 lg:shrink-0 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white">
+        <aside
+          data-tour="sidebar"
+          className="hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-64 lg:shrink-0 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white">
           <div className="flex h-16 min-w-0 shrink-0 items-center border-b border-slate-200 px-6">
             <BrandMark />
           </div>
@@ -474,13 +497,23 @@ export function PortalShell({
             <MobileAppBar />
             <div className="flex shrink-0 items-center gap-3 lg:min-w-0 lg:flex-1 lg:justify-between">
               {contextLabel ? (
-                <span className="hidden truncate rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-800 sm:inline-flex">
+                <span
+                  data-tour="context"
+                  className="hidden truncate rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-800 sm:inline-flex"
+                >
                   {contextLabel}
                 </span>
               ) : (
                 <span className="hidden sm:inline-flex" />
               )}
-              {user ? <UserMenu user={user} /> : <span className="text-sm text-slate-500">Not signed in</span>}
+              {user ? (
+                <div className="flex items-center gap-1 sm:gap-2">
+                  {portal && <HelpButton portal={portal} />}
+                  <UserMenu user={user} />
+                </div>
+              ) : (
+                <span className="text-sm text-slate-500">Not signed in</span>
+              )}
             </div>
           </header>
           <main className="flex-1 pb-tabbar-safe lg:pb-0">
@@ -521,6 +554,12 @@ export function PortalShell({
           rendered here rather than nested inside the (conditionally
           unmounted) drawer markup. */}
       <InstallInstructionsModal open={instructionsOpen} onClose={closeInstructions} platform={platform} />
+      {user && portal && (
+        <>
+          <WelcomeModal portal={portal} role={user.role} />
+          <TourRunner portal={portal} role={user.role} />
+        </>
+      )}
     </div>
   );
 }

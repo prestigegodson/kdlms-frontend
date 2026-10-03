@@ -42,6 +42,7 @@ import { GuardiansPage } from "@/features/guardians/GuardiansPage";
 import { LearningResourcePreviewPage } from "@/features/learning/LearningResourcePreviewPage";
 import { LearningResourcesPage } from "@/features/learning/LearningResourcesPage";
 import { LessonNotesPage } from "@/features/lessonNotes/LessonNotesPage";
+import { HowToGuidesPage } from "@/features/onboarding/pages/HowToGuidesPage";
 import { PackagesPage } from "@/features/packages/PackagesPage";
 import { ReportSettingsPage } from "@/features/reporting/ReportSettingsPage";
 import { ReportsPage } from "@/features/reporting/ReportsPage";
@@ -125,6 +126,7 @@ export const routes: RouteObject[] = [
           { path: "templates/:templateId", element: <TemplateDesignerRoute /> },
           { path: "support", element: <AdminSupportContactPage /> },
           { path: "ai", element: <AdminAiSettingsPage /> },
+          { path: "help", element: <HowToGuidesPage /> },
         ],
       },
       {
@@ -136,6 +138,7 @@ export const routes: RouteObject[] = [
         ),
         children: [
           { index: true, element: <SchoolDashboardPage /> },
+          { path: "help", element: <HowToGuidesPage /> },
           {
             path: "branches",
             element: (
@@ -324,6 +327,7 @@ export const routes: RouteObject[] = [
         ),
         children: [
           { index: true, element: <WardsPage /> },
+          { path: "help", element: <HowToGuidesPage /> },
           {
             path: "results",
             children: [
@@ -373,6 +377,7 @@ export const routes: RouteObject[] = [
         ),
         children: [
           { index: true, element: <StudentDashboardPage /> },
+          { path: "help", element: <HowToGuidesPage /> },
           { path: "results", element: <StudentResultsPage /> },
           { path: "results/:sessionId/:termId", element: <StudentTermResultPage /> },
           { path: "resources", element: <StudentResourcesPage /> },

@@ -48,13 +48,17 @@ export function PageHeader({ title, description, actions, backTo }: PageHeaderPr
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div>
+      <div data-tour="page-header">
         <h1 className="sr-only font-display text-3xl font-medium text-slate-900 lg:not-sr-only">
           {title}
         </h1>
         {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && (
+        <div data-tour="page-actions" className="flex flex-wrap items-center gap-2">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

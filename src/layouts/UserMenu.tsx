@@ -1,7 +1,8 @@
-import { KeyRound, LogOut, UserCog } from "lucide-react";
+import { BookOpen, KeyRound, LogOut, UserCog } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { ChangePasswordDialog } from "@/features/auth/ChangePasswordDialog";
+import { portalForPath } from "@/features/onboarding/eligibility";
 import type { AuthenticatedUser } from "@/stores/authStore";
 import { useAuthStore } from "@/stores/authStore";
 import { initialsOf } from "@/utils/initials";
@@ -23,6 +24,7 @@ export function UserMenu({ user }: UserMenuProps) {
   const impersonation = useAuthStore((state) => state.impersonation);
   const stopImpersonation = useAuthStore((state) => state.stopImpersonation);
   const navigate = useNavigate();
+  const portal = portalForPath(useLocation().pathname);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -63,6 +65,11 @@ export function UserMenu({ user }: UserMenuProps) {
     setChangePasswordOpen(true);
   }
 
+  function handleGuides() {
+    setOpen(false);
+    navigate(`/${portal}/help`);
+  }
+
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === "Escape") {
       close();
@@ -77,6 +84,7 @@ export function UserMenu({ user }: UserMenuProps) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Account menu"
+        data-tour="account-menu"
         onClick={() => setOpen((value) => !value)}
         className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-sm font-semibold
           text-brand-800 transition-colors hover:bg-brand-100 mobile:h-11 mobile:w-11"
@@ -101,6 +109,17 @@ export function UserMenu({ user }: UserMenuProps) {
               </p>
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{user.role}</p>
             </div>
+            {portal && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleGuides}
+                className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+              >
+                <BookOpen className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                How-to guides
+              </button>
+            )}
             {/* The backend refuses /auth/change-password for an impersonation token outright
                 (shared.config.ImpersonationGuardFilter) - a sysadmin must never change the
                 target's own credentials, so this is hidden rather than shown-then-403ing. */}

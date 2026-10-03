@@ -44,6 +44,7 @@ export function MobileTabBar({
   return (
     <nav
       aria-label="Primary"
+      data-tour="tabbar"
       className="fixed inset-x-0 bottom-0 z-30 flex border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
     >
       {tabs.map((item) => {
@@ -75,6 +76,7 @@ export function MobileTabBar({
       {showMore && (
         <button
           ref={moreRef}
+          data-tour="more"
           type="button"
           onClick={onMore}
           aria-haspopup="dialog"
