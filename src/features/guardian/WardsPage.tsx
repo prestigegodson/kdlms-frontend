@@ -18,6 +18,11 @@ import { StatTile } from "@/components/ui/StatTile";
 import { groupWardsBySchool } from "@/features/guardian/groupWardsBySchool";
 import { StudentMedicalPanel } from "@/features/students/components/StudentMedicalPanel";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
+import { can } from "@/auth/permissions";
+import { UpcomingSessionsPanel } from "@/features/virtualclass/components/UpcomingSessionsPanel";
+import { loadGuardianUpcoming } from "@/features/virtualclass/upcomingSessions";
+import { useAuthStore } from "@/stores/authStore";
+import { useFeatureStore } from "@/stores/featureStore";
 import { useWardStore } from "@/stores/wardStore";
 import { initialsOfFullName } from "@/utils/initials";
 
@@ -155,6 +160,8 @@ function WardMedicalModal({ ward, onClose }: WardMedicalModalProps) {
  */
 export function WardsPage() {
   const { wards, status, errorMessage, fetchIfNeeded, retry } = useWardStore();
+  const role = useAuthStore((state) => state.user?.role);
+  const onlineClasses = useFeatureStore((state) => state.onlineClasses);
 
   useEffect(() => {
     fetchIfNeeded();
@@ -165,6 +172,10 @@ export function WardsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="My Wards" description="Students linked to your account." />
+
+      {can.viewOnlineClasses(role, onlineClasses) && (
+        <UpcomingSessionsPanel load={loadGuardianUpcoming} joinLabel={() => "Watch"} hideWhenEmpty />
+      )}
 
       {(status === "idle" || status === "loading") && (
         <div className="flex items-center gap-2 text-sm text-slate-500">

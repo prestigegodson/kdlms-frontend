@@ -48,6 +48,7 @@ describe("TourCard", () => {
     expect(screen.getByRole("heading", { name: "Your account" })).toBeInTheDocument();
     expect(screen.getByText("2 of 4")).toBeInTheDocument();
     expect(screen.getByTestId("tour-card")).toHaveAttribute("data-layout", "floating");
+    expect(screen.getByTestId("tour-card")).toHaveClass("relative");
 
     await userEvent.click(screen.getByRole("button", { name: "primary" }));
     expect(cardProps.primaryProps.onClick).toHaveBeenCalled();
@@ -78,5 +79,8 @@ describe("TourCard", () => {
     render(<TourCard {...props()} />);
 
     expect(screen.getByTestId("tour-card")).toHaveAttribute("data-layout", "sheet");
+    // `.relative` is emitted after `.fixed`, so carrying both would put the sheet below the page.
+    expect(screen.getByTestId("tour-card")).toHaveClass("fixed");
+    expect(screen.getByTestId("tour-card")).not.toHaveClass("relative");
   });
 });

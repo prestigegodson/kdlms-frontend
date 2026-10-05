@@ -289,6 +289,79 @@ export const can = {
     return isAcademicAdmin(role, scope);
   },
 
+  /** An education creator's own business profile (creators.md Phase C1) - the CREATOR themselves only. */
+  manageCreatorProfile(role: Role | undefined): boolean {
+    return role === "CREATOR";
+  },
+
+  /** An education creator's own virtual classes, schedules and sessions (creators.md Phase C4) - the CREATOR only. */
+  manageVirtualClasses(role: Role | undefined): boolean {
+    return role === "CREATOR";
+  },
+
+  /**
+   * Paying for the tenant's own KDLMS plan through Paystack - checkout, auto-renewal, payment
+   * history (creators.md Phase C8). The server accepts a CREATOR or a SCHOOL_ADMIN; the school's own
+   * billing page arrives in Phase C10, so only the creator portal links to it so far.
+   */
+  manageSubscriptionBilling(role: Role | undefined): boolean {
+    return role === "CREATOR" || role === "SCHOOL_ADMIN";
+  },
+
+  /** Every tenant's Paystack payments, platform-wide (creators.md Phase C8) - the SYSTEM_ADMIN only. */
+  viewPlatformPayments(role: Role | undefined): boolean {
+    return role === "SYSTEM_ADMIN";
+  },
+
+  /** An education creator's learner roster and class enrollments (creators.md Phase C5) - the CREATOR only. */
+  manageLearners(role: Role | undefined): boolean {
+    return role === "CREATOR";
+  },
+
+  /**
+   * Entering a virtual class's live session (creators.md Phase C6) - the class's CREATOR, an
+   * enrolled LEARNER, or a GUARDIAN of an enrolled learner as an observer. The server decides
+   * which sessions; this only gates the live room route.
+   */
+  joinLiveSession(role: Role | undefined): boolean {
+    return role === "CREATOR" || role === "LEARNER" || role === "GUARDIAN";
+  },
+
+  /** Whether a live session's participant may publish camera/mic - a guardian only watches (creators.md §7.3). */
+  publishInLiveSession(role: Role | undefined): boolean {
+    return role === "CREATOR" || role === "LEARNER";
+  },
+
+  /** The learner portal (creators.md Phase C5) - a LEARNER's own online classes across every creator. */
+  viewLearnerPortal(role: Role | undefined): boolean {
+    return role === "LEARNER";
+  },
+
+  /**
+   * The guardian portal's Online classes item (creators.md Phase C5) - a GUARDIAN who follows a
+   * learner in an education creator's classes (`/api/v1/me/features`' `onlineClasses`).
+   */
+  viewOnlineClasses(role: Role | undefined, onlineClasses: boolean): boolean {
+    return role === "GUARDIAN" && onlineClasses;
+  },
+
+  /**
+   * Creators' class messaging (creators.md Phase C11): a CREATOR whose plan includes messaging, a
+   * LEARNER (each tutor's plan is checked per class by the server, and unentitled ones simply don't
+   * list), or a GUARDIAN following a creator's learner (`entitled` = their `onlineClasses` flag).
+   */
+  viewClassMessages(role: Role | undefined, entitled: boolean): boolean {
+    if (role === "LEARNER") {
+      return true;
+    }
+    return (role === "CREATOR" || role === "GUARDIAN") && entitled;
+  },
+
+  /** A class-wide announcement - the class's CREATOR only (creators.md Phase C11). */
+  announceToClass(role: Role | undefined): boolean {
+    return role === "CREATOR";
+  },
+
   /** Designing master result templates on the layout canvas - SYSTEM_ADMIN only, outside tenant scope entirely. */
   manageResultTemplates(role: Role | undefined): boolean {
     return role === "SYSTEM_ADMIN";

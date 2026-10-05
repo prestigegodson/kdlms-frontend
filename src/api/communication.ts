@@ -4,7 +4,8 @@ import type { Page } from "@/api/types";
 /** Mirrors backend communication.domain.MessageCategory. */
 export type MessageCategory = "GENERAL" | "BEHAVIOUR" | "ACADEMIC" | "HEALTH" | "COMMENDATION" | "CONCERN";
 
-export type MessageAuthorRole = "TEACHER" | "GUARDIAN";
+/** `CREATOR`/`LEARNER` author messages in a creator's class conversations (creators Phase C11). */
+export type MessageAuthorRole = "TEACHER" | "GUARDIAN" | "CREATOR" | "LEARNER";
 
 /** Mirrors backend communication.application.port.in.MessageView. */
 export interface MessageView {
@@ -18,6 +19,8 @@ export interface MessageView {
   editedAt?: string;
   canEdit: boolean;
   editableUntil: string;
+  /** One copy of a creator's class-wide announcement - never true on a school thread. */
+  announcement?: boolean;
 }
 
 /** Mirrors backend communication.application.port.in.ThreadView - a thread's flat root + replies. */

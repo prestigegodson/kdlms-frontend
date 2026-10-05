@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { ApiError } from "@/api/client";
-import { listPackages, type PackageView } from "@/api/packages";
+import { listPackages, type PackageAudience, type PackageView } from "@/api/packages";
 import {
   activateSchool,
   archiveSchool,
@@ -44,7 +44,7 @@ import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { ImpersonateDialog } from "@/features/schools/components/ImpersonateDialog";
-import { formatDateRange, formatInstant } from "@/utils/date";
+import { formatDateRange, formatInstant, formatLongDate } from "@/utils/date";
 
 type PendingAction =
   | { kind: "suspend" }
@@ -723,7 +723,11 @@ const SUBSCRIPTION_STATUS_VARIANT: Record<
  * portal (see shared.config.SubscriptionWriteGuardFilter) - this card is
  * where a system admin fixes that.
  */
-function SubscriptionCard({ schoolId }: { schoolId: string }) {
+/**
+ * Also reused by the creator detail page - a creator tenant's id is a school id. `audience`
+ * narrows the assignable packages to the tenant's own kind (creators Phase C3).
+ */
+export function SubscriptionCard({ schoolId, audience = "SCHOOL" }: { schoolId: string; audience?: PackageAudience }) {
   const [state, setState] = useState<SubscriptionLoadState>({ kind: "loading" });
   const [assignOpen, setAssignOpen] = useState(false);
   const [pending, setPending] = useState<SubscriptionPendingAction | null>(null);
@@ -795,7 +799,9 @@ function SubscriptionCard({ schoolId }: { schoolId: string }) {
       {state.kind === "none" && (
         <>
           <p className="mt-1 text-sm text-slate-500">
-            No subscription has been assigned yet - this school's portal is read-only until one is.
+            {audience === "CREATOR"
+              ? "No subscription has been assigned yet - this creator is on the Free plan until one is."
+              : "No subscription has been assigned yet - this school's portal is read-only until one is."}
           </p>
           <Button className="mt-3" onClick={() => setAssignOpen(true)}>
             Assign package
@@ -809,8 +815,9 @@ function SubscriptionCard({ schoolId }: { schoolId: string }) {
             <div>
               <p className="text-sm font-medium text-slate-900">{state.subscription.packageName}</p>
               <p className="text-sm text-slate-500">
-                {formatDateRange(state.subscription.startDate, state.subscription.endDate)} (
-                {state.subscription.daysRemaining} days left)
+                {state.subscription.endDate === null
+                  ? `Since ${formatLongDate(state.subscription.startDate)} · no end date`
+                  : `${formatDateRange(state.subscription.startDate, state.subscription.endDate)} (${state.subscription.daysRemaining} days left)`}
               </p>
             </div>
             <Badge variant={SUBSCRIPTION_STATUS_VARIANT[state.subscription.status]}>
@@ -843,6 +850,7 @@ function SubscriptionCard({ schoolId }: { schoolId: string }) {
       {assignOpen && (
         <AssignSubscriptionModal
           schoolId={schoolId}
+          audience={audience}
           onClose={() => setAssignOpen(false)}
           onAssigned={() => {
             setAssignOpen(false);
@@ -881,11 +889,12 @@ function SubscriptionCard({ schoolId }: { schoolId: string }) {
 
 interface AssignSubscriptionModalProps {
   schoolId: string;
+  audience: PackageAudience;
   onClose: () => void;
   onAssigned: () => void;
 }
 
-function AssignSubscriptionModal({ schoolId, onClose, onAssigned }: AssignSubscriptionModalProps) {
+function AssignSubscriptionModal({ schoolId, audience, onClose, onAssigned }: AssignSubscriptionModalProps) {
   const [packages, setPackages] = useState<PackageView[] | null>(null);
   const [packageId, setPackageId] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -894,14 +903,16 @@ function AssignSubscriptionModal({ schoolId, onClose, onAssigned }: AssignSubscr
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listPackages(0, 100)
+    listPackages(0, 100, audience)
       .then((page) => {
         const active = page.content.filter((pkg) => pkg.status === "ACTIVE");
         setPackages(active);
         setPackageId(active[0]?.id ?? "");
       })
       .catch(() => setPackages([]));
-  }, []);
+  }, [audience]);
+
+  const selectedIsFree = packages?.find((pkg) => pkg.id === packageId)?.free ?? false;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -911,7 +922,7 @@ function AssignSubscriptionModal({ schoolId, onClose, onAssigned }: AssignSubscr
       await assignSubscription(schoolId, {
         packageId,
         startDate: startDate || undefined,
-        endDate: endDate || undefined,
+        endDate: selectedIsFree ? undefined : endDate || undefined,
       });
       onAssigned();
     } catch (err) {
@@ -945,21 +956,25 @@ function AssignSubscriptionModal({ schoolId, onClose, onAssigned }: AssignSubscr
               >
                 {packages.map((pkg) => (
                   <option key={pkg.id} value={pkg.id}>
-                    {pkg.name}
+                    {pkg.free ? `${pkg.name} (free)` : pkg.name}
                   </option>
                 ))}
               </Select>
             </FormField>
             <p className="text-xs text-slate-500">
-              Leave the dates blank to start today and run for the package's billing cycle.
+              {selectedIsFree
+                ? "The free plan never expires - leave the start date blank to start today."
+                : "Leave the dates blank to start today and run for the package's billing cycle. Set an end date to give a complimentary period."}
             </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField label="Start date (optional)" htmlFor="assign-start-date">
                 <DateInput id="assign-start-date" value={startDate} onChange={setStartDate} />
               </FormField>
-              <FormField label="End date (optional)" htmlFor="assign-end-date">
-                <DateInput id="assign-end-date" value={endDate} onChange={setEndDate} />
-              </FormField>
+              {!selectedIsFree && (
+                <FormField label="End date (optional)" htmlFor="assign-end-date">
+                  <DateInput id="assign-end-date" value={endDate} onChange={setEndDate} />
+                </FormField>
+              )}
             </div>
           </>
         )}

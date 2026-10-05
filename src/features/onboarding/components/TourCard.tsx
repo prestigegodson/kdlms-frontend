@@ -46,10 +46,12 @@ export function TourCard({
       aria-describedby={bodyId}
       data-testid="tour-card"
       data-layout={mobile ? "sheet" : "floating"}
-      className={`tour-card relative flex flex-col bg-white text-left shadow-xl ring-1 ring-slate-900/5 ${
+      // `relative` stays off the sheet: Tailwind emits `.relative` after `.fixed`, so carrying both
+      // would leave the portalled sheet in normal flow at the end of <body>, below the page.
+      className={`tour-card flex flex-col bg-white text-left shadow-xl ring-1 ring-slate-900/5 ${
         mobile
-          ? "tour-card-sheet fixed inset-x-3 z-[70] rounded-card"
-          : "w-[min(360px,calc(100vw-2rem))] rounded-card"
+          ? "tour-card-sheet fixed inset-x-3 z-[70] max-h-[calc(100dvh-var(--spacing-tabbar-safe)-5rem)] overflow-y-auto rounded-card"
+          : "relative w-[min(360px,calc(100vw-2rem))] rounded-card"
       }`}
       style={mobile ? { bottom: "calc(var(--spacing-tabbar-safe) + 0.75rem)" } : undefined}
     >

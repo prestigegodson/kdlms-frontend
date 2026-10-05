@@ -413,4 +413,30 @@ describe("router", () => {
       expect(await screen.findByRole("heading", { name: "Set your password" })).toBeInTheDocument();
     });
   });
+  describe("as a LEARNER", () => {
+    beforeEach(() => {
+      useAuthStore.setState({
+        user: { id: "learner-1", email: "lin@learner.example", firstName: "Lin", lastName: "Learner", role: "LEARNER" },
+        accessToken: "access",
+        refreshToken: "refresh",
+      });
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) })),
+      );
+    });
+
+    it("lands on My classes", async () => {
+      renderAt("/learner");
+
+      expect(await screen.findByRole("heading", { name: "My classes" })).toBeInTheDocument();
+      expect(await screen.findByText("No classes yet")).toBeInTheDocument();
+    });
+
+    it("is redirected away from /creator to its own portal home", async () => {
+      renderAt("/creator");
+
+      expect(await screen.findByRole("heading", { name: "My classes" })).toBeInTheDocument();
+    });
+  });
 });

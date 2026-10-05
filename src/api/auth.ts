@@ -25,6 +25,22 @@ export interface UserSummary {
    * redirect to /set-password before the user hits that 403.
    */
   mustChangePassword?: boolean;
+  /**
+   * False only for a self-registered CREATOR who hasn't followed their
+   * verification link yet - drives the creator portal's verify banner; the
+   * server refuses their writes (403 email-unverified) regardless. Optional
+   * for the same test-fixture reason as mustChangePassword; undefined
+   * behaves as true.
+   */
+  emailVerified?: boolean;
+  /**
+   * True only for a CREATOR who signed up with Google and hasn't filled in
+   * their business profile yet - RequireRole redirects them to
+   * /creator/complete-profile; the server refuses every other write (403
+   * profile-incomplete) regardless. Optional for the same test-fixture
+   * reason as mustChangePassword; undefined behaves as false.
+   */
+  profileIncomplete?: boolean;
 }
 
 export interface SessionResponse {
@@ -52,6 +68,42 @@ export function login(identifier: string, password: string, subdomain?: string |
     authenticated: false,
     body: JSON.stringify({ identifier, password, subdomain: subdomain ?? null }),
   });
+}
+
+/** What a Google sign-in is for - mirrors the backend's GoogleAuthenticationUseCase.Intent. */
+export type GoogleSignInIntent = "LOGIN" | "CREATOR_SIGNUP" | "ACCEPT_INVITE";
+
+/**
+ * Exchanges a Google Identity Services ID token for a KDLMS session. A LOGIN
+ * for a Google account with no creator/guardian account behind it fails with
+ * 401 `.../problems/google-account-not-found` (see GOOGLE_ACCOUNT_NOT_FOUND).
+ */
+export function googleSignIn(
+  idToken: string,
+  intent: GoogleSignInIntent,
+  options: { inviteToken?: string; subdomain?: string | null } = {},
+): Promise<SessionResponse> {
+  return apiFetch<SessionResponse>("/api/v1/auth/google", {
+    method: "POST",
+    authenticated: false,
+    body: JSON.stringify({
+      idToken,
+      intent,
+      inviteToken: options.inviteToken ?? null,
+      subdomain: options.subdomain ?? null,
+    }),
+  });
+}
+
+export const GOOGLE_ACCOUNT_NOT_FOUND = "https://kdlms.com/problems/google-account-not-found";
+
+/** The sign-in options to offer - `googleClientId` is null while Google sign-in is off. */
+export interface AuthConfig {
+  googleClientId: string | null;
+}
+
+export function getAuthConfig(): Promise<AuthConfig> {
+  return apiFetch<AuthConfig>("/api/v1/public/auth/config", { authenticated: false });
 }
 
 export function refresh(refreshToken: string): Promise<SessionResponse> {
@@ -128,4 +180,18 @@ export function setInitialPassword(newPassword: string): Promise<SessionResponse
  */
 export function stopImpersonation(): Promise<void> {
   return apiFetch<void>("/api/v1/auth/impersonation/stop", { method: "POST" });
+}
+
+/** Public - the token comes from the emailed /verify-email link. Refresh the session afterward to clear the gate. */
+export function confirmEmailVerification(token: string): Promise<void> {
+  return apiFetch<void>("/api/v1/auth/email-verification/confirm", {
+    method: "POST",
+    authenticated: false,
+    body: JSON.stringify({ token }),
+  });
+}
+
+/** Re-sends the signed-in creator's verification email. 429 inside the resend cooldown. */
+export function resendEmailVerification(): Promise<{ token?: string }> {
+  return apiFetch<{ token?: string }>("/api/v1/auth/email-verification/resend", { method: "POST" });
 }

@@ -17,6 +17,9 @@ const BLURB: Record<Role, string> = {
   INVENTORY_MANAGER: "Keep your branch's store stocked: issue items and raise purchase requests.",
   GUARDIAN: "Follow your children's results, bills and messages from school, all in one place.",
   STUDENT: "Find your learning resources, take your quizzes and see your results.",
+  // No creator- or learner-portal guide yet (portalForPath has neither portal), so these two are never shown today.
+  CREATOR: "Run your online classes: schedule sessions, enroll learners and share your materials.",
+  LEARNER: "See your online classes and upcoming sessions from every tutor you learn with.",
 };
 
 interface WelcomeModalProps {

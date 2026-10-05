@@ -1,20 +1,30 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ApiError } from "@/api/client";
-import type { SchoolUserView } from "@/api/users";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
 import { Modal } from "@/components/ui/Modal";
 import { Textarea } from "@/components/ui/Textarea";
+import { homePathForRole } from "@/routes/roleHome";
 import { useAuthStore } from "@/stores/authStore";
 
 const MIN_REASON_LENGTH = 10;
 const MAX_REASON_LENGTH = 500;
 
+/** The account being impersonated - a school's SCHOOL_ADMIN, or a creator tenant's CREATOR. */
+export interface ImpersonationTarget {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 interface ImpersonateDialogProps {
   schoolId: string;
-  admin: SchoolUserView;
+  admin: ImpersonationTarget;
+  /** Names the portal the admin lands in, e.g. "school portal" or "creator portal". */
+  portalLabel?: string;
   onClose: () => void;
 }
 
@@ -22,10 +32,11 @@ interface ImpersonateDialogProps {
  * Confirms and starts a support impersonation session (see authStore's
  * `startImpersonation`) - the reason textarea mirrors
  * `lessonNotes/components/ReviewDecisionModal`'s shape. On success the whole
- * app is now signed in as `admin`, so this navigates straight to the school
- * portal rather than closing back into the system-admin console.
+ * app is now signed in as `admin`, so this navigates straight to that
+ * account's own portal (homePathForRole) rather than closing back into the
+ * system-admin console.
  */
-export function ImpersonateDialog({ schoolId, admin, onClose }: ImpersonateDialogProps) {
+export function ImpersonateDialog({ schoolId, admin, portalLabel = "school portal", onClose }: ImpersonateDialogProps) {
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +51,8 @@ export function ImpersonateDialog({ schoolId, admin, onClose }: ImpersonateDialo
     setError(null);
     try {
       await startImpersonation(schoolId, admin.id, trimmed);
-      navigate("/school", { replace: true });
+      const role = useAuthStore.getState().user?.role;
+      navigate(role ? homePathForRole(role) : "/school", { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not start impersonation");
       setSubmitting(false);
@@ -53,7 +65,7 @@ export function ImpersonateDialog({ schoolId, admin, onClose }: ImpersonateDialo
         {error && <Alert variant="error">{error}</Alert>}
 
         <p className="text-sm text-slate-700">
-          You'll be signed in to the school portal as{" "}
+          You'll be signed in to the {portalLabel} as{" "}
           <strong>
             {admin.firstName} {admin.lastName}
           </strong>{" "}

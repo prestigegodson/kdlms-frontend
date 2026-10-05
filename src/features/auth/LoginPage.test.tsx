@@ -199,6 +199,40 @@ describe("LoginPage", () => {
     expect(screen.getByRole("link", { name: "Sign in at the main site instead" })).toBeInTheDocument();
   });
 
+  it("offers creator sign-up when Google finds no account to sign in to", async () => {
+    let googleCallback: ((response: { credential?: string }) => void) | undefined;
+    window.google = {
+      accounts: {
+        id: {
+          initialize: (config) => {
+            googleCallback = config.callback;
+          },
+          renderButton: vi.fn(),
+        },
+      },
+    };
+    vi.mocked(authApi.getAuthConfig).mockResolvedValue({ googleClientId: "client.apps.googleusercontent.com" });
+    vi.mocked(authApi.googleSignIn).mockRejectedValue(
+      new ApiError(401, "We couldn't find an account you can sign in to with this Google account.", {
+        type: "https://kdlms.com/problems/google-account-not-found",
+      }),
+    );
+
+    const router = createMemoryRouter(routes, { initialEntries: ["/login"] });
+    render(<RouterProvider router={router} />);
+    await screen.findByTestId("google-signin");
+    await vi.waitFor(() => expect(googleCallback).toBeDefined());
+
+    googleCallback?.({ credential: "google-id-token" });
+
+    expect(
+      await screen.findByText("We couldn't find an account you can sign in to with this Google account."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create a creator account" })).toBeInTheDocument();
+    expect(authApi.googleSignIn).toHaveBeenCalledWith("google-id-token", "LOGIN", { subdomain: null });
+    delete window.google;
+  });
+
   it("does not show the platform-host link for an ordinary login failure", async () => {
     vi.mocked(authApi.login).mockRejectedValue(new ApiError(401, "Invalid login or password."));
 

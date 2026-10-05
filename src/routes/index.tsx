@@ -16,9 +16,29 @@ import { ForgotPasswordPage } from "@/features/auth/ForgotPasswordPage";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
 import { SetInitialPasswordPage } from "@/features/auth/SetInitialPasswordPage";
+import { VerifyEmailPage } from "@/features/auth/VerifyEmailPage";
+import { BillingCallbackPage } from "@/features/subscriptionBilling/BillingCallbackPage";
+import { BillingHomeRedirect } from "@/features/subscriptionBilling/BillingHomeRedirect";
+import { PaymentTransactionsPage } from "@/features/subscriptionBilling/PaymentTransactionsPage";
+import { PlanBillingPage } from "@/features/subscriptionBilling/PlanBillingPage";
 import { BranchesPage } from "@/features/branches/BranchesPage";
 import { MessagesPage } from "@/features/communication/MessagesPage";
 import { LandingPage } from "@/features/connectivity/LandingPage";
+import { CreatorDetailPage } from "@/features/creators/admin/CreatorDetailPage";
+import { CreatorsPage } from "@/features/creators/admin/CreatorsPage";
+import { CreatorDashboardPage } from "@/features/creators/CreatorDashboardPage";
+import { CreatorProfilePage } from "@/features/creators/CreatorProfilePage";
+import { CreatorSignupPage } from "@/features/creators/CreatorSignupPage";
+import { CompleteProfilePage } from "@/features/creators/CompleteProfilePage";
+import { SessionsCalendarPage } from "@/features/virtualclass/pages/SessionsCalendarPage";
+import { LearnersPage } from "@/features/virtualclass/pages/LearnersPage";
+import { InviteAcceptPage } from "@/features/invites/InviteAcceptPage";
+import { MyClassesPage } from "@/features/learner/MyClassesPage";
+import { CreatorMessagesPage } from "@/features/classMessages/pages/CreatorMessagesPage";
+import { MemberMessagesPage } from "@/features/classMessages/pages/MemberMessagesPage";
+import { OnlineClassesPage } from "@/features/guardian/OnlineClassesPage";
+import { VirtualClassDetailPage } from "@/features/virtualclass/pages/VirtualClassDetailPage";
+import { VirtualClassesPage } from "@/features/virtualclass/pages/VirtualClassesPage";
 import { AdminDashboardPage } from "@/features/dashboard/AdminDashboardPage";
 import { SchoolDashboardPage } from "@/features/dashboard/SchoolDashboardPage";
 import { NotificationSettingsPage } from "@/features/guardian/NotificationSettingsPage";
@@ -43,6 +63,7 @@ import { LearningResourcePreviewPage } from "@/features/learning/LearningResourc
 import { LearningResourcesPage } from "@/features/learning/LearningResourcesPage";
 import { LessonNotesPage } from "@/features/lessonNotes/LessonNotesPage";
 import { HowToGuidesPage } from "@/features/onboarding/pages/HowToGuidesPage";
+import { CouponsPage } from "@/features/coupons/CouponsPage";
 import { PackagesPage } from "@/features/packages/PackagesPage";
 import { ReportSettingsPage } from "@/features/reporting/ReportSettingsPage";
 import { ReportsPage } from "@/features/reporting/ReportsPage";
@@ -74,6 +95,8 @@ import { GuardianLayout } from "@/layouts/GuardianLayout";
 import { RootLayout } from "@/layouts/RootLayout";
 import { SchoolLayout } from "@/layouts/SchoolLayout";
 import { StudentLayout } from "@/layouts/StudentLayout";
+import { CreatorLayout } from "@/layouts/CreatorLayout";
+import { LearnerLayout } from "@/layouts/LearnerLayout";
 import { SystemAdminLayout } from "@/layouts/SystemAdminLayout";
 import { BillingRoute } from "@/routes/BillingRoute";
 import { HomeRedirect } from "@/routes/HomeRedirect";
@@ -82,6 +105,7 @@ import { LessonNoteEditorRoute } from "@/routes/LessonNoteEditorRoute";
 import { RequireRole } from "@/routes/RequireRole";
 import { TakeHomeQuizEditorRoute } from "@/routes/TakeHomeQuizEditorRoute";
 import { TakeHomeQuizResultsRoute } from "@/routes/TakeHomeQuizResultsRoute";
+import { LiveSessionRoute } from "@/routes/LiveSessionRoute";
 import { TakeHomeQuizRoute } from "@/routes/TakeHomeQuizRoute";
 import { TemplateDesignerRoute } from "@/routes/TemplateDesignerRoute";
 import { WardLessonNotesRoute } from "@/routes/WardLessonNotesRoute";
@@ -109,7 +133,36 @@ export const routes: RouteObject[] = [
       { path: "forgot-password", element: <ForgotPasswordPage /> },
       { path: "reset-password", element: <ResetPasswordPage /> },
       { path: "set-password", element: <SetInitialPasswordPage /> },
+      { path: "creators/signup", element: <CreatorSignupPage /> },
+      { path: "creator/complete-profile", element: <CompleteProfilePage /> },
+      { path: "verify-email", element: <VerifyEmailPage /> },
+      { path: "invite/:token", element: <InviteAcceptPage /> },
       { path: "take-home-quiz", element: <TakeHomeQuizRoute /> },
+      {
+        // Paystack sends the browser back here after checkout (creators.md §6.1, Phase C8).
+        path: "billing/callback",
+        element: (
+          <RequireRole roles={["CREATOR", "SCHOOL_ADMIN"]}>
+            <BillingCallbackPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: "billing",
+        element: (
+          <RequireRole roles={["CREATOR", "SCHOOL_ADMIN"]}>
+            <BillingHomeRedirect />
+          </RequireRole>
+        ),
+      },
+      {
+        path: "live/:occurrenceId",
+        element: (
+          <RequireRole roles={["CREATOR", "LEARNER", "GUARDIAN"]}>
+            <LiveSessionRoute />
+          </RequireRole>
+        ),
+      },
       {
         path: "admin",
         element: (
@@ -121,11 +174,15 @@ export const routes: RouteObject[] = [
           { index: true, element: <AdminDashboardPage /> },
           { path: "schools", element: <SchoolsPage /> },
           { path: "schools/:schoolId", element: <SchoolDetailPage /> },
+          { path: "creators", element: <CreatorsPage /> },
+          { path: "creators/:schoolId", element: <CreatorDetailPage /> },
           { path: "packages", element: <PackagesPage /> },
           { path: "templates", element: <ResultTemplatesPage /> },
           { path: "templates/:templateId", element: <TemplateDesignerRoute /> },
           { path: "support", element: <AdminSupportContactPage /> },
           { path: "ai", element: <AdminAiSettingsPage /> },
+          { path: "payments", element: <PaymentTransactionsPage /> },
+          { path: "coupons", element: <CouponsPage /> },
           { path: "help", element: <HowToGuidesPage /> },
         ],
       },
@@ -366,6 +423,8 @@ export const routes: RouteObject[] = [
           { path: "payments", element: <WardPaymentsPage /> },
           { path: "fees", element: <Navigate to="/guardian/bills" replace /> },
           { path: "settings", element: <NotificationSettingsPage /> },
+          { path: "online-classes", element: <OnlineClassesPage /> },
+          { path: "class-messages", element: <MemberMessagesPage audience="GUARDIAN" /> },
         ],
       },
       {
@@ -385,6 +444,36 @@ export const routes: RouteObject[] = [
           { path: "quizzes", element: <StudentQuizzesPage /> },
           { path: "quizzes/:quizId", element: <StudentQuizPage /> },
           { path: "timetable", element: <StudentTimetablePage /> },
+        ],
+      },
+      {
+        path: "creator",
+        element: (
+          <RequireRole roles={["CREATOR"]}>
+            <CreatorLayout />
+          </RequireRole>
+        ),
+        children: [
+          { index: true, element: <CreatorDashboardPage /> },
+          { path: "profile", element: <CreatorProfilePage /> },
+          { path: "classes", element: <VirtualClassesPage /> },
+          { path: "classes/:classId", element: <VirtualClassDetailPage /> },
+          { path: "sessions", element: <SessionsCalendarPage /> },
+          { path: "learners", element: <LearnersPage /> },
+          { path: "messages", element: <CreatorMessagesPage /> },
+          { path: "billing", element: <PlanBillingPage /> },
+        ],
+      },
+      {
+        path: "learner",
+        element: (
+          <RequireRole roles={["LEARNER"]}>
+            <LearnerLayout />
+          </RequireRole>
+        ),
+        children: [
+          { index: true, element: <MyClassesPage /> },
+          { path: "messages", element: <MemberMessagesPage audience="LEARNER" /> },
         ],
       },
       { path: "*", element: <NotFoundPage /> },

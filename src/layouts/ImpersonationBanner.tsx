@@ -32,10 +32,12 @@ export function ImpersonationBanner() {
   // here (rather than read inside handleStop) so TS's null-narrowing above
   // applies - a `function` declaration doesn't inherit it.
   const schoolId = user.schoolId;
+  // A creator tenant's id is a school id too, but its admin page lives under Creators.
+  const returnBase = user.role === "CREATOR" ? "/admin/creators" : "/admin/schools";
 
   async function handleStop() {
     await stopImpersonation();
-    navigate(schoolId ? `/admin/schools/${schoolId}` : "/admin", { replace: true });
+    navigate(schoolId ? `${returnBase}/${schoolId}` : "/admin", { replace: true });
   }
 
   return (

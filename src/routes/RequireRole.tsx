@@ -24,7 +24,9 @@ interface RequireRoleProps {
  * one edit covers all three portals rather than each needing its own copy
  * of the check; the real enforcement is server-side
  * (shared.config.PasswordChangeGuardFilter), this is only the UX shortcut
- * that keeps a flagged user from bouncing off a 403 first. Wrong role ->
+ * that keeps a flagged user from bouncing off a 403 first. A Google sign-up
+ * creator with no business profile yet -> /creator/complete-profile, the
+ * same shape (shared.config.CreatorWriteGuardFilter enforces). Wrong role ->
  * redirect to *that role's own* home rather than /login, which would just
  * bounce them straight back here in a loop. Renders nothing until the
  * persisted session has been read from storage (see authStore's
@@ -47,6 +49,12 @@ export function RequireRole({ roles, allowLevelHead = false, children }: Require
 
   if (user.mustChangePassword) {
     return <Navigate to="/set-password" replace />;
+  }
+
+  // A Google sign-up creator has no business profile yet - the server refuses their writes
+  // (403 profile-incomplete) until they fill it in, so send them straight to the form.
+  if (user.profileIncomplete) {
+    return <Navigate to="/creator/complete-profile" replace />;
   }
 
   if (!roles.includes(user.role)) {

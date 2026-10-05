@@ -1,11 +1,11 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   createPackage,
   listPackages,
+  type PackageAudience,
   type PackageView,
   reactivatePackage,
   retirePackage,
-  type SavePackageRequest,
   updatePackage,
 } from "@/api/packages";
 import { ApiError } from "@/api/client";
@@ -14,13 +14,8 @@ import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Checkbox } from "@/components/ui/Checkbox";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FormField } from "@/components/ui/FormField";
-import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Select } from "@/components/ui/Select";
 import {
   Table,
   TableBody,
@@ -30,22 +25,38 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { TableSkeleton } from "@/components/ui/TableSkeleton";
-import { formatMoney } from "@/utils/currency";
+import { Tabs } from "@/components/ui/Tabs";
+import { formatMoney, fromMinor } from "@/utils/currency";
+import { PackageFormModal } from "./components/PackageFormModal";
 
 type ListState =
   | { kind: "loading" }
   | { kind: "loaded"; packages: PackageView[] }
   | { kind: "error"; message: string };
 
-/** System-admin package catalogue: list, create, edit, and retire/reactivate plans. */
+const AUDIENCE_TABS: Array<{ value: PackageAudience; label: string }> = [
+  { value: "SCHOOL", label: "School" },
+  { value: "CREATOR", label: "Creator" },
+];
+
+/** A limit cell: `null` is unlimited. */
+function limitText(limit: number | null): string {
+  return limit == null ? "Unlimited" : String(limit);
+}
+
+/**
+ * System-admin package catalogue: list, create, edit, and retire/reactivate plans - school
+ * packages and creator plans on their own tabs (creators Phase C3).
+ */
 export function PackagesPage() {
+  const [audience, setAudience] = useState<PackageAudience>("SCHOOL");
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<PackageView | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  function fetchPackages() {
-    listPackages()
+  function fetchPackages(forAudience: PackageAudience) {
+    listPackages(0, 100, forAudience)
       .then((page) => setState({ kind: "loaded", packages: page.content }))
       .catch((error: unknown) =>
         setState({
@@ -57,11 +68,17 @@ export function PackagesPage() {
 
   // Mount-only fetch: the initial state above is already "loading", so no synchronous
   // setState is needed here - only load() (used by user-triggered reloads below) resets it.
-  useEffect(fetchPackages, []);
+  useEffect(() => fetchPackages("SCHOOL"), []);
 
-  function load() {
+  function load(forAudience: PackageAudience = audience) {
     setState({ kind: "loading" });
-    fetchPackages();
+    fetchPackages(forAudience);
+  }
+
+  function switchAudience(next: PackageAudience) {
+    setAudience(next);
+    setActionError(null);
+    load(next);
   }
 
   async function toggleStatus(pkg: PackageView) {
@@ -78,13 +95,17 @@ export function PackagesPage() {
     }
   }
 
+  const isCreator = audience === "CREATOR";
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Packages"
-        description="Plans schools can subscribe to."
-        actions={<Button onClick={() => setCreateOpen(true)}>Add package</Button>}
+        description="Plans schools and education creators can subscribe to."
+        actions={<Button onClick={() => setCreateOpen(true)}>{isCreator ? "Add creator plan" : "Add package"}</Button>}
       />
+
+      <Tabs ariaLabel="Package audience" value={audience} onChange={switchAudience} items={AUDIENCE_TABS} />
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
@@ -95,7 +116,11 @@ export function PackagesPage() {
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {state.kind === "loaded" && state.packages.length === 0 && (
-        <EmptyState icon={Package} title="No packages yet" description="Create a package to get started." />
+        <EmptyState
+          icon={Package}
+          title={isCreator ? "No creator plans yet" : "No packages yet"}
+          description="Create one to get started."
+        />
       )}
       {state.kind === "loaded" && state.packages.length > 0 && (
         <Card className="p-0">
@@ -105,8 +130,17 @@ export function PackagesPage() {
                 <TableHeaderCell>Name</TableHeaderCell>
                 <TableHeaderCell>Billing</TableHeaderCell>
                 <TableHeaderCell numeric>Price</TableHeaderCell>
-                <TableHeaderCell>Branch limit</TableHeaderCell>
-                <TableHeaderCell>Student limit</TableHeaderCell>
+                {isCreator ? (
+                  <>
+                    <TableHeaderCell>Classes</TableHeaderCell>
+                    <TableHeaderCell>Learners per class</TableHeaderCell>
+                  </>
+                ) : (
+                  <>
+                    <TableHeaderCell>Branch limit</TableHeaderCell>
+                    <TableHeaderCell>Student limit</TableHeaderCell>
+                  </>
+                )}
                 <TableHeaderCell>Features</TableHeaderCell>
                 <TableHeaderCell>Status</TableHeaderCell>
                 <TableHeaderCell>Actions</TableHeaderCell>
@@ -120,12 +154,29 @@ export function PackagesPage() {
                   </TableCell>
                   <TableCell label="Billing">{pkg.billingCycle}</TableCell>
                   <TableCell label="Price" numeric>
-                    {formatMoney(pkg.price, pkg.currency)}
+                    {pkg.free ? (
+                      <Badge variant="success">Free</Badge>
+                    ) : (
+                      <div className="flex flex-col items-end gap-0.5">
+                        {pkg.prices.map((price) => (
+                          <span key={price.currency}>{formatMoney(fromMinor(price.amountMinor), price.currency)}</span>
+                        ))}
+                      </div>
+                    )}
                   </TableCell>
-                  <TableCell label="Branch limit">
-                    {pkg.multiBranch ? pkg.branchLimit : "1 (single branch)"}
-                  </TableCell>
-                  <TableCell label="Student limit">{pkg.activeStudentLimit}</TableCell>
+                  {isCreator ? (
+                    <>
+                      <TableCell label="Classes">{limitText(pkg.maxClasses)}</TableCell>
+                      <TableCell label="Learners per class">{limitText(pkg.maxStudentsPerClass)}</TableCell>
+                    </>
+                  ) : (
+                    <>
+                      <TableCell label="Branch limit">
+                        {pkg.multiBranch ? pkg.branchLimit : "1 (single branch)"}
+                      </TableCell>
+                      <TableCell label="Student limit">{pkg.activeStudentLimit}</TableCell>
+                    </>
+                  )}
                   <TableCell label="Features">
                     <div className="flex flex-wrap justify-end gap-1 sm:justify-start">
                       {pkg.onDemandLearning && <Badge variant="neutral">Learning</Badge>}
@@ -137,6 +188,7 @@ export function PackagesPage() {
                       {pkg.billing && <Badge variant="brand">Fees & bills</Badge>}
                       {pkg.learningMedia && <Badge variant="neutral">Learning media</Badge>}
                       {pkg.studentLogins && <Badge variant="neutral">Student logins</Badge>}
+                      {pkg.guardianAccess && <Badge variant="neutral">Guardian access</Badge>}
                     </div>
                   </TableCell>
                   <TableCell label="Status">
@@ -171,7 +223,8 @@ export function PackagesPage() {
           mount picks up `initial` naturally, with no reset-on-open effect required. */}
       {createOpen && (
         <PackageFormModal
-          title="Add package"
+          title={isCreator ? "Add creator plan" : "Add package"}
+          audience={audience}
           onClose={() => setCreateOpen(false)}
           onSubmit={async (values) => {
             await createPackage(values);
@@ -185,7 +238,8 @@ export function PackagesPage() {
       {editing && (
         <PackageFormModal
           key={editing.id}
-          title="Edit package"
+          title={editing.audience === "CREATOR" ? "Edit creator plan" : "Edit package"}
+          audience={editing.audience}
           initial={editing}
           onClose={() => setEditing(null)}
           onSubmit={async (values) => {
@@ -198,260 +252,5 @@ export function PackagesPage() {
         />
       )}
     </div>
-  );
-}
-
-interface PackageFormModalProps {
-  title: string;
-  initial?: PackageView;
-  onClose: () => void;
-  onSubmit: (values: SavePackageRequest) => Promise<void>;
-  onSaved: () => void;
-}
-
-function PackageFormModal({ title, initial, onClose, onSubmit, onSaved }: PackageFormModalProps) {
-  const [name, setName] = useState(initial?.name ?? "");
-  const [description, setDescription] = useState(initial?.description ?? "");
-  const [billingCycle, setBillingCycle] = useState(initial?.billingCycle ?? "MONTHLY");
-  const [price, setPrice] = useState(initial ? String(initial.price) : "");
-  const [currency, setCurrency] = useState(initial?.currency ?? "NGN");
-  const [multiBranch, setMultiBranch] = useState(initial?.multiBranch ?? false);
-  const [branchLimit, setBranchLimit] = useState(initial ? String(initial.branchLimit) : "1");
-  const [activeStudentLimit, setActiveStudentLimit] = useState(
-    initial ? String(initial.activeStudentLimit) : "",
-  );
-  const [takeHomeQuiz, setTakeHomeQuiz] = useState(initial?.takeHomeQuiz ?? false);
-  const [onDemandLearning, setOnDemandLearning] = useState(initial?.onDemandLearning ?? false);
-  const [communication, setCommunication] = useState(initial?.communication ?? false);
-  const [timetable, setTimetable] = useState(initial?.timetable ?? false);
-  const [lessonNotes, setLessonNotes] = useState(initial?.lessonNotes ?? false);
-  const [aiLessonNotes, setAiLessonNotes] = useState(initial?.aiLessonNotes ?? false);
-  const [aiGenerationLimit, setAiGenerationLimit] = useState(
-    initial ? String(initial.aiGenerationLimit) : "0",
-  );
-  const [billing, setBilling] = useState(initial?.billing ?? false);
-  const [learningMedia, setLearningMedia] = useState(initial?.learningMedia ?? false);
-  const [studentLogins, setStudentLogins] = useState(initial?.studentLogins ?? false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSubmitting(true);
-    setError(null);
-    try {
-      await onSubmit({
-        name,
-        description: description || undefined,
-        billingCycle,
-        price: Number(price),
-        currency,
-        multiBranch,
-        branchLimit: multiBranch ? Number(branchLimit) : 1,
-        activeStudentLimit: Number(activeStudentLimit),
-        takeHomeQuiz,
-        onDemandLearning,
-        communication,
-        timetable,
-        lessonNotes,
-        aiLessonNotes,
-        aiGenerationLimit: aiLessonNotes ? Number(aiGenerationLimit) : 0,
-        billing,
-        learningMedia,
-        studentLogins,
-      });
-      onSaved();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to save package");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <Modal open onClose={onClose} title={title}>
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        {error && <Alert variant="error">{error}</Alert>}
-        <FormField label="Name" htmlFor="package-name">
-          <Input id="package-name" required value={name} onChange={(event) => setName(event.target.value)} />
-        </FormField>
-        <FormField label="Description" htmlFor="package-description">
-          <Input
-            id="package-description"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-          />
-        </FormField>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField label="Billing cycle" htmlFor="package-billing-cycle">
-            <Select
-              id="package-billing-cycle"
-              value={billingCycle}
-              onChange={(event) => setBillingCycle(event.target.value as "MONTHLY" | "ANNUAL")}
-            >
-              <option value="MONTHLY">Monthly</option>
-              <option value="ANNUAL">Annual</option>
-            </Select>
-          </FormField>
-          <FormField label="Currency" htmlFor="package-currency">
-            <Input
-              id="package-currency"
-              required
-              maxLength={3}
-              value={currency}
-              onChange={(event) => setCurrency(event.target.value.toUpperCase())}
-            />
-          </FormField>
-        </div>
-        <FormField label="Price" htmlFor="package-price">
-          <Input
-            id="package-price"
-            type="number"
-            min="0"
-            step="0.01"
-            required
-            value={price}
-            onChange={(event) => setPrice(event.target.value)}
-          />
-        </FormField>
-
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <Checkbox checked={multiBranch} onChange={(event) => setMultiBranch(event.target.checked)} />
-          Allow multiple branches
-        </label>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField label="Branch limit" htmlFor="package-branch-limit">
-            <Input
-              id="package-branch-limit"
-              type="number"
-              min="1"
-              required
-              disabled={!multiBranch}
-              value={multiBranch ? branchLimit : "1"}
-              onChange={(event) => setBranchLimit(event.target.value)}
-            />
-          </FormField>
-          <FormField label="Active student limit" htmlFor="package-student-limit">
-            <Input
-              id="package-student-limit"
-              type="number"
-              min="1"
-              required
-              value={activeStudentLimit}
-              onChange={(event) => setActiveStudentLimit(event.target.value)}
-            />
-          </FormField>
-        </div>
-
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <Checkbox checked={takeHomeQuiz} onChange={(event) => setTakeHomeQuiz(event.target.checked)} />
-          Take-home quizzes
-        </label>
-        <p className="-mt-2 text-xs text-slate-500">
-          Entitlement for the teacher-authored take-home quiz module - does not affect midterm quiz
-          recording, which is available on every package.
-        </p>
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <Checkbox
-            checked={onDemandLearning}
-            onChange={(event) => setOnDemandLearning(event.target.checked)}
-          />
-          On-demand learning
-        </label>
-        <p className="-mt-2 text-xs text-slate-500">
-          Entitlement for the learning-resources module (PDF, rich text, YouTube) - live once that
-          module ships (Phase 35E); currently dormant.
-        </p>
-
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <Checkbox checked={learningMedia} onChange={(event) => setLearningMedia(event.target.checked)} />
-          Learning media (mp3/mp4)
-        </label>
-        <p className="-mt-2 text-xs text-slate-500">
-          A second, independent gate on top of On-demand learning for uploaded audio/video only - a
-          school can have the module without the storage-heavy media types. Live once Phase 35F ships.
-        </p>
-
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <Checkbox checked={studentLogins} onChange={(event) => setStudentLogins(event.target.checked)} />
-          Student logins
-        </label>
-        <p className="-mt-2 text-xs text-slate-500">
-          Entitlement for the student portal and student credential provisioning - live once Phase 35B
-          ships; currently dormant. Deliberately not checked at the login endpoint itself, so a
-          downgrade can never strand an already-signed-in student.
-        </p>
-
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <Checkbox
-            checked={communication}
-            onChange={(event) => setCommunication(event.target.checked)}
-          />
-          Home-school messaging
-        </label>
-        <p className="-mt-2 text-xs text-slate-500">
-          Unlike the flags above, this one actually gates the feature - a school without it loses
-          the Messages screen entirely, for both staff and guardians.
-        </p>
-
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <Checkbox checked={timetable} onChange={(event) => setTimetable(event.target.checked)} />
-          Timetables
-        </label>
-        <p className="-mt-2 text-xs text-slate-500">
-          Also actually gates the feature - a school without it loses the Timetable screen entirely,
-          for staff and guardians alike.
-        </p>
-
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <Checkbox checked={lessonNotes} onChange={(event) => setLessonNotes(event.target.checked)} />
-          Lesson notes
-        </label>
-        <p className="-mt-2 text-xs text-slate-500">
-          Also actually gates the feature - a school without it loses the Lesson notes screen entirely,
-          for staff and guardians alike.
-        </p>
-
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <Checkbox checked={aiLessonNotes} onChange={(event) => setAiLessonNotes(event.target.checked)} />
-          AI lesson notes
-        </label>
-        <p className="-mt-2 text-xs text-slate-500">
-          A second, independent gate on top of Lesson notes for the AI-generation button only - a school
-          can have the module without this add-on.
-        </p>
-        <FormField label="AI generations per month" htmlFor="package-ai-generation-limit">
-          <Input
-            id="package-ai-generation-limit"
-            type="number"
-            min="0"
-            required
-            disabled={!aiLessonNotes}
-            value={aiLessonNotes ? aiGenerationLimit : "0"}
-            onChange={(event) => setAiGenerationLimit(event.target.value)}
-          />
-        </FormField>
-
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <Checkbox checked={billing} onChange={(event) => setBilling(event.target.checked)} />
-          Fees & bills
-        </label>
-        <p className="-mt-2 text-xs text-slate-500">
-          Entitlement for the per-term parent billing module - a school without it loses the Fees &
-          Bills screen entirely, for staff and guardians alike. Never confuse with this package's own
-          price/billing cycle above, which is the SaaS operator billing the school.
-        </p>
-
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting ? "Saving…" : "Save"}
-          </Button>
-        </div>
-      </form>
-    </Modal>
   );
 }

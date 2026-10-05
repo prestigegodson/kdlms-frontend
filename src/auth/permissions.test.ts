@@ -837,4 +837,48 @@ describe("can.manageFeePayments", () => {
     expect(can.deleteStudents("INVENTORY_MANAGER")).toBe(false);
     expect(can.deleteStudents(undefined)).toBe(false);
   });
+  describe("plan billing (Phase C8)", () => {
+    it("lets a CREATOR or SCHOOL_ADMIN pay for their own plan", () => {
+      expect(can.manageSubscriptionBilling("CREATOR")).toBe(true);
+      expect(can.manageSubscriptionBilling("SCHOOL_ADMIN")).toBe(true);
+      expect(can.manageSubscriptionBilling("BRANCH_ADMIN")).toBe(false);
+      expect(can.manageSubscriptionBilling("LEARNER")).toBe(false);
+      expect(can.manageSubscriptionBilling(undefined)).toBe(false);
+    });
+
+    it("shows platform payments to the SYSTEM_ADMIN only", () => {
+      expect(can.viewPlatformPayments("SYSTEM_ADMIN")).toBe(true);
+      expect(can.viewPlatformPayments("SCHOOL_ADMIN")).toBe(false);
+    });
+  });
+
+  describe("creator learners (Phase C5)", () => {
+    it("lets only a CREATOR manage learners", () => {
+      expect(can.manageLearners("CREATOR")).toBe(true);
+      expect(can.manageLearners("SCHOOL_ADMIN")).toBe(false);
+      expect(can.manageLearners("LEARNER")).toBe(false);
+    });
+
+    it("opens the learner portal to a LEARNER only", () => {
+      expect(can.viewLearnerPortal("LEARNER")).toBe(true);
+      expect(can.viewLearnerPortal("STUDENT")).toBe(false);
+    });
+
+    it("shows a guardian Online classes only when they follow a creator's learner", () => {
+      expect(can.viewOnlineClasses("GUARDIAN", true)).toBe(true);
+      expect(can.viewOnlineClasses("GUARDIAN", false)).toBe(false);
+      expect(can.viewOnlineClasses("LEARNER", true)).toBe(false);
+    });
+
+    it("lets a creator, learner or guardian into a live session, but only the first two publish", () => {
+      for (const role of ["CREATOR", "LEARNER", "GUARDIAN"] as const) {
+        expect(can.joinLiveSession(role)).toBe(true);
+      }
+      expect(can.joinLiveSession("STUDENT")).toBe(false);
+      expect(can.joinLiveSession("SCHOOL_ADMIN")).toBe(false);
+      expect(can.publishInLiveSession("CREATOR")).toBe(true);
+      expect(can.publishInLiveSession("LEARNER")).toBe(true);
+      expect(can.publishInLiveSession("GUARDIAN")).toBe(false);
+    });
+  });
 });

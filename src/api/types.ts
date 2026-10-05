@@ -6,7 +6,9 @@ export type Role =
   | "TEACHER"
   | "INVENTORY_MANAGER"
   | "GUARDIAN"
-  | "STUDENT";
+  | "STUDENT"
+  | "CREATOR"
+  | "LEARNER";
 
 /**
  * Mirrors backend shared.domain.ResultScope. Every API this widens defaults

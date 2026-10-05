@@ -20,6 +20,8 @@ export interface MyFeaturesView {
   learningMedia: boolean;
   /** Phase 35A - live once student credential provisioning ships (35B). */
   studentLogins: boolean;
+  /** Creators Phase C5 - GUARDIAN only: follows a learner in an education creator's online classes. */
+  onlineClasses: boolean;
 }
 
 export function getMyFeatures(): Promise<MyFeaturesView> {

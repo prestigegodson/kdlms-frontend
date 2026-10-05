@@ -320,11 +320,14 @@ const NAV_ITEMS: NavItem[] = [
     primary: ["INVENTORY_MANAGER"],
   },
   {
-    label: "Subscription",
+    label: "Subscription & billing",
     href: "/school/subscription",
     icon: CreditCard,
     group: "Administration",
     roles: ["SCHOOL_ADMIN"],
+    // Paying for and renewing the school's own plan (creators.md Phase C10) - see
+    // auth/permissions.ts's manageSubscriptionBilling.
+    visible: () => can.manageSubscriptionBilling(useAuthStore.getState().user?.role),
   },
   {
     label: "Support",

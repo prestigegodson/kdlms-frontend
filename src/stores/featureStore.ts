@@ -13,6 +13,7 @@ interface FeatureState {
   onDemandLearning: boolean;
   learningMedia: boolean;
   studentLogins: boolean;
+  onlineClasses: boolean;
   status: FetchStatus;
   /** Fetches once per session; a repeat call while loaded/loading is a no-op. */
   fetchIfNeeded: () => Promise<void>;
@@ -29,6 +30,7 @@ const UNFETCHED_FLAGS = {
   onDemandLearning: false,
   learningMedia: false,
   studentLogins: false,
+  onlineClasses: false,
 } as const;
 
 /**
@@ -61,6 +63,7 @@ export const useFeatureStore = create<FeatureState>((set, get) => ({
         onDemandLearning: features.onDemandLearning,
         learningMedia: features.learningMedia,
         studentLogins: features.studentLogins,
+        onlineClasses: features.onlineClasses ?? false,
         status: "loaded",
       });
     } catch {

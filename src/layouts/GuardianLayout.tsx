@@ -5,7 +5,9 @@ import {
   ClipboardList,
   FileCheck2,
   MessageSquare,
+  MessagesSquare,
   NotebookPen,
+  Presentation,
   Receipt,
   Users,
   Wallet,
@@ -14,6 +16,7 @@ import { useEffect } from "react";
 import { can } from "@/auth/permissions";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useFeatureStore } from "@/stores/featureStore";
+import { useClassMessagesUnreadStore } from "@/stores/classMessagesUnreadStore";
 import { useUnreadMessagesStore } from "@/stores/unreadMessagesStore";
 
 const NAV_ITEMS: NavItem[] = [
@@ -87,6 +90,24 @@ const NAV_ITEMS: NavItem[] = [
     visible: () => can.viewWardTakeHomeQuizzes("GUARDIAN", useFeatureStore.getState().takeHomeQuiz),
   },
   {
+    label: "Online classes",
+    href: "/guardian/online-classes",
+    icon: Presentation,
+    // Overflow-only - see the Timetable item's comment above. Shown only to a guardian who follows a
+    // learner in an education creator's classes (creators.md Phase C5) - see auth/permissions.ts's
+    // viewOnlineClasses.
+    visible: () => can.viewOnlineClasses("GUARDIAN", useFeatureStore.getState().onlineClasses),
+  },
+  {
+    label: "Class messages",
+    href: "/guardian/class-messages",
+    icon: MessagesSquare,
+    // Overflow-only, beside Online classes - conversations with the tutors of the creator learners
+    // this guardian follows (creators.md Phase C11), separate from the school Messages above.
+    visible: () => can.viewClassMessages("GUARDIAN", useFeatureStore.getState().onlineClasses),
+    badge: () => useClassMessagesUnreadStore.getState().count,
+  },
+  {
     label: "Notifications",
     href: "/guardian/settings",
     icon: Bell,
@@ -110,6 +131,9 @@ export function GuardianLayout() {
   useFeatureStore((state) => state.takeHomeQuiz);
   useFeatureStore((state) => state.billing);
   useUnreadMessagesStore((state) => state.count);
+  const onlineClasses = useFeatureStore((state) => state.onlineClasses);
+  const fetchClassUnread = useClassMessagesUnreadStore((state) => state.fetchIfNeeded);
+  useClassMessagesUnreadStore((state) => state.count);
 
   // Deliberately no schoolBrandingStore fetch here, unlike SchoolLayout: a
   // guardian's token carries no schoolId (CLAUDE.md's cross-school guardian
@@ -121,6 +145,13 @@ export function GuardianLayout() {
     fetchFeatures();
     fetchUnreadMessages("GUARDIAN");
   }, [fetchFeatures, fetchUnreadMessages]);
+
+  // Only a guardian who follows a creator's learner has class messages to count.
+  useEffect(() => {
+    if (onlineClasses) {
+      fetchClassUnread("GUARDIAN");
+    }
+  }, [onlineClasses, fetchClassUnread]);
 
   return <PortalShell portalName="Guardian" navItems={NAV_ITEMS} />;
 }

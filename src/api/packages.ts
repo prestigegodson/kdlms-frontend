@@ -1,20 +1,45 @@
 import { apiFetch } from "@/api/client";
 import type { Page } from "@/api/types";
+import type { SupportedCurrency } from "@/utils/currency";
 
 export type BillingCycle = "MONTHLY" | "ANNUAL";
 export type PackageStatus = "ACTIVE" | "RETIRED";
+/** Which tenant kind a package is sold to; fixed once the package exists. */
+export type PackageAudience = "SCHOOL" | "CREATOR";
+
+/** One of a package's prices, in the currency's minor unit (kobo for NGN). Mirrors backend PriceView. */
+export interface PackagePrice {
+  currency: SupportedCurrency;
+  amountMinor: number;
+}
+
+/**
+ * The five CREATOR-plan limits (creators.md §5); `null` means unlimited. Always `null` on a
+ * SCHOOL package.
+ */
+export interface CreatorPlanLimitFields {
+  maxClasses: number | null;
+  maxStudentsPerClass: number | null;
+  maxSessionMinutes: number | null;
+  maxParticipantsPerSession: number | null;
+  maxMonthlySessionHours: number | null;
+}
 
 /** Mirrors backend subscription.application.port.in.PackageView. */
-export interface PackageView {
+export interface PackageView extends CreatorPlanLimitFields {
   id: string;
   name: string;
   description?: string;
   billingCycle: BillingCycle;
-  price: number;
-  currency: string;
+  audience: PackageAudience;
+  /** The platform's Free creator plan - no prices, never expires. At most one is ACTIVE. */
+  free: boolean;
+  /** Empty only for the free plan; at most one per currency. */
+  prices: PackagePrice[];
   multiBranch: boolean;
   branchLimit: number;
-  activeStudentLimit: number;
+  /** SCHOOL packages only; `null` on a CREATOR plan. */
+  activeStudentLimit: number | null;
   /** Also actually gates the feature (Phase 20), the same hard-lockout shape `communication`/`timetable`/`lessonNotes` use - see CLAUDE.md. */
   takeHomeQuiz: boolean;
   /** Live once the `learning` module ships (Phase 35E) - the same hard-lockout shape as the other gating flags. */
@@ -38,18 +63,21 @@ export interface PackageView {
   learningMedia: boolean;
   /** Entitlement for the student portal and credential provisioning - live once Phase 35B ships. */
   studentLogins: boolean;
+  /** CREATOR plans only: a minor learner's guardian gets access to their classes (dormant until creators Phase C5). */
+  guardianAccess: boolean;
   status: PackageStatus;
 }
 
-export interface SavePackageRequest {
+export interface SavePackageRequest extends CreatorPlanLimitFields {
   name: string;
   description?: string;
   billingCycle: BillingCycle;
-  price: number;
-  currency: string;
+  audience: PackageAudience;
+  free: boolean;
+  prices: PackagePrice[];
   multiBranch: boolean;
   branchLimit: number;
-  activeStudentLimit: number;
+  activeStudentLimit: number | null;
   takeHomeQuiz: boolean;
   onDemandLearning: boolean;
   communication: boolean;
@@ -60,12 +88,15 @@ export interface SavePackageRequest {
   billing: boolean;
   learningMedia: boolean;
   studentLogins: boolean;
+  guardianAccess: boolean;
 }
 
 const BASE = "/api/v1/admin/packages";
 
-export function listPackages(page = 0, size = 20): Promise<Page<PackageView>> {
-  return apiFetch<Page<PackageView>>(`${BASE}?page=${page}&size=${size}`);
+/** Every package, or only one audience's when `audience` is given. */
+export function listPackages(page = 0, size = 20, audience?: PackageAudience): Promise<Page<PackageView>> {
+  const audienceParam = audience ? `&audience=${audience}` : "";
+  return apiFetch<Page<PackageView>>(`${BASE}?page=${page}&size=${size}${audienceParam}`);
 }
 
 export function getPackage(packageId: string): Promise<PackageView> {

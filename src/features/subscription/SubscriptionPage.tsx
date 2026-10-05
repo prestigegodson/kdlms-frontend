@@ -1,5 +1,5 @@
 import { Building2, CreditCard, GraduationCap, Layers, Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
 import { getMySubscription, type SubscriptionSummaryView } from "@/api/subscriptions";
 import { Alert } from "@/components/ui/Alert";
@@ -9,7 +9,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { StatTile } from "@/components/ui/StatTile";
-import { formatMoney } from "@/utils/currency";
+import { PlanBillingSections } from "@/features/subscriptionBilling/components/PlanBillingSections";
+import { formatMoney, fromMinor } from "@/utils/currency";
 import { formatDateRange, formatLongDate } from "@/utils/date";
 
 type LoadState =
@@ -25,16 +26,23 @@ const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "neutral
   NONE: "neutral",
 };
 
+interface SubscriptionPageProps {
+  /** Where to send the browser for payment - `window.location.assign` outside tests. */
+  redirect?: (url: string) => void;
+}
+
 /**
- * Read-only self-service view of the school's own subscription: plan,
- * limits, current usage, and expiry. Subscriptions are activated/extended
- * manually by a system admin (CLAUDE.md's "manual subscription activation
- * (no payment gateway yet)"), so there's nothing to act on here.
+ * "Subscription & billing" (creators.md Phase C10): the school's own plan,
+ * limits, current usage, and expiry, followed by the same plan billing a
+ * creator gets - auto-renewal, the SCHOOL plans it can buy through
+ * Paystack, and its payment history - so a school admin can pay for and
+ * renew the subscription without the system admin. A plan the system
+ * admin assigned for a bank transfer still shows here, as `MANUAL`.
  */
-export function SubscriptionPage() {
+export function SubscriptionPage({ redirect }: SubscriptionPageProps) {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
 
-  useEffect(() => {
+  const load = useCallback(() => {
     getMySubscription()
       .then((summary) => setState({ kind: "loaded", summary }))
       .catch((error: unknown) =>
@@ -45,9 +53,14 @@ export function SubscriptionPage() {
       );
   }, []);
 
+  useEffect(load, [load]);
+
   return (
     <div className="max-w-5xl space-y-6">
-      <PageHeader title="Subscription" description="Your school's current plan, limits, and usage." />
+      <PageHeader
+        title="Subscription & billing"
+        description="Your school's plan, limits and usage, how it renews, and what you've paid."
+      />
 
       {state.kind === "loading" && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -59,8 +72,8 @@ export function SubscriptionPage() {
       {state.kind === "loaded" && !state.summary.hasSubscription && (
         <EmptyState
           icon={CreditCard}
-          title="No active subscription"
-          description="Contact your system administrator to have a plan assigned. The portal stays read-only until then."
+          title="No active plan"
+          description="Choose a plan below. The portal stays read-only until your school has one."
         />
       )}
 
@@ -112,7 +125,13 @@ export function SubscriptionPage() {
             <StatTile
               icon={Sparkles}
               label="Price"
-              value={formatMoney(state.summary.price, state.summary.currency)}
+              value={
+                state.summary.prices.length === 0
+                  ? "—"
+                  : state.summary.prices
+                      .map((price) => formatMoney(fromMinor(price.amountMinor), price.currency))
+                      .join(" / ")
+              }
             />
             <StatTile
               icon={Building2}
@@ -127,6 +146,8 @@ export function SubscriptionPage() {
           </div>
         </>
       )}
+
+      <PlanBillingSections redirect={redirect} onChanged={load} />
     </div>
   );
 }

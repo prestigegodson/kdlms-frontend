@@ -14,6 +14,7 @@ function renderGuarded(roles: Role[], allowLevelHead = false) {
       { path: "/school", element: <div>School home</div> },
       { path: "/student", element: <div>Student home</div> },
       { path: "/set-password", element: <div>Set password page</div> },
+      { path: "/creator/complete-profile", element: <div>Complete profile page</div> },
       {
         path: "/protected",
         element: (
@@ -178,6 +179,27 @@ describe("RequireRole", () => {
     renderGuarded(["SYSTEM_ADMIN"]);
 
     expect(await screen.findByText("Set password page")).toBeInTheDocument();
+    expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
+  });
+
+  it("redirects a Google sign-up creator with no business profile to the completion step", async () => {
+    useAuthStore.setState({
+      user: {
+        id: "1",
+        email: "ada@example.com",
+        firstName: "Ada",
+        lastName: "Lovelace",
+        role: "CREATOR",
+        schoolId: "tenant-1",
+        profileIncomplete: true,
+      },
+      accessToken: "t",
+      refreshToken: "r",
+    });
+
+    renderGuarded(["CREATOR"]);
+
+    expect(await screen.findByText("Complete profile page")).toBeInTheDocument();
     expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
   });
 

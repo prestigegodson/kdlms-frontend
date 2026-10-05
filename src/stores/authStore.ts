@@ -6,6 +6,8 @@ import type { Role } from "@/api/types";
 import * as usersApi from "@/api/users";
 import { useAcademicContextStore } from "@/stores/academicContextStore";
 import { useBranchStore } from "@/stores/branchStore";
+import { useClassMessagesUnreadStore } from "@/stores/classMessagesUnreadStore";
+import { useCreatorPlanStore } from "@/stores/creatorPlanStore";
 import { useFeatureStore } from "@/stores/featureStore";
 import { useLevelStore } from "@/stores/levelStore";
 import { useOnboardingStore } from "@/stores/onboardingStore";
@@ -32,6 +34,10 @@ export interface AuthenticatedUser {
    * reads this to redirect to /set-password.
    */
   mustChangePassword?: boolean;
+  /** See api/auth.ts's UserSummary#emailVerified - undefined behaves as true. */
+  emailVerified?: boolean;
+  /** See api/auth.ts's UserSummary#profileIncomplete - undefined behaves as false. */
+  profileIncomplete?: boolean;
 }
 
 type AuthStatus = "idle" | "authenticating";
@@ -75,6 +81,14 @@ interface AuthState {
     refreshToken: string;
   }) => void;
   login: (identifier: string, password: string, subdomain?: string | null) => Promise<AuthenticatedUser>;
+  /** As login, with a Google ID token instead of a password - see api/auth.ts's googleSignIn. */
+  /** `inviteToken` only for intent `ACCEPT_INVITE` - a creator's learner/guardian invite (creators Phase C5). */
+  loginWithGoogle: (
+    idToken: string,
+    intent: authApi.GoogleSignInIntent,
+    subdomain?: string | null,
+    inviteToken?: string,
+  ) => Promise<AuthenticatedUser>;
   logout: () => void;
   refreshSession: () => Promise<boolean>;
   setHydrated: () => void;
@@ -111,6 +125,8 @@ function resetSessionScopedStores(): void {
   useFeatureStore.getState().reset();
   useSchoolBrandingStore.getState().reset();
   useUnreadMessagesStore.getState().reset();
+  useClassMessagesUnreadStore.getState().reset();
+  useCreatorPlanStore.getState().reset();
   usePendingLessonNotesStore.getState().reset();
   usePendingFeePaymentsStore.getState().reset();
   useBranchStore.getState().reset();
@@ -136,6 +152,21 @@ export const useAuthStore = create<AuthState>()(
         set({ status: "authenticating" });
         try {
           const session = await authApi.login(identifier, password, subdomain);
+          set({
+            user: session.user,
+            accessToken: session.accessToken,
+            refreshToken: session.refreshToken,
+          });
+          return session.user;
+        } finally {
+          set({ status: "idle" });
+        }
+      },
+
+      loginWithGoogle: async (idToken, intent, subdomain, inviteToken) => {
+        set({ status: "authenticating" });
+        try {
+          const session = await authApi.googleSignIn(idToken, intent, { subdomain, inviteToken });
           set({
             user: session.user,
             accessToken: session.accessToken,

@@ -1,4 +1,5 @@
 import { apiFetch } from "@/api/client";
+import type { PackagePrice } from "@/api/packages";
 import type { Page } from "@/api/types";
 
 export type SubscriptionStatus = "ACTIVE" | "EXPIRED" | "SUSPENDED" | "CANCELLED";
@@ -10,9 +11,11 @@ export interface SubscriptionView {
   packageId: string;
   packageName: string;
   startDate: string;
-  endDate: string;
+  /** `null` for an open-ended Free creator plan row, which never expires. */
+  endDate: string | null;
   status: SubscriptionStatus;
-  daysRemaining: number;
+  /** `null` for an open-ended row. */
+  daysRemaining: number | null;
 }
 
 export interface AssignSubscriptionRequest {
@@ -31,12 +34,12 @@ export interface SubscriptionSummaryView {
   hasSubscription: boolean;
   packageName?: string;
   billingCycle?: string;
-  price?: number;
-  currency?: string;
+  /** The package's list price in every currency it's sold in. */
+  prices: PackagePrice[];
   startDate?: string;
-  endDate?: string;
+  endDate?: string | null;
   status: SubscriptionStatus | "NONE";
-  daysRemaining: number;
+  daysRemaining: number | null;
   multiBranch: boolean;
   branchLimit: number;
   branchesUsed: number;
@@ -52,6 +55,13 @@ export interface SubscriptionSummaryView {
   billing: boolean;
   /** Mirrors the school's own `freemium` flag - see school API's doc comment. */
   freemium: boolean;
+  /**
+   * Set only while a failed auto-renewal is being retried (Phase C10): the plan is past
+   * `endDate` but stays active until this date.
+   */
+  graceUntil: string | null;
+  /** Whether the plan renews itself from a saved card (Phase C10) - the banner then stays quiet. */
+  autoRenew: boolean;
 }
 
 function adminBase(schoolId: string): string {

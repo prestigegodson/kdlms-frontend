@@ -1,3 +1,21 @@
+/** Mirrors backend shared.domain.SupportedCurrency - every currency the platform prices and checks out in. */
+export const SUPPORTED_CURRENCIES = ["NGN", "GHS", "ZAR", "KES", "USD"] as const;
+export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
+
+/**
+ * Major units to minor units (naira to kobo): 125.5 -> 12550. Every supported currency has two
+ * decimal places, which package_prices.amount_minor relies on. Rounds rather than truncates, so a
+ * float like 0.29 (really 0.28999...) still becomes 29.
+ */
+export function toMinor(amount: number): number {
+  return Math.round(amount * 100);
+}
+
+/** Minor units back to major units (kobo to naira): 12550 -> 125.5. */
+export function fromMinor(amountMinor: number): number {
+  return amountMinor / 100;
+}
+
 const FORMATTERS = new Map<string, Intl.NumberFormat>();
 
 /**
