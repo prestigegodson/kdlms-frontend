@@ -1,5 +1,6 @@
 import {
   Bell,
+  BookOpen,
   CalendarDays,
   ClipboardCheck,
   ClipboardList,
@@ -106,6 +107,30 @@ const NAV_ITEMS: NavItem[] = [
     // this guardian follows (creators.md Phase C11), separate from the school Messages above.
     visible: () => can.viewClassMessages("GUARDIAN", useFeatureStore.getState().onlineClasses),
     badge: () => useClassMessagesUnreadStore.getState().count,
+  },
+  {
+    label: "Class lesson notes",
+    href: "/guardian/class-lesson-notes",
+    icon: NotebookPen,
+    // Overflow-only, beside Class messages - the published lesson notes of the creator classes this
+    // guardian's learners take (creators.md Phase C12). Each tutor's plan is checked by the server.
+    visible: () => can.viewClassLessonNotes("GUARDIAN", useFeatureStore.getState().onlineClasses),
+  },
+  {
+    label: "Class quizzes",
+    href: "/guardian/class-quizzes",
+    icon: ClipboardCheck,
+    // Overflow-only, beside Class lesson notes - released results of the creator classes' quizzes this
+    // guardian's learners take (creators.md Phase C13), separate from the school Take-home quizzes.
+    visible: () => can.viewClassQuizzes("GUARDIAN", useFeatureStore.getState().onlineClasses),
+  },
+  {
+    label: "Class resources",
+    href: "/guardian/class-resources",
+    icon: BookOpen,
+    // Overflow-only, beside Class quizzes - the learning resources of the creator classes this
+    // guardian's learners take (creators.md Phase C14), read-only. Each tutor's plan is checked by the server.
+    visible: () => can.viewClassResources("GUARDIAN", useFeatureStore.getState().onlineClasses),
   },
   {
     label: "Notifications",

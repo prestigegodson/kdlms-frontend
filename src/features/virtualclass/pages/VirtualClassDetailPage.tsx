@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, Pencil, Plus, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, BookOpen, ClipboardCheck, NotebookPen, Pencil, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { getErrorMessage } from "@/api/client";
@@ -16,6 +16,7 @@ import {
   saveSchedule,
   updateVirtualClass,
 } from "@/api/virtualClasses";
+import { can } from "@/auth/permissions";
 import { ActionMenu } from "@/components/ui/ActionMenu";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -28,6 +29,7 @@ import { ClassRosterCard } from "../components/ClassRosterCard";
 import { ScheduleEditor } from "../components/ScheduleEditor";
 import { SessionList } from "../components/SessionList";
 import { SessionTimeModal } from "../components/SessionTimeModal";
+import { useCreatorPlanStore } from "@/stores/creatorPlanStore";
 import {
   type SlotDraft,
   addDays,
@@ -53,6 +55,10 @@ function toDrafts(virtualClass: VirtualClass): SlotDraft[] {
 export function VirtualClassDetailPage() {
   const { classId = "" } = useParams();
   const navigate = useNavigate();
+  // The plan is fetched by CreatorLayout; the Lesson notes shortcut shows once it has loaded.
+  const lessonNotesIncluded = useCreatorPlanStore((state) => state.plan?.lessonNotes ?? false);
+  const quizzesIncluded = useCreatorPlanStore((state) => state.plan?.takeHomeQuiz ?? false);
+  const resourcesIncluded = useCreatorPlanStore((state) => state.plan?.onDemandLearning ?? false);
   const [virtualClass, setVirtualClass] = useState<VirtualClass | null>(null);
   const [timezone, setTimezone] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -172,6 +178,33 @@ export function VirtualClassDetailPage() {
             items={[
               ...(writable
                 ? [{ label: "Edit details", icon: Pencil, onSelect: () => setEditing(true) }]
+                : []),
+              ...(can.viewClassLessonNotes("CREATOR", lessonNotesIncluded)
+                ? [
+                    {
+                      label: "Lesson notes",
+                      icon: NotebookPen,
+                      onSelect: () => navigate(`/creator/lesson-notes?classId=${virtualClass.id}`),
+                    },
+                  ]
+                : []),
+              ...(can.viewClassQuizzes("CREATOR", quizzesIncluded)
+                ? [
+                    {
+                      label: "Quizzes",
+                      icon: ClipboardCheck,
+                      onSelect: () => navigate(`/creator/quizzes?classId=${virtualClass.id}`),
+                    },
+                  ]
+                : []),
+              ...(can.viewClassResources("CREATOR", resourcesIncluded)
+                ? [
+                    {
+                      label: "Resources",
+                      icon: BookOpen,
+                      onSelect: () => navigate(`/creator/resources?classId=${virtualClass.id}`),
+                    },
+                  ]
                 : []),
               archived
                 ? {

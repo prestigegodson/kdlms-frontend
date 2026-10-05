@@ -52,6 +52,9 @@ export function MyClassesPage() {
               onlineClass={onlineClass}
               loadAttendance={() => getMyClassAttendance(onlineClass.id)}
               saveReminders={(enabled) => setMyClassReminders(onlineClass.id, enabled)}
+              lessonNotesHref={`/learner/lesson-notes?classId=${onlineClass.id}`}
+              quizzesHref={`/learner/quizzes?classId=${onlineClass.id}`}
+              resourcesHref={`/learner/resources?classId=${onlineClass.id}`}
             />
           ))}
         </div>

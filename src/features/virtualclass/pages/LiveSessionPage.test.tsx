@@ -11,27 +11,51 @@ import { LiveSessionPage } from "./LiveSessionPage";
 
 vi.mock("@livekit/components-styles", () => ({}));
 vi.mock("@livekit/components-react", () => ({
-  LiveKitRoom: ({ children, token, audio }: { children: React.ReactNode; token: string; audio: unknown }) => (
+  LiveKitRoom: ({
+    children,
+    token,
+    audio,
+    onDisconnected,
+  }: {
+    children: React.ReactNode;
+    token: string;
+    audio: unknown;
+    onDisconnected: (reason?: number) => void;
+  }) => (
     <div data-testid="room" data-token={token} data-audio={String(Boolean(audio))}>
+      {/* Stands in for LiveKit closing the room under the participant (DisconnectReason.ROOM_DELETED = 5). */}
+      <button type="button" onClick={() => onDisconnected(5)}>
+        Simulate room closed
+      </button>
       {children}
     </div>
   ),
   VideoConference: () => <p>Video conference</p>,
-  PreJoin: ({ joinLabel, onSubmit }: { joinLabel: string; onSubmit: (values: unknown) => void }) => (
-    <button
-      type="button"
-      onClick={() =>
-        onSubmit({ videoEnabled: true, audioEnabled: true, videoDeviceId: "", audioDeviceId: "", username: "" })
-      }
-    >
-      {joinLabel}
-    </button>
-  ),
+  // Mirrors the real PreJoin: the join button stays disabled until validation passes, and with no
+  // onValidate the default rule demands a non-empty username.
+  PreJoin: ({
+    joinLabel,
+    onSubmit,
+    onValidate,
+  }: {
+    joinLabel: string;
+    onSubmit: (values: unknown) => void;
+    onValidate?: (values: { username: string }) => boolean;
+  }) => {
+    const values = { videoEnabled: true, audioEnabled: true, videoDeviceId: "", audioDeviceId: "", username: "" };
+    const valid = onValidate ? onValidate(values) : values.username !== "";
+    return (
+      <button type="button" disabled={!valid} onClick={() => onSubmit(values)}>
+        {joinLabel}
+      </button>
+    );
+  },
   useDataChannel: vi.fn(),
 }));
 vi.mock("@/api/liveSessions", async () => ({
   ...(await vi.importActual<typeof import("@/api/liveSessions")>("@/api/liveSessions")),
   joinLiveSession: vi.fn(),
+  endLiveSession: vi.fn(),
 }));
 
 function joinView(role: ParticipantRole): JoinView {
@@ -55,9 +79,13 @@ function renderAs(role: Role) {
     accessToken: "access",
     refreshToken: "refresh",
   });
-  const router = createMemoryRouter([{ path: "/live/:occurrenceId", element: <LiveSessionPage /> }], {
-    initialEntries: ["/live/o1"],
-  });
+  const router = createMemoryRouter(
+    [
+      { path: "/live/:occurrenceId", element: <LiveSessionPage /> },
+      { path: "*", element: <p>Portal home</p> },
+    ],
+    { initialEntries: ["/live/o1"] },
+  );
   render(<RouterProvider router={router} />);
 }
 
@@ -70,7 +98,9 @@ describe("LiveSessionPage", () => {
     vi.mocked(liveSessionsApi.joinLiveSession).mockResolvedValue(joinView("LEARNER"));
     renderAs("LEARNER");
 
-    await userEvent.click(screen.getByRole("button", { name: "Join session" }));
+    const join = screen.getByRole("button", { name: "Join session" });
+    expect(join).toBeEnabled();
+    await userEvent.click(join);
 
     const room = await screen.findByTestId("room");
     expect(room).toHaveAttribute("data-token", "lk-token");
@@ -89,6 +119,45 @@ describe("LiveSessionPage", () => {
     const room = await screen.findByTestId("room");
     expect(room).toHaveAttribute("data-audio", "false");
     expect(screen.getByText("Watching")).toBeInTheDocument();
+  });
+
+  it("lets only the creator end the session for everyone, after confirming", async () => {
+    vi.mocked(liveSessionsApi.joinLiveSession).mockResolvedValue(joinView("CREATOR"));
+    vi.mocked(liveSessionsApi.endLiveSession).mockResolvedValue(undefined);
+    renderAs("CREATOR");
+    await userEvent.click(screen.getByRole("button", { name: "Join session" }));
+    await screen.findByTestId("room");
+
+    await userEvent.click(screen.getByRole("button", { name: "End for everyone" }));
+    expect(screen.getByText("End session for everyone?")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(liveSessionsApi.endLiveSession).not.toHaveBeenCalled();
+    expect(screen.queryByText("End session for everyone?")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "End for everyone" }));
+    await userEvent.click(screen.getByRole("button", { name: "End session" }));
+    expect(liveSessionsApi.endLiveSession).toHaveBeenCalledWith("o1");
+    expect(await screen.findByText("Portal home")).toBeInTheDocument();
+  });
+
+  it("doesn't offer learners or guardians the end-for-everyone action", async () => {
+    vi.mocked(liveSessionsApi.joinLiveSession).mockResolvedValue(joinView("LEARNER"));
+    renderAs("LEARNER");
+    await userEvent.click(screen.getByRole("button", { name: "Join session" }));
+    await screen.findByTestId("room");
+    expect(screen.queryByRole("button", { name: "End for everyone" })).not.toBeInTheDocument();
+  });
+
+  it("tells a participant the session has ended when the room closes under them", async () => {
+    vi.mocked(liveSessionsApi.joinLiveSession).mockResolvedValue(joinView("GUARDIAN"));
+    renderAs("GUARDIAN");
+    await userEvent.click(screen.getByRole("button", { name: "Watch session" }));
+    expect(screen.queryByRole("button", { name: "End for everyone" })).not.toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Simulate room closed" }));
+
+    expect(screen.getByText("This session has ended.")).toBeInTheDocument();
+    expect(screen.queryByTestId("room")).not.toBeInTheDocument();
   });
 
   it("shows why the server refused the join", async () => {

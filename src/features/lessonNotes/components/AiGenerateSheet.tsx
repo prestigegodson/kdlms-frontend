@@ -1,7 +1,8 @@
 import { Sparkles } from "lucide-react";
 import { useRef, useState } from "react";
 import { ApiError } from "@/api/client";
-import { generateLessonNote, type LessonNoteContentView } from "@/api/lessonNotes";
+import type { GenerateLessonNoteHandlers, LessonNoteContentView } from "@/api/lessonNotes";
+import type { AiGenerateCopy } from "@/features/lessonNotes/components/aiGenerateCopy";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
@@ -10,12 +11,20 @@ import { Modal } from "@/components/ui/Modal";
 import { Textarea } from "@/components/ui/Textarea";
 import { LessonNoteReadView } from "@/features/lessonNotes/components/LessonNoteReadView";
 
+/** What the sheet collects - `hint` is the school editor's Nigerian class, or a creator's audience. */
+export interface AiGenerateInput {
+  topic: string;
+  hint: string | null;
+  extraInstructions: string | null;
+}
+
 interface AiGenerateSheetProps {
-  subjectId: string;
-  termId: string;
-  weekNumber: number;
-  /** The branch the note belongs to - see `LessonNoteEditorPage`'s own `branchId`. */
-  branchId?: string;
+  /**
+   * Starts the streamed generation - the school editor's `generateLessonNote` or a creator's
+   * `generateClassLessonNote`, closed over whatever identifies the note being drafted.
+   */
+  generate: (input: AiGenerateInput, handlers: GenerateLessonNoteHandlers, signal: AbortSignal) => Promise<void>;
+  copy: AiGenerateCopy;
   /** Pre-fills the sheet's own Topic field from whatever the teacher has already typed in the main form, if anything. */
   initialTopic: string;
   onClose: () => void;
@@ -34,17 +43,9 @@ type Status = "idle" | "streaming" | "done" | "error";
  * stay `primary`/`secondary`, the same "trigger is accent, the dialog's own submit isn't"
  * convention `LevelsPage`'s `LevelForm`, `ReviewDecisionModal`, and `ComposeNoteSheet` all follow.
  */
-export function AiGenerateSheet({
-  subjectId,
-  termId,
-  weekNumber,
-  branchId,
-  initialTopic,
-  onClose,
-  onApply,
-}: AiGenerateSheetProps) {
+export function AiGenerateSheet({ generate: startGeneration, copy, initialTopic, onClose, onApply }: AiGenerateSheetProps) {
   const [topic, setTopic] = useState(initialTopic);
-  const [classHint, setClassHint] = useState("");
+  const [hint, setHint] = useState("");
   const [extraInstructions, setExtraInstructions] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [previewText, setPreviewText] = useState("");
@@ -66,13 +67,10 @@ export function AiGenerateSheet({
     const controller = new AbortController();
     abortControllerRef.current = controller;
     try {
-      await generateLessonNote(
-        subjectId,
-        termId,
-        weekNumber,
+      await startGeneration(
         {
           topic: topic.trim(),
-          classHint: classHint.trim() || null,
+          hint: hint.trim() || null,
           extraInstructions: extraInstructions.trim() || null,
         },
         {
@@ -86,7 +84,7 @@ export function AiGenerateSheet({
             setStatus("error");
           },
         },
-        { signal: controller.signal, branchId },
+        controller.signal,
       );
     } catch (caught) {
       if (controller.signal.aborted) {
@@ -118,10 +116,7 @@ export function AiGenerateSheet({
   return (
     <Modal open onClose={streaming ? stop : onClose} title="Generate with AI" size="lg">
       <div className="space-y-4">
-        <p className="text-sm text-slate-500">
-          Drafts a lesson note aligned to the Nigerian NERDC/UBE curriculum. Review and adjust it
-          before saving - this doesn't save anything on its own.
-        </p>
+        <p className="text-sm text-slate-500">{copy.description}</p>
 
         {error && <Alert variant="error">{error}</Alert>}
 
@@ -136,13 +131,13 @@ export function AiGenerateSheet({
           />
         </FormField>
 
-        <FormField label="Class (optional)" htmlFor="ai-generate-class-hint">
+        <FormField label={copy.hintLabel} htmlFor="ai-generate-class-hint">
           <Input
             id="ai-generate-class-hint"
-            value={classHint}
-            onChange={(event) => setClassHint(event.target.value)}
+            value={hint}
+            onChange={(event) => setHint(event.target.value)}
             disabled={streaming}
-            placeholder="e.g. JSS 2 - narrows the curriculum level if this level spans more than one Nigerian class"
+            placeholder={copy.hintPlaceholder}
           />
         </FormField>
 

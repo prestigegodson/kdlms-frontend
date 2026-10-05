@@ -36,6 +36,18 @@ import { InviteAcceptPage } from "@/features/invites/InviteAcceptPage";
 import { MyClassesPage } from "@/features/learner/MyClassesPage";
 import { CreatorMessagesPage } from "@/features/classMessages/pages/CreatorMessagesPage";
 import { MemberMessagesPage } from "@/features/classMessages/pages/MemberMessagesPage";
+import { CreatorLessonNoteEditorPage } from "@/features/lessonNotes/creator/CreatorLessonNoteEditorPage";
+import { CreatorLessonNotesPage } from "@/features/lessonNotes/creator/CreatorLessonNotesPage";
+import { ClassLessonNotesReaderPage } from "@/features/lessonNotes/reader/ClassLessonNotesReaderPage";
+import { ClassResourceDetailPage } from "@/features/learning/classMember/ClassResourceDetailPage";
+import { ClassResourcesPage } from "@/features/learning/classMember/ClassResourcesPage";
+import { CreatorResourcePreviewPage } from "@/features/learning/creator/CreatorResourcePreviewPage";
+import { CreatorResourcesPage } from "@/features/learning/creator/CreatorResourcesPage";
+import { ClassQuizzesPage } from "@/features/takeHomeQuizzes/classMember/ClassQuizzesPage";
+import { LearnerClassQuizPage } from "@/features/takeHomeQuizzes/classMember/LearnerClassQuizPage";
+import { CreatorQuizEditorPage } from "@/features/takeHomeQuizzes/creator/CreatorQuizEditorPage";
+import { CreatorQuizResultsPage } from "@/features/takeHomeQuizzes/creator/CreatorQuizResultsPage";
+import { CreatorQuizzesPage } from "@/features/takeHomeQuizzes/creator/CreatorQuizzesPage";
 import { OnlineClassesPage } from "@/features/guardian/OnlineClassesPage";
 import { VirtualClassDetailPage } from "@/features/virtualclass/pages/VirtualClassDetailPage";
 import { VirtualClassesPage } from "@/features/virtualclass/pages/VirtualClassesPage";
@@ -425,6 +437,13 @@ export const routes: RouteObject[] = [
           { path: "settings", element: <NotificationSettingsPage /> },
           { path: "online-classes", element: <OnlineClassesPage /> },
           { path: "class-messages", element: <MemberMessagesPage audience="GUARDIAN" /> },
+          { path: "class-lesson-notes", element: <ClassLessonNotesReaderPage audience="GUARDIAN" /> },
+          { path: "class-quizzes", element: <ClassQuizzesPage audience="GUARDIAN" /> },
+          { path: "class-resources", element: <ClassResourcesPage audience="GUARDIAN" /> },
+          {
+            path: "class-resources/:learnerId/:classId/:resourceId",
+            element: <ClassResourceDetailPage audience="GUARDIAN" />,
+          },
         ],
       },
       {
@@ -461,6 +480,13 @@ export const routes: RouteObject[] = [
           { path: "sessions", element: <SessionsCalendarPage /> },
           { path: "learners", element: <LearnersPage /> },
           { path: "messages", element: <CreatorMessagesPage /> },
+          { path: "lesson-notes", element: <CreatorLessonNotesPage /> },
+          { path: "lesson-notes/:classId/:noteId", element: <CreatorLessonNoteEditorPage /> },
+          { path: "quizzes", element: <CreatorQuizzesPage /> },
+          { path: "quizzes/:classId/:quizId", element: <CreatorQuizEditorPage /> },
+          { path: "quizzes/:classId/:quizId/results", element: <CreatorQuizResultsPage /> },
+          { path: "resources", element: <CreatorResourcesPage /> },
+          { path: "resources/:classId/:resourceId", element: <CreatorResourcePreviewPage /> },
           { path: "billing", element: <PlanBillingPage /> },
         ],
       },
@@ -474,6 +500,11 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, element: <MyClassesPage /> },
           { path: "messages", element: <MemberMessagesPage audience="LEARNER" /> },
+          { path: "lesson-notes", element: <ClassLessonNotesReaderPage audience="LEARNER" /> },
+          { path: "quizzes", element: <ClassQuizzesPage audience="LEARNER" /> },
+          { path: "quizzes/:classId/:quizId", element: <LearnerClassQuizPage /> },
+          { path: "resources", element: <ClassResourcesPage audience="LEARNER" /> },
+          { path: "resources/:classId/:resourceId", element: <ClassResourceDetailPage audience="LEARNER" /> },
         ],
       },
       { path: "*", element: <NotFoundPage /> },

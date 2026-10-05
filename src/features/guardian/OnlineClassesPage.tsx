@@ -59,6 +59,9 @@ export function OnlineClassesPage() {
                     joinLabel="Watch"
                     loadAttendance={() => getWardClassAttendance(learner.learnerId, onlineClass.id)}
                     saveReminders={(enabled) => setWardClassReminders(onlineClass.id, enabled)}
+                    lessonNotesHref={`/guardian/class-lesson-notes?classId=${onlineClass.id}&learnerId=${learner.learnerId}`}
+                    quizzesHref={`/guardian/class-quizzes?classId=${onlineClass.id}&learnerId=${learner.learnerId}`}
+                    resourcesHref={`/guardian/class-resources?classId=${onlineClass.id}&learnerId=${learner.learnerId}`}
                   />
                 ))}
               </div>

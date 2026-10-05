@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { adjustTakeHomeQuizScore, type StudentResultRowView } from "@/api/takeHomeQuizzes";
+import { type AdjustScoreRequest, adjustTakeHomeQuizScore } from "@/api/takeHomeQuizzes";
 import { ApiError } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -15,7 +15,9 @@ interface AdjustScoreModalProps {
   currentScore: number | null;
   totalPoints: number;
   onClose: () => void;
-  onAdjusted: (row: StudentResultRowView) => void;
+  onAdjusted: () => void;
+  /** Overrides the school endpoint - a creator's class quiz adjusts a learner's score (creators Phase C13). */
+  adjust?: (request: AdjustScoreRequest) => Promise<unknown>;
 }
 
 /**
@@ -36,6 +38,7 @@ export function AdjustScoreModal({
   totalPoints,
   onClose,
   onAdjusted,
+  adjust,
 }: AdjustScoreModalProps) {
   const [score, setScore] = useState(currentScore !== null ? String(currentScore) : "");
   const [reason, setReason] = useState("");
@@ -52,11 +55,9 @@ export function AdjustScoreModal({
     setSubmitting(true);
     setError(null);
     try {
-      const row = await adjustTakeHomeQuizScore(quizId, studentId, {
-        newScore: parsedScore,
-        reason: reason.trim(),
-      });
-      onAdjusted(row);
+      const request = { newScore: parsedScore, reason: reason.trim() };
+      await (adjust ? adjust(request) : adjustTakeHomeQuizScore(quizId, studentId, request));
+      onAdjusted();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not adjust this score");
       setSubmitting(false);

@@ -881,4 +881,64 @@ describe("can.manageFeePayments", () => {
       expect(can.publishInLiveSession("GUARDIAN")).toBe(false);
     });
   });
+
+  describe("class lesson notes (Phase C12)", () => {
+    it("shows class lesson notes to an entitled creator or guardian, and to every learner", () => {
+      expect(can.viewClassLessonNotes("CREATOR", true)).toBe(true);
+      expect(can.viewClassLessonNotes("CREATOR", false)).toBe(false);
+      expect(can.viewClassLessonNotes("GUARDIAN", true)).toBe(true);
+      expect(can.viewClassLessonNotes("GUARDIAN", false)).toBe(false);
+      expect(can.viewClassLessonNotes("LEARNER", false)).toBe(true);
+      expect(can.viewClassLessonNotes("TEACHER", true)).toBe(false);
+    });
+
+    it("lets only an entitled creator write them", () => {
+      expect(can.authorClassLessonNotes("CREATOR", true)).toBe(true);
+      expect(can.authorClassLessonNotes("CREATOR", false)).toBe(false);
+      expect(can.authorClassLessonNotes("LEARNER", true)).toBe(false);
+      expect(can.authorClassLessonNotes("TEACHER", true)).toBe(false);
+    });
+  });
+});
+
+describe("class quizzes (creators Phase C13)", () => {
+  it("lets a learner always look, and a creator or guardian only while entitled", () => {
+    expect(can.viewClassQuizzes("LEARNER", false)).toBe(true);
+    expect(can.viewClassQuizzes("CREATOR", true)).toBe(true);
+    expect(can.viewClassQuizzes("CREATOR", false)).toBe(false);
+    expect(can.viewClassQuizzes("GUARDIAN", true)).toBe(true);
+    expect(can.viewClassQuizzes("GUARDIAN", false)).toBe(false);
+    expect(can.viewClassQuizzes("TEACHER", true)).toBe(false);
+  });
+
+  it("leaves authoring to the entitled creator and taking to the learner", () => {
+    expect(can.authorClassQuizzes("CREATOR", true)).toBe(true);
+    expect(can.authorClassQuizzes("CREATOR", false)).toBe(false);
+    expect(can.authorClassQuizzes("TEACHER", true)).toBe(false);
+    expect(can.takeClassQuizzes("LEARNER")).toBe(true);
+    expect(can.takeClassQuizzes("GUARDIAN")).toBe(false);
+    expect(can.takeClassQuizzes("CREATOR")).toBe(false);
+  });
+});
+
+describe("class learning resources (creators Phase C14)", () => {
+  it("lets a learner always look, and a creator or guardian only while entitled", () => {
+    expect(can.viewClassResources("LEARNER", false)).toBe(true);
+    expect(can.viewClassResources("CREATOR", true)).toBe(true);
+    expect(can.viewClassResources("CREATOR", false)).toBe(false);
+    expect(can.viewClassResources("GUARDIAN", true)).toBe(true);
+    expect(can.viewClassResources("GUARDIAN", false)).toBe(false);
+    expect(can.viewClassResources("STUDENT", true)).toBe(false);
+  });
+
+  it("leaves authoring to the entitled creator and progress to the learner", () => {
+    expect(can.authorClassResources("CREATOR", true)).toBe(true);
+    expect(can.authorClassResources("CREATOR", false)).toBe(false);
+    expect(can.authorClassResources("TEACHER", true)).toBe(false);
+    expect(can.authorClassMedia("CREATOR", true)).toBe(true);
+    expect(can.authorClassMedia("CREATOR", false)).toBe(false);
+    expect(can.trackClassResources("LEARNER")).toBe(true);
+    expect(can.trackClassResources("GUARDIAN")).toBe(false);
+    expect(can.trackClassResources("CREATOR")).toBe(false);
+  });
 });

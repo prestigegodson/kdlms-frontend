@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
-import { getStudentTakeHomeQuizResult, type StudentAttemptDetailView } from "@/api/takeHomeQuizzes";
+import { type AnsweredQuestionView, getStudentTakeHomeQuizResult } from "@/api/takeHomeQuizzes";
 import { Alert } from "@/components/ui/Alert";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
@@ -12,9 +12,16 @@ interface StudentAnswersModalProps {
   studentId: string;
   studentName: string;
   onClose: () => void;
+  /** Overrides the school endpoint - a creator's class quiz loads a learner's attempt (creators Phase C13). */
+  load?: () => Promise<AttemptDetail>;
 }
 
-function toReviewQuestions(detail: StudentAttemptDetailView) {
+/** The part of a staff attempt detail this modal reads - shared by a student's and a learner's. */
+interface AttemptDetail {
+  questions: AnsweredQuestionView[];
+}
+
+function toReviewQuestions(detail: AttemptDetail) {
   return detail.questions.map((question) => ({
     id: question.questionId,
     position: question.position,
@@ -37,14 +44,15 @@ function toReviewQuestions(detail: StudentAttemptDetailView) {
  * `QuizReview` (Phase 20K), also used by a student's own reveal-on-submit
  * review, so the two can never drift apart.
  */
-export function StudentAnswersModal({ quizId, studentId, studentName, onClose }: StudentAnswersModalProps) {
-  const [detail, setDetail] = useState<StudentAttemptDetailView | null>(null);
+export function StudentAnswersModal({ quizId, studentId, studentName, onClose, load }: StudentAnswersModalProps) {
+  const [detail, setDetail] = useState<AttemptDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getStudentTakeHomeQuizResult(quizId, studentId)
+    (load ? load() : getStudentTakeHomeQuizResult(quizId, studentId))
       .then(setDetail)
       .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Could not load this attempt"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `load` is a fresh closure each parent render; quizId/studentId fix the attempt it names
   }, [quizId, studentId]);
 
   return (

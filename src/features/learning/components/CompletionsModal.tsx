@@ -8,6 +8,10 @@ import { CompletionsPanel } from "@/features/learning/components/CompletionsPane
 
 interface CompletionsModalProps {
   resourceId: string;
+  /** Overrides where the roster loads from (creators Phase C14: a class resource's learners). */
+  load?: () => Promise<ResourceCompletionsView>;
+  /** Passed through to `CompletionsPanel`. */
+  personLabel?: string;
   onClose: () => void;
 }
 
@@ -17,14 +21,15 @@ interface CompletionsModalProps {
  * trigger a reload (this is a read-only view), so no refresh affordance is needed - reopening the
  * modal is the refresh.
  */
-export function CompletionsModal({ resourceId, onClose }: CompletionsModalProps) {
+export function CompletionsModal({ resourceId, load, personLabel, onClose }: CompletionsModalProps) {
   const [completions, setCompletions] = useState<ResourceCompletionsView | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getLearningResourceCompletions(resourceId)
+    (load ? load() : getLearningResourceCompletions(resourceId))
       .then(setCompletions)
       .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Failed to load completions"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `load` is a fresh closure per render; fetch once per resource
   }, [resourceId]);
 
   return (
@@ -37,7 +42,7 @@ export function CompletionsModal({ resourceId, onClose }: CompletionsModalProps)
         </div>
       )}
 
-      {completions && <CompletionsPanel completions={completions} />}
+      {completions && <CompletionsPanel completions={completions} personLabel={personLabel} />}
     </Modal>
   );
 }

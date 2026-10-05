@@ -26,6 +26,8 @@ const STATUS_VARIANTS: Record<RowStatus, "success" | "info" | "neutral"> = {
 
 interface CompletionsPanelProps {
   completions: ResourceCompletionsView;
+  /** The roster column's heading - "Student" unless overridden (creators Phase C14: "Learner"). */
+  personLabel?: string;
 }
 
 /**
@@ -36,7 +38,7 @@ interface CompletionsPanelProps {
  * three-state badge (`Completed` / `Opened` / `Not opened`) is derived here from `completed` and
  * `lastOpenedAt` alone, never re-fetched or re-derived server-side twice.
  */
-export function CompletionsPanel({ completions }: CompletionsPanelProps) {
+export function CompletionsPanel({ completions, personLabel = "Student" }: CompletionsPanelProps) {
   return (
     <div className="space-y-4">
       <RegisterProgress
@@ -48,7 +50,7 @@ export function CompletionsPanel({ completions }: CompletionsPanelProps) {
       <Table>
         <TableHead>
           <TableRow>
-            <TableHeaderCell>Student</TableHeaderCell>
+            <TableHeaderCell>{personLabel}</TableHeaderCell>
             <TableHeaderCell>Status</TableHeaderCell>
             <TableHeaderCell>Last opened</TableHeaderCell>
             <TableHeaderCell>Completed</TableHeaderCell>
@@ -59,10 +61,10 @@ export function CompletionsPanel({ completions }: CompletionsPanelProps) {
             const status = statusOf(row);
             return (
               <TableRow key={row.studentId}>
-                <TableCell label="Student">
+                <TableCell label={personLabel}>
                   <div>
                     <div className="font-medium text-slate-900">{row.studentName}</div>
-                    <div className="text-xs text-slate-500">{row.admissionNumber}</div>
+                    {row.admissionNumber && <div className="text-xs text-slate-500">{row.admissionNumber}</div>}
                   </div>
                 </TableCell>
                 <TableCell label="Status">

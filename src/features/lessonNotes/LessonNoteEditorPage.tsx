@@ -4,6 +4,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router";
 import { can } from "@/auth/permissions";
 import { ApiError } from "@/api/client";
 import {
+  generateLessonNote,
   getLessonNote,
   type LessonNoteContentView,
   type LessonNoteView,
@@ -23,6 +24,7 @@ import { AuthenticatedRichImage } from "@/components/richText/AuthenticatedRichI
 import { richTextIsBlank } from "@/components/richText/richTextIsBlank";
 import { UnsavedChangesBar } from "@/features/assessments/components/UnsavedChangesBar";
 import { AiGenerateSheet } from "@/features/lessonNotes/components/AiGenerateSheet";
+import { SCHOOL_AI_COPY } from "@/features/lessonNotes/components/aiGenerateCopy";
 import { LessonNoteDocumentEditor } from "@/features/lessonNotes/components/LessonNoteDocumentEditor";
 import { lessonNoteContentToHtml } from "@/features/lessonNotes/components/lessonNoteContentToHtml";
 import { LessonNoteReadView } from "@/features/lessonNotes/components/LessonNoteReadView";
@@ -31,58 +33,18 @@ import { MathText } from "@/features/lessonNotes/components/MathText";
 import { StructuredLessonNoteForm } from "@/features/lessonNotes/components/StructuredLessonNoteForm";
 import { ReviewDecisionModal } from "@/features/lessonNotes/components/ReviewDecisionModal";
 import { LESSON_NOTE_FIELD_HELP } from "@/features/lessonNotes/lessonNoteFieldHelp";
+import {
+  cleanContent,
+  EMPTY_CONTENT,
+  normalizeForCompare,
+  structuredHasContent,
+} from "@/features/lessonNotes/lessonNoteFormState";
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
 import { usePendingLessonNotesStore } from "@/stores/pendingLessonNotesStore";
 
-const EMPTY_CONTENT: LessonNoteContentView = {
-  mode: "STRUCTURED",
-  body: "",
-  subTopic: "",
-  duration: "",
-  averageAge: "",
-  objectives: [],
-  entryBehaviour: "",
-  instructionalMaterials: [],
-  references: [],
-  presentation: [],
-  evaluation: "",
-  conclusion: "",
-  assignment: "",
-};
-
 function renderStaffImage(fileId: string, alt: string) {
   return <AuthenticatedRichImage fileId={fileId} alt={alt} />;
-}
-
-/**
- * Normalizes a content snapshot for dirty-tracking and comparison -
- * `richTextIsBlank` maps every shape TipTap's empty document can take
- * (`""`, `"<p></p>"`, ...) to the same `""`, so loading a saved
- * `STRUCTURED` note (whose `body` is always empty) or freshly switching to
- * `DOCUMENT` mode never reads as a spurious unsaved change.
- */
-function normalizeForCompare(topic: string, content: LessonNoteContentView) {
-  return { topic, content: { ...content, body: richTextIsBlank(content.body) ? "" : content.body } };
-}
-
-/** `true` once any structured field carries real content - the "Convert to document" prompt's own gate, so it never offers to convert nothing. */
-function structuredHasContent(content: LessonNoteContentView): boolean {
-  return Boolean(
-    content.subTopic?.trim() ||
-      content.duration?.trim() ||
-      content.averageAge?.trim() ||
-      content.entryBehaviour?.trim() ||
-      content.evaluation?.trim() ||
-      content.conclusion?.trim() ||
-      content.assignment?.trim() ||
-      content.objectives.some((value) => value.trim() !== "") ||
-      content.instructionalMaterials.some((value) => value.trim() !== "") ||
-      content.references.some((value) => value.trim() !== "") ||
-      content.presentation.some(
-        (step) => step.label.trim() !== "" || step.teacherActivity.trim() !== "" || step.learnerActivity.trim() !== "",
-      ),
-  );
 }
 
 /**
@@ -218,20 +180,7 @@ export function LessonNoteEditorPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const cleaned: LessonNoteContentView = {
-        ...content,
-        objectives: content.objectives.filter((value) => value.trim() !== ""),
-        instructionalMaterials: content.instructionalMaterials.filter(
-          (value) => value.trim() !== "",
-        ),
-        references: content.references.filter((value) => value.trim() !== ""),
-        presentation: content.presentation.filter(
-          (step) =>
-            step.label.trim() !== "" ||
-            step.teacherActivity.trim() !== "" ||
-            step.learnerActivity.trim() !== "",
-        ),
-      };
+      const cleaned = cleanContent(content);
       const saved = await saveLessonNote(
         subjectId,
         termId,
@@ -547,10 +496,17 @@ export function LessonNoteEditorPage() {
       )}
       {aiSheetOpen && (
         <AiGenerateSheet
-          subjectId={subjectId}
-          termId={termId}
-          weekNumber={weekNumber}
-          branchId={branchId}
+          generate={(input, handlers, signal) =>
+            generateLessonNote(
+              subjectId,
+              termId,
+              weekNumber,
+              { topic: input.topic, classHint: input.hint, extraInstructions: input.extraInstructions },
+              handlers,
+              { signal, branchId },
+            )
+          }
+          copy={SCHOOL_AI_COPY}
           initialTopic={topic}
           onClose={() => setAiSheetOpen(false)}
           onApply={applyGenerated}

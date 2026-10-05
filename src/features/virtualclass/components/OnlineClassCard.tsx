@@ -1,4 +1,4 @@
-import { ClipboardList, Video } from "lucide-react";
+import { BookOpen, ClipboardCheck, ClipboardList, NotebookPen, Video } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import type { AttendanceHistory } from "@/api/liveSessions";
@@ -26,6 +26,12 @@ interface OnlineClassCardProps {
   loadAttendance: () => Promise<AttendanceHistory>;
   /** Saves the viewer's reminder-email choice for this class (Phase C7); omitted hides the toggle. */
   saveReminders?: (enabled: boolean) => Promise<ReminderPreference>;
+  /** Where this class's published lesson notes open (Phase C12); omitted hides the link. */
+  lessonNotesHref?: string;
+  /** Where this class's quizzes open (Phase C13); omitted hides the link. */
+  quizzesHref?: string;
+  /** Where this class's learning resources open (Phase C14); omitted hides the link. */
+  resourcesHref?: string;
 }
 
 /**
@@ -33,9 +39,20 @@ interface OnlineClassCardProps {
  * schedule in the creator's own timezone, and the next few sessions in the viewer's timezone. A
  * session inside its join window gets a button into the live room, and the class's attendance
  * history is a click away (Phase C6). The viewer can turn this class's reminder emails off and on
- * again (Phase C7) - saved straight away, and put back if the save fails.
+ * again (Phase C7) - saved straight away, and put back if the save fails. Since Phase C12 the card
+ * also links to the class's published lesson notes, since Phase C13 to its quizzes, and since
+ * Phase C14 to its learning resources.
  */
-export function OnlineClassCard({ onlineClass, joinLabel = "Join", loadAttendance, saveReminders }: OnlineClassCardProps) {
+export function OnlineClassCard({
+  onlineClass,
+  joinLabel = "Join",
+  loadAttendance,
+  saveReminders,
+  lessonNotesHref,
+  quizzesHref,
+  resourcesHref,
+}: OnlineClassCardProps) {
+  const navigate = useNavigate();
   const zone = viewerZone();
   const upcoming = onlineClass.upcoming.slice(0, UPCOMING_SHOWN);
   const [showAttendance, setShowAttendance] = useState(false);
@@ -49,10 +66,30 @@ export function OnlineClassCard({ onlineClass, joinLabel = "Join", loadAttendanc
             {onlineClass.subjectLabel ? ` · ${onlineClass.subjectLabel}` : ""}
           </p>
         </div>
-        <Button type="button" variant="ghost" size="sm" onClick={() => setShowAttendance(true)}>
-          <ClipboardList className="h-4 w-4" aria-hidden="true" />
-          Attendance
-        </Button>
+        <div className="flex flex-wrap gap-1">
+          {lessonNotesHref && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => navigate(lessonNotesHref)}>
+              <NotebookPen className="h-4 w-4" aria-hidden="true" />
+              Lesson notes
+            </Button>
+          )}
+          {quizzesHref && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => navigate(quizzesHref)}>
+              <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
+              Quizzes
+            </Button>
+          )}
+          {resourcesHref && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => navigate(resourcesHref)}>
+              <BookOpen className="h-4 w-4" aria-hidden="true" />
+              Resources
+            </Button>
+          )}
+          <Button type="button" variant="ghost" size="sm" onClick={() => setShowAttendance(true)}>
+            <ClipboardList className="h-4 w-4" aria-hidden="true" />
+            Attendance
+          </Button>
+        </div>
       </div>
       {onlineClass.description && <p className="mt-3 text-sm text-slate-700">{onlineClass.description}</p>}
       {onlineClass.slots.length > 0 && (

@@ -357,6 +357,72 @@ export const can = {
     return (role === "CREATOR" || role === "GUARDIAN") && entitled;
   },
 
+  /**
+   * Creators' class lesson notes (creators.md Phase C12): a CREATOR whose plan includes lesson
+   * notes, a LEARNER (each tutor's plan is checked per class by the server), or a GUARDIAN
+   * following a creator's learner (`entitled` = their `onlineClasses` flag).
+   */
+  viewClassLessonNotes(role: Role | undefined, entitled: boolean): boolean {
+    if (role === "LEARNER") {
+      return true;
+    }
+    return (role === "CREATOR" || role === "GUARDIAN") && entitled;
+  },
+
+  /** Writing class lesson notes - the class's own CREATOR only, while the plan includes them (Phase C12). */
+  authorClassLessonNotes(role: Role | undefined, entitled: boolean): boolean {
+    return role === "CREATOR" && entitled;
+  },
+
+  /**
+   * Creators' class quizzes (creators.md Phase C13): a CREATOR whose plan includes take-home quizzes,
+   * a LEARNER (each tutor's plan is checked per class by the server), or a GUARDIAN following a
+   * creator's learner (`entitled` = their `onlineClasses` flag) - who reads released results only.
+   */
+  viewClassQuizzes(role: Role | undefined, entitled: boolean): boolean {
+    if (role === "LEARNER") {
+      return true;
+    }
+    return (role === "CREATOR" || role === "GUARDIAN") && entitled;
+  },
+
+  /** Authoring class quizzes and managing their results - the class's own CREATOR only, while the plan includes them (Phase C13). */
+  authorClassQuizzes(role: Role | undefined, entitled: boolean): boolean {
+    return role === "CREATOR" && entitled;
+  },
+
+  /** Taking a class quiz - the LEARNER alone; a guardian only reads released results (Phase C13). */
+  takeClassQuizzes(role: Role | undefined): boolean {
+    return role === "LEARNER";
+  },
+
+  /**
+   * Creators' class learning resources (creators.md Phase C14): a CREATOR whose plan includes on-demand
+   * learning, a LEARNER (each tutor's plan is checked per class by the server), or a GUARDIAN
+   * following a creator's learner (`entitled` = their `onlineClasses` flag) - who reads only.
+   */
+  viewClassResources(role: Role | undefined, entitled: boolean): boolean {
+    if (role === "LEARNER") {
+      return true;
+    }
+    return (role === "CREATOR" || role === "GUARDIAN") && entitled;
+  },
+
+  /** Authoring class learning resources - the class's own CREATOR only, while the plan includes them (Phase C14). */
+  authorClassResources(role: Role | undefined, entitled: boolean): boolean {
+    return role === "CREATOR" && entitled;
+  },
+
+  /** Authoring audio/video class resources - additionally needs the plan's `learningMedia` (Phase C14). */
+  authorClassMedia(role: Role | undefined, mediaEntitled: boolean): boolean {
+    return role === "CREATOR" && mediaEntitled;
+  },
+
+  /** Marking a class resource done and saving a resume position - the LEARNER alone; a guardian only reads (Phase C14). */
+  trackClassResources(role: Role | undefined): boolean {
+    return role === "LEARNER";
+  },
+
   /** A class-wide announcement - the class's CREATOR only (creators.md Phase C11). */
   announceToClass(role: Role | undefined): boolean {
     return role === "CREATOR";

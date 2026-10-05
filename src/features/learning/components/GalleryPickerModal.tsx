@@ -21,11 +21,21 @@ const TYPE_ICON: Record<string, typeof FileText> = {
   VIDEO: FileVideo,
 };
 
+/** Loads one page of gallery files - an override for the school gallery's own scope (creators Phase C14: the creator's whole tenant). */
+export type GalleryLoader = (params: {
+  resourceType: LearningResourceType;
+  search?: string;
+  page: number;
+  size: number;
+}) => Promise<Page<LearningGalleryFileView>>;
+
 interface GalleryPickerModalProps {
   classId: string;
   subjectId: string;
   resourceType: LearningResourceType;
   selectedFileId: string | null;
+  /** When present, replaces the school gallery's own level+branch-scoped listing. */
+  loadPage?: GalleryLoader;
   onPick: (file: LearningGalleryFileView) => void;
   onClose: () => void;
 }
@@ -47,6 +57,7 @@ export function GalleryPickerModal({
   subjectId,
   resourceType,
   selectedFileId,
+  loadPage,
   onPick,
   onClose,
 }: GalleryPickerModalProps) {
@@ -69,7 +80,10 @@ export function GalleryPickerModal({
 
   useEffect(() => {
     let cancelled = false;
-    listLearningGalleryFiles({ classId, subjectId, resourceType, search, page: pageNumber, size: PAGE_SIZE })
+    const request = loadPage
+      ? loadPage({ resourceType, search, page: pageNumber, size: PAGE_SIZE })
+      : listLearningGalleryFiles({ classId, subjectId, resourceType, search, page: pageNumber, size: PAGE_SIZE });
+    request
       .then((result) => {
         if (!cancelled) setPage(result);
       })
@@ -79,7 +93,7 @@ export function GalleryPickerModal({
     return () => {
       cancelled = true;
     };
-  }, [classId, subjectId, resourceType, search, pageNumber]);
+  }, [classId, subjectId, resourceType, search, pageNumber, loadPage]);
 
   const loading = page === null && error === null;
 
@@ -137,7 +151,7 @@ export function GalleryPickerModal({
                       <div>
                         <p className="line-clamp-2 font-medium text-slate-900">{file.resourceTitle}</p>
                         <p className="mt-0.5 text-xs text-slate-500">
-                          {file.className} · {file.subjectName}
+                          {file.subjectName ? `${file.className} · ${file.subjectName}` : file.className}
                         </p>
                       </div>
                       <div className="mt-auto flex items-start gap-2 border-t border-slate-100 pt-2">

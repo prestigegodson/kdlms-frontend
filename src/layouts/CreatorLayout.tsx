@@ -1,4 +1,15 @@
-import { CalendarDays, CreditCard, Home, MessageSquare, Presentation, UserRound, Users } from "lucide-react";
+import {
+  BookOpen,
+  CalendarDays,
+  ClipboardCheck,
+  CreditCard,
+  Home,
+  MessageSquare,
+  NotebookPen,
+  Presentation,
+  UserRound,
+  Users,
+} from "lucide-react";
 import { useEffect } from "react";
 import { can } from "@/auth/permissions";
 import { VerifyEmailBanner } from "@/features/creators/components/VerifyEmailBanner";
@@ -8,8 +19,9 @@ import { useCreatorPlanStore } from "@/stores/creatorPlanStore";
 
 /**
  * The education-creator portal (creators.md Phase C1; Classes and Sessions since C4, Learners since
- * C5, Plan & billing since C8, Messages since C11). The tab bar holds four primary items, so
- * Learners, Messages and Plan & billing live in the More drawer.
+ * C5, Plan & billing since C8, Messages since C11, Lesson notes since C12, Quizzes since C13). The tab
+ * bar holds four primary items, so Learners, Messages, Lesson notes, Quizzes and Plan & billing live
+ * in the More drawer.
  */
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/creator", icon: Home, primary: ["CREATOR"] },
@@ -41,6 +53,31 @@ const NAV_ITEMS: NavItem[] = [
     // viewClassMessages.
     visible: () => can.viewClassMessages("CREATOR", useCreatorPlanStore.getState().plan?.communication ?? false),
     badge: () => useClassMessagesUnreadStore.getState().count,
+  },
+  {
+    label: "Lesson notes",
+    href: "/creator/lesson-notes",
+    icon: NotebookPen,
+    // Gated on the creator's own plan (creators.md Phase C12) - see auth/permissions.ts's
+    // viewClassLessonNotes.
+    visible: () => can.viewClassLessonNotes("CREATOR", useCreatorPlanStore.getState().plan?.lessonNotes ?? false),
+  },
+  {
+    label: "Quizzes",
+    href: "/creator/quizzes",
+    icon: ClipboardCheck,
+    // Gated on the creator's own plan (creators.md Phase C13) - see auth/permissions.ts's
+    // viewClassQuizzes.
+    visible: () => can.viewClassQuizzes("CREATOR", useCreatorPlanStore.getState().plan?.takeHomeQuiz ?? false),
+  },
+  {
+    label: "Resources",
+    href: "/creator/resources",
+    icon: BookOpen,
+    // Gated on the creator's own plan (creators.md Phase C14) - see auth/permissions.ts's
+    // viewClassResources.
+    visible: () =>
+      can.viewClassResources("CREATOR", useCreatorPlanStore.getState().plan?.onDemandLearning ?? false),
   },
   {
     label: "Plan & billing",

@@ -1,4 +1,4 @@
-import { apiFetch, apiStream } from "@/api/client";
+import { apiFetch, apiFetchBlob, apiStream } from "@/api/client";
 import type { Page } from "@/api/types";
 
 /** Mirrors backend lessonnote.application.port.in.LevelSubjectView - one (level, subject) pair a teacher subject-teaches. */
@@ -310,4 +310,167 @@ export function generateLessonNote(
     },
     { method: "POST", body: JSON.stringify(request), signal: options?.signal },
   );
+}
+
+// ---- Class lesson notes (creators Phase C12) ----
+
+/** A creator's class note is only ever DRAFT or PUBLISHED - no review workflow. */
+export type ClassLessonNoteStatus = "DRAFT" | "PUBLISHED";
+
+/** Mirrors backend `ClassLessonNoteView.ActionsView` - server-derived, never re-implemented here. */
+export interface ClassLessonNoteActionsView {
+  canEdit: boolean;
+  canPublish: boolean;
+  canUnpublish: boolean;
+  canDelete: boolean;
+}
+
+/** Mirrors backend `lessonnote.application.port.in.ClassLessonNoteView`. */
+export interface ClassLessonNoteView {
+  id: string;
+  classId: string;
+  className: string;
+  /** ISO date (YYYY-MM-DD), or null for a note about the class as a whole. */
+  sessionDate: string | null;
+  topic: string;
+  content: LessonNoteContentView;
+  status: ClassLessonNoteStatus;
+  aiGenerated: boolean;
+  updatedAt: string;
+  publishedAt: string | null;
+  actions: ClassLessonNoteActionsView;
+}
+
+/** Mirrors backend `ClassLessonNoteSummary` - one list row. */
+export interface ClassLessonNoteSummary {
+  id: string;
+  sessionDate: string | null;
+  topic: string;
+  status: ClassLessonNoteStatus;
+  aiGenerated: boolean;
+  updatedAt: string;
+  publishedAt: string | null;
+}
+
+/** Mirrors backend `ClassLessonNoteListView`. `writable` is false for an archived/over-limit class, and always for a reader. */
+export interface ClassLessonNoteListView {
+  classId: string;
+  className: string;
+  writable: boolean;
+  notes: ClassLessonNoteSummary[];
+}
+
+/** Mirrors backend `CreatorLessonNoteController.SaveClassLessonNoteRequest`. */
+export interface SaveClassLessonNoteRequest {
+  sessionDate: string | null;
+  topic: string;
+  content: LessonNoteContentView;
+  aiGenerated?: boolean;
+}
+
+/** Mirrors backend `CreatorLessonNoteController.GenerateClassLessonNoteRequest`. */
+export interface GenerateClassLessonNoteRequest {
+  topic: string;
+  sessionDate: string | null;
+  audienceHint: string | null;
+  extraInstructions: string | null;
+}
+
+const classNotesBase = (classId: string) => `/api/v1/virtual-classes/${classId}/lesson-notes`;
+
+export function listClassLessonNotes(classId: string): Promise<ClassLessonNoteListView> {
+  return apiFetch<ClassLessonNoteListView>(classNotesBase(classId));
+}
+
+export function getClassLessonNote(classId: string, noteId: string): Promise<ClassLessonNoteView> {
+  return apiFetch<ClassLessonNoteView>(`${classNotesBase(classId)}/${noteId}`);
+}
+
+export function createClassLessonNote(
+  classId: string,
+  request: SaveClassLessonNoteRequest,
+): Promise<ClassLessonNoteView> {
+  return apiFetch<ClassLessonNoteView>(classNotesBase(classId), {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+export function updateClassLessonNote(
+  classId: string,
+  noteId: string,
+  request: SaveClassLessonNoteRequest,
+): Promise<ClassLessonNoteView> {
+  return apiFetch<ClassLessonNoteView>(`${classNotesBase(classId)}/${noteId}`, {
+    method: "PUT",
+    body: JSON.stringify(request),
+  });
+}
+
+export function publishClassLessonNote(classId: string, noteId: string): Promise<ClassLessonNoteView> {
+  return apiFetch<ClassLessonNoteView>(`${classNotesBase(classId)}/${noteId}/publish`, { method: "POST" });
+}
+
+export function unpublishClassLessonNote(classId: string, noteId: string): Promise<ClassLessonNoteView> {
+  return apiFetch<ClassLessonNoteView>(`${classNotesBase(classId)}/${noteId}/unpublish`, { method: "POST" });
+}
+
+export function deleteClassLessonNote(classId: string, noteId: string): Promise<void> {
+  return apiFetch<void>(`${classNotesBase(classId)}/${noteId}`, { method: "DELETE" });
+}
+
+/** A creator's AI draft for a class note - the same frames and pre-flight refusals as {@link generateLessonNote}. */
+export function generateClassLessonNote(
+  classId: string,
+  request: GenerateClassLessonNoteRequest,
+  handlers: GenerateLessonNoteHandlers,
+  signal?: AbortSignal,
+): Promise<void> {
+  return apiStream(
+    `${classNotesBase(classId)}/generate`,
+    (event, data) => {
+      if (event === "delta") {
+        handlers.onDelta((JSON.parse(data) as { text: string }).text);
+      } else if (event === "result") {
+        handlers.onResult(JSON.parse(data) as LessonNoteContentView);
+      } else if (event === "error") {
+        handlers.onError((JSON.parse(data) as { detail: string }).detail);
+      }
+    },
+    { method: "POST", body: JSON.stringify(request), signal },
+  );
+}
+
+/**
+ * Where a learner or guardian reads one class's published notes. A learner's own reads carry only
+ * the class; a guardian's also name the followed learner.
+ */
+export interface ClassNotesReader {
+  classId: string;
+  /** Set only for a guardian - the learner they follow. */
+  learnerId?: string;
+}
+
+function readerBase({ classId, learnerId }: ClassNotesReader): string {
+  return learnerId
+    ? `/api/v1/me/online-classes/${learnerId}/classes/${classId}/lesson-notes`
+    : `/api/v1/learner/classes/${classId}/lesson-notes`;
+}
+
+export function listPublishedClassLessonNotes(reader: ClassNotesReader): Promise<ClassLessonNoteListView> {
+  return apiFetch<ClassLessonNoteListView>(readerBase(reader));
+}
+
+export function getPublishedClassLessonNote(reader: ClassNotesReader, noteId: string): Promise<ClassLessonNoteView> {
+  return apiFetch<ClassLessonNoteView>(`${readerBase(reader)}/${noteId}`);
+}
+
+/** The narrow image path a reader's `<img>` resolves through - `/api/v1/files` never admits a learner or guardian. */
+export function classLessonNoteImagePath(reader: ClassNotesReader, noteId: string, fileId: string): string {
+  return `${readerBase(reader)}/${noteId}/images/${fileId}`;
+}
+
+/** Fetches an image by its full API path - the `useObjectUrl` fetcher for {@link classLessonNoteImagePath}. */
+export function downloadClassLessonNoteImage(path: string): Promise<Blob> {
+  return apiFetchBlob(path);
 }

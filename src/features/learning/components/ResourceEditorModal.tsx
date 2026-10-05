@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from "react";
+import type { ClassLearningResourceView } from "@/api/classLearningResources";
 import { ApiError } from "@/api/client";
 import { uploadFile, uploadLimitFor, uploadLimitLabel } from "@/api/files";
 import {
@@ -8,6 +9,7 @@ import {
   type LearningResourceType,
   type LearningResourceView,
   updateLearningResource,
+  type UpdateLearningResourceRequest,
 } from "@/api/learning";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -18,7 +20,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { RichTextField } from "@/components/richText/RichTextField";
-import { GalleryPickerModal } from "@/features/learning/components/GalleryPickerModal";
+import { type GalleryLoader, GalleryPickerModal } from "@/features/learning/components/GalleryPickerModal";
 import { formatDuration } from "@/utils/duration";
 import { instantToLocalDate, localDateToEndInstant, localDateToStartInstant } from "@/utils/date";
 
@@ -68,15 +70,30 @@ function probeMediaDuration(file: File, kind: "audio" | "video"): Promise<number
   });
 }
 
+/** An existing resource the form edits - a school resource, or a creator's class resource (creators Phase C14). */
+export type EditableLearningResource = LearningResourceView | ClassLearningResourceView;
+
+/** The payload {@link ResourceEditorModalProps.save} receives - `resourceType` is the one picked on create, or the resource's own on edit. */
+export type ResourceEditorPayload = UpdateLearningResourceRequest & { resourceType: LearningResourceType };
+
 interface ResourceEditorModalProps {
   classId: string;
-  subjectId: string;
-  termId: string;
-  subjects: AuthorableSubjectView[];
+  subjectId?: string;
+  termId?: string;
+  subjects?: AuthorableSubjectView[];
   /** Present -> edit an existing resource. Absent -> create a new one, in `subjectId` above. */
-  resource?: LearningResourceView;
+  resource?: EditableLearningResource;
   /** Whether the caller may author an `AUDIO`/`VIDEO` resource - `can.authorLearningMedia` (Phase 35F), evaluated by the parent since it needs the `learningMedia` feature flag. */
   canAuthorMedia: boolean;
+  /**
+   * Overrides where the form saves (creators Phase C14: a creator's class resource) - when absent,
+   * it creates/updates a school resource in `classId`/`subjectId`/`termId`.
+   */
+  save?: (payload: ResourceEditorPayload) => Promise<unknown>;
+  /** Overrides where "Choose from gallery" lists files from - passed straight to `GalleryPickerModal`. */
+  loadGallery?: GalleryLoader;
+  /** Who the availability window hides the resource from, in its hint - "Students" unless overridden. */
+  audienceLabel?: string;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -96,16 +113,21 @@ interface ResourceEditorModalProps {
  */
 export function ResourceEditorModal({
   classId,
-  subjectId,
-  termId,
-  subjects,
+  subjectId = "",
+  termId = "",
+  subjects = [],
   resource,
   canAuthorMedia,
+  save,
+  loadGallery,
+  audienceLabel = "Students",
   onClose,
   onSaved,
 }: ResourceEditorModalProps) {
   const isEdit = resource != null;
-  const [targetSubjectId, setTargetSubjectId] = useState(resource?.subjectId ?? subjectId);
+  const [targetSubjectId, setTargetSubjectId] = useState(
+    resource && "subjectId" in resource ? resource.subjectId : subjectId,
+  );
   const [resourceType, setResourceType] = useState<LearningResourceType>(resource?.resourceType ?? "RICH_TEXT");
   const [title, setTitle] = useState(resource?.title ?? "");
   const [description, setDescription] = useState(resource?.description ?? "");
@@ -178,7 +200,9 @@ export function ResourceEditorModal({
         availableFrom: localDateToStartInstant(availableFromDate),
         availableUntil: localDateToEndInstant(availableUntilDate),
       };
-      if (isEdit) {
+      if (save) {
+        await save({ ...payload, resourceType: resource?.resourceType ?? resourceType });
+      } else if (isEdit) {
         await updateLearningResource(resource.id, payload);
       } else {
         await createLearningResource({
@@ -341,7 +365,7 @@ export function ResourceEditorModal({
             <FormField
               label="Available until"
               htmlFor="resource-available-until"
-              description="Students only see this resource within this window. Leave blank for no end limit."
+              description={`${audienceLabel} only see this resource within this window. Leave blank for no end limit.`}
             >
               <DateInput
                 id="resource-available-until"
@@ -371,6 +395,7 @@ export function ResourceEditorModal({
           subjectId={targetSubjectId}
           resourceType={resourceType}
           selectedFileId={fileId}
+          loadPage={loadGallery}
           onPick={handleGalleryPick}
           onClose={() => setGalleryOpen(false)}
         />

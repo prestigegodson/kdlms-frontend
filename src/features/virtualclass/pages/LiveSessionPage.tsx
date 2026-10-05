@@ -1,14 +1,16 @@
 import "@livekit/components-styles";
 import { LiveKitRoom, PreJoin, VideoConference, useDataChannel, type LocalUserChoices } from "@livekit/components-react";
+import { DisconnectReason } from "livekit-client";
 import { ArrowLeft, Eye } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { getErrorMessage } from "@/api/client";
-import { joinLiveSession, parseSessionEnding, type JoinView } from "@/api/liveSessions";
+import { endLiveSession, joinLiveSession, parseSessionEnding, type JoinView } from "@/api/liveSessions";
 import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { homePathForRole } from "@/routes/roleHome";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -16,8 +18,10 @@ import { useAuthStore } from "@/stores/authStore";
  * A virtual class's live session (creators.md Phase C6, §9). A creator or learner first checks
  * their camera and microphone (LiveKit's `PreJoin`); a guardian joins as an observer with nothing
  * to publish, so skips it. Joining asks the server for a token - which decides whether this caller
- * may enter this session now - and then connects to LiveKit's `VideoConference`. Leaving, or the
- * room closing at the plan's session length, returns to the portal home.
+ * may enter this session now - and then connects to LiveKit's `VideoConference`. The creator can
+ * also end the session for everyone, after confirming. Leaving returns to the portal home; the room
+ * closing under a participant (ended by the creator, or at the plan's session length) shows that
+ * the session has ended.
  */
 export function LiveSessionPage() {
   const { occurrenceId = "" } = useParams();
@@ -29,6 +33,8 @@ export function LiveSessionPage() {
   const [choices, setChoices] = useState<LocalUserChoices | null>(null);
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingEnd, setConfirmingEnd] = useState(false);
+  const [ended, setEnded] = useState(false);
 
   const enter = useCallback(
     async (userChoices: LocalUserChoices | null) => {
@@ -47,6 +53,25 @@ export function LiveSessionPage() {
     [occurrenceId],
   );
 
+  if (ended) {
+    return (
+      <div className="min-h-dvh bg-slate-50 px-4 py-6">
+        <div className="mx-auto flex max-w-2xl flex-col gap-4">
+          <h1 className="font-display text-xl font-semibold text-slate-900">Live session</h1>
+          <Card>
+            <p className="text-sm text-slate-700">This session has ended.</p>
+            <Link
+              to={home}
+              className="mt-4 inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back
+            </Link>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   if (session) {
     const audio = canPublish && choices?.audioEnabled ? { deviceId: choices.audioDeviceId || undefined } : false;
     const video = canPublish && choices?.videoEnabled ? { deviceId: choices.videoDeviceId || undefined } : false;
@@ -57,10 +82,19 @@ export function LiveSessionPage() {
         connect
         audio={audio}
         video={video}
-        onDisconnected={() => navigate(home)}
+        onDisconnected={(reason) => {
+          if (reason === DisconnectReason.ROOM_DELETED) {
+            setEnded(true);
+          } else {
+            navigate(home);
+          }
+        }}
         onError={(err) => setError(err.message)}
         data-lk-theme="default"
-        className="flex h-dvh flex-col"
+        className="flex flex-col"
+        // Inline, not `h-dvh`: LiveKit's unlayered `.lk-room-container{height:100%}` beats Tailwind's
+        // layered utilities, and 100% of an auto-height #root collapses the room to its content.
+        style={{ height: "100dvh" }}
       >
         <header className="flex items-center justify-between gap-3 px-4 py-2 text-sm text-white">
           <span className="truncate font-medium">{session.className}</span>
@@ -69,7 +103,25 @@ export function LiveSessionPage() {
               <Eye className="h-4 w-4" aria-hidden="true" /> Watching
             </span>
           )}
+          {session.role === "CREATOR" && (
+            <Button type="button" variant="danger" size="sm" onClick={() => setConfirmingEnd(true)}>
+              End for everyone
+            </Button>
+          )}
         </header>
+        {confirmingEnd && (
+          <ConfirmDialog
+            title="End session for everyone?"
+            message="Everyone in the room will be disconnected and the session can't be rejoined."
+            confirmLabel="End session"
+            variant="danger"
+            onConfirm={async () => {
+              await endLiveSession(session.occurrenceId);
+              navigate(home);
+            }}
+            onClose={() => setConfirmingEnd(false)}
+          />
+        )}
         <SessionEndingNotice />
         <div className="min-h-0 flex-1">
           <VideoConference />
@@ -93,6 +145,9 @@ export function LiveSessionPage() {
               <PreJoin
                 joinLabel={joining ? "Joining…" : "Join session"}
                 persistUserChoices={false}
+                // PreJoin's default validation requires a username, but the field is hidden (the
+                // server names the participant), so it would keep the join button disabled forever.
+                onValidate={() => !joining}
                 onSubmit={(values) => void enter(values)}
                 onError={(err) => setError(err.message)}
               />

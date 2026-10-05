@@ -86,6 +86,11 @@ export function joinLiveSession(occurrenceId: string): Promise<JoinView> {
   return apiFetch<JoinView>(`/api/v1/virtual-classes/occurrences/${occurrenceId}/join`, { method: "POST" });
 }
 
+/** The creator ends the session for everyone: the room closes and nobody can rejoin. */
+export function endLiveSession(occurrenceId: string): Promise<void> {
+  return apiFetch<void>(`/api/v1/virtual-classes/occurrences/${occurrenceId}/end`, { method: "POST" });
+}
+
 export function getOccurrenceAttendance(occurrenceId: string): Promise<OccurrenceAttendance> {
   return apiFetch<OccurrenceAttendance>(`/api/v1/virtual-classes/occurrences/${occurrenceId}/attendance`);
 }

@@ -12,6 +12,8 @@ interface ResultsTableProps {
   onAdjust: (row: StudentResultRowView) => void;
   onClearAdjustment: (row: StudentResultRowView) => void;
   onReset: (row: StudentResultRowView) => void;
+  /** The first column's heading - "Learner" on a creator's class quiz (creators Phase C13). */
+  participantLabel?: string;
 }
 
 const STATE_LABELS: Record<TakeHomeQuizAttemptState, string> = {
@@ -45,12 +47,13 @@ export function ResultsTable({
   onAdjust,
   onClearAdjustment,
   onReset,
+  participantLabel = "Student",
 }: ResultsTableProps) {
   return (
     <Table>
       <TableHead>
         <TableRow>
-          <TableHeaderCell>Student</TableHeaderCell>
+          <TableHeaderCell>{participantLabel}</TableHeaderCell>
           <TableHeaderCell>State</TableHeaderCell>
           <TableHeaderCell>Score</TableHeaderCell>
           <TableHeaderCell>Submitted</TableHeaderCell>
@@ -60,7 +63,7 @@ export function ResultsTable({
       <TableBody>
         {rows.map((row) => (
           <TableRow key={row.studentId}>
-            <TableCell label="Student">
+            <TableCell label={participantLabel}>
               <div>
                 <div className="font-medium text-slate-900">{row.fullName}</div>
                 <div className="text-xs text-slate-500">{row.admissionNumber}</div>
