@@ -51,7 +51,7 @@ export function CopySubjectsModal({
     if (!sourceLevelId) {
       return;
     }
-    // An explicit page size, larger than the page's default of 50 - a
+    // An explicit page size, larger than the page's default of 100 - a
     // truncated picker would silently drop subjects from the copy.
     listSubjects(sourceLevelId, 0, 200)
       .then((page) => {
