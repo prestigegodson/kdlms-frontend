@@ -120,7 +120,8 @@ export function LearningResourcePreviewPage() {
   }
 
   const duration = formatDuration(resource.durationSeconds);
-  const description = [resource.className, resource.subjectName, duration].filter(Boolean).join(" · ");
+  const subjectLabel = resource.subjectGroupId ? `${resource.subjectName} (subject group)` : resource.subjectName;
+  const description = [resource.className, subjectLabel, duration].filter(Boolean).join(" · ");
   const fileExtension = resource.resourceType === "AUDIO" ? "mp3" : resource.resourceType === "VIDEO" ? "mp4" : "pdf";
 
   return (
@@ -181,9 +182,7 @@ export function LearningResourcePreviewPage() {
       {editing && (
         <ResourceEditorModal
           classId={resource.classId}
-          subjectId={resource.subjectId}
           termId={resource.termId}
-          subjects={[{ subjectId: resource.subjectId, subjectName: resource.subjectName }]}
           resource={resource}
           canAuthorMedia={canAuthorMedia}
           onClose={() => setEditing(false)}

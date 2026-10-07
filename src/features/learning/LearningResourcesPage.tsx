@@ -4,9 +4,11 @@ import { useNavigate, useSearchParams } from "react-router";
 import { ApiError } from "@/api/client";
 import { listClasses, type SchoolClassView } from "@/api/classes";
 import {
+  type AuthorableSubjectGroupView,
   type AuthorableSubjectView,
   archiveLearningResource,
   deleteLearningResource,
+  getAuthorableSubjectGroups,
   getAuthorableSubjects,
   type LearningResourceStatus,
   type LearningResourceSummaryView,
@@ -41,6 +43,7 @@ import {
   LEARNING_RESOURCE_STATUS_VARIANT,
   learningResourceAvailabilityBadge,
 } from "@/features/learning/learningResourceStatus";
+import { groupTargetKey, parseTargetKey } from "@/features/learning/resourceTarget";
 import { useIsLevelHead } from "@/features/levelHeads/useLevelHead";
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
@@ -59,7 +62,9 @@ const TYPE_LABEL: Record<string, string> = {
  * the `TakeHomeQuizzesPage` shape: a class+term(+subject) picker, then the resource table for that
  * selection. Reorder (backend-supported) has no drag-and-drop UI yet - out of this phase's scope.
  * An optional `?classId=&subjectId=` (from SubjectsPage's "Learning resources" row action) seeds
- * the initial class + subject selection.
+ * the initial class + subject selection. The Subject picker also offers the class's subject groups
+ * (Phase 35M) to whole-class staff: a group's resources cover every subject in it, and a subject's
+ * own list takes in its group's resources too, labelled with a "Group" badge.
  */
 export function LearningResourcesPage() {
   const navigate = useNavigate();
@@ -79,9 +84,12 @@ export function LearningResourcesPage() {
   const [teacherClasses, setTeacherClasses] = useState<TeacherClassView[] | null>(null);
   const [classId, setClassId] = useState(searchParams.get("classId") ?? "");
   const [termId, setTermId] = useState("");
-  const [subjectId, setSubjectId] = useState(searchParams.get("subjectId") ?? "");
+  // A target key (`resourceTarget.ts`): a subject's bare id, or `group:<id>` for a subject group.
+  const [targetKey, setTargetKey] = useState(searchParams.get("subjectId") ?? "");
   const [status, setStatus] = useState<LearningResourceStatus | "">("");
   const [subjects, setSubjects] = useState<AuthorableSubjectView[] | null>(null);
+  const [subjectGroups, setSubjectGroups] = useState<AuthorableSubjectGroupView[]>([]);
+  const target = parseTargetKey(targetKey);
 
   const [pageIndex, setPageIndex] = useState(0);
   const [page, setPage] = useState<Page<LearningResourceSummaryView> | null>(null);
@@ -112,11 +120,12 @@ export function LearningResourcesPage() {
   const [lastClassId, setLastClassId] = useState(classId);
   if (classId !== lastClassId) {
     setLastClassId(classId);
-    setSubjectId("");
+    setTargetKey("");
     setSubjects(null);
+    setSubjectGroups([]);
   }
 
-  const selectionKey = `${classId}|${termId}|${subjectId}|${status}`;
+  const selectionKey = `${classId}|${termId}|${targetKey}|${status}`;
   const [lastSelectionKey, setLastSelectionKey] = useState(selectionKey);
   if (selectionKey !== lastSelectionKey) {
     setLastSelectionKey(selectionKey);
@@ -130,18 +139,22 @@ export function LearningResourcesPage() {
     getAuthorableSubjects(classId)
       .then(setSubjects)
       .catch(() => setSubjects([]));
+    getAuthorableSubjectGroups(classId)
+      .then(setSubjectGroups)
+      .catch(() => setSubjectGroups([]));
   }, [classId]);
 
   function refresh() {
     if (!classId || !termId) return;
-    listLearningResources(classId, termId, subjectId || undefined, status || undefined, pageIndex, 20)
+    const filter = targetKey ? parseTargetKey(targetKey) : undefined;
+    listLearningResources(classId, termId, filter, status || undefined, pageIndex, 20)
       .then(setPage)
       .catch((error: unknown) =>
         setLoadError(error instanceof ApiError ? error.message : "Failed to load learning resources"),
       );
   }
 
-  useEffect(refresh, [classId, termId, subjectId, status, pageIndex]);
+  useEffect(refresh, [classId, termId, targetKey, status, pageIndex]);
 
   const classes = isTeacher ? teacherClasses : adminClasses;
   const classesLoaded = classes !== null;
@@ -160,9 +173,28 @@ export function LearningResourcesPage() {
     }
   }
 
+  /**
+   * A group resource the caller can't author for (a subject teacher of one of its subjects sees it
+   * on their list, Phase 35M) is read-only - the server refuses every change to it.
+   */
+  function isReadOnly(resource: LearningResourceSummaryView) {
+    return (
+      resource.subjectGroupId != null &&
+      !subjectGroups.some((group) => group.subjectGroupId === resource.subjectGroupId)
+    );
+  }
+
   function resourceActions(resource: LearningResourceSummaryView) {
+    const preview = {
+      label: "Preview",
+      icon: Eye,
+      onSelect: () => navigate(`/school/learning-resources/${resource.id}`),
+    };
+    if (isReadOnly(resource)) {
+      return [preview];
+    }
     return [
-      { label: "Preview", icon: Eye, onSelect: () => navigate(`/school/learning-resources/${resource.id}`) },
+      preview,
       { label: "Edit", icon: Pencil, onSelect: () => setEditing({ resourceId: resource.id }) },
       { label: "Comments", icon: MessageSquare, onSelect: () => setModeratingResourceId(resource.id) },
       ...(canViewCompletions
@@ -220,7 +252,7 @@ export function LearningResourcesPage() {
           canAuthor &&
           classId &&
           termId &&
-          subjectId && <Button variant="accent" onClick={() => setEditing({ resourceId: null })}>Add resource</Button>
+          targetKey && <Button variant="accent" onClick={() => setEditing({ resourceId: null })}>Add resource</Button>
         }
       />
 
@@ -247,15 +279,34 @@ export function LearningResourcesPage() {
                 <FormField label="Subject" htmlFor="learning-resource-subject">
                   <Select
                     id="learning-resource-subject"
-                    value={subjectId}
-                    onChange={(event) => setSubjectId(event.target.value)}
+                    value={targetKey}
+                    onChange={(event) => setTargetKey(event.target.value)}
                   >
                     <option value="">Select a subject…</option>
-                    {(subjects ?? []).map((subject) => (
-                      <option key={subject.subjectId} value={subject.subjectId}>
-                        {subject.subjectName}
-                      </option>
-                    ))}
+                    {subjectGroups.length === 0 ? (
+                      (subjects ?? []).map((subject) => (
+                        <option key={subject.subjectId} value={subject.subjectId}>
+                          {subject.subjectName}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <optgroup label="Subject groups">
+                          {subjectGroups.map((group) => (
+                            <option key={group.subjectGroupId} value={groupTargetKey(group.subjectGroupId)}>
+                              {group.subjectGroupName}
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="Subjects">
+                          {(subjects ?? []).map((subject) => (
+                            <option key={subject.subjectId} value={subject.subjectId}>
+                              {subject.subjectName}
+                            </option>
+                          ))}
+                        </optgroup>
+                      </>
+                    )}
                   </Select>
                 </FormField>
               )}
@@ -310,7 +361,12 @@ export function LearningResourcesPage() {
               {page.content.map((resource) => (
                 <TableRow key={resource.id} to={`/school/learning-resources/${resource.id}`}>
                   <TableCell label="Title">{resource.title}</TableCell>
-                  <TableCell label="Subject">{resource.subjectName}</TableCell>
+                  <TableCell label="Subject">
+                    <div className="flex flex-wrap items-center gap-1">
+                      {resource.subjectName}
+                      {resource.subjectGroupId && <Badge variant="info">Group</Badge>}
+                    </div>
+                  </TableCell>
                   <TableCell label="Type">{TYPE_LABEL[resource.resourceType] ?? resource.resourceType}</TableCell>
                   <TableCell label="Status">
                     <div className="flex flex-wrap items-center gap-1">
@@ -350,12 +406,14 @@ export function LearningResourcesPage() {
         </>
       )}
 
-      {editing && classId && subjectId && termId && (
+      {editing && classId && targetKey && termId && (
         <ResourceEditorEntry
           classId={classId}
-          subjectId={subjectId}
+          subjectId={target.subjectId ?? ""}
+          subjectGroupId={target.subjectGroupId ?? ""}
           termId={termId}
           subjects={subjects ?? []}
+          subjectGroups={subjectGroups}
           resourceId={editing.resourceId}
           canAuthorMedia={canAuthorMedia}
           onClose={() => setEditing(null)}
@@ -408,8 +466,10 @@ export function LearningResourcesPage() {
 function ResourceEditorEntry({
   classId,
   subjectId,
+  subjectGroupId,
   termId,
   subjects,
+  subjectGroups,
   resourceId,
   canAuthorMedia,
   onClose,
@@ -417,8 +477,10 @@ function ResourceEditorEntry({
 }: {
   classId: string;
   subjectId: string;
+  subjectGroupId: string;
   termId: string;
   subjects: AuthorableSubjectView[];
+  subjectGroups: AuthorableSubjectGroupView[];
   resourceId: string | null;
   canAuthorMedia: boolean;
   onClose: () => void;
@@ -450,8 +512,10 @@ function ResourceEditorEntry({
     <ResourceEditorModal
       classId={classId}
       subjectId={subjectId}
+      subjectGroupId={subjectGroupId}
       termId={termId}
       subjects={subjects}
+      subjectGroups={subjectGroups}
       resource={loaded.resource}
       canAuthorMedia={canAuthorMedia}
       onClose={onClose}

@@ -45,6 +45,32 @@ function fileOfSize(name: string, type: string, sizeBytes: number): File {
 beforeEach(() => vi.clearAllMocks());
 
 describe("ResourceEditorModal", () => {
+  it("creates a resource for a subject group picked beside the subjects", async () => {
+    vi.mocked(learningApi.createLearningResource).mockResolvedValue({} as learningApi.LearningResourceView);
+    render(
+      <ResourceEditorModal
+        classId="class-1"
+        subjectId="subject-1"
+        termId="term-1"
+        subjects={SUBJECTS}
+        subjectGroups={[{ subjectGroupId: "group-1", subjectGroupName: "Sciences" }]}
+        canAuthorMedia={false}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByLabelText("Subject"), "Sciences");
+    await user.selectOptions(screen.getByLabelText("Type"), "YOUTUBE");
+    await user.type(screen.getByLabelText("Title"), "Lab safety");
+    await user.type(screen.getByLabelText("YouTube URL"), "https://youtu.be/dQw4w9WgXcQ");
+    await user.click(screen.getByRole("button", { name: "Add resource" }));
+
+    expect(learningApi.createLearningResource).toHaveBeenCalledWith(
+      expect.objectContaining({ classId: "class-1", subjectId: null, subjectGroupId: "group-1", termId: "term-1" }),
+    );
+  });
+
   it("hides the Audio/Video type options when the caller can't author media", () => {
     renderModal(false);
     const typeSelect = screen.getByLabelText("Type");

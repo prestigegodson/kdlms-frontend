@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { can } from "@/auth/permissions";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useFeatureStore } from "@/stores/featureStore";
+import { useNewResourcesStore } from "@/stores/newResourcesStore";
 import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 import { useStudentStore } from "@/stores/studentStore";
 
@@ -20,6 +21,8 @@ const NAV_ITEMS: NavItem[] = [
     // Gated on the school's On-demand learning package entitlement - see auth/permissions.ts's
     // viewStudentResources.
     visible: () => can.viewStudentResources("STUDENT", useFeatureStore.getState().onDemandLearning),
+    // Resources the student has never opened.
+    badge: () => useNewResourcesStore.getState().count || null,
   },
   {
     label: "Quizzes",
@@ -53,12 +56,21 @@ export function StudentLayout() {
   useFeatureStore((state) => state.onDemandLearning);
   useFeatureStore((state) => state.takeHomeQuiz);
   useFeatureStore((state) => state.timetable);
+  const onDemandLearning = useFeatureStore((state) => state.onDemandLearning);
+  // Subscribed for the same reason - the Resources badge re-evaluates when the count changes.
+  useNewResourcesStore((state) => state.count);
+  const fetchNewResources = useNewResourcesStore((state) => state.fetchIfNeeded);
 
   useEffect(() => {
     fetchStudent();
     fetchFeatures();
     fetchSchoolBranding();
   }, [fetchStudent, fetchFeatures, fetchSchoolBranding]);
+
+  // Only once the school is known to have On-demand learning - the count endpoint 403s otherwise.
+  useEffect(() => {
+    if (onDemandLearning) fetchNewResources();
+  }, [onDemandLearning, fetchNewResources]);
 
   return <PortalShell portalName="Student" navItems={NAV_ITEMS} />;
 }

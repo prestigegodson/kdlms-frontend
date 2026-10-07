@@ -87,6 +87,7 @@ import { SchoolsPage } from "@/features/schools/SchoolsPage";
 import { StudentDashboardPage } from "@/features/student/StudentDashboardPage";
 import { StudentQuizPage } from "@/features/student/StudentQuizPage";
 import { StudentQuizzesPage } from "@/features/student/StudentQuizzesPage";
+import { StudentResourceCardPage } from "@/features/student/StudentResourceCardPage";
 import { StudentResourceDetailPage } from "@/features/student/StudentResourceDetailPage";
 import { StudentResourcesPage } from "@/features/student/StudentResourcesPage";
 import { StudentTimetablePage } from "@/features/student/StudentTimetablePage";
@@ -455,6 +456,8 @@ export const routes: RouteObject[] = [
           { index: true, element: <StudentDashboardPage /> },
           { path: "help", element: <HowToGuidesPage /> },
           { path: "resources", element: <StudentResourcesPage /> },
+          { path: "resources/subject/:cardId", element: <StudentResourceCardPage kind="SUBJECT" /> },
+          { path: "resources/group/:cardId", element: <StudentResourceCardPage kind="GROUP" /> },
           { path: "resources/:resourceId", element: <StudentResourceDetailPage /> },
           { path: "quizzes", element: <StudentQuizzesPage /> },
           { path: "quizzes/:quizId", element: <StudentQuizPage /> },

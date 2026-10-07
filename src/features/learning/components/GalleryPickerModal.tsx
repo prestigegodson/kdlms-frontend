@@ -31,7 +31,9 @@ export type GalleryLoader = (params: {
 
 interface GalleryPickerModalProps {
   classId: string;
-  subjectId: string;
+  /** What the resource is being authored for - exactly one of these (a subject group since Phase 35M). */
+  subjectId?: string | null;
+  subjectGroupId?: string | null;
   resourceType: LearningResourceType;
   selectedFileId: string | null;
   /** When present, replaces the school gallery's own level+branch-scoped listing. */
@@ -54,7 +56,8 @@ interface GalleryPickerModalProps {
  */
 export function GalleryPickerModal({
   classId,
-  subjectId,
+  subjectId = null,
+  subjectGroupId = null,
   resourceType,
   selectedFileId,
   loadPage,
@@ -70,7 +73,7 @@ export function GalleryPickerModal({
   // idiom) - any dependency change means the in-flight/last-shown page no longer answers the new
   // query, so `page`/`error` go back to "loading" synchronously instead of via a setState call
   // inside the effect body.
-  const queryKey = `${classId}|${subjectId}|${resourceType}|${search}|${pageNumber}`;
+  const queryKey = `${classId}|${subjectId}|${subjectGroupId}|${resourceType}|${search}|${pageNumber}`;
   const [lastQueryKey, setLastQueryKey] = useState(queryKey);
   if (queryKey !== lastQueryKey) {
     setLastQueryKey(queryKey);
@@ -82,7 +85,15 @@ export function GalleryPickerModal({
     let cancelled = false;
     const request = loadPage
       ? loadPage({ resourceType, search, page: pageNumber, size: PAGE_SIZE })
-      : listLearningGalleryFiles({ classId, subjectId, resourceType, search, page: pageNumber, size: PAGE_SIZE });
+      : listLearningGalleryFiles({
+          classId,
+          subjectId,
+          subjectGroupId,
+          resourceType,
+          search,
+          page: pageNumber,
+          size: PAGE_SIZE,
+        });
     request
       .then((result) => {
         if (!cancelled) setPage(result);
@@ -93,7 +104,7 @@ export function GalleryPickerModal({
     return () => {
       cancelled = true;
     };
-  }, [classId, subjectId, resourceType, search, pageNumber, loadPage]);
+  }, [classId, subjectId, subjectGroupId, resourceType, search, pageNumber, loadPage]);
 
   const loading = page === null && error === null;
 

@@ -19,6 +19,7 @@ vi.mock("@/api/learning", async () => {
     ...actual,
     listLearningResources: vi.fn(),
     getAuthorableSubjects: vi.fn(),
+    getAuthorableSubjectGroups: vi.fn(),
     getLearningResource: vi.fn(),
     publishLearningResource: vi.fn(),
     unpublishLearningResource: vi.fn(),
@@ -152,6 +153,7 @@ describe("LearningResourcesPage", () => {
     vi.mocked(learningApi.getAuthorableSubjects).mockResolvedValue([
       { subjectId: "subject-1", subjectName: "Mathematics" },
     ]);
+    vi.mocked(learningApi.getAuthorableSubjectGroups).mockResolvedValue([]);
     vi.mocked(learningApi.listLearningResources).mockResolvedValue({
       content: [RESOURCE_ROW],
       totalElements: 1,
@@ -187,11 +189,57 @@ describe("LearningResourcesPage", () => {
     expect(learningApi.listLearningResources).toHaveBeenCalledWith(
       "class-1",
       "term-1",
-      "subject-1",
+      { subjectId: "subject-1", subjectGroupId: null },
       undefined,
       0,
       20,
     );
+  });
+
+  it("offers subject groups beside subjects, lists a group's resources, and badges group rows", async () => {
+    vi.mocked(learningApi.getAuthorableSubjectGroups).mockResolvedValue([
+      { subjectGroupId: "group-1", subjectGroupName: "Sciences" },
+    ]);
+    vi.mocked(learningApi.listLearningResources).mockResolvedValue({
+      content: [{ ...RESOURCE_ROW, title: "Lab safety", subjectName: "Sciences", subjectGroupId: "group-1" }],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 20,
+    });
+    renderAs("TEACHER");
+    const user = userEvent.setup();
+    await user.selectOptions(await screen.findByLabelText("Class"), "JSS 1A");
+    const subjectPicker = await screen.findByLabelText("Subject");
+    expect(await within(subjectPicker).findByRole("group", { name: "Subject groups" })).toBeInTheDocument();
+    await user.selectOptions(subjectPicker, "Sciences");
+
+    const row = (await screen.findByText("Lab safety")).closest("tr") as HTMLElement;
+    expect(within(row).getByText("Group")).toBeInTheDocument();
+    expect(learningApi.listLearningResources).toHaveBeenLastCalledWith(
+      "class-1",
+      "term-1",
+      { subjectId: null, subjectGroupId: "group-1" },
+      undefined,
+      0,
+      20,
+    );
+  });
+
+  it("shows a group resource the caller can't author for with only a Preview action", async () => {
+    vi.mocked(learningApi.listLearningResources).mockResolvedValue({
+      content: [{ ...RESOURCE_ROW, title: "Lab safety", subjectName: "Sciences", subjectGroupId: "group-1" }],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 20,
+    });
+    renderAs("TEACHER");
+    const user = await selectClassAndSubject();
+
+    await openRowMenu(user, "Lab safety");
+    expect(screen.getByRole("menuitem", { name: "Preview" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Edit" })).not.toBeInTheDocument();
   });
 
   it("seeds the class and subject from ?classId=&subjectId= (SubjectsPage's row action)", async () => {
@@ -202,7 +250,7 @@ describe("LearningResourcesPage", () => {
     expect(learningApi.listLearningResources).toHaveBeenCalledWith(
       "class-1",
       "term-1",
-      "subject-1",
+      { subjectId: "subject-1", subjectGroupId: null },
       undefined,
       0,
       20,

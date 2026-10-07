@@ -10,11 +10,20 @@ export interface AuthorableSubjectView {
   subjectName: string;
 }
 
+/** Mirrors backend learning.application.port.in.AuthorableSubjectGroupView (Phase 35M). */
+export interface AuthorableSubjectGroupView {
+  subjectGroupId: string;
+  subjectGroupName: string;
+}
+
 /** Mirrors backend learning.application.port.in.LearningResourceSummaryView - one row of the staff list. */
 export interface LearningResourceSummaryView {
   id: string;
   title: string;
+  /** The subject's name - or, for a resource targeting a subject group (Phase 35M), the group's. */
   subjectName: string;
+  /** Set when the resource targets a whole subject group rather than one subject (Phase 35M). */
+  subjectGroupId?: string | null;
   resourceType: LearningResourceType;
   status: LearningResourceStatus;
   position: number;
@@ -38,8 +47,12 @@ export interface LearningResourceView {
   id: string;
   classId: string;
   className: string;
-  subjectId: string;
+  /** Null for a resource targeting a subject group (Phase 35M). */
+  subjectId: string | null;
+  /** The subject's name - or the group's, for a group resource. */
   subjectName: string;
+  /** Set when the resource targets a whole subject group rather than one subject (Phase 35M). */
+  subjectGroupId?: string | null;
   termId: string;
   title: string;
   description: string | null;
@@ -59,10 +72,11 @@ export interface LearningResourceView {
   updatedAt: string;
 }
 
-/** Mirrors backend learning.adapter.in.web.LearningResourceController.CreateLearningResourceRequest. Exactly one of `bodyHtml`/`fileId`/`youtubeUrl` applies, matching `resourceType`. */
+/** Mirrors backend learning.adapter.in.web.LearningResourceController.CreateLearningResourceRequest. Exactly one of `bodyHtml`/`fileId`/`youtubeUrl` applies, matching `resourceType`; exactly one of `subjectId`/`subjectGroupId` (Phase 35M). */
 export interface CreateLearningResourceRequest {
   classId: string;
-  subjectId: string;
+  subjectId: string | null;
+  subjectGroupId: string | null;
   termId: string;
   title: string;
   description: string | null;
@@ -94,14 +108,27 @@ export interface MyLearningResourceSummaryView {
   id: string;
   title: string;
   description: string | null;
+  /** The subject's name - or, for a resource targeting a subject group (Phase 35M), the group's. */
   subjectName: string;
+  /** Set when the resource targets a whole subject group rather than one subject (Phase 35M). */
+  subjectGroupId?: string | null;
   resourceType: LearningResourceType;
   durationSeconds: number | null;
   position: number;
   completed: boolean;
   /** Set only when the resource has an end of its availability window (Phase 35L) - shown as an "Available until ..." hint; the row is simply absent from this list once it's actually passed, so this is never used client-side to decide visibility. */
   availableUntil: string | null;
+  /** The Resources page card this row sits on - a subject's group when it has one, else the subject. Absent on a creator's class-resource row. */
+  cardKind?: MyResourceCardKind | null;
+  cardId?: string | null;
+  cardName?: string | null;
+  /** When the student could first see it - the later of its publish time and `availableFrom`; orders the cards. */
+  visibleSince?: string | null;
+  /** Whether the student has ever opened it - an unopened row is "new". */
+  opened?: boolean | null;
 }
+
+export type MyResourceCardKind = "SUBJECT" | "GROUP";
 
 /** Mirrors backend learning.application.port.in.MyLearningResourceView - the calling STUDENT's own full detail. No `fileId` - a file's bytes come from this same resource's own `/file` endpoint. `fileSizeBytes` (Phase 35F) is present only for a file-backed type (`PDF`/`AUDIO`/`VIDEO`) - it lets the player show a determinate progress bar before the first byte arrives. `completed`/`positionSeconds` (Phase 35H) are the caller's own current interaction state - `positionSeconds` seeds an audio/video player's resume point. */
 export interface MyLearningResourceView {
@@ -194,16 +221,24 @@ export interface StudentCompletionView {
 
 const BASE = "/api/v1/learning-resources";
 
+/** A school resource's target (Phase 35M): one subject, or a whole subject group - exactly one is set. */
+export interface ResourceTarget {
+  subjectId: string | null;
+  subjectGroupId: string | null;
+}
+
+/** `target` narrows to one subject (which also takes in its own group's resources) or one subject group; omitted means every resource the caller may see. */
 export function listLearningResources(
   classId: string,
   termId: string,
-  subjectId?: string,
+  target?: Partial<ResourceTarget>,
   status?: LearningResourceStatus,
   page = 0,
   size = 20,
 ): Promise<Page<LearningResourceSummaryView>> {
   const params = new URLSearchParams({ classId, termId, page: String(page), size: String(size) });
-  if (subjectId) params.set("subjectId", subjectId);
+  if (target?.subjectId) params.set("subjectId", target.subjectId);
+  if (target?.subjectGroupId) params.set("subjectGroupId", target.subjectGroupId);
   if (status) params.set("status", status);
   return apiFetch<Page<LearningResourceSummaryView>>(`${BASE}?${params.toString()}`);
 }
@@ -214,6 +249,11 @@ export function getLearningResource(resourceId: string): Promise<LearningResourc
 
 export function getAuthorableSubjects(classId: string): Promise<AuthorableSubjectView[]> {
   return apiFetch<AuthorableSubjectView[]>(`${BASE}/authorable-subjects?classId=${classId}`);
+}
+
+/** The subject groups the caller may author for on `classId` (Phase 35M) - empty for a subject-only teacher. */
+export function getAuthorableSubjectGroups(classId: string): Promise<AuthorableSubjectGroupView[]> {
+  return apiFetch<AuthorableSubjectGroupView[]>(`${BASE}/authorable-subject-groups?classId=${classId}`);
 }
 
 export function createLearningResource(request: CreateLearningResourceRequest): Promise<LearningResourceView> {
@@ -243,16 +283,16 @@ export function deleteLearningResource(resourceId: string): Promise<void> {
   return apiFetch<void>(`${BASE}/${resourceId}`, { method: "DELETE" });
 }
 
-/** Reassigns positions to match `orderedResourceIds`' order - refused unless the list is exactly this class/subject/term's own resource set. */
+/** Reassigns positions to match `orderedResourceIds`' order - refused unless the list is exactly this class/target/term's own resource set. */
 export function reorderLearningResources(
   classId: string,
-  subjectId: string,
+  target: ResourceTarget,
   termId: string,
   orderedResourceIds: string[],
 ): Promise<LearningResourceSummaryView[]> {
   return apiFetch<LearningResourceSummaryView[]>(`${BASE}/reorder`, {
     method: "PUT",
-    body: JSON.stringify({ classId, subjectId, termId, orderedResourceIds }),
+    body: JSON.stringify({ classId, ...target, termId, orderedResourceIds }),
   });
 }
 
@@ -297,7 +337,9 @@ export function getLearningResourceCompletions(resourceId: string): Promise<Reso
  */
 export function listLearningGalleryFiles(params: {
   classId: string;
-  subjectId: string;
+  /** Exactly one of `subjectId`/`subjectGroupId` (Phase 35M) - what the caller is authoring for. */
+  subjectId?: string | null;
+  subjectGroupId?: string | null;
   resourceType: LearningResourceType;
   search?: string;
   page?: number;
@@ -305,11 +347,12 @@ export function listLearningGalleryFiles(params: {
 }): Promise<Page<LearningGalleryFileView>> {
   const query = new URLSearchParams({
     classId: params.classId,
-    subjectId: params.subjectId,
     resourceType: params.resourceType,
     page: String(params.page ?? 0),
     size: String(params.size ?? 10),
   });
+  if (params.subjectId) query.set("subjectId", params.subjectId);
+  if (params.subjectGroupId) query.set("subjectGroupId", params.subjectGroupId);
   if (params.search) query.set("search", params.search);
   return apiFetch<Page<LearningGalleryFileView>>(`${BASE}/gallery?${query.toString()}`);
 }
@@ -320,6 +363,11 @@ const ME_BASE = "/api/v1/me/learning-resources";
 export function listMyLearningResources(subjectId?: string): Promise<MyLearningResourceSummaryView[]> {
   const query = subjectId ? `?subjectId=${subjectId}` : "";
   return apiFetch<MyLearningResourceSummaryView[]>(`${ME_BASE}${query}`);
+}
+
+/** How many of the caller's visible resources they have never opened - the Resources nav badge. */
+export function getMyUnopenedResourceCount(): Promise<{ count: number }> {
+  return apiFetch<{ count: number }>(`${ME_BASE}/unopened-count`);
 }
 
 export function getMyLearningResource(resourceId: string): Promise<MyLearningResourceView> {

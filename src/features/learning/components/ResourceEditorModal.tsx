@@ -3,6 +3,7 @@ import type { ClassLearningResourceView } from "@/api/classLearningResources";
 import { ApiError } from "@/api/client";
 import { uploadFile, uploadLimitFor, uploadLimitLabel } from "@/api/files";
 import {
+  type AuthorableSubjectGroupView,
   type AuthorableSubjectView,
   createLearningResource,
   type LearningGalleryFileView,
@@ -21,6 +22,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { RichTextField } from "@/components/richText/RichTextField";
 import { type GalleryLoader, GalleryPickerModal } from "@/features/learning/components/GalleryPickerModal";
+import { groupTargetKey, parseTargetKey, targetKeyOf } from "@/features/learning/resourceTarget";
 import { formatDuration } from "@/utils/duration";
 import { instantToLocalDate, localDateToEndInstant, localDateToStartInstant } from "@/utils/date";
 
@@ -78,10 +80,14 @@ export type ResourceEditorPayload = UpdateLearningResourceRequest & { resourceTy
 
 interface ResourceEditorModalProps {
   classId: string;
+  /** The initial target on create - a subject, or (Phase 35M) a whole subject group; at most one. */
   subjectId?: string;
+  subjectGroupId?: string;
   termId?: string;
   subjects?: AuthorableSubjectView[];
-  /** Present -> edit an existing resource. Absent -> create a new one, in `subjectId` above. */
+  /** The groups the caller may author for (Phase 35M) - offered beside `subjects` in the target picker. */
+  subjectGroups?: AuthorableSubjectGroupView[];
+  /** Present -> edit an existing resource. Absent -> create a new one, in the target above. */
   resource?: EditableLearningResource;
   /** Whether the caller may author an `AUDIO`/`VIDEO` resource - `can.authorLearningMedia` (Phase 35F), evaluated by the parent since it needs the `learningMedia` feature flag. */
   canAuthorMedia: boolean;
@@ -114,8 +120,10 @@ interface ResourceEditorModalProps {
 export function ResourceEditorModal({
   classId,
   subjectId = "",
+  subjectGroupId = "",
   termId = "",
   subjects = [],
+  subjectGroups = [],
   resource,
   canAuthorMedia,
   save,
@@ -125,9 +133,11 @@ export function ResourceEditorModal({
   onSaved,
 }: ResourceEditorModalProps) {
   const isEdit = resource != null;
-  const [targetSubjectId, setTargetSubjectId] = useState(
-    resource && "subjectId" in resource ? resource.subjectId : subjectId,
+  // A target key (`resourceTarget.ts`): a subject's bare id, or `group:<id>` for a subject group.
+  const [targetKey, setTargetKey] = useState(
+    resource && "subjectId" in resource ? targetKeyOf(resource) : targetKeyOf({ subjectId, subjectGroupId }),
   );
+  const target = parseTargetKey(targetKey);
   const [resourceType, setResourceType] = useState<LearningResourceType>(resource?.resourceType ?? "RICH_TEXT");
   const [title, setTitle] = useState(resource?.title ?? "");
   const [description, setDescription] = useState(resource?.description ?? "");
@@ -207,7 +217,7 @@ export function ResourceEditorModal({
       } else {
         await createLearningResource({
           classId,
-          subjectId: targetSubjectId,
+          ...target,
           termId,
           resourceType,
           ...payload,
@@ -240,18 +250,33 @@ export function ResourceEditorModal({
         <form className="space-y-4" onSubmit={handleSubmit}>
           {error && <Alert variant="error">{error}</Alert>}
 
-          {!isEdit && subjects.length > 1 && (
+          {!isEdit && subjects.length + subjectGroups.length > 1 && (
             <FormField label="Subject" htmlFor="resource-subject">
-              <Select
-                id="resource-subject"
-                value={targetSubjectId}
-                onChange={(event) => setTargetSubjectId(event.target.value)}
-              >
-                {subjects.map((subject) => (
-                  <option key={subject.subjectId} value={subject.subjectId}>
-                    {subject.subjectName}
-                  </option>
-                ))}
+              <Select id="resource-subject" value={targetKey} onChange={(event) => setTargetKey(event.target.value)}>
+                {subjectGroups.length === 0 ? (
+                  subjects.map((subject) => (
+                    <option key={subject.subjectId} value={subject.subjectId}>
+                      {subject.subjectName}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <optgroup label="Subjects">
+                      {subjects.map((subject) => (
+                        <option key={subject.subjectId} value={subject.subjectId}>
+                          {subject.subjectName}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Subject groups">
+                      {subjectGroups.map((group) => (
+                        <option key={group.subjectGroupId} value={groupTargetKey(group.subjectGroupId)}>
+                          {group.subjectGroupName}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </>
+                )}
               </Select>
             </FormField>
           )}
@@ -392,7 +417,8 @@ export function ResourceEditorModal({
       {galleryOpen && isFileBacked && (
         <GalleryPickerModal
           classId={classId}
-          subjectId={targetSubjectId}
+          subjectId={target.subjectId}
+          subjectGroupId={target.subjectGroupId}
           resourceType={resourceType}
           selectedFileId={fileId}
           loadPage={loadGallery}

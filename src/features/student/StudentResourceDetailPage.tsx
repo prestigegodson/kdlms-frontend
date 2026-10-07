@@ -22,6 +22,7 @@ import { ResourceViewer } from "@/features/learning/components/ResourceViewer";
 import { useMediaObjectUrl } from "@/hooks/useMediaObjectUrl";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
 import { useThrottledSave } from "@/hooks/useThrottledSave";
+import { useNewResourcesStore } from "@/stores/newResourcesStore";
 import { formatInstant } from "@/utils/date";
 import { formatDuration } from "@/utils/duration";
 
@@ -99,6 +100,8 @@ export function StudentResourceDetailPage() {
       .then((view) => {
         setCompleted(view.completed);
         setCompletedAt(view.completedAt);
+        // The resource is no longer "new" - drop the Resources nav badge right away.
+        void useNewResourcesStore.getState().refresh();
       })
       .catch(() => {
         // Best-effort - see this effect's own comment above.

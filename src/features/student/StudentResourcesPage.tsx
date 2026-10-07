@@ -1,60 +1,52 @@
+import { BookOpen, ChevronRight, Layers } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import { ApiError } from "@/api/client";
 import { listMyLearningResources, type MyLearningResourceSummaryView } from "@/api/learning";
-import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
-import { DrillRow } from "@/features/guardian/components/DrillRow";
-import { formatInstantDate } from "@/utils/date";
-import { formatDuration } from "@/utils/duration";
+import { ResourceNewPill } from "@/features/student/components/ResourceNewPill";
+import { cardPath, groupByCard, type ResourceCard } from "@/features/student/resourceCards";
 
-const TYPE_LABEL: Record<string, string> = {
-  PDF: "PDF",
-  RICH_TEXT: "Note",
-  YOUTUBE: "YouTube",
-  AUDIO: "Audio",
-  VIDEO: "Video",
-};
-
-/**
- * `resource.description`, with the media duration and (Phase 35L) an "Available until ..." hint
- * appended - e.g. "5:00 lecture · 4:32 · Available until 10 Oct 2026". The resource is simply
- * absent from this list once its window has actually closed - this is a heads-up while it's still
- * visible, never a claim this page enforces itself.
- */
-function rowMeta(resource: MyLearningResourceSummaryView): string | undefined {
-  const parts = [
-    resource.description ?? undefined,
-    formatDuration(resource.durationSeconds) || undefined,
-    resource.availableUntil ? `Available until ${formatInstantDate(resource.availableUntil)}` : undefined,
-  ].filter((part): part is string => Boolean(part));
-  return parts.length > 0 ? parts.join(" · ") : undefined;
+function plural(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
-interface SubjectGroup {
-  subjectName: string;
-  resources: MyLearningResourceSummaryView[];
+function cardSummary(card: ResourceCard): string {
+  const progress = card.notCompleted === 0 ? "All completed" : `${card.notCompleted} not completed`;
+  return `${plural(card.resources.length, "resource")} · ${progress}`;
 }
 
-function groupBySubject(resources: MyLearningResourceSummaryView[]): SubjectGroup[] {
-  const bySubject = new Map<string, SubjectGroup>();
-  for (const resource of resources) {
-    const existing = bySubject.get(resource.subjectName);
-    if (existing) {
-      existing.resources.push(resource);
-      continue;
-    }
-    bySubject.set(resource.subjectName, { subjectName: resource.subjectName, resources: [resource] });
-  }
-  return [...bySubject.values()].sort((a, b) => a.subjectName.localeCompare(b.subjectName));
+function ResourceCardTile({ card }: { card: ResourceCard }) {
+  const Icon = card.kind === "GROUP" ? Layers : BookOpen;
+  return (
+    <Link to={cardPath(card.kind, card.id)} className="block h-full">
+      <Card className="flex h-full cursor-pointer items-start gap-3 p-4 transition-colors hover:border-brand-200 hover:bg-brand-50/40 sm:p-4">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-brand-50 text-brand-700">
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-display text-base font-medium text-slate-900">{card.name}</p>
+            {card.unopened > 0 && <ResourceNewPill label={`${card.unopened}`} />}
+          </div>
+          <p className="mt-0.5 text-sm text-slate-500">{cardSummary(card)}</p>
+        </div>
+        <ChevronRight className="mt-2.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
+      </Card>
+    </Link>
+  );
 }
 
 /**
  * The student portal's Resources tab (Phase 35E) - every published resource of the caller's own
- * class+current term, grouped by subject. A flat page like `StudentTimetablePage`: one student, no
- * ward selector.
+ * class+current term, as one card per subject (or per subject group, which its subjects roll up
+ * into - decided server-side), the card with the most recently visible resource first. Each card
+ * shows how many resources it holds, how many aren't completed, and a "new" pill for those never
+ * opened; tapping one opens `StudentResourceCardPage`.
  */
 export function StudentResourcesPage() {
   const [resources, setResources] = useState<MyLearningResourceSummaryView[] | null>(null);
@@ -88,39 +80,21 @@ export function StudentResourcesPage() {
     );
   }
 
-  const groups = groupBySubject(resources);
+  const cards = groupByCard(resources);
 
   return (
     <div className="space-y-6">
       <PageHeader title="Resources" description="Notes, documents, and videos from your teachers." />
 
-      {groups.length === 0 && (
+      {cards.length === 0 ? (
         <EmptyState title="No resources yet" description="Your teachers haven't published anything yet." />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {cards.map((card) => (
+            <ResourceCardTile key={`${card.kind}:${card.id}`} card={card} />
+          ))}
+        </div>
       )}
-
-      <div className="space-y-6">
-        {groups.map((group) => (
-          <div key={group.subjectName} className="space-y-2">
-            <p className="text-sm font-medium text-slate-500">{group.subjectName}</p>
-            <div className="space-y-2">
-              {group.resources.map((resource) => (
-                <DrillRow
-                  key={resource.id}
-                  to={`/student/resources/${resource.id}`}
-                  title={resource.title}
-                  meta={rowMeta(resource)}
-                  trailing={
-                    <div className="flex items-center gap-2">
-                      {resource.completed && <Badge variant="success">Completed</Badge>}
-                      <Badge variant="neutral">{TYPE_LABEL[resource.resourceType] ?? resource.resourceType}</Badge>
-                    </div>
-                  }
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
