@@ -98,7 +98,7 @@ export function CreatorQuizzesPage() {
         <EmptyState
           icon={ClipboardCheck}
           title="Quizzes aren't in your plan"
-          description="Upgrade to a plan with take-home quizzes to set auto-marked quizzes for your classes."
+          description="Upgrade to a plan with CBT/Quizzes to set auto-marked quizzes for your classes."
           action={
             <Link
               to="/creator/billing"

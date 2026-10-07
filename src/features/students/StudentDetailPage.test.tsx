@@ -512,7 +512,113 @@ describe("StudentDetailPage", () => {
       expect(studentsApi.getStudentCredentials).not.toHaveBeenCalled();
     });
 
-    it("shows no-login state and provisions a login, revealing the temporary password", async () => {
+    it("provisions a login with an admin-typed password by default, with no reveal", async () => {
+      vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+      vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+      vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+      vi.mocked(studentsApi.getStudentCredentials).mockResolvedValue({
+        studentId: "student-1",
+        studentName: "Ada Obi",
+        active: false,
+        mustChangePassword: false,
+      });
+      vi.mocked(studentsApi.provisionStudentCredentials).mockResolvedValue({
+        studentId: "student-1",
+        studentName: "Ada Obi",
+        loginId: "ada-bfa20260001",
+        active: true,
+        mustChangePassword: false,
+      });
+      useFeatureStore.setState({ studentLogins: true, status: "loaded" });
+      const user = userEvent.setup();
+
+      renderAsSchoolAdmin();
+      await screen.findByRole("heading", { name: "Ada Obi" });
+      await user.click(await screen.findByRole("button", { name: "Provision login" }));
+
+      const dialog = await screen.findByRole("dialog");
+      await user.type(within(dialog).getByLabelText("Password"), "sunflower12");
+      await user.type(within(dialog).getByLabelText("Confirm password"), "sunflower12");
+      await user.click(within(dialog).getByRole("button", { name: "Set password" }));
+
+      expect(studentsApi.provisionStudentCredentials).toHaveBeenCalledWith("student-1", "sunflower12");
+      expect(await screen.findByText("ada-bfa20260001")).toBeInTheDocument();
+      expect(screen.getByText(/Password set/)).toBeInTheDocument();
+      expect(screen.queryByText("Password change required")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /show credentials/i })).not.toBeInTheDocument();
+    });
+
+    it("refuses a short or mismatched typed password without calling the API", async () => {
+      vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+      vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+      vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+      vi.mocked(studentsApi.getStudentCredentials).mockResolvedValue({
+        studentId: "student-1",
+        studentName: "Ada Obi",
+        loginId: "ada-bfa20260001",
+        active: true,
+        mustChangePassword: false,
+      });
+      useFeatureStore.setState({ studentLogins: true, status: "loaded" });
+      const user = userEvent.setup();
+
+      renderAsSchoolAdmin();
+      await screen.findByText("ada-bfa20260001");
+      await user.click(screen.getByRole("button", { name: "Reset password" }));
+
+      const dialog = await screen.findByRole("dialog");
+      await user.type(within(dialog).getByLabelText("Password"), "short");
+      await user.type(within(dialog).getByLabelText("Confirm password"), "short");
+      await user.click(within(dialog).getByRole("button", { name: "Set password" }));
+      expect(await within(dialog).findByText(/at least 8 characters/)).toBeInTheDocument();
+
+      await user.clear(within(dialog).getByLabelText("Password"));
+      await user.type(within(dialog).getByLabelText("Password"), "sunflower12");
+      await user.clear(within(dialog).getByLabelText("Confirm password"));
+      await user.type(within(dialog).getByLabelText("Confirm password"), "sunflower13");
+      await user.click(within(dialog).getByRole("button", { name: "Set password" }));
+      expect(await within(dialog).findByText("The passwords don't match.")).toBeInTheDocument();
+
+      expect(studentsApi.resetStudentCredentials).not.toHaveBeenCalled();
+    });
+
+    it("resets with a typed password", async () => {
+      vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+      vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+      vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+      vi.mocked(studentsApi.getStudentCredentials).mockResolvedValue({
+        studentId: "student-1",
+        studentName: "Ada Obi",
+        loginId: "ada-bfa20260001",
+        active: true,
+        mustChangePassword: true,
+      });
+      vi.mocked(studentsApi.resetStudentCredentials).mockResolvedValue({
+        studentId: "student-1",
+        studentName: "Ada Obi",
+        loginId: "ada-bfa20260001",
+        active: true,
+        mustChangePassword: false,
+      });
+      useFeatureStore.setState({ studentLogins: true, status: "loaded" });
+      const user = userEvent.setup();
+
+      renderAsSchoolAdmin();
+      await screen.findByText("ada-bfa20260001");
+      expect(screen.getByText("Password change required")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Reset password" }));
+
+      const dialog = await screen.findByRole("dialog");
+      await user.type(within(dialog).getByLabelText("Password"), "rainbow4567");
+      await user.type(within(dialog).getByLabelText("Confirm password"), "rainbow4567");
+      await user.click(within(dialog).getByRole("button", { name: "Set password" }));
+
+      expect(studentsApi.resetStudentCredentials).toHaveBeenCalledWith("student-1", "rainbow4567");
+      expect(await screen.findByText(/Password set/)).toBeInTheDocument();
+      expect(screen.queryByText("Password change required")).not.toBeInTheDocument();
+    });
+
+    it("can still generate a temporary password, revealing it", async () => {
       vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
       vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
       vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
@@ -538,8 +644,12 @@ describe("StudentDetailPage", () => {
       expect(await screen.findByText("No portal login")).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "Provision login" }));
+      const dialog = await screen.findByRole("dialog");
+      await user.click(within(dialog).getByRole("button", { name: "Generate a temporary password instead" }));
 
+      expect(studentsApi.provisionStudentCredentials).toHaveBeenCalledWith("student-1", undefined);
       expect(await screen.findByText("ada-bfa20260001")).toBeInTheDocument();
+      expect(screen.queryByText(/Password set/)).not.toBeInTheDocument();
       await user.click(screen.getByRole("button", { name: /show credentials/i }));
       expect(await screen.findByText("Temp1234Pass")).toBeInTheDocument();
     });

@@ -183,7 +183,7 @@ export function PackagesPage() {
                       {pkg.communication && <Badge variant="brand">Messaging</Badge>}
                       {pkg.timetable && <Badge variant="brand">Timetables</Badge>}
                       {pkg.lessonNotes && <Badge variant="brand">Lesson notes</Badge>}
-                      {pkg.takeHomeQuiz && <Badge variant="brand">Take-home quizzes</Badge>}
+                      {pkg.takeHomeQuiz && <Badge variant="brand">CBT/Quizzes</Badge>}
                       {pkg.aiLessonNotes && <Badge variant="brand">AI lesson notes</Badge>}
                       {pkg.billing && <Badge variant="brand">Fees & bills</Badge>}
                       {pkg.learningMedia && <Badge variant="neutral">Learning media</Badge>}

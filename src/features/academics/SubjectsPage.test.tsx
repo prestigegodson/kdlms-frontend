@@ -557,7 +557,7 @@ describe("SubjectsPage", () => {
       await openMenu();
 
       expect(screen.queryByRole("menuitem", { name: "New quiz" })).not.toBeInTheDocument();
-      expect(screen.getByRole("menuitem", { name: "Take-home quizzes" })).toBeInTheDocument();
+      expect(screen.getByRole("menuitem", { name: "CBT/Quizzes" })).toBeInTheDocument();
     });
 
     it("hides every packaged item on an unentitled school, keeping Record assessment", async () => {
@@ -569,7 +569,7 @@ describe("SubjectsPage", () => {
 
       expect(screen.getByRole("menuitem", { name: "Record assessment" })).toBeInTheDocument();
       expect(screen.queryByRole("menuitem", { name: "Lesson notes" })).not.toBeInTheDocument();
-      expect(screen.queryByRole("menuitem", { name: "Take-home quizzes" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("menuitem", { name: "CBT/Quizzes" })).not.toBeInTheDocument();
       expect(screen.queryByRole("menuitem", { name: "New quiz" })).not.toBeInTheDocument();
       expect(screen.queryByRole("menuitem", { name: "Learning resources" })).not.toBeInTheDocument();
     });

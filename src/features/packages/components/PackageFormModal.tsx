@@ -257,11 +257,11 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
         <Flag
           checked={takeHomeQuiz}
           onChange={setTakeHomeQuiz}
-          label="Take-home quizzes"
+          label="CBT/Quizzes"
           help={
             isCreator
               ? "Quizzes the creator sets and learners take in their portal."
-              : "Entitlement for the teacher-authored take-home quiz module - does not affect midterm quiz recording, which is available on every package."
+              : "Entitlement for the teacher-authored CBT/Quiz module - does not affect midterm quiz recording, which is available on every package."
           }
         />
         <Flag

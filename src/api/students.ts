@@ -442,12 +442,22 @@ export function getStudentCredentials(studentId: string): Promise<StudentLoginVi
   return apiFetch<StudentLoginView>(`${BASE}/${studentId}/credentials`);
 }
 
-export function provisionStudentCredentials(studentId: string): Promise<StudentLoginView> {
-  return apiFetch<StudentLoginView>(`${BASE}/${studentId}/credentials`, { method: "POST" });
+/**
+ * With `password`, the admin typed one the student can remember: kept as-is (no forced change at
+ * first sign-in), never emailed, and not echoed back. Without it, a temporary password is
+ * generated, emailed to the guardians, revealed once, and must be changed at first sign-in.
+ */
+export function provisionStudentCredentials(studentId: string, password?: string): Promise<StudentLoginView> {
+  return apiFetch<StudentLoginView>(`${BASE}/${studentId}/credentials`, credentialsInit(password));
 }
 
-export function resetStudentCredentials(studentId: string): Promise<StudentLoginView> {
-  return apiFetch<StudentLoginView>(`${BASE}/${studentId}/credentials/reset`, { method: "POST" });
+/** Same `password` contract as {@link provisionStudentCredentials}. */
+export function resetStudentCredentials(studentId: string, password?: string): Promise<StudentLoginView> {
+  return apiFetch<StudentLoginView>(`${BASE}/${studentId}/credentials/reset`, credentialsInit(password));
+}
+
+function credentialsInit(password?: string): RequestInit {
+  return password === undefined ? { method: "POST" } : { method: "POST", body: JSON.stringify({ password }) };
 }
 
 export function revokeStudentCredentials(studentId: string): Promise<void> {

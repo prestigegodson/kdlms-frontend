@@ -82,7 +82,7 @@ const NAV_ITEMS: NavItem[] = [
     visible: () => can.viewWardLessonNotes("GUARDIAN", useFeatureStore.getState().lessonNotes),
   },
   {
-    label: "Take-home quizzes",
+    label: "CBT/Quizzes",
     href: "/guardian/take-home-quizzes",
     icon: FileCheck2,
     // Overflow-only (drawer via the tab bar's More tab) - see the Timetable item's comment above

@@ -123,13 +123,13 @@ describe("WardTakeHomeQuizzesPage", () => {
     expect(await screen.findByText("Fractions checkpoint")).toBeInTheDocument();
   });
 
-  it("shows an empty state when the ward has no take-home quiz results yet", async () => {
+  it("shows an empty state when the ward has no CBT/Quiz results yet", async () => {
     vi.mocked(wardsApi.listMyWards).mockResolvedValue([WARD]);
     vi.mocked(wardsApi.getWardTakeHomeQuizzes).mockResolvedValue([]);
 
     renderPage();
 
-    expect(await screen.findByText("No take-home quiz results yet")).toBeInTheDocument();
+    expect(await screen.findByText("No CBT/Quiz results yet")).toBeInTheDocument();
   });
 
   it("shows a submitted quiz's score and its midterm badge", async () => {

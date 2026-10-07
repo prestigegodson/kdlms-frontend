@@ -97,7 +97,7 @@ export function SubscriptionPage({ redirect }: SubscriptionPageProps) {
                 {state.summary.multiBranch ? "Multi-branch" : "Single branch"}
               </Badge>
               <Badge variant={state.summary.takeHomeQuiz ? "success" : "neutral"}>
-                {state.summary.takeHomeQuiz ? "Take-home quizzes included" : "No take-home quizzes"}
+                {state.summary.takeHomeQuiz ? "CBT/Quizzes included" : "No CBT/Quizzes"}
               </Badge>
               <Badge variant={state.summary.onDemandLearning ? "success" : "neutral"}>
                 {state.summary.onDemandLearning ? "On-demand learning included" : "No on-demand learning"}

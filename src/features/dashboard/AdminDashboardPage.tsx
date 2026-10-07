@@ -179,7 +179,7 @@ export function AdminDashboardPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <StatTile
                 icon={FileCheck2}
-                label="Take-home quizzes"
+                label="CBT/Quizzes"
                 value={impact.takeHomeQuizzes.toLocaleString()}
                 hint={`${impact.quizQuestions.toLocaleString()} questions`}
               />

@@ -119,7 +119,7 @@ export const SHELL_TOURS: TourDefinition[] = [
         target: "sidebar",
         mobileTarget: "tabbar",
         title: "Your learning",
-        body: "Resources holds what your teachers have shared with you. Quizzes holds take-home quizzes to complete. Results shows your published report cards.",
+        body: "Resources holds what your teachers have shared with you. Quizzes holds CBT/Quizzes to complete. Results shows your published report cards.",
       },
       ...ACCOUNT_STEPS,
       {

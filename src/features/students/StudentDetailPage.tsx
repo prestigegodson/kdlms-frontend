@@ -40,6 +40,7 @@ import {
 import { can } from "@/auth/permissions";
 import { StudentAttendanceCard } from "@/features/attendance/components/StudentAttendanceCard";
 import { EditStudentMedicalModal } from "@/features/students/components/EditStudentMedicalModal";
+import { SetStudentPasswordModal } from "@/features/students/components/SetStudentPasswordModal";
 import { StudentMedicalPanel } from "@/features/students/components/StudentMedicalPanel";
 import { StudentPhotoPanel } from "@/features/students/components/StudentPhotoPanel";
 import { UserPlus } from "lucide-react";
@@ -310,7 +311,7 @@ export function StudentDetailPage() {
       <SubjectsCard student={student} canManage={canManage} onActionError={setActionError} />
 
       {studentLoginsEntitled && canManageLogins && (
-        <PortalAccessCard studentId={student.id} onActionError={setActionError} />
+        <PortalAccessCard studentId={student.id} studentFirstName={student.firstName} onActionError={setActionError} />
       )}
 
       <StudentAttendanceCard studentId={student.id} variant="accordion" />
@@ -814,19 +815,24 @@ function MedicalCard({ studentId, canManage, onActionError }: MedicalCardProps) 
 
 interface PortalAccessCardProps {
   studentId: string;
+  studentFirstName: string;
   onActionError: (message: string) => void;
 }
 
 /**
- * A student's portal login (Phase 35B) - status, Provision/Reset/Revoke. Rendered only for a
+ * A student's portal login (Phase 35B) - status, Provision/Reset/Revoke. Provision and Reset open
+ * `SetStudentPasswordModal`, where typing a memorable password (kept as-is, not emailed) is the
+ * default and a generated temporary password is the fallback. Rendered only for a
  * caller who is both entitled (the school's `studentLogins` package flag) and authorized
  * (`can.manageStudentLogins`) - the backend's own `GET` is gated by the identical
  * `requireCredentialWritable` guard as every write here, so there is no read-only view to fall
  * back to for a caller who fails either check.
  */
-function PortalAccessCard({ studentId, onActionError }: PortalAccessCardProps) {
+function PortalAccessCard({ studentId, studentFirstName, onActionError }: PortalAccessCardProps) {
   const [login, setLogin] = useState<StudentLoginView | null>(null);
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
+  const [settingPassword, setSettingPassword] = useState<"provision" | "reset" | null>(null);
+  const [passwordSet, setPasswordSet] = useState(false);
   const [busy, setBusy] = useState(false);
 
   function fetchCredentials() {
@@ -840,28 +846,15 @@ function PortalAccessCard({ studentId, onActionError }: PortalAccessCardProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- onActionError is a stable setState setter
   useEffect(fetchCredentials, [studentId]);
 
-  async function handleProvision() {
-    setBusy(true);
-    try {
-      const result = await provisionStudentCredentials(studentId);
-      setLogin(result);
-    } catch (error) {
-      onActionError(error instanceof ApiError ? error.message : "Failed to provision a login");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleReset() {
-    setBusy(true);
-    try {
-      const result = await resetStudentCredentials(studentId);
-      setLogin(result);
-    } catch (error) {
-      onActionError(error instanceof ApiError ? error.message : "Failed to reset the password");
-    } finally {
-      setBusy(false);
-    }
+  // Errors propagate to SetStudentPasswordModal, which keeps itself open and shows them.
+  async function handleSetPassword(password: string | undefined) {
+    const result =
+      settingPassword === "provision"
+        ? await provisionStudentCredentials(studentId, password)
+        : await resetStudentCredentials(studentId, password);
+    setLogin(result);
+    setPasswordSet(password !== undefined);
+    setSettingPassword(null);
   }
 
   async function confirmRevoke() {
@@ -869,6 +862,7 @@ function PortalAccessCard({ studentId, onActionError }: PortalAccessCardProps) {
     try {
       await revokeStudentCredentials(studentId);
       setConfirmingRevoke(false);
+      setPasswordSet(false);
       fetchCredentials();
     } catch (error) {
       onActionError(error instanceof ApiError ? error.message : "Failed to revoke the login");
@@ -891,7 +885,7 @@ function PortalAccessCard({ studentId, onActionError }: PortalAccessCardProps) {
               title="No portal login"
               description="This student has no student-portal login yet."
             />
-            <Button type="button" variant="secondary" disabled={busy} onClick={handleProvision}>
+            <Button type="button" variant="secondary" disabled={busy} onClick={() => setSettingPassword("provision")}>
               Provision login
             </Button>
           </div>
@@ -917,11 +911,14 @@ function PortalAccessCard({ studentId, onActionError }: PortalAccessCardProps) {
                 </dd>
               </div>
             </dl>
+            {passwordSet && (
+              <Alert variant="success">Password set. Share it with the student - they won't be asked to change it.</Alert>
+            )}
             {login.temporaryPassword && (
               <CredentialsReveal email={login.loginId} temporaryPassword={login.temporaryPassword} />
             )}
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="secondary" disabled={busy} onClick={handleReset}>
+              <Button type="button" variant="secondary" disabled={busy} onClick={() => setSettingPassword("reset")}>
                 Reset password
               </Button>
               <Button
@@ -936,6 +933,14 @@ function PortalAccessCard({ studentId, onActionError }: PortalAccessCardProps) {
           </div>
         )}
       </Accordion>
+
+      <SetStudentPasswordModal
+        open={settingPassword !== null}
+        mode={settingPassword ?? "provision"}
+        studentName={studentFirstName}
+        onClose={() => setSettingPassword(null)}
+        onSubmit={handleSetPassword}
+      />
 
       {confirmingRevoke && (
         <ConfirmDialog

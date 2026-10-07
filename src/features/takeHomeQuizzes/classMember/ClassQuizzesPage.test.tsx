@@ -104,10 +104,10 @@ describe("ClassQuizzesPage", () => {
 
   it("explains when the tutor's plan doesn't include quizzes", async () => {
     vi.mocked(classQuizzesApi.listMemberClassQuizzes).mockRejectedValue(
-      new ApiError(403, "Take-home quizzes are not included in the current plan."),
+      new ApiError(403, "CBT/Quizzes are not included in the current plan."),
     );
     renderAt("/quizzes", "LEARNER");
 
-    expect(await screen.findByText("Take-home quizzes are not included in the current plan.")).toBeInTheDocument();
+    expect(await screen.findByText("CBT/Quizzes are not included in the current plan.")).toBeInTheDocument();
   });
 });

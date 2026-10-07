@@ -155,7 +155,7 @@ function MySubjects() {
     }
     if (can.viewTakeHomeQuizzes(role, takeHomeQuizEntitled)) {
       items.push({
-        label: "Take-home quizzes",
+        label: "CBT/Quizzes",
         icon: ListChecks,
         separated: true,
         onSelect: () =>

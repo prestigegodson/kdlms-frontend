@@ -26,7 +26,7 @@ export const STUDENT_TOURS: TourDefinition[] = [
     portal: "student",
     kind: "page",
     title: "Quizzes",
-    description: "Take your take-home quizzes before the deadline.",
+    description: "Take your CBT/Quizzes before the deadline.",
     area: "Learning",
     roles: ["STUDENT"],
     route: "/student/quizzes",
@@ -34,7 +34,7 @@ export const STUDENT_TOURS: TourDefinition[] = [
     steps: [
       {
         target: "page-header",
-        title: "Take-home quizzes",
+        title: "CBT/Quizzes",
         body: "Each quiz shows its deadline. Once you start, the timer keeps running, so make sure you have enough time to finish.",
       },
     ],

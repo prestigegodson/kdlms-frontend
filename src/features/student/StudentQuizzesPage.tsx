@@ -80,12 +80,12 @@ export function StudentQuizzesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Quizzes" description="Take-home quizzes from your teachers for this term." />
+      <PageHeader title="Quizzes" description="CBT/Quizzes from your teachers for this term." />
 
       {page.totalElements === 0 && (
         <EmptyState
           title="No quizzes this term"
-          description="Your teachers haven't published a take-home quiz for this term yet."
+          description="Your teachers haven't published a CBT/Quiz for this term yet."
         />
       )}
 

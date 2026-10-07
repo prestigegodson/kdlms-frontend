@@ -40,7 +40,7 @@ export const ADMIN_TOURS: TourDefinition[] = [
       {
         target: "page-header",
         title: "Subscription packages",
-        body: "A package sets a school's branch and student limits and which features it includes, such as billing, take-home quizzes or student logins.",
+        body: "A package sets a school's branch and student limits and which features it includes, such as billing, CBT/Quizzes or student logins.",
       },
       {
         target: "page-actions",

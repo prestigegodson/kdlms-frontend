@@ -146,7 +146,7 @@ const NAV_ITEMS: NavItem[] = [
     badge: () => usePendingLessonNotesStore.getState().count,
   },
   {
-    label: "Take-home quizzes",
+    label: "CBT/Quizzes",
     href: "/school/take-home-quizzes",
     icon: ListChecks,
     group: "Academics",

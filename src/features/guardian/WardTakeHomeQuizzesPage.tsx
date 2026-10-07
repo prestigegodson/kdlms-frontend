@@ -92,7 +92,7 @@ export function WardTakeHomeQuizzesPage() {
     getWardTakeHomeQuizzes(selectedWardId, termId)
       .then(setQuizzes)
       .catch((error: unknown) =>
-        setQuizzesError(error instanceof ApiError ? error.message : "Failed to load this ward's take-home quizzes"),
+        setQuizzesError(error instanceof ApiError ? error.message : "Failed to load this ward's CBT/Quizzes"),
       );
   }, [selectedWardId, termId]);
 
@@ -113,7 +113,7 @@ export function WardTakeHomeQuizzesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Take-home quizzes" description="Your ward's completed take-home quiz results." />
+      <PageHeader title="CBT/Quizzes" description="Your ward's completed CBT/Quiz results." />
 
       {(status === "idle" || status === "loading") && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -156,14 +156,14 @@ export function WardTakeHomeQuizzesPage() {
 
       {termId && quizzes === null && !quizzesError && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading take-home quizzes…
+          <Spinner /> Loading CBT/Quizzes…
         </div>
       )}
 
       {quizzes && quizzes.length === 0 && (
         <EmptyState
           icon={ClipboardList}
-          title="No take-home quiz results yet"
+          title="No CBT/Quiz results yet"
           description="Results appear here once your school's teacher has published them."
         />
       )}

@@ -102,7 +102,7 @@ export function TakeHomeQuizzesPage() {
     listTakeHomeQuizzes(classId, termId, subjectId || undefined, undefined, pageIndex, 20)
       .then(setPage)
       .catch((error: unknown) =>
-        setLoadError(error instanceof ApiError ? error.message : "Failed to load take-home quizzes"),
+        setLoadError(error instanceof ApiError ? error.message : "Failed to load CBT/Quizzes"),
       );
   }, [classId, termId, subjectId, pageIndex]);
 
@@ -121,8 +121,8 @@ export function TakeHomeQuizzesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Take-home quizzes"
-        description="Author and manage take-home quizzes for your classes."
+        title="CBT/Quizzes"
+        description="Author and manage CBT/Quizzes for your classes."
         actions={
           canAuthor &&
           classId &&
@@ -186,7 +186,7 @@ export function TakeHomeQuizzesPage() {
       {page !== null && page.content.length === 0 && (
         <EmptyState
           icon={ClipboardList}
-          title="No take-home quizzes yet"
+          title="No CBT/Quizzes yet"
           description={canAuthor ? "Create one to get started." : "Nothing has been authored for this selection yet."}
         />
       )}

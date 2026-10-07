@@ -235,8 +235,8 @@ export function TakeHomeQuizEditorPage() {
   return (
     <div className="space-y-6 pb-24">
       <PageHeader
-        title={isNew ? "New take-home quiz" : form.title || "Take-home quiz"}
-        description={isNew ? "Set up a new take-home quiz for this class." : undefined}
+        title={isNew ? "New CBT/Quiz" : form.title || "CBT/Quiz"}
+        description={isNew ? "Set up a new CBT/Quiz for this class." : undefined}
         backTo="/school/take-home-quizzes"
         actions={
           quiz && (

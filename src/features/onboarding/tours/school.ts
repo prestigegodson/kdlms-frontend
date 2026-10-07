@@ -413,7 +413,7 @@ export const SCHOOL_TOURS: TourDefinition[] = [
     version: 1,
     portal: "school",
     kind: "page",
-    title: "Take-home quizzes",
+    title: "CBT/Quizzes",
     description: "Set quizzes students complete at home, scored automatically.",
     area: "Teaching",
     roles: STAFF,
