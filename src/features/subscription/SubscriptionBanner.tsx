@@ -17,7 +17,9 @@ const EXPIRING_SOON_THRESHOLD_DAYS = 14;
  * (see shared.config.SubscriptionWriteGuardFilter); this is purely the
  * heads-up so that 403 isn't the first the admin hears of it. Since
  * Phase C10 a school admin can pay for the plan themselves, so they get a
- * link to Subscription & billing; everyone else is told to ask them.
+ * link to Subscription & billing; everyone else is told to ask them. A
+ * freemium school is writable whatever its plan and never pays, so it gets
+ * no banner at all.
  */
 export function SubscriptionBanner() {
   const role = useAuthStore((state) => state.user?.role);
@@ -29,7 +31,7 @@ export function SubscriptionBanner() {
       .catch(() => setSummary(null));
   }, []);
 
-  if (!summary) {
+  if (!summary || summary.freemium) {
     return null;
   }
 

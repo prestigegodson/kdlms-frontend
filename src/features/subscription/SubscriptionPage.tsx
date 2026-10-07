@@ -37,7 +37,9 @@ interface SubscriptionPageProps {
  * creator gets - auto-renewal, the SCHOOL plans it can buy through
  * Paystack, and its payment history - so a school admin can pay for and
  * renew the subscription without the system admin. A plan the system
- * admin assigned for a bank transfer still shows here, as `MANUAL`.
+ * admin assigned for a bank transfer still shows here, as `MANUAL`. A freemium
+ * school is writable whatever its plan, so it never pays: it sees only its
+ * plan and usage, with no billing sections at all.
  */
 export function SubscriptionPage({ redirect }: SubscriptionPageProps) {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
@@ -55,11 +57,17 @@ export function SubscriptionPage({ redirect }: SubscriptionPageProps) {
 
   useEffect(load, [load]);
 
+  const freemium = state.kind === "loaded" && state.summary.freemium;
+
   return (
     <div className="max-w-5xl space-y-6">
       <PageHeader
         title="Subscription & billing"
-        description="Your school's plan, limits and usage, how it renews, and what you've paid."
+        description={
+          freemium
+            ? "Your school's plan, limits and usage."
+            : "Your school's plan, limits and usage, how it renews, and what you've paid."
+        }
       />
 
       {state.kind === "loading" && (
@@ -69,7 +77,11 @@ export function SubscriptionPage({ redirect }: SubscriptionPageProps) {
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
 
-      {state.kind === "loaded" && !state.summary.hasSubscription && (
+      {freemium && (
+        <Alert variant="info">Your school is on a free plan, so there's nothing to pay.</Alert>
+      )}
+
+      {state.kind === "loaded" && !state.summary.hasSubscription && !freemium && (
         <EmptyState
           icon={CreditCard}
           title="No active plan"
@@ -147,7 +159,9 @@ export function SubscriptionPage({ redirect }: SubscriptionPageProps) {
         </>
       )}
 
-      <PlanBillingSections redirect={redirect} onChanged={load} />
+      {state.kind === "loaded" && !freemium && (
+        <PlanBillingSections redirect={redirect} onChanged={load} />
+      )}
     </div>
   );
 }

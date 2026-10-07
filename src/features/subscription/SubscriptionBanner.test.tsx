@@ -96,6 +96,20 @@ describe("SubscriptionBanner", () => {
     );
   });
 
+  it("renders nothing for a freemium school, even with no plan", async () => {
+    vi.mocked(subscriptionsApi.getMySubscription).mockResolvedValue({
+      ...ACTIVE_SUMMARY,
+      hasSubscription: false,
+      status: "NONE",
+      freemium: true,
+    });
+
+    const { container } = renderBanner();
+
+    await waitFor(() => expect(subscriptionsApi.getMySubscription).toHaveBeenCalled());
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it("warns when the subscription has expired", async () => {
     vi.mocked(subscriptionsApi.getMySubscription).mockResolvedValue({
       ...ACTIVE_SUMMARY,

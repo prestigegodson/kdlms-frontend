@@ -125,6 +125,36 @@ describe("SubscriptionPage", () => {
     expect(screen.queryByText(/days left/)).not.toBeInTheDocument();
   });
 
+  it("offers a freemium school nothing to pay for", async () => {
+    vi.mocked(subscriptionsApi.getMySubscription).mockResolvedValue({
+      ...ACTIVE_SUMMARY,
+      freemium: true,
+    });
+
+    renderPage();
+
+    expect(await screen.findByText(/on a free plan, so there's nothing to pay/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Choose / })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Renew now" })).not.toBeInTheDocument();
+    expect(billingApi.listBillablePlans).not.toHaveBeenCalled();
+    expect(billingApi.getBillingSubscription).not.toHaveBeenCalled();
+  });
+
+  it("does not tell a freemium school with no plan to choose one", async () => {
+    vi.mocked(subscriptionsApi.getMySubscription).mockResolvedValue({
+      ...ACTIVE_SUMMARY,
+      hasSubscription: false,
+      status: "NONE",
+      freemium: true,
+    });
+
+    renderPage();
+
+    expect(await screen.findByText(/on a free plan, so there's nothing to pay/i)).toBeInTheDocument();
+    expect(screen.queryByText("No active plan")).not.toBeInTheDocument();
+    expect(billingApi.listBillablePlans).not.toHaveBeenCalled();
+  });
+
   it("offers the school's plans, explains a manual plan has no card renewal, and renews it in place", async () => {
     vi.mocked(subscriptionsApi.getMySubscription).mockResolvedValue(ACTIVE_SUMMARY);
 
