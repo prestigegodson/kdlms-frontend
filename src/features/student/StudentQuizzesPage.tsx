@@ -36,7 +36,7 @@ function statusBadge(quiz: MyTakeHomeQuizSummaryView): { variant: "success" | "w
 /**
  * The student portal's Quizzes tab (Phase 35I.3) - every applicable, published take-home quiz for
  * the caller's own class+current term (never a past term's), paginated server-side. A flat page like
- * `StudentResultsPage`: one student, no ward selector. A submitted quiz's score shows here as soon as it's reviewable - either the quiz's own
+ * `StudentTimetablePage`: one student, no ward selector. A submitted quiz's score shows here as soon as it's reviewable - either the quiz's own
  * `revealResultsOnSubmit` opt-in, or the teacher publishing results, the same
  * `TakeHomeQuizAttemptRunner#isReviewable` gate the interstitial/review use - not gated on
  * `resultsPublished` alone the way the guardian ward view (`MyWardTakeHomeQuizzesService`,

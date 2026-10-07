@@ -375,9 +375,8 @@ describe("router", () => {
 
       expect(await screen.findByRole("heading", { name: "Home" })).toBeInTheDocument();
       expect(await screen.findByText("Grace Ward")).toBeInTheDocument();
-      // Two occurrences each: the sidebar/drawer link and MobileTabBar's own copy - Home/Results
-      // are always tab-primary (see StudentLayout.tsx).
-      expect(screen.getAllByText("Results")).toHaveLength(2);
+      // A student never reads their own results - there is no Results destination at all.
+      expect(screen.queryByText("Results")).not.toBeInTheDocument();
     });
 
     it("is redirected away from /school to its own portal home", async () => {

@@ -39,23 +39,4 @@ export const STUDENT_TOURS: TourDefinition[] = [
       },
     ],
   },
-  {
-    key: "student.results",
-    version: 1,
-    portal: "student",
-    kind: "page",
-    title: "Results",
-    description: "Read your published report cards.",
-    area: "Learning",
-    roles: ["STUDENT"],
-    route: "/student/results",
-    navHref: "/student/results",
-    steps: [
-      {
-        target: "page-header",
-        title: "Your report cards",
-        body: "A term's result appears here once your school publishes it.",
-      },
-    ],
-  },
 ];

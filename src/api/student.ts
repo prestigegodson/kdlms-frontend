@@ -1,15 +1,11 @@
 import { apiFetch, apiFetchBlob } from "@/api/client";
-import type { GradingSystemView } from "@/api/gradingSystems";
-import type { StudentTermResultView } from "@/api/assessments";
-import type { TraitConfigurationView } from "@/api/traits";
 import type { ClassTimetableView } from "@/api/timetable";
-import type { ResultScope } from "@/api/types";
 
 /**
  * Self-service views for the currently authenticated STUDENT - own profile, term history, own
- * result, own class timetable, own photo. Mirrors backend
- * student.adapter.in.web.MyStudentProfileController and assessment.adapter.in.web.
- * MyResultsController and timetable.adapter.in.web.MyClassTimetableController - all under
+ * class timetable, own photo. A student never reads their own results (guardians and staff
+ * only). Mirrors backend student.adapter.in.web.MyStudentProfileController and
+ * timetable.adapter.in.web.MyClassTimetableController - all under
  * `/api/v1/me`. The `api/wards.ts` analogue for a STUDENT caller rather than a GUARDIAN one.
  */
 const BASE = "/api/v1/me";
@@ -52,13 +48,6 @@ export interface StudentTermView {
   midtermPublished: boolean;
 }
 
-/** Mirrors backend assessment.application.port.in.MyWardResultsUseCase.WardTermResultView, reused server-side for a STUDENT caller too. */
-export interface MyTermResultView {
-  result: StudentTermResultView;
-  gradingSystem: GradingSystemView;
-  traitConfiguration: TraitConfigurationView;
-}
-
 /** The calling student's own profile. */
 export function getMyStudent(): Promise<MyStudentView> {
   return apiFetch<MyStudentView>(`${BASE}/student`);
@@ -67,11 +56,6 @@ export function getMyStudent(): Promise<MyStudentView> {
 /** Every term the caller has ever been enrolled for, across every session - not pre-filtered to published ones. */
 export function listMyTerms(): Promise<StudentTermView[]> {
   return apiFetch<StudentTermView[]>(`${BASE}/terms`);
-}
-
-/** Only resolves once the caller's own class+term is published for the given scope - 404 otherwise. */
-export function getMyResult(termId: string, scope: ResultScope = "TERM"): Promise<MyTermResultView> {
-  return apiFetch<MyTermResultView>(`${BASE}/results?termId=${termId}&scope=${scope}`);
 }
 
 /** The caller's own class timetable for one term, read-only - not publication-gated, like the guardian ward equivalent. */

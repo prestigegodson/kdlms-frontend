@@ -53,7 +53,7 @@ function groupBySubject(resources: MyLearningResourceSummaryView[]): SubjectGrou
 
 /**
  * The student portal's Resources tab (Phase 35E) - every published resource of the caller's own
- * class+current term, grouped by subject. A flat page like `StudentResultsPage`: one student, no
+ * class+current term, grouped by subject. A flat page like `StudentTimetablePage`: one student, no
  * ward selector.
  */
 export function StudentResourcesPage() {

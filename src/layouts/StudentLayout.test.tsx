@@ -81,7 +81,7 @@ describe("StudentLayout", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders exactly the four-tab cap - Home, Resources, Quizzes, Results - with Timetable in the drawer only", () => {
+  it("renders Home, Resources, Quizzes and Timetable as tabs, with no Results tab", () => {
     resetFeatureStore();
     useFeatureStore.setState({
       status: "loaded",
@@ -95,10 +95,9 @@ describe("StudentLayout", () => {
     const labels = within(tabBar())
       .getAllByRole("link")
       .map((link) => link.textContent);
-    expect(labels).toEqual(["Home", "Resources", "Quizzes", "Results"]);
-    // Still reachable, just not as a tab - the More drawer/sidebar copy.
-    expect(screen.getAllByText("Timetable").length).toBeGreaterThan(0);
-    expect(within(tabBar()).queryByText("Timetable")).not.toBeInTheDocument();
+    expect(labels).toEqual(["Home", "Resources", "Quizzes", "Timetable"]);
+    // Results are for guardians and staff only - never in the student portal.
+    expect(screen.queryByText("Results")).not.toBeInTheDocument();
   });
 
   it("hides Resources entirely without the on-demand-learning entitlement", () => {
@@ -148,13 +147,12 @@ describe("StudentLayout", () => {
     expect(within(tabBar()).getByText("Resources")).toBeInTheDocument();
   });
 
-  it("always shows Home and Results regardless of any feature flag", () => {
+  it("always shows Home regardless of any feature flag", () => {
     resetFeatureStore();
     useFeatureStore.setState({ status: "loaded", onDemandLearning: false, takeHomeQuiz: false, timetable: false });
 
     renderStudentLayout();
 
     expect(within(tabBar()).getByText("Home")).toBeInTheDocument();
-    expect(within(tabBar()).getByText("Results")).toBeInTheDocument();
   });
 });

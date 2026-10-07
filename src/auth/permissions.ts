@@ -1010,11 +1010,6 @@ export const can = {
     return role === "STUDENT";
   },
 
-  /** The student portal's own Results tab - the `viewWards` shape, ungated for the same reason `viewStudentPortal` is. */
-  viewStudentResults(role: Role | undefined): boolean {
-    return role === "STUDENT";
-  },
-
   /**
    * The student portal's own Timetable tab - gated on the school's Timetables package
    * entitlement, the `viewWardFees`/`viewTimetable` shape.

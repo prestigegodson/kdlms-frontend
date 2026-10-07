@@ -89,8 +89,6 @@ import { StudentQuizPage } from "@/features/student/StudentQuizPage";
 import { StudentQuizzesPage } from "@/features/student/StudentQuizzesPage";
 import { StudentResourceDetailPage } from "@/features/student/StudentResourceDetailPage";
 import { StudentResourcesPage } from "@/features/student/StudentResourcesPage";
-import { StudentResultsPage } from "@/features/student/StudentResultsPage";
-import { StudentTermResultPage } from "@/features/student/StudentTermResultPage";
 import { StudentTimetablePage } from "@/features/student/StudentTimetablePage";
 import { PromotionPage } from "@/features/students/PromotionPage";
 import { StudentDetailPage } from "@/features/students/StudentDetailPage";
@@ -456,8 +454,6 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, element: <StudentDashboardPage /> },
           { path: "help", element: <HowToGuidesPage /> },
-          { path: "results", element: <StudentResultsPage /> },
-          { path: "results/:sessionId/:termId", element: <StudentTermResultPage /> },
           { path: "resources", element: <StudentResourcesPage /> },
           { path: "resources/:resourceId", element: <StudentResourceDetailPage /> },
           { path: "quizzes", element: <StudentQuizzesPage /> },

@@ -527,18 +527,6 @@ describe("can.viewStudentPortal", () => {
   });
 });
 
-describe("can.viewStudentResults", () => {
-  it("is true only for STUDENT", () => {
-    expect(can.viewStudentResults("STUDENT")).toBe(true);
-  });
-
-  it("is false for every other role", () => {
-    expect(can.viewStudentResults("GUARDIAN")).toBe(false);
-    expect(can.viewStudentResults("SCHOOL_ADMIN")).toBe(false);
-    expect(can.viewStudentResults(undefined)).toBe(false);
-  });
-});
-
 describe("can.viewStudentTimetable", () => {
   it("is true only for an entitled STUDENT", () => {
     expect(can.viewStudentTimetable("STUDENT", true)).toBe(true);
@@ -728,7 +716,7 @@ describe("can.viewLearningCompletions", () => {
 
 /**
  * Phase 35J: a `STUDENT` is denied every capability that isn't its own
- * (`viewStudentPortal`/`viewStudentResults`/`viewStudentTimetable`/
+ * (`viewStudentPortal`/`viewStudentTimetable`/
  * `viewStudentResources`/`viewStudentQuizzes`) or the one STUDENT-only write
  * (`postLearningComments`) - a sweep over the rest of the `can` object with
  * every gate deliberately forced open (`entitled`/`scope`/`onDemandLearning`/

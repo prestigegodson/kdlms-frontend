@@ -1,4 +1,4 @@
-import { CalendarDays, ClipboardCheck } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { useEffect } from "react";
 import { downloadMyPhoto } from "@/api/student";
 import { Avatar } from "@/components/ui/Avatar";
@@ -17,8 +17,7 @@ function fetchMyPhoto(): Promise<Blob> {
 }
 
 /**
- * The student portal's Home tab - own profile summary plus entry tiles into Results and
- * Timetable. No placeholder tiles for Resources/Quizzes here - those arrive with their own
+ * The student portal's Home tab - own profile summary plus session and Timetable tiles. No placeholder tiles for Resources/Quizzes here - those arrive with their own
  * phases (35E/35I) rather than linking somewhere that doesn't exist yet.
  */
 export function StudentDashboardPage() {
@@ -76,8 +75,7 @@ export function StudentDashboardPage() {
           label="Session"
           value={me.sessionName ?? "—"}
           hint={me.currentTermName ?? undefined}
-          to="/student/results"
-          icon={ClipboardCheck}
+          icon={CalendarDays}
         />
         <StatTile label="Timetable" value="This term" to="/student/timetable" icon={CalendarDays} />
       </div>

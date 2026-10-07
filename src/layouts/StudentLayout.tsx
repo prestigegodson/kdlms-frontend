@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, ClipboardCheck, Home, ListChecks } from "lucide-react";
+import { BookOpen, CalendarDays, Home, ListChecks } from "lucide-react";
 import { useEffect } from "react";
 import { can } from "@/auth/permissions";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
@@ -7,9 +7,8 @@ import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 import { useStudentStore } from "@/stores/studentStore";
 
 /**
- * Four primary destinations, exactly `style_guide.md`'s four-destination cap. Quizzes (Phase
- * 35I.3) is now primary; Timetable moved into the More drawer to make room - the `GuardianLayout`
- * pattern of a module's own screen arriving in the drawer before/after it holds a primary slot.
+ * Four primary destinations, exactly `style_guide.md`'s four-destination cap. There is no
+ * Results destination: a student never reads their own results - guardians and staff only.
  */
 const NAV_ITEMS: NavItem[] = [
   { label: "Home", href: "/student", icon: Home, primary: ["STUDENT"] },
@@ -30,11 +29,11 @@ const NAV_ITEMS: NavItem[] = [
     // Gated on the school's Take-home quizzes entitlement - see auth/permissions.ts's viewStudentQuizzes.
     visible: () => can.viewStudentQuizzes("STUDENT", useFeatureStore.getState().takeHomeQuiz),
   },
-  { label: "Results", href: "/student/results", icon: ClipboardCheck, primary: ["STUDENT"] },
   {
     label: "Timetable",
     href: "/student/timetable",
     icon: CalendarDays,
+    primary: ["STUDENT"],
     // Gated on the school's Timetables package entitlement, the same full-lockout shape
     // GuardianLayout's own Timetable item uses - see auth/permissions.ts's viewStudentTimetable.
     visible: () => can.viewStudentTimetable("STUDENT", useFeatureStore.getState().timetable),
