@@ -107,6 +107,9 @@ function MySubjects() {
   const takeHomeQuizEntitled = useFeatureStore((state) => state.takeHomeQuiz);
   const onDemandLearningEntitled = useFeatureStore((state) => state.onDemandLearning);
   const currentTermId = useAcademicContextStore((state) => state.currentTermId);
+  // "" means all. Class = level, classroom = class, matching the table's column headers.
+  const [levelFilter, setLevelFilter] = useState("");
+  const [classFilter, setClassFilter] = useState("");
 
   useEffect(() => {
     listMySubjects()
@@ -190,6 +193,34 @@ function MySubjects() {
     return items;
   }
 
+  const assignments = state.kind === "loaded" ? state.assignments : [];
+  const levelOptions = uniqueOptions(
+    assignments.flatMap((assignment) =>
+      assignment.levelId ? [{ id: assignment.levelId, name: assignment.levelName ?? "—" }] : [],
+    ),
+  );
+  const classOptions = uniqueOptions(
+    assignments
+      .filter((assignment) => !levelFilter || assignment.levelId === levelFilter)
+      .map((assignment) => ({ id: assignment.classId, name: assignment.className })),
+  );
+  const filtered = assignments.filter(
+    (assignment) =>
+      (!levelFilter || assignment.levelId === levelFilter) && (!classFilter || assignment.classId === classFilter),
+  );
+
+  function changeLevel(nextLevelId: string) {
+    setLevelFilter(nextLevelId);
+    // "All classes" resets the classroom too; otherwise keep it only if it belongs to the chosen class.
+    if (
+      !nextLevelId ||
+      (classFilter &&
+        !assignments.some((assignment) => assignment.classId === classFilter && assignment.levelId === nextLevelId))
+    ) {
+      setClassFilter("");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -218,6 +249,51 @@ function MySubjects() {
         />
       )}
       {state.kind === "loaded" && state.assignments.length > 0 && (
+        <StickySubHeader>
+          <FormField
+            label="Class"
+            htmlFor="my-subjects-level-filter"
+            className="min-w-0 flex-1 lg:max-w-xs"
+            labelClassName="sr-only lg:not-sr-only"
+          >
+            <Select
+              id="my-subjects-level-filter"
+              value={levelFilter}
+              onChange={(event) => changeLevel(event.target.value)}
+            >
+              <option value="">All classes</option>
+              {levelOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField
+            label="Classroom"
+            htmlFor="my-subjects-class-filter"
+            className="min-w-0 flex-1 lg:max-w-xs"
+            labelClassName="sr-only lg:not-sr-only"
+          >
+            <Select
+              id="my-subjects-class-filter"
+              value={classFilter}
+              onChange={(event) => setClassFilter(event.target.value)}
+            >
+              <option value="">All classrooms</option>
+              {classOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        </StickySubHeader>
+      )}
+      {state.kind === "loaded" && state.assignments.length > 0 && filtered.length === 0 && (
+        <EmptyState icon={BookOpen} title="No subjects match these filters" />
+      )}
+      {filtered.length > 0 && (
         <Card className="p-0">
           <Table>
             <TableHead>
@@ -229,7 +305,7 @@ function MySubjects() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {state.assignments.map((assignment) => (
+              {filtered.map((assignment) => (
                 <TableRow key={`${assignment.classId}-${assignment.subjectId}`}>
                   <TableCell label="Subject" className="font-medium text-slate-900">
                     <span className="inline-flex flex-wrap items-center gap-2">
@@ -542,6 +618,17 @@ function AdminSubjects() {
       )}
     </div>
   );
+}
+
+interface FilterOption {
+  id: string;
+  name: string;
+}
+
+/** Deduped by id, sorted by name. */
+function uniqueOptions(options: FilterOption[]): FilterOption[] {
+  const byId = new Map(options.map((option) => [option.id, option]));
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 interface SubjectSection {

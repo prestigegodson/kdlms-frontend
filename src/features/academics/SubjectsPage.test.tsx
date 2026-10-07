@@ -514,6 +514,81 @@ describe("SubjectsPage", () => {
     ).toBeInTheDocument();
   });
 
+  describe("MySubjects filters", () => {
+    const SECONDARY_ASSIGNMENT: TeacherSubjectAssignmentView = {
+      classId: "class-3",
+      className: "JSS 1A",
+      levelId: "level-2",
+      levelName: "Secondary",
+      subjectId: "subject-4",
+      subjectName: "Physics",
+      subjectTeacher: true,
+    };
+
+    function optionNames(select: HTMLElement) {
+      return within(select)
+        .getAllByRole("option")
+        .map((option) => option.textContent);
+    }
+
+    beforeEach(() => {
+      vi.mocked(meApi.listMySubjects).mockResolvedValue([
+        TERM_ONE_ASSIGNMENT,
+        SAME_SUBJECT_OTHER_CLASS,
+        SECONDARY_ASSIGNMENT,
+      ]);
+    });
+
+    it("narrows rows and classroom options to the selected class", async () => {
+      const user = userEvent.setup();
+      renderAsTeacher();
+      await screen.findByText("Physics");
+
+      await user.selectOptions(screen.getByLabelText("Class"), "level-2");
+
+      expect(screen.getByText("Physics")).toBeInTheDocument();
+      expect(screen.queryByText("Mathematics")).not.toBeInTheDocument();
+      expect(optionNames(screen.getByLabelText("Classroom"))).toEqual(["All classrooms", "JSS 1A"]);
+    });
+
+    it("narrows rows to the selected classroom", async () => {
+      const user = userEvent.setup();
+      renderAsTeacher();
+      await screen.findByText("Physics");
+
+      await user.selectOptions(screen.getByLabelText("Classroom"), "class-2");
+
+      const rows = screen.getAllByRole("row").slice(1);
+      expect(rows).toHaveLength(1);
+      expect(within(rows[0]).getByText("Little Star 2")).toBeInTheDocument();
+    });
+
+    it("clears a classroom that doesn't belong to a newly selected class", async () => {
+      const user = userEvent.setup();
+      renderAsTeacher();
+      await screen.findByText("Physics");
+
+      await user.selectOptions(screen.getByLabelText("Classroom"), "class-1");
+      await user.selectOptions(screen.getByLabelText("Class"), "level-2");
+
+      expect(screen.getByLabelText("Classroom")).toHaveValue("");
+      expect(screen.getByText("Physics")).toBeInTheDocument();
+    });
+
+    it("resets the classroom to all classrooms when All classes is selected", async () => {
+      const user = userEvent.setup();
+      renderAsTeacher();
+      await screen.findByText("Physics");
+
+      await user.selectOptions(screen.getByLabelText("Class"), "level-1");
+      await user.selectOptions(screen.getByLabelText("Classroom"), "class-2");
+      await user.selectOptions(screen.getByLabelText("Class"), "");
+
+      expect(screen.getByLabelText("Classroom")).toHaveValue("");
+      expect(screen.getAllByRole("row").slice(1)).toHaveLength(3);
+    });
+  });
+
   describe("MySubjects row actions", () => {
     function entitleEverything() {
       useFeatureStore.setState({ lessonNotes: true, takeHomeQuiz: true, onDemandLearning: true });
