@@ -1,12 +1,14 @@
-import { Eye, FileText, ListTree, Pencil, Sparkles, Wand2 } from "lucide-react";
+import { Eye, FileText, FileUp, ListTree, Pencil, Sparkles, Wand2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { can } from "@/auth/permissions";
 import { ApiError } from "@/api/client";
+import { downloadFile } from "@/api/files";
 import {
   generateLessonNote,
   getClassWeekGrid,
   getLessonNote,
+  type LessonNoteContentMode,
   type LessonNoteContentView,
   type LessonNoteView,
   reopenLessonNote,
@@ -28,6 +30,7 @@ import { UnsavedChangesBar } from "@/features/assessments/components/UnsavedChan
 import { AiGenerateSheet } from "@/features/lessonNotes/components/AiGenerateSheet";
 import { SCHOOL_AI_COPY } from "@/features/lessonNotes/components/aiGenerateCopy";
 import { LessonNoteDocumentEditor } from "@/features/lessonNotes/components/LessonNoteDocumentEditor";
+import { LessonNoteDocumentUploadField } from "@/features/lessonNotes/components/LessonNoteDocumentUploadField";
 import { lessonNoteContentToHtml } from "@/features/lessonNotes/components/lessonNoteContentToHtml";
 import { LessonNoteReadView } from "@/features/lessonNotes/components/LessonNoteReadView";
 import { LessonNoteStatusBadge } from "@/features/lessonNotes/components/LessonNoteStatusBadge";
@@ -49,15 +52,6 @@ function renderStaffImage(fileId: string, alt: string) {
   return <AuthenticatedRichImage fileId={fileId} alt={alt} />;
 }
 
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-/** A new whole-class note's starting body - one heading per subject the class takes this term. */
-function subjectHeadingsBody(subjectNames: string[]): string {
-  return subjectNames.map((name) => `<h2>${escapeHtml(name)}</h2><p></p>`).join("");
-}
-
 /**
  * Author/edit/review one week's lesson note - addressed either by a real
  * `noteId` (an existing note, hydrated via `getLessonNote`) or the literal
@@ -75,10 +69,14 @@ function subjectHeadingsBody(subjectNames: string[]): string {
  * types into or pastes a Word lesson plan into). Both halves of `content`
  * persist regardless of which is active, so the toggle below is
  * non-destructive - switching back and forth never loses either half.
+ * A third mode, "Upload document", makes an uploaded PDF/Word file the note
+ * itself (`LessonNoteDocumentUploadField`); reviewers see it through
+ * `LessonNoteReadView`'s `LessonNoteDocumentViewer`.
  * <p>
  * A whole-class note (`?classId=` instead of `?subjectId=`, or a loaded note
  * carrying `classId`) covers every subject of one class for the week: it is
- * always a document (no format toggle, no AI), and a new one starts with a
+ * always a document - typed or uploaded, never the structured form, and no
+ * AI - and a new one starts with a
  * heading per subject the class takes that term.
  */
 export function LessonNoteEditorPage() {
@@ -129,8 +127,12 @@ export function LessonNoteEditorPage() {
   // mid-edit - swaps to `LessonNoteReadView` (MathText-rendered) instead. Preview is meaningless
   // once the form itself is already read-only, and document mode is already its own WYSIWYG
   // canvas, so the toggle is offered only for a structured, editable note.
-  const documentMode = isClassNote || content.mode === "DOCUMENT";
-  const showReadView = readOnly || (previewMode && !documentMode);
+  // A class-week note is never structured, whatever an unsaved form state says.
+  const effectiveMode: LessonNoteContentMode =
+    isClassNote && content.mode === "STRUCTURED" ? "DOCUMENT" : content.mode;
+  const uploadMode = effectiveMode === "UPLOAD";
+  const documentMode = effectiveMode === "DOCUMENT";
+  const showReadView = readOnly || (previewMode && effectiveMode === "STRUCTURED");
 
   useEffect(() => {
     if (isNew || !noteId) {
@@ -153,7 +155,7 @@ export function LessonNoteEditorPage() {
         const seeded: LessonNoteContentView = {
           ...EMPTY_CONTENT,
           mode: "DOCUMENT",
-          body: subjectHeadingsBody(grid.subjectNames),
+          body: ''
         };
         setNewClassName(grid.className);
         setContent(seeded);
@@ -213,6 +215,10 @@ export function LessonNoteEditorPage() {
   }
 
   async function save() {
+    if (uploadMode && !content.fileId) {
+      setSaveError("Upload a PDF or Word document before saving.");
+      return;
+    }
     if (isClassNote) {
       await saveClassNote();
       return;
@@ -264,7 +270,7 @@ export function LessonNoteEditorPage() {
     try {
       const saved = await saveClassWeekNote(classId, termId, weekNumber, {
         topic,
-        content: cleanContent({ ...content, mode: "DOCUMENT" }),
+        content: cleanContent({ ...content, mode: effectiveMode }),
         aiGenerated,
       });
       applyNote(saved);
@@ -333,6 +339,7 @@ export function LessonNoteEditorPage() {
   const canGenerateWithAi =
     can.generateLessonNotesWithAi(role, aiLessonNotesEntitled) &&
     !isClassNote &&
+    !uploadMode &&
     !readOnly &&
     !!subjectId &&
     !!termId &&
@@ -359,7 +366,7 @@ export function LessonNoteEditorPage() {
         actions={
           (canGenerateWithAi || note || !readOnly) && (
             <div className="flex flex-wrap items-center gap-2">
-              {!readOnly && !documentMode && (
+              {!readOnly && effectiveMode === "STRUCTURED" && (
                 <Button
                   type="button"
                   variant="secondary"
@@ -458,31 +465,43 @@ export function LessonNoteEditorPage() {
         </p>
       )}
 
-      {!readOnly && !isClassNote && (
+      {!readOnly && (
         <div
           role="radiogroup"
           aria-label="Lesson note format"
           className="inline-flex rounded-control border border-slate-300 bg-white p-0.5"
         >
+          {!isClassNote && (
+            <Button
+              type="button"
+              variant={effectiveMode === "STRUCTURED" ? "secondary" : "ghost"}
+              size="sm"
+              aria-pressed={effectiveMode === "STRUCTURED"}
+              onClick={() => setContent({ ...content, mode: "STRUCTURED" })}
+            >
+              <ListTree className="h-4 w-4" aria-hidden="true" />
+              Structured form
+            </Button>
+          )}
           <Button
             type="button"
-            variant={content.mode === "STRUCTURED" ? "secondary" : "ghost"}
+            variant={documentMode ? "secondary" : "ghost"}
             size="sm"
-            aria-pressed={content.mode === "STRUCTURED"}
-            onClick={() => setContent({ ...content, mode: "STRUCTURED" })}
-          >
-            <ListTree className="h-4 w-4" aria-hidden="true" />
-            Structured form
-          </Button>
-          <Button
-            type="button"
-            variant={content.mode === "DOCUMENT" ? "secondary" : "ghost"}
-            size="sm"
-            aria-pressed={content.mode === "DOCUMENT"}
+            aria-pressed={documentMode}
             onClick={() => setContent({ ...content, mode: "DOCUMENT" })}
           >
             <FileText className="h-4 w-4" aria-hidden="true" />
             Free-form document
+          </Button>
+          <Button
+            type="button"
+            variant={uploadMode ? "secondary" : "ghost"}
+            size="sm"
+            aria-pressed={uploadMode}
+            onClick={() => setContent({ ...content, mode: "UPLOAD" })}
+          >
+            <FileUp className="h-4 w-4" aria-hidden="true" />
+            Upload document
           </Button>
         </div>
       )}
@@ -496,8 +515,9 @@ export function LessonNoteEditorPage() {
             </p>
           </div>
           <LessonNoteReadView
-            content={documentMode ? { ...content, mode: "DOCUMENT" } : content}
+            content={{ ...content, mode: effectiveMode }}
             renderImage={renderStaffImage}
+            fetchFile={downloadFile}
           />
         </div>
       ) : (
@@ -517,7 +537,14 @@ export function LessonNoteEditorPage() {
             />
           </FormField>
 
-          {documentMode ? (
+          {uploadMode ? (
+            <LessonNoteDocumentUploadField
+              document={content.document ?? null}
+              onChange={(document) =>
+                setContent({ ...content, fileId: document?.fileId ?? null, document })
+              }
+            />
+          ) : documentMode ? (
             <div className="space-y-3">
               {showConvertPrompt && (
                 <Alert variant="info">

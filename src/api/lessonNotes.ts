@@ -38,7 +38,15 @@ export interface PresentationStep {
 }
 
 /** Mirrors backend lessonnote.domain.LessonNoteContent.ContentMode - which half of a `LessonNoteContentView` is authoritative. */
-export type LessonNoteContentMode = "STRUCTURED" | "DOCUMENT";
+export type LessonNoteContentMode = "STRUCTURED" | "DOCUMENT" | "UPLOAD";
+
+/** Mirrors backend lessonnote.application.port.in.LessonNoteView.DocumentView - an `UPLOAD`-mode note's file. */
+export interface LessonNoteDocumentView {
+  fileId: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+}
 
 /**
  * Mirrors backend lessonnote.application.port.in.LessonNoteView.ContentView.
@@ -47,7 +55,9 @@ export type LessonNoteContentMode = "STRUCTURED" | "DOCUMENT";
  * `mode` is `"DOCUMENT"`; the eleven fields below are the original
  * structured NERDC form, present only when `mode` is `"STRUCTURED"`. Both
  * halves persist regardless of which is active, so switching mode in the
- * editor is non-destructive.
+ * editor is non-destructive. `UPLOAD` makes an uploaded PDF/Word file
+ * (`fileId`) the note itself; `document` describes it, and is present only
+ * while `mode` is `"UPLOAD"` (never on creator class notes or AI results).
  */
 export interface LessonNoteContentView {
   mode: LessonNoteContentMode;
@@ -63,6 +73,8 @@ export interface LessonNoteContentView {
   evaluation: string | null;
   conclusion: string | null;
   assignment: string | null;
+  fileId?: string | null;
+  document?: LessonNoteDocumentView | null;
 }
 
 /** Mirrors backend lessonnote.application.port.in.LessonNoteView.ReviewView. Every field is null until its event has happened. */

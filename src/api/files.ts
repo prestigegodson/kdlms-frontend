@@ -16,6 +16,8 @@ export const MAX_IMAGE_UPLOAD_LABEL = "2 MB";
 /** Per-content-type caps, mirroring `kdlms.files.max-size-bytes-by-content-type`. Anything not listed falls back to the image default. */
 export const UPLOAD_LIMIT_BYTES: Record<string, number> = {
   "application/pdf": 10 * 1024 * 1024,
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": 10 * 1024 * 1024,
+  "application/msword": 10 * 1024 * 1024,
   "audio/mpeg": 25 * 1024 * 1024,
   "video/mp4": 50 * 1024 * 1024,
 };

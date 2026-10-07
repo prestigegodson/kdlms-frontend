@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { LessonNoteContentView } from "@/api/lessonNotes";
 import { RichContent } from "@/components/richText/RichContent";
+import { LessonNoteDocumentViewer } from "@/features/lessonNotes/components/LessonNoteDocumentViewer";
 import { MathText } from "@/features/lessonNotes/components/MathText";
 
 interface LessonNoteReadViewProps {
@@ -18,11 +19,18 @@ interface LessonNoteReadViewProps {
    * "explicitly undefined", so each caller states its own intent.
    */
   renderImage?: (fileId: string, alt: string) => ReactNode;
+  /**
+   * Fetches an `UPLOAD`-mode note's file - staff pass `downloadFile`. Omitted for a guardian
+   * (`WardLessonNotesPage`), for the same reason as `renderImage`: the viewer then says the
+   * document is staff-only.
+   */
+  fetchFile?: (fileId: string) => Promise<Blob>;
 }
 
 /**
  * A purely presentational, read-only render of a lesson note's content.
- * Branches on {@link LessonNoteContentView.mode} (Phase 16G): `DOCUMENT`
+ * Branches on {@link LessonNoteContentView.mode} (Phase 16G): `UPLOAD` shows
+ * the uploaded PDF/Word file through `LessonNoteDocumentViewer`; `DOCUMENT`
  * renders the free-form body through `RichContent` (the same renderer the
  * take-home quiz module uses, widened for lesson notes - see
  * `LessonNoteRichText`'s vocabulary); `STRUCTURED` renders the original
@@ -39,7 +47,14 @@ interface LessonNoteReadViewProps {
  * `AiGenerateSheet`'s completed-generation preview - the "one component,
  * several callers" precedent `AttendanceSummaryPanel`/`ThreadCard` set.
  */
-export function LessonNoteReadView({ content, renderImage }: LessonNoteReadViewProps) {
+export function LessonNoteReadView({ content, renderImage, fetchFile }: LessonNoteReadViewProps) {
+  if (content.mode === "UPLOAD") {
+    return content.document ? (
+      <LessonNoteDocumentViewer document={content.document} fetchFile={fetchFile} />
+    ) : (
+      <p className="text-sm text-slate-500">No document has been uploaded yet.</p>
+    );
+  }
   if (content.mode === "DOCUMENT") {
     return <RichContent html={content.body ?? ""} renderImage={renderImage} className="space-y-2 text-sm" />;
   }

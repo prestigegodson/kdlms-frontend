@@ -25,6 +25,7 @@
     "@tiptap/pm": "3.31.3",
     "@tiptap/react": "3.31.3",
     "@tiptap/starter-kit": "3.31.3",
+    "docx-preview": "^0.4.1",
     "katex": "^0.18.4",
     "livekit-client": "^2.22.3",
     "lucide-react": "^1.28.0",

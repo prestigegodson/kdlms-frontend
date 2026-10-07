@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import * as filesApi from "@/api/files";
 import * as lessonNotesApi from "@/api/lessonNotes";
 import { LessonNoteEditorPage } from "@/features/lessonNotes/LessonNoteEditorPage";
 import { LESSON_NOTE_FIELD_HELP } from "@/features/lessonNotes/lessonNoteFieldHelp";
@@ -20,6 +21,11 @@ beforeAll(() => {
 vi.mock("@/api/lessonNotes", async () => {
   const actual = await vi.importActual<typeof import("@/api/lessonNotes")>("@/api/lessonNotes");
   return { ...actual, saveLessonNote: vi.fn(), saveClassWeekNote: vi.fn(), getClassWeekGrid: vi.fn() };
+});
+
+vi.mock("@/api/files", async () => {
+  const actual = await vi.importActual<typeof import("@/api/files")>("@/api/files");
+  return { ...actual, uploadFile: vi.fn(), downloadFile: vi.fn() };
 });
 
 function renderNewNote(
@@ -171,5 +177,62 @@ describe("LessonNoteEditorPage whole-class note", () => {
       ),
     );
     expect(lessonNotesApi.saveLessonNote).not.toHaveBeenCalled();
+  });
+});
+
+describe("LessonNoteEditorPage uploaded document", () => {
+  it("uploads a PDF as the note and saves it in upload mode", async () => {
+    vi.mocked(filesApi.uploadFile).mockResolvedValue({
+      fileId: "file-1",
+      fileName: "plan.pdf",
+      contentType: "application/pdf",
+      sizeBytes: 1234,
+    });
+    vi.mocked(filesApi.downloadFile).mockReturnValue(new Promise(() => {}));
+    vi.mocked(lessonNotesApi.saveLessonNote).mockReset().mockRejectedValue(new Error("stop here"));
+    renderNewNote();
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByLabelText("Topic"), "Fractions");
+    await user.click(screen.getByRole("button", { name: "Upload document" }));
+    expect(screen.getByRole("button", { name: "Upload document" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByLabelText("Evaluation")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Generate with AI" })).not.toBeInTheDocument();
+
+    // Saving with no file yet is refused client-side.
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(await screen.findByText("Upload a PDF or Word document before saving.")).toBeInTheDocument();
+    expect(lessonNotesApi.saveLessonNote).not.toHaveBeenCalled();
+
+    const file = new File(["%PDF-1.7"], "plan.pdf", { type: "application/pdf" });
+    await user.upload(screen.getByLabelText("Lesson note document"), file);
+    expect(await screen.findByText("plan.pdf")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() =>
+      expect(lessonNotesApi.saveLessonNote).toHaveBeenCalledWith(
+        "s1",
+        "t1",
+        3,
+        expect.objectContaining({ content: expect.objectContaining({ mode: "UPLOAD", fileId: "file-1" }) }),
+        undefined,
+      ),
+    );
+  });
+
+  it("refuses a file that isn't a PDF or Word document", async () => {
+    vi.mocked(filesApi.uploadFile).mockClear();
+    renderNewNote();
+    const user = userEvent.setup({ applyAccept: false });
+
+    await screen.findByLabelText("Topic");
+    await user.click(screen.getByRole("button", { name: "Upload document" }));
+    await user.upload(
+      screen.getByLabelText("Lesson note document"),
+      new File(["x"], "notes.txt", { type: "text/plain" }),
+    );
+
+    expect(await screen.findByText(/Choose a PDF or Word document/)).toBeInTheDocument();
+    expect(filesApi.uploadFile).not.toHaveBeenCalled();
   });
 });
