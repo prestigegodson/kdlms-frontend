@@ -22,12 +22,14 @@ describe("SchoolSettingsPage", () => {
       allowWeekendAttendance: false,
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: false,
+      allowStudentPasswordChange: true,
     });
     vi.mocked(schoolSettingsApi.updateSchoolSettings).mockResolvedValue({
       schoolId: "school-1",
       allowWeekendAttendance: true,
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: false,
+      allowStudentPasswordChange: true,
     });
     const user = userEvent.setup();
     render(<SchoolSettingsPage />);
@@ -44,6 +46,7 @@ describe("SchoolSettingsPage", () => {
       allowWeekendAttendance: true,
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: false,
+      allowStudentPasswordChange: true,
     });
     expect(await screen.findByText("Settings updated.")).toBeInTheDocument();
   });
@@ -54,12 +57,14 @@ describe("SchoolSettingsPage", () => {
       allowWeekendAttendance: false,
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: false,
+      allowStudentPasswordChange: true,
     });
     vi.mocked(schoolSettingsApi.updateSchoolSettings).mockResolvedValue({
       schoolId: "school-1",
       allowWeekendAttendance: false,
       allowWeekendTimetable: true,
       guardianLessonNotesEnabled: false,
+      allowStudentPasswordChange: true,
     });
     const user = userEvent.setup();
     render(<SchoolSettingsPage />);
@@ -76,6 +81,7 @@ describe("SchoolSettingsPage", () => {
       allowWeekendAttendance: false,
       allowWeekendTimetable: true,
       guardianLessonNotesEnabled: false,
+      allowStudentPasswordChange: true,
     });
     expect(await screen.findByText("Settings updated.")).toBeInTheDocument();
   });
@@ -86,12 +92,14 @@ describe("SchoolSettingsPage", () => {
       allowWeekendAttendance: false,
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: false,
+      allowStudentPasswordChange: true,
     });
     vi.mocked(schoolSettingsApi.updateSchoolSettings).mockResolvedValue({
       schoolId: "school-1",
       allowWeekendAttendance: false,
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: true,
+      allowStudentPasswordChange: true,
     });
     const user = userEvent.setup();
     render(<SchoolSettingsPage />);
@@ -108,6 +116,42 @@ describe("SchoolSettingsPage", () => {
       allowWeekendAttendance: false,
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: true,
+      allowStudentPasswordChange: true,
+    });
+    expect(await screen.findByText("Settings updated.")).toBeInTheDocument();
+  });
+
+  it("toggles the student password change setting, which is on by default", async () => {
+    vi.mocked(schoolSettingsApi.getSchoolSettings).mockResolvedValue({
+      schoolId: "school-1",
+      allowWeekendAttendance: false,
+      allowWeekendTimetable: false,
+      guardianLessonNotesEnabled: false,
+      allowStudentPasswordChange: true,
+    });
+    vi.mocked(schoolSettingsApi.updateSchoolSettings).mockResolvedValue({
+      schoolId: "school-1",
+      allowWeekendAttendance: false,
+      allowWeekendTimetable: false,
+      guardianLessonNotesEnabled: false,
+      allowStudentPasswordChange: false,
+    });
+    const user = userEvent.setup();
+    render(<SchoolSettingsPage />);
+
+    const checkbox = await screen.findByRole("checkbox", { name: "Allow students to change password" });
+    expect(checkbox).toBeChecked();
+
+    await user.click(checkbox);
+    expect(checkbox).not.toBeChecked();
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(schoolSettingsApi.updateSchoolSettings).toHaveBeenCalledWith({
+      allowWeekendAttendance: false,
+      allowWeekendTimetable: false,
+      guardianLessonNotesEnabled: false,
+      allowStudentPasswordChange: false,
     });
     expect(await screen.findByText("Settings updated.")).toBeInTheDocument();
   });

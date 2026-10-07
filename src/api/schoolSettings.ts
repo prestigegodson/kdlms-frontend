@@ -7,6 +7,8 @@ export interface SchoolSettingsView {
   allowWeekendTimetable: boolean;
   /** Lets guardians read their wards' approved lesson notes. Off by default; also needs the Lesson notes plan feature. */
   guardianLessonNotesEnabled: boolean;
+  /** Lets students change their own password. On by default; never blocks replacing a temporary password. */
+  allowStudentPasswordChange: boolean;
 }
 
 /** A full replace, like the rest of this resource - omitting a field clears it. */
@@ -15,6 +17,8 @@ export interface SaveSchoolSettingsRequest {
   allowWeekendTimetable: boolean;
   /** Lets guardians read their wards' approved lesson notes. Off by default; also needs the Lesson notes plan feature. */
   guardianLessonNotesEnabled: boolean;
+  /** Lets students change their own password. On by default; never blocks replacing a temporary password. */
+  allowStudentPasswordChange: boolean;
 }
 
 const BASE = "/api/v1/school/settings";

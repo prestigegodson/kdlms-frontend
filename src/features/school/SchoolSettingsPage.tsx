@@ -48,6 +48,7 @@ export function SchoolSettingsPage() {
         allowWeekendAttendance: state.settings.allowWeekendAttendance,
         allowWeekendTimetable: state.settings.allowWeekendTimetable,
         guardianLessonNotesEnabled: state.settings.guardianLessonNotesEnabled,
+        allowStudentPasswordChange: state.settings.allowStudentPasswordChange,
       });
       setState({ kind: "loaded", settings: updated });
       // The attendance date picker reads this same store - push the save straight in
@@ -144,6 +145,24 @@ export function SchoolSettingsPage() {
           <p className="text-sm text-slate-500">
             Off by default. When turned on, guardians can read their wards' approved lesson notes in the
             guardian portal. This also requires the Lesson notes feature on your school's plan.
+          </p>
+
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <Checkbox
+              checked={settings.allowStudentPasswordChange}
+              onChange={(event) =>
+                setState({
+                  kind: "loaded",
+                  settings: { ...settings, allowStudentPasswordChange: event.target.checked },
+                })
+              }
+            />
+            Allow students to change password
+          </label>
+          <p className="text-sm text-slate-500">
+            On by default. When turned off, students can't change their own password from the student
+            portal - a teacher or admin sets it for them. A student given a temporary password must still
+            replace it the first time they sign in.
           </p>
 
           <Button type="submit" disabled={saving}>

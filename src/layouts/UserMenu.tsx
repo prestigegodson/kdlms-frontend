@@ -122,8 +122,9 @@ export function UserMenu({ user }: UserMenuProps) {
             )}
             {/* The backend refuses /auth/change-password for an impersonation token outright
                 (shared.config.ImpersonationGuardFilter) - a sysadmin must never change the
-                target's own credentials, so this is hidden rather than shown-then-403ing. */}
-            {!impersonation && (
+                target's own credentials, so this is hidden rather than shown-then-403ing. The same
+                goes for a student whose school has turned student password changes off. */}
+            {!impersonation && user.canChangePassword !== false && (
               <button
                 type="button"
                 role="menuitem"

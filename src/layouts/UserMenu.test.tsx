@@ -67,6 +67,16 @@ describe("UserMenu", () => {
     expect(screen.getByRole("menuitem", { name: "Log out" })).toBeInTheDocument();
   });
 
+  it("hides Change password when the user may not change it", async () => {
+    const user = userEvent.setup();
+    renderMenu({ ...USER, role: "STUDENT", canChangePassword: false });
+
+    await user.click(screen.getByRole("button", { name: "Account menu" }));
+
+    expect(screen.queryByRole("menuitem", { name: "Change password" })).not.toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Log out" })).toBeInTheDocument();
+  });
+
   it("opens the portal's how-to guides", async () => {
     const router = createMemoryRouter(
       [

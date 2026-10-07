@@ -41,6 +41,13 @@ export interface UserSummary {
    * reason as mustChangePassword; undefined behaves as false.
    */
   profileIncomplete?: boolean;
+  /**
+   * False only for a STUDENT whose school has turned off "Allow students to
+   * change password" - hides the account menu's Change password action; the
+   * server refuses the change (403) regardless. Optional for the same
+   * test-fixture reason as mustChangePassword; undefined behaves as true.
+   */
+  canChangePassword?: boolean;
 }
 
 export interface SessionResponse {

@@ -38,6 +38,8 @@ export interface AuthenticatedUser {
   emailVerified?: boolean;
   /** See api/auth.ts's UserSummary#profileIncomplete - undefined behaves as false. */
   profileIncomplete?: boolean;
+  /** See api/auth.ts's UserSummary#canChangePassword - undefined behaves as true. */
+  canChangePassword?: boolean;
 }
 
 type AuthStatus = "idle" | "authenticating";
