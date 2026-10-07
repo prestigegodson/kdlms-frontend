@@ -150,7 +150,15 @@ export function getWardLessonNotes(studentId: string, termId: string): Promise<W
   return apiFetch<WardSubjectLessonNotesView[]>(`${BASE}/${studentId}/lesson-notes?termId=${termId}`);
 }
 
-/** One note in full, read-only - 404s unless it's APPROVED and belongs to one of this ward's applicable subjects. */
+/** The ward's own class's APPROVED whole-class notes (one per week, covering every subject) for one term. */
+export function getWardClassLessonNotes(studentId: string, termId: string): Promise<WardLessonNoteSummary[]> {
+  return apiFetch<WardLessonNoteSummary[]>(`${BASE}/${studentId}/class-lesson-notes?termId=${termId}`);
+}
+
+/**
+ * One note in full, read-only - 404s unless it's APPROVED and belongs to one of this ward's applicable
+ * subjects (or, for a whole-class note, to the ward's own class).
+ */
 export function getWardLessonNote(studentId: string, noteId: string): Promise<LessonNoteView> {
   return apiFetch<LessonNoteView>(`${BASE}/${studentId}/lesson-notes/${noteId}`);
 }

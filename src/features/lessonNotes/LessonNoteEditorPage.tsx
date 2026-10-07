@@ -5,10 +5,12 @@ import { can } from "@/auth/permissions";
 import { ApiError } from "@/api/client";
 import {
   generateLessonNote,
+  getClassWeekGrid,
   getLessonNote,
   type LessonNoteContentView,
   type LessonNoteView,
   reopenLessonNote,
+  saveClassWeekNote,
   saveLessonNote,
   submitLessonNote,
   withdrawLessonNote,
@@ -47,6 +49,15 @@ function renderStaffImage(fileId: string, alt: string) {
   return <AuthenticatedRichImage fileId={fileId} alt={alt} />;
 }
 
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/** A new whole-class note's starting body - one heading per subject the class takes this term. */
+function subjectHeadingsBody(subjectNames: string[]): string {
+  return subjectNames.map((name) => `<h2>${escapeHtml(name)}</h2><p></p>`).join("");
+}
+
 /**
  * Author/edit/review one week's lesson note - addressed either by a real
  * `noteId` (an existing note, hydrated via `getLessonNote`) or the literal
@@ -64,6 +75,11 @@ function renderStaffImage(fileId: string, alt: string) {
  * types into or pastes a Word lesson plan into). Both halves of `content`
  * persist regardless of which is active, so the toggle below is
  * non-destructive - switching back and forth never loses either half.
+ * <p>
+ * A whole-class note (`?classId=` instead of `?subjectId=`, or a loaded note
+ * carrying `classId`) covers every subject of one class for the week: it is
+ * always a document (no format toggle, no AI), and a new one starts with a
+ * heading per subject the class takes that term.
  */
 export function LessonNoteEditorPage() {
   const { noteId } = useParams<{ noteId: string }>();
@@ -71,11 +87,15 @@ export function LessonNoteEditorPage() {
   const navigate = useNavigate();
 
   const subjectId = searchParams.get("subjectId") ?? "";
+  const classIdParam = searchParams.get("classId") ?? "";
   const termId = searchParams.get("termId") ?? "";
   const weekNumber = Number(searchParams.get("weekNumber") ?? "0");
   const isNew = !noteId || noteId === "new";
 
   const [note, setNote] = useState<LessonNoteView | null>(null);
+  const classId = note?.classId ?? classIdParam;
+  const isClassNote = !!classId;
+  const [newClassName, setNewClassName] = useState<string | null>(null);
   // Lesson notes are branch-scoped: an existing note carries its own branch; a new week's link
   // carries the branch a SCHOOL_ADMIN was browsing (absent for everyone else - the server uses
   // their own branch).
@@ -109,7 +129,8 @@ export function LessonNoteEditorPage() {
   // mid-edit - swaps to `LessonNoteReadView` (MathText-rendered) instead. Preview is meaningless
   // once the form itself is already read-only, and document mode is already its own WYSIWYG
   // canvas, so the toggle is offered only for a structured, editable note.
-  const showReadView = readOnly || (previewMode && content.mode === "STRUCTURED");
+  const documentMode = isClassNote || content.mode === "DOCUMENT";
+  const showReadView = readOnly || (previewMode && !documentMode);
 
   useEffect(() => {
     if (isNew || !noteId) {
@@ -121,6 +142,27 @@ export function LessonNoteEditorPage() {
         setLoadError(error instanceof ApiError ? error.message : "Failed to load this lesson note"),
       );
   }, [isNew, noteId]);
+
+  // A new whole-class note is seeded with the class's subject headings once the grid tells us them.
+  useEffect(() => {
+    if (!isNew || !classIdParam || !termId) {
+      return;
+    }
+    getClassWeekGrid(classIdParam, termId)
+      .then((grid) => {
+        const seeded: LessonNoteContentView = {
+          ...EMPTY_CONTENT,
+          mode: "DOCUMENT",
+          body: subjectHeadingsBody(grid.subjectNames),
+        };
+        setNewClassName(grid.className);
+        setContent(seeded);
+        setSnapshot(JSON.stringify(normalizeForCompare("", seeded)));
+      })
+      .catch((error: unknown) =>
+        setLoadError(error instanceof ApiError ? error.message : "Failed to load this class"),
+      );
+  }, [isNew, classIdParam, termId]);
 
   const dirty = JSON.stringify(normalizeForCompare(topic, content)) !== snapshot;
 
@@ -171,6 +213,10 @@ export function LessonNoteEditorPage() {
   }
 
   async function save() {
+    if (isClassNote) {
+      await saveClassNote();
+      return;
+    }
     if (!subjectId || !termId || !weekNumber) {
       setSaveError(
         "Missing subject, term, or week - go back to the week grid and open this week again.",
@@ -199,6 +245,33 @@ export function LessonNoteEditorPage() {
           {
             replace: true,
           },
+        );
+      }
+    } catch (error) {
+      setSaveError(error instanceof ApiError ? error.message : "Failed to save this lesson note");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveClassNote() {
+    if (!termId || !weekNumber) {
+      setSaveError("Missing term or week - go back to the week grid and open this week again.");
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const saved = await saveClassWeekNote(classId, termId, weekNumber, {
+        topic,
+        content: cleanContent({ ...content, mode: "DOCUMENT" }),
+        aiGenerated,
+      });
+      applyNote(saved);
+      if (isNew) {
+        navigate(
+          `/school/lesson-notes/${saved.id}?classId=${classId}&termId=${termId}&weekNumber=${weekNumber}`,
+          { replace: true },
         );
       }
     } catch (error) {
@@ -259,23 +332,34 @@ export function LessonNoteEditorPage() {
   // offered whenever the form itself would accept the result, isNew or not.
   const canGenerateWithAi =
     can.generateLessonNotesWithAi(role, aiLessonNotesEntitled) &&
+    !isClassNote &&
     !readOnly &&
     !!subjectId &&
     !!termId &&
     weekNumber > 0;
   const showConvertPrompt =
-    !readOnly && content.mode === "DOCUMENT" && richTextIsBlank(content.body) && structuredHasContent(content);
+    !readOnly &&
+    !isClassNote &&
+    content.mode === "DOCUMENT" &&
+    richTextIsBlank(content.body) &&
+    structuredHasContent(content);
 
   return (
     <div className="space-y-6 pb-24">
       <PageHeader
         title={`Week ${weekNumber} lesson note`}
-        description={note ? `${note.subjectName} · ${note.levelName}` : undefined}
+        description={
+          note
+            ? `${note.className ?? note.subjectName} · ${note.classId ? "All subjects" : note.levelName}`
+            : newClassName
+              ? `${newClassName} · All subjects`
+              : undefined
+        }
         backTo="/school/lesson-notes"
         actions={
           (canGenerateWithAi || note || !readOnly) && (
             <div className="flex flex-wrap items-center gap-2">
-              {!readOnly && content.mode === "STRUCTURED" && (
+              {!readOnly && !documentMode && (
                 <Button
                   type="button"
                   variant="secondary"
@@ -374,7 +458,7 @@ export function LessonNoteEditorPage() {
         </p>
       )}
 
-      {!readOnly && (
+      {!readOnly && !isClassNote && (
         <div
           role="radiogroup"
           aria-label="Lesson note format"
@@ -411,7 +495,10 @@ export function LessonNoteEditorPage() {
               <MathText text={topic} />
             </p>
           </div>
-          <LessonNoteReadView content={content} renderImage={renderStaffImage} />
+          <LessonNoteReadView
+            content={documentMode ? { ...content, mode: "DOCUMENT" } : content}
+            renderImage={renderStaffImage}
+          />
         </div>
       ) : (
         <>
@@ -430,7 +517,7 @@ export function LessonNoteEditorPage() {
             />
           </FormField>
 
-          {content.mode === "DOCUMENT" ? (
+          {documentMode ? (
             <div className="space-y-3">
               {showConvertPrompt && (
                 <Alert variant="info">

@@ -28,10 +28,13 @@ export function ReviewQueueTable({ rows }: ReviewQueueTableProps) {
       </TableHead>
       <TableBody>
         {rows.map((row) => {
-          const to = `/school/lesson-notes/${row.id}?subjectId=${row.subjectId}&termId=${row.termId}&weekNumber=${row.weekNumber}`;
+          const scope = row.classId ? `classId=${row.classId}` : `subjectId=${row.subjectId}`;
+          const to = `/school/lesson-notes/${row.id}?${scope}&termId=${row.termId}&weekNumber=${row.weekNumber}`;
           return (
             <TableRow key={row.id} to={to}>
-              <TableCell label="Subject">{row.subjectName ?? "—"}</TableCell>
+              <TableCell label="Subject">
+                {row.classId ? `${row.className ?? "Class"} · All subjects` : (row.subjectName ?? "—")}
+              </TableCell>
               <TableCell label="Level">{row.levelName ?? "—"}</TableCell>
               <TableCell label="Term">{row.termName ?? "—"}</TableCell>
               <TableCell label="Week">Week {row.weekNumber}</TableCell>

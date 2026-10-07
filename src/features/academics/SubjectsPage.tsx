@@ -89,8 +89,9 @@ type MySubjectsState =
   | { kind: "error"; message: string };
 
 /**
- * The (class, subject) pairs the calling TEACHER is assigned to teach
- * (GET /api/v1/me/subjects), already scoped server-side to the school's
+ * The (class, subject) pairs the calling TEACHER subject-teaches, plus every
+ * other subject of a class they class-teach or assist (`subjectTeacher: false`,
+ * badged "Class teacher") (GET /api/v1/me/subjects), already scoped server-side to the school's
  * current term. `capabilities` is populated app-wide by SchoolLayout on
  * mount, so `currentTermName` is either already there or arrives a moment
  * later via the store subscription below. Each row carries an `ActionMenu`
@@ -213,7 +214,7 @@ function MySubjects() {
         <EmptyState
           icon={BookOpen}
           title="No subjects yet"
-          description="You have no subject-teacher assignments yet."
+          description="You don't subject-teach or class-teach anything yet."
         />
       )}
       {state.kind === "loaded" && state.assignments.length > 0 && (
@@ -231,7 +232,10 @@ function MySubjects() {
               {state.assignments.map((assignment) => (
                 <TableRow key={`${assignment.classId}-${assignment.subjectId}`}>
                   <TableCell label="Subject" className="font-medium text-slate-900">
-                    {assignment.subjectName}
+                    <span className="inline-flex flex-wrap items-center gap-2">
+                      {assignment.subjectName}
+                      {!assignment.subjectTeacher && <Badge variant="neutral">Class teacher</Badge>}
+                    </span>
                   </TableCell>
                   <TableCell label="Classroom">{assignment.className}</TableCell>
                   <TableCell label="Class">{assignment.levelName ?? "—"}</TableCell>

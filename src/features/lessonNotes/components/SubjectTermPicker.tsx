@@ -17,6 +17,11 @@ interface SubjectTermPickerProps {
   onSubjectChange: (subjectId: string) => void;
   termId: string;
   onTermChange: (termId: string) => void;
+  /**
+   * What the first picker chooses - "Subject" by default; the whole-class note grid reuses this
+   * picker for a class instead.
+   */
+  itemLabel?: "Subject" | "Class";
 }
 
 /**
@@ -26,7 +31,8 @@ interface SubjectTermPickerProps {
  * the current session/term). Subjects are supplied by the caller rather
  * than fetched here, since the two lesson-notes panels source their subject
  * list differently (a teacher's own `/me/lesson-note-subjects` vs. the
- * admin catalogue's `listSubjects()`).
+ * admin catalogue's `listSubjects()`). `itemLabel="Class"` repurposes the
+ * first picker for the whole-class note grid's class list.
  */
 export function SubjectTermPicker({
   subjects,
@@ -34,7 +40,9 @@ export function SubjectTermPicker({
   onSubjectChange,
   termId,
   onTermChange,
+  itemLabel = "Subject",
 }: SubjectTermPickerProps) {
+  const itemKey = itemLabel.toLowerCase();
   const [sessions, setSessions] = useState<AcademicSessionView[]>([]);
   const [sessionId, setSessionId] = useState("");
   const [terms, setTerms] = useState<TermView[]>([]);
@@ -59,17 +67,17 @@ export function SubjectTermPicker({
 
   useFilterChip("session", sessions.find((session) => session.id === sessionId)?.name);
   useFilterChip("term", terms.find((term) => term.id === termId)?.name);
-  useFilterChip("subject", subjects.find((option) => option.id === subjectId)?.name);
+  useFilterChip(itemKey, subjects.find((option) => option.id === subjectId)?.name);
 
   return (
     <div className="grid min-w-0 flex-1 gap-2 lg:grid-flow-col lg:auto-cols-fr lg:gap-4">
-      <FormField label="Subject" htmlFor="lesson-note-picker-subject">
+      <FormField label={itemLabel} htmlFor={`lesson-note-picker-${itemKey}`}>
         <Select
-          id="lesson-note-picker-subject"
+          id={`lesson-note-picker-${itemKey}`}
           value={subjectId}
           onChange={(event) => onSubjectChange(event.target.value)}
         >
-          <option value="">Select a subject…</option>
+          <option value="">Select a {itemKey}…</option>
           {subjects.map((option) => (
             <option key={option.id} value={option.id}>
               {option.name}

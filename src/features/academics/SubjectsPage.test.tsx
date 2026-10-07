@@ -213,6 +213,7 @@ const TERM_ONE_ASSIGNMENT: TeacherSubjectAssignmentView = {
   levelName: "Primary",
   subjectId: "subject-2",
   subjectName: "Mathematics",
+  subjectTeacher: true,
 };
 
 const SAME_SUBJECT_OTHER_CLASS: TeacherSubjectAssignmentView = {
@@ -222,6 +223,7 @@ const SAME_SUBJECT_OTHER_CLASS: TeacherSubjectAssignmentView = {
   levelName: "Primary",
   subjectId: "subject-2",
   subjectName: "Mathematics",
+  subjectTeacher: true,
 };
 
 describe("SubjectsPage", () => {
@@ -475,6 +477,21 @@ describe("SubjectsPage", () => {
 
     expect(await screen.findByText("Mathematics")).toBeInTheDocument();
     expect(screen.getByText("Showing subjects for First Term.")).toBeInTheDocument();
+  });
+
+  it("badges a subject the TEACHER sees only as the class teacher", async () => {
+    vi.mocked(meApi.listMySubjects).mockResolvedValue([
+      TERM_ONE_ASSIGNMENT,
+      { ...TERM_ONE_ASSIGNMENT, subjectId: "subject-3", subjectName: "English", subjectTeacher: false },
+    ]);
+
+    renderAsTeacher();
+
+    const englishRow = (await screen.findByText("English")).closest("tr");
+    const mathsRow = screen.getByText("Mathematics").closest("tr");
+    expect(englishRow).not.toBeNull();
+    expect(within(englishRow as HTMLElement).getByText("Class teacher")).toBeInTheDocument();
+    expect(within(mathsRow as HTMLElement).queryByText("Class teacher")).not.toBeInTheDocument();
   });
 
   it("warns a TEACHER when the school has not set a current term", async () => {

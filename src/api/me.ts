@@ -32,6 +32,8 @@ export interface TeacherSubjectAssignmentView {
   levelName?: string;
   subjectId: string;
   subjectName: string;
+  /** False when the caller sees this subject only as the class's class/assistant teacher. */
+  subjectTeacher: boolean;
 }
 
 /**
@@ -55,7 +57,7 @@ export function listMyClasses(): Promise<TeacherClassView[]> {
   return apiFetch<TeacherClassView[]>(`${BASE}/classes`);
 }
 
-/** Every (class, subject) the caller is the assigned subject teacher for. */
+/** Every (class, subject) the caller subject-teaches, plus every subject of a class they class-teach or assist. */
 export function listMySubjects(): Promise<TeacherSubjectAssignmentView[]> {
   return apiFetch<TeacherSubjectAssignmentView[]>(`${BASE}/subjects`);
 }

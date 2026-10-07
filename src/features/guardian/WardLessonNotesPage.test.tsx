@@ -16,6 +16,7 @@ vi.mock("@/api/wards", async () => {
     listMyWards: vi.fn(),
     listWardTerms: vi.fn(),
     getWardLessonNotes: vi.fn(),
+    getWardClassLessonNotes: vi.fn(),
     getWardLessonNote: vi.fn(),
   };
 });
@@ -89,6 +90,8 @@ const NOTE_DETAIL: LessonNoteView = {
   updatedAt: "2026-09-01T10:00:00Z",
   review: { submittedAt: null, submittedByName: null, reviewedAt: null, reviewedByName: null, reviewComment: null },
   actions: { canEdit: false, canSubmit: false, canWithdraw: false, canReview: false, canReopen: false },
+  classId: null,
+  className: null,
 };
 
 function renderPage() {
@@ -116,6 +119,7 @@ describe("WardLessonNotesPage", () => {
     resetFeatureStore();
     vi.mocked(wardsApi.listWardTerms).mockResolvedValue([TERM]);
     vi.mocked(wardsApi.getWardLessonNotes).mockResolvedValue(SUBJECTS);
+    vi.mocked(wardsApi.getWardClassLessonNotes).mockResolvedValue([]);
     vi.mocked(wardsApi.getWardLessonNote).mockResolvedValue(NOTE_DETAIL);
   });
 
@@ -147,6 +151,41 @@ describe("WardLessonNotesPage", () => {
     expect(await screen.findByText(/Mathematics/)).toBeInTheDocument();
     expect(screen.getByText(/Basic Science/)).toBeInTheDocument();
     expect(screen.getByText(/Week 1 · Whole numbers/)).toBeInTheDocument();
+  });
+
+  it("shows no whole-class section when the class has no whole-class notes", async () => {
+    vi.mocked(wardsApi.listMyWards).mockResolvedValue([WARD]);
+
+    renderPage();
+
+    await screen.findByText(/Mathematics/);
+    expect(screen.queryByText(/Whole class/)).not.toBeInTheDocument();
+  });
+
+  it("lists the class's whole-class notes in their own section and opens one", async () => {
+    vi.mocked(wardsApi.listMyWards).mockResolvedValue([WARD]);
+    vi.mocked(wardsApi.getWardClassLessonNotes).mockResolvedValue([
+      { noteId: "class-note-1", weekNumber: 2, weekStart: "2026-09-14", weekEnd: "2026-09-20", topic: "My Family" },
+    ]);
+    vi.mocked(wardsApi.getWardLessonNote).mockResolvedValue({
+      ...NOTE_DETAIL,
+      id: "class-note-1",
+      subjectId: null,
+      subjectName: null,
+      classId: "class-1",
+      className: "Primary 3",
+      topic: "My Family",
+      content: { ...NOTE_DETAIL.content, mode: "DOCUMENT", body: "<h2>English</h2><p>Family words</p>" },
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    expect(await screen.findByText("Whole class · 1 note")).toBeInTheDocument();
+    await user.click(screen.getByText(/Week 2 · My Family/));
+
+    expect(await screen.findByRole("heading", { name: "English", level: 2 })).toBeInTheDocument();
+    expect(wardsApi.getWardLessonNote).toHaveBeenCalledWith("s1", "class-note-1");
   });
 
   it("shows a muted message for a subject with no approved notes yet", async () => {

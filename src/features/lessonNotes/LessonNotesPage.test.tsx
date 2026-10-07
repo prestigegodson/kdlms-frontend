@@ -16,6 +16,8 @@ vi.mock("@/api/lessonNotes", async () => {
   return {
     ...actual,
     getMyLessonNoteSubjects: vi.fn(),
+    getMyLessonNoteClasses: vi.fn(),
+    getClassWeekGrid: vi.fn(),
     getReviewQueue: vi.fn(),
     getWeekGrid: vi.fn(),
     copyLessonNotes: vi.fn(),
@@ -64,6 +66,7 @@ describe("LessonNotesPage", () => {
     resetBranchStore();
     useBranchStore.setState({ status: "loaded", branches: [], selectedBranchId: null });
     vi.mocked(lessonNotesApi.getMyLessonNoteSubjects).mockResolvedValue([]);
+    vi.mocked(lessonNotesApi.getMyLessonNoteClasses).mockResolvedValue([]);
     vi.mocked(subjectsApi.listSubjects).mockResolvedValue({
       content: [],
       totalElements: 0,
@@ -138,6 +141,40 @@ describe("LessonNotesPage", () => {
     );
   });
 
+  it("offers a TEACHER with no classes no By class tab", async () => {
+    renderAs("TEACHER");
+
+    await screen.findByText("No subjects assigned");
+    expect(screen.queryByRole("tab", { name: "By class" })).not.toBeInTheDocument();
+  });
+
+  it("lets a class teacher open their class's whole-class week grid", async () => {
+    const session = { id: "session-1", schoolId: "school-1", name: "2026/2027", startDate: "2026-09-01", endDate: null, current: true };
+    const term = { id: "term-1", schoolId: "school-1", sessionId: "session-1", termNumber: 1, name: "First Term", startDate: "2026-09-01", endDate: "2026-12-01", current: true };
+    vi.mocked(sessionsApi.listSessions).mockResolvedValue({ content: [session], totalElements: 1, totalPages: 1, number: 0, size: 50 });
+    vi.mocked(sessionsApi.listTerms).mockResolvedValue([term]);
+    vi.mocked(lessonNotesApi.getMyLessonNoteClasses).mockResolvedValue([
+      { classId: "class-1", className: "Primary 3A", levelId: "level-1", levelName: "Primary", authorable: true },
+    ]);
+    vi.mocked(lessonNotesApi.getClassWeekGrid).mockResolvedValue({
+      classId: "class-1",
+      className: "Primary 3A",
+      levelId: "level-1",
+      levelName: "Primary",
+      branchId: "branch-1",
+      subjectNames: ["English", "Mathematics"],
+      weeks: [{ weekNumber: 1, weekStart: "2026-09-01", weekEnd: "2026-09-05", noteId: null, topic: null, status: null }],
+    });
+    renderAs("TEACHER");
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("tab", { name: "By class" }));
+    await user.selectOptions(screen.getByLabelText("Class"), "class-1");
+
+    await vi.waitFor(() => expect(lessonNotesApi.getClassWeekGrid).toHaveBeenCalledWith("class-1", "term-1"));
+    expect((await screen.findByText("Week 1")).closest("tr")).toHaveAttribute("tabindex");
+  });
+
   it("shows no branch filter to a TEACHER, whose branch the server derives", async () => {
     renderAs("TEACHER");
 
@@ -162,7 +199,7 @@ describe("LessonNotesPage", () => {
 
     beforeEach(() => {
       vi.mocked(lessonNotesApi.getMyLessonNoteSubjects).mockResolvedValue([
-        { levelId: "level-1", levelName: "Primary", subjectId: "subject-1", subjectName: "Mathematics" },
+        { levelId: "level-1", levelName: "Primary", subjectId: "subject-1", subjectName: "Mathematics", authorable: true },
       ]);
       vi.mocked(lessonNotesApi.getWeekGrid).mockResolvedValue([]);
       vi.mocked(sessionsApi.listSessions).mockResolvedValue({
@@ -182,6 +219,21 @@ describe("LessonNotesPage", () => {
       // the moment the (auto-selected) current term resolves alongside it.
       await vi.waitFor(() => expect(lessonNotesApi.getWeekGrid).toHaveBeenCalledWith("subject-1", "term-1"));
       expect(await screen.findByLabelText("Subject")).toHaveValue("subject-1");
+    });
+
+    it("shows a class teacher's subject that has a subject teacher read-only, with no copy trigger", async () => {
+      vi.mocked(lessonNotesApi.getMyLessonNoteSubjects).mockResolvedValue([
+        { levelId: "level-1", levelName: "Primary", subjectId: "subject-1", subjectName: "Mathematics", authorable: false },
+      ]);
+      vi.mocked(lessonNotesApi.getWeekGrid).mockResolvedValue([
+        { weekNumber: 1, weekStart: "2026-09-01", weekEnd: "2026-09-05", noteId: null, topic: null, status: null },
+      ]);
+      renderAs("TEACHER", "/?subjectId=subject-1");
+
+      expect(await screen.findByText(/you can read its lesson notes but not edit them/)).toBeInTheDocument();
+      // An empty week of a read-only subject isn't a clickable row (no blank editor to open).
+      expect((await screen.findByText("Week 1")).closest("tr")).not.toHaveAttribute("tabindex");
+      expect(screen.queryByRole("button", { name: "Copy from another term" })).not.toBeInTheDocument();
     });
 
     it("shows the copy trigger once a current term is auto-selected, and opens the copy modal", async () => {

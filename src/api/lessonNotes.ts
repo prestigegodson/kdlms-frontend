@@ -1,12 +1,17 @@
 import { apiFetch, apiFetchBlob, apiStream } from "@/api/client";
 import type { Page } from "@/api/types";
 
-/** Mirrors backend lessonnote.application.port.in.LevelSubjectView - one (level, subject) pair a teacher subject-teaches. */
+/**
+ * Mirrors backend lessonnote.application.port.in.LevelSubjectView - one (level, subject) pair a
+ * teacher subject-teaches, or one of a class they class-teach/assist.
+ */
 export interface LevelSubjectView {
   levelId: string;
   levelName: string;
   subjectId: string;
   subjectName: string;
+  /** False for a class teacher's subject that already has a subject teacher - its notes are read-only to them. */
+  authorable: boolean;
 }
 
 /**
@@ -86,8 +91,9 @@ export interface LessonNoteView {
   id: string;
   /** The branch that owns this note - each branch authors its own scheme of work. */
   branchId: string;
-  subjectId: string;
-  subjectName: string;
+  /** Null for a whole-class note - see `classId`. */
+  subjectId: string | null;
+  subjectName: string | null;
   levelId: string;
   levelName: string;
   termId: string;
@@ -100,13 +106,16 @@ export interface LessonNoteView {
   updatedAt: string;
   review: LessonNoteReviewView;
   actions: LessonNoteActionsView;
+  /** Set only on a whole-class note (one note per class per week covering every subject); always document mode. */
+  classId: string | null;
+  className: string | null;
 }
 
 /** Mirrors backend lessonnote.application.port.in.LessonNoteQueueView - one row of the review queue. */
 export interface LessonNoteQueueView {
   id: string;
   branchId: string;
-  subjectId: string;
+  subjectId: string | null;
   subjectName: string | null;
   levelId: string;
   levelName: string | null;
@@ -119,6 +128,9 @@ export interface LessonNoteQueueView {
   submittedByName: string | null;
   updatedAt: string;
   updatedByName: string | null;
+  /** Set only on a whole-class note, whose `subjectId`/`subjectName` are null. */
+  classId: string | null;
+  className: string | null;
 }
 
 /** Mirrors backend lessonnote.application.port.in.PendingCountView - the admin nav-badge count. */
@@ -210,6 +222,51 @@ const ME_BASE = "/api/v1/me/lesson-note-subjects";
 /** The calling TEACHER's own deduped (level, subject) list for lesson notes. */
 export function getMyLessonNoteSubjects(): Promise<LevelSubjectView[]> {
   return apiFetch<LevelSubjectView[]>(ME_BASE);
+}
+
+/** Mirrors backend LessonNoteClassView - a class whose whole-class notes the calling TEACHER can open. */
+export interface LessonNoteClassView {
+  classId: string;
+  className: string;
+  levelId: string;
+  levelName: string;
+  /** True only for the class's class/assistant teacher; a subject teacher of the class may only read. */
+  authorable: boolean;
+}
+
+/** Mirrors backend ClassWeekGridView - one class's whole-class note grid for a term. */
+export interface ClassWeekGridView {
+  classId: string;
+  className: string;
+  levelId: string;
+  levelName: string;
+  branchId: string;
+  /** The subjects the class's level takes this term - a new note's body is seeded with a heading per subject. */
+  subjectNames: string[];
+  weeks: LessonNoteWeekView[];
+}
+
+/** Every class the calling TEACHER class-teaches, assists, or subject-teaches. */
+export function getMyLessonNoteClasses(): Promise<LessonNoteClassView[]> {
+  return apiFetch<LessonNoteClassView[]>("/api/v1/me/lesson-note-classes");
+}
+
+/** A class's whole-class note grid - one row per week of the term, whether or not a note exists yet. */
+export function getClassWeekGrid(classId: string, termId: string): Promise<ClassWeekGridView> {
+  return apiFetch<ClassWeekGridView>(`${BASE}/class-weeks?classId=${classId}&termId=${termId}`);
+}
+
+/** Creates or edits a class's whole-class note for one week. The content must be document mode. */
+export function saveClassWeekNote(
+  classId: string,
+  termId: string,
+  weekNumber: number,
+  request: SaveLessonNoteRequest,
+): Promise<LessonNoteView> {
+  return apiFetch<LessonNoteView>(
+    `${BASE}/class-weeks?classId=${classId}&termId=${termId}&weekNumber=${weekNumber}`,
+    { method: "PUT", body: JSON.stringify(request) },
+  );
 }
 
 /** Moves a DRAFT/REJECTED note to SUBMITTED. */

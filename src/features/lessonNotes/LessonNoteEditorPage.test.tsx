@@ -19,7 +19,7 @@ beforeAll(() => {
 
 vi.mock("@/api/lessonNotes", async () => {
   const actual = await vi.importActual<typeof import("@/api/lessonNotes")>("@/api/lessonNotes");
-  return { ...actual, saveLessonNote: vi.fn() };
+  return { ...actual, saveLessonNote: vi.fn(), saveClassWeekNote: vi.fn(), getClassWeekGrid: vi.fn() };
 });
 
 function renderNewNote(
@@ -131,5 +131,45 @@ describe("LessonNoteEditorPage branch scoping", () => {
     await waitFor(() =>
       expect(lessonNotesApi.saveLessonNote).toHaveBeenCalledWith("s1", "t1", 3, expect.anything(), "b2"),
     );
+  });
+});
+
+// A whole-class note covers every subject of a class for one week - always a document.
+describe("LessonNoteEditorPage whole-class note", () => {
+  it("seeds a new note with a heading per subject, hides the format toggle, and saves by class", async () => {
+    vi.mocked(lessonNotesApi.saveLessonNote).mockClear();
+    vi.mocked(lessonNotesApi.getClassWeekGrid).mockResolvedValue({
+      classId: "c1",
+      className: "Primary 3A",
+      levelId: "level-1",
+      levelName: "Primary",
+      branchId: "b1",
+      subjectNames: ["English", "Mathematics"],
+      weeks: [],
+    });
+    vi.mocked(lessonNotesApi.saveClassWeekNote).mockRejectedValue(new Error("stop here"));
+    renderNewNote("TEACHER", "/school/lesson-notes/new?classId=c1&termId=t1&weekNumber=2");
+    const user = userEvent.setup();
+
+    expect(await screen.findByText("Primary 3A · All subjects")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText("Lesson plan document")).toHaveTextContent("Mathematics"));
+    expect(screen.queryByRole("button", { name: "Structured form" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Generate with AI" })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Topic"), "My Family");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(lessonNotesApi.saveClassWeekNote).toHaveBeenCalledWith(
+        "c1",
+        "t1",
+        2,
+        expect.objectContaining({
+          topic: "My Family",
+          content: expect.objectContaining({ mode: "DOCUMENT", body: expect.stringContaining("<h2>English</h2>") }),
+        }),
+      ),
+    );
+    expect(lessonNotesApi.saveLessonNote).not.toHaveBeenCalled();
   });
 });

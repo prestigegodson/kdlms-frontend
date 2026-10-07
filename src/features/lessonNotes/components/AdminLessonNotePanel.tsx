@@ -8,6 +8,7 @@ import {
   type LessonNoteStatus,
   type LessonNoteWeekView,
 } from "@/api/lessonNotes";
+import { listClasses, type SchoolClassView } from "@/api/classes";
 import { listSubjects, type SubjectView } from "@/api/subjects";
 import type { Page } from "@/api/types";
 import { Alert } from "@/components/ui/Alert";
@@ -18,6 +19,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
+import { ClassWeekNotesPanel } from "@/features/lessonNotes/components/ClassWeekNotesPanel";
 import { useBranchScope } from "@/features/branches/useBranchScope";
 import { CopyLessonNotesModal } from "@/features/lessonNotes/components/CopyLessonNotesModal";
 import { ReviewQueueFilters } from "@/features/lessonNotes/components/ReviewQueueFilters";
@@ -26,7 +28,7 @@ import { SubjectTermPicker } from "@/features/lessonNotes/components/SubjectTerm
 import { WeekGridTable } from "@/features/lessonNotes/components/WeekGridTable";
 import { useLevelStore } from "@/stores/levelStore";
 
-type AdminTab = "queue" | "browse";
+type AdminTab = "queue" | "browse" | "classes";
 const PAGE_SIZE = 20;
 
 /**
@@ -41,6 +43,8 @@ const PAGE_SIZE = 20;
  * which renders only for a SCHOOL_ADMIN (one branch at a time, no "All
  * branches", the Assessments/Attendance shape) - a BRANCH_ADMIN or Head of
  * Level gets no picker, since the server confines them to their own branch.
+ * "Browse by class" shows a class's whole-class notes (one per week covering
+ * every subject), written by its class teacher.
  */
 export function AdminLessonNotePanel() {
   const [tab, setTab] = useState<AdminTab>("queue");
@@ -55,9 +59,12 @@ export function AdminLessonNotePanel() {
       <div role="tablist" aria-label="Lesson note views" className="flex gap-1 border-b border-slate-200">
         <TabButton label="Review queue" active={tab === "queue"} onClick={() => setTab("queue")} />
         <TabButton label="Browse by subject" active={tab === "browse"} onClick={() => setTab("browse")} />
+        <TabButton label="Browse by class" active={tab === "classes"} onClick={() => setTab("classes")} />
       </div>
 
-      {tab === "queue" ? <ReviewQueuePanel /> : <BrowseBySubjectPanel />}
+      {tab === "queue" && <ReviewQueuePanel />}
+      {tab === "browse" && <BrowseBySubjectPanel />}
+      {tab === "classes" && <BrowseByClassPanel />}
     </div>
   );
 }
@@ -268,6 +275,57 @@ function BrowseBySubjectPanel() {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * The selected branch's classes (a SCHOOL_ADMIN's `BranchFilter` pick, else the caller's own
+ * branch), each opening its whole-class note grid. An admin may write any of them; a Head of
+ * Level's write reach is still checked per class by the server.
+ */
+function BrowseByClassPanel() {
+  const { ready: branchReady, branchId } = useBranchScope();
+  const levels = useLevelStore((state) => state.levels);
+  const fetchLevels = useLevelStore((state) => state.fetchIfNeeded);
+  const [classes, setClasses] = useState<SchoolClassView[] | null>(null);
+
+  useEffect(() => {
+    fetchLevels();
+  }, [fetchLevels]);
+
+  const [lastBranchId, setLastBranchId] = useState(branchId);
+  if (branchId !== lastBranchId) {
+    setLastBranchId(branchId);
+    setClasses(null);
+  }
+
+  useEffect(() => {
+    if (!branchReady) return;
+    listClasses(branchId, undefined, 0, 500)
+      .then((page) => setClasses(page.content))
+      .catch(() => setClasses([]));
+  }, [branchReady, branchId]);
+
+  if (classes === null) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-slate-500">
+        <Spinner /> Loading classes…
+      </div>
+    );
+  }
+
+  const levelNameOf = (levelId: string) => levels.find((level) => level.id === levelId)?.displayName;
+  return (
+    <ClassWeekNotesPanel
+      key={branchId ?? ""}
+      filters={<BranchFilter id="lesson-notes-classes-branch" />}
+      classes={classes.map((schoolClass) => ({
+        id: schoolClass.id,
+        name: schoolClass.name,
+        levelName: levelNameOf(schoolClass.levelId),
+        authorable: true,
+      }))}
+    />
   );
 }
 

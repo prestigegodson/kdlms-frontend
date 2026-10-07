@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { ChevronRight, NotebookPen } from "lucide-react";
 import { ApiError } from "@/api/client";
 import {
+  getWardClassLessonNotes,
   getWardLessonNote,
   getWardLessonNotes,
   listWardTerms,
+  type WardLessonNoteSummary,
   type WardSubjectLessonNotesView,
   type WardTermView,
 } from "@/api/wards";
@@ -37,7 +39,9 @@ import { useWardStore } from "@/stores/wardStore";
  * published yet rather than the subject silently vanishing. Tapping a week
  * opens the full note read-only in a `Modal`-as-sheet via
  * `LessonNoteReadView`, the "one component, two callers" precedent
- * `AttendanceSummaryPanel`/`ThreadCard` set.
+ * `AttendanceSummaryPanel`/`ThreadCard` set. A class teacher's whole-class
+ * notes (one per week covering every subject) get their own "Whole class"
+ * accordion above the subjects, shown only when the class has any.
  */
 export function WardLessonNotesPage() {
   const {
@@ -86,13 +90,23 @@ export function WardLessonNotesPage() {
 
   const [subjects, setSubjects] = useState<WardSubjectLessonNotesView[] | null>(null);
   const [subjectsError, setSubjectsError] = useState<string | null>(null);
+  const [classNotes, setClassNotes] = useState<WardLessonNoteSummary[]>([]);
 
   const [lastTermId, setLastTermId] = useState(termId);
   if (termId !== lastTermId) {
     setLastTermId(termId);
     setSubjects(null);
     setSubjectsError(null);
+    setClassNotes([]);
   }
+
+  // Whole-class notes are a side list - a failure here leaves the per-subject view intact.
+  useEffect(() => {
+    if (!selectedWardId || !termId) return;
+    getWardClassLessonNotes(selectedWardId, termId)
+      .then(setClassNotes)
+      .catch(() => setClassNotes([]));
+  }, [selectedWardId, termId]);
 
   useEffect(() => {
     if (!selectedWardId || !termId) return;
@@ -172,13 +186,37 @@ export function WardLessonNotesPage() {
         />
       )}
 
+      {subjects && classNotes.length > 0 && (
+        <Accordion
+          title={`Whole class · ${classNotes.length} note${classNotes.length === 1 ? "" : "s"}`}
+          defaultOpen
+        >
+          <ul className="divide-y divide-slate-100">
+            {classNotes.map((note) => (
+              <li key={note.noteId}>
+                <button
+                  type="button"
+                  onClick={() => openNoteSheet("Whole class", note.weekNumber, note.noteId)}
+                  className="flex w-full cursor-pointer items-center justify-between gap-2 py-3 text-left mobile:min-h-11"
+                >
+                  <span className="text-sm text-slate-900">
+                    Week {note.weekNumber} · {note.topic}
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Accordion>
+      )}
+
       {subjects && subjects.length > 0 && (
         <div className="space-y-3">
           {subjects.map((subject, index) => (
             <Accordion
               key={subject.subjectId}
               title={`${subject.subjectName} · ${subject.notes.length} note${subject.notes.length === 1 ? "" : "s"}`}
-              defaultOpen={index === 0}
+              defaultOpen={index === 0 && classNotes.length === 0}
             >
               {subject.notes.length === 0 ? (
                 <p className="text-sm text-slate-400">No notes published yet.</p>

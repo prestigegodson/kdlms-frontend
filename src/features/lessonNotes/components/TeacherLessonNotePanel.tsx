@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { getMyLessonNoteSubjects, getWeekGrid, type LessonNoteWeekView, type LevelSubjectView } from "@/api/lessonNotes";
+import {
+  getMyLessonNoteClasses,
+  getMyLessonNoteSubjects,
+  getWeekGrid,
+  type LessonNoteClassView,
+  type LessonNoteWeekView,
+  type LevelSubjectView,
+} from "@/api/lessonNotes";
 import { ApiError } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -7,6 +14,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
+import { Tabs } from "@/components/ui/Tabs";
+import { ClassWeekNotesPanel } from "@/features/lessonNotes/components/ClassWeekNotesPanel";
 import { CopyLessonNotesModal } from "@/features/lessonNotes/components/CopyLessonNotesModal";
 import { SubjectTermPicker } from "@/features/lessonNotes/components/SubjectTermPicker";
 import { WeekGridTable } from "@/features/lessonNotes/components/WeekGridTable";
@@ -14,12 +23,18 @@ import { NotebookPen } from "lucide-react";
 
 /**
  * A TEACHER's own lesson-note subjects and week grid - subjects come from
- * `/me/lesson-note-subjects` (their own subject-teach assignments only,
- * `MyLessonNoteSubjectsUseCase`), narrower than what `LessonNoteAccessGuard`
- * would let them *view* (which also admits a class-teach-only account) -
- * see the picker's own Javadoc-mirroring comment for why. `AdminLessonNotePanel`
- * shares this screen's shape but sources its subjects from the school-wide
- * catalogue instead.
+ * `/me/lesson-note-subjects` (`MyLessonNoteSubjectsUseCase`): every subject
+ * they subject-teach, plus every subject of a class they class-teach or
+ * assist. A class teacher may author only those with no subject teacher in
+ * their class (`authorable`); the rest are read-only - existing notes open
+ * read-only in the editor, empty weeks aren't links, and the copy action
+ * offers only authorable subjects. `AdminLessonNotePanel` shares this
+ * screen's shape but sources its subjects from the school-wide catalogue
+ * instead.
+ *
+ * A teacher with classes also gets a "By class" tab: whole-class notes, one
+ * per class per week covering every subject (`ClassWeekNotesPanel`) - how a
+ * primary class teacher who teaches the whole timetable plans their week.
  */
 interface TeacherLessonNotePanelProps {
   /** Seeds the initial subject selection (e.g. from SubjectsPage's "Lesson notes" row action). */
@@ -34,11 +49,16 @@ export function TeacherLessonNotePanel({ initialSubjectId }: TeacherLessonNotePa
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const [classes, setClasses] = useState<LessonNoteClassView[]>([]);
+  const [view, setView] = useState<"subject" | "class">("subject");
 
   useEffect(() => {
     getMyLessonNoteSubjects()
       .then(setSubjects)
       .catch(() => setSubjects([]));
+    getMyLessonNoteClasses()
+      .then(setClasses)
+      .catch(() => setClasses([]));
   }, []);
 
   // A subject/term change resets the loaded grid during render (see
@@ -61,19 +81,24 @@ export function TeacherLessonNotePanel({ initialSubjectId }: TeacherLessonNotePa
       );
   }, [subjectId, termId, reloadToken]);
 
-  const subjectOptions = (subjects ?? []).map((subject) => ({
+  const toOption = (subject: LevelSubjectView) => ({
     id: subject.subjectId,
     name: subject.subjectName,
     levelName: subject.levelName,
-  }));
+  });
+  const subjectOptions = (subjects ?? []).map(toOption);
+  const authorableSubjectOptions = (subjects ?? []).filter((subject) => subject.authorable).map(toOption);
+  const selectedAuthorable = subjects?.find((subject) => subject.subjectId === subjectId)?.authorable ?? true;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Lesson notes"
-        description="Prepare your weekly scheme-of-work notes for a subject."
+        description="Prepare your weekly scheme-of-work notes for a subject, or for your whole class."
         actions={
-          termId && (
+          view === "subject" &&
+          termId &&
+          authorableSubjectOptions.length > 0 && (
             <Button type="button" variant="secondary" onClick={() => setCopyModalOpen(true)}>
               Copy from another term
             </Button>
@@ -81,21 +106,44 @@ export function TeacherLessonNotePanel({ initialSubjectId }: TeacherLessonNotePa
         }
       />
 
-      {subjects === null && (
+      {classes.length > 0 && (
+        <Tabs
+          ariaLabel="Lesson note scope"
+          value={view}
+          onChange={setView}
+          items={[
+            { value: "subject", label: "By subject" },
+            { value: "class", label: "By class" },
+          ]}
+        />
+      )}
+
+      {view === "class" && classes.length > 0 && (
+        <ClassWeekNotesPanel
+          classes={classes.map((option) => ({
+            id: option.classId,
+            name: option.className,
+            levelName: option.levelName,
+            authorable: option.authorable,
+          }))}
+        />
+      )}
+
+      {view === "subject" && subjects === null && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
           <Spinner /> Loading your subjects…
         </div>
       )}
 
-      {subjects !== null && subjects.length === 0 && (
+      {view === "subject" && subjects !== null && subjects.length === 0 && (
         <EmptyState
           icon={NotebookPen}
           title="No subjects assigned"
-          description="You aren't assigned to subject-teach anything yet - ask a school admin to check your subject-teacher assignments."
+          description="You don't subject-teach or class-teach anything yet - ask a school admin to check your assignments."
         />
       )}
 
-      {subjects !== null && subjects.length > 0 && (
+      {view === "subject" && subjects !== null && subjects.length > 0 && (
         <>
           <StickySubHeader collapsible>
             <SubjectTermPicker
@@ -109,7 +157,15 @@ export function TeacherLessonNotePanel({ initialSubjectId }: TeacherLessonNotePa
 
           {loadError && <Alert variant="error">{loadError}</Alert>}
 
-          {weeks && weeks.length > 0 && <WeekGridTable weeks={weeks} subjectId={subjectId} termId={termId} />}
+          {subjectId && !selectedAuthorable && (
+            <Alert variant="info">
+              This subject has a subject teacher - you can read its lesson notes but not edit them.
+            </Alert>
+          )}
+
+          {weeks && weeks.length > 0 && (
+            <WeekGridTable weeks={weeks} subjectId={subjectId} termId={termId} authorable={selectedAuthorable} />
+          )}
           {weeks && weeks.length === 0 && (
             <EmptyState
               icon={NotebookPen}
@@ -125,8 +181,8 @@ export function TeacherLessonNotePanel({ initialSubjectId }: TeacherLessonNotePa
           open={copyModalOpen}
           onClose={() => setCopyModalOpen(false)}
           targetTermId={termId}
-          subjectOptions={subjectOptions}
-          defaultSubjectId={subjectId || undefined}
+          subjectOptions={authorableSubjectOptions}
+          defaultSubjectId={selectedAuthorable ? subjectId || undefined : undefined}
           onCopied={() => setReloadToken((token) => token + 1)}
         />
       )}
