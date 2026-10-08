@@ -474,6 +474,7 @@ function AdminSubjects() {
                     <TableHeaderCell>Code</TableHeaderCell>
                     <TableHeaderCell>Terms</TableHeaderCell>
                     <TableHeaderCell>Selective</TableHeaderCell>
+                    <TableHeaderCell>Graded</TableHeaderCell>
                     <TableHeaderCell>Status</TableHeaderCell>
                     {canManage && <TableHeaderCell>Actions</TableHeaderCell>}
                   </TableRow>
@@ -490,6 +491,9 @@ function AdminSubjects() {
                       </TableCell>
                       <TableCell label="Selective">
                         {subject.selective ? <Badge variant="neutral">Selective</Badge> : "—"}
+                      </TableCell>
+                      <TableCell label="Graded">
+                        {subject.graded ? "—" : <Badge variant="neutral">Non-graded</Badge>}
                       </TableCell>
                       <TableCell label="Status">
                         <Badge variant={subject.status === "ACTIVE" ? "success" : "neutral"}>
@@ -547,6 +551,7 @@ function AdminSubjects() {
               subjectGroupId: values.subjectGroupId,
               termNumbers: values.termNumbers,
               selective: values.selective,
+              graded: values.graded,
             });
           }}
           onSaved={() => {
@@ -569,6 +574,7 @@ function AdminSubjects() {
               subjectGroupId: values.subjectGroupId,
               termNumbers: values.termNumbers,
               selective: values.selective,
+              graded: values.graded,
             });
           }}
           onSaved={() => {
@@ -668,6 +674,7 @@ interface SubjectFormValues {
   subjectGroupId?: string;
   termNumbers?: number[];
   selective?: boolean;
+  graded?: boolean;
 }
 
 interface SubjectFormModalProps {
@@ -685,6 +692,7 @@ function SubjectFormModal({ title, initial, groups, onClose, onSubmit, onSaved }
   const [subjectGroupId, setSubjectGroupId] = useState(initial?.subjectGroupId ?? "");
   const [termNumbers, setTermNumbers] = useState<number[]>(initial?.termNumbers ?? ALL_TERM_NUMBERS);
   const [selective, setSelective] = useState(initial?.selective ?? false);
+  const [graded, setGraded] = useState(initial?.graded ?? true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -711,6 +719,7 @@ function SubjectFormModal({ title, initial, groups, onClose, onSubmit, onSaved }
         subjectGroupId: subjectGroupId || undefined,
         termNumbers,
         selective,
+        graded,
       });
       onSaved();
     } catch (err) {
@@ -766,6 +775,16 @@ function SubjectFormModal({ title, initial, groups, onClose, onSubmit, onSaved }
           <p className="mt-1 text-xs text-slate-500">
             Leave unchecked for a mandatory subject every student at this class takes. Once any score or rating has
             been recorded, this can no longer be changed.
+          </p>
+        </FormField>
+        <FormField label="Assessment" htmlFor="subject-non-graded">
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <Checkbox id="subject-non-graded" checked={!graded} onChange={() => setGraded((value) => !value)} />
+            Non-graded - not assessed and left off result reports
+          </label>
+          <p className="mt-1 text-xs text-slate-500">
+            Teachers won't see it on the Assessments page, and it won't appear on broadsheets or report cards. Any
+            scores already recorded are kept and reappear if you make it graded again.
           </p>
         </FormField>
         <div className="flex justify-end gap-2">

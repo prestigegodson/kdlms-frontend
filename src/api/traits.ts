@@ -4,7 +4,8 @@ import { apiFetch } from "@/api/client";
 export interface TraitScaleOption {
   id: string;
   value: string;
-  label: string;
+  /** Optional - a school may rate with the value alone. */
+  label?: string;
   description?: string;
   rank: number;
 }
@@ -43,7 +44,8 @@ export interface SaveScaleOptionRequest {
   /** `undefined`/omitted means a freshly authored option; an existing id updates that row in place. `rank` is derived server-side from list position. */
   id?: string;
   value: string;
-  label: string;
+  /** Optional - a school may rate with the value alone. */
+  label?: string;
   description?: string;
 }
 

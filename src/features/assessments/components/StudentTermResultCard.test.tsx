@@ -104,4 +104,15 @@ describe("StudentTermResultCard", () => {
     expect(screen.getByText("Psychomotor skills")).toBeInTheDocument();
     expect(screen.getByText("4 - GOOD")).toBeInTheDocument();
   });
+
+  it("renders a trait rated on a label-less scale as its value alone", () => {
+    render(
+      <StudentTermResultCard
+        result={{ ...TERM_RESULT, traits: [{ category: "AFFECTIVE", traitName: "Punctuality", optionValue: "5" }] }}
+      />,
+    );
+
+    expect(screen.getByText("5")).toBeInTheDocument();
+    expect(screen.queryByText(/5 -/)).not.toBeInTheDocument();
+  });
 });

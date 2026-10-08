@@ -80,10 +80,9 @@ export function TraitScaleRows({ options, onChange }: TraitScaleRowsProps) {
                   onChange={(event) => updateRow(index, { value: event.target.value })}
                 />
               </FormField>
-              <FormField label="Label" htmlFor={`trait-scale-${index}-label`}>
+              <FormField label="Label (optional)" htmlFor={`trait-scale-${index}-label`}>
                 <Input
                   id={`trait-scale-${index}-label`}
-                  required
                   value={option.label}
                   onChange={(event) => updateRow(index, { label: event.target.value })}
                 />
@@ -99,7 +98,7 @@ export function TraitScaleRows({ options, onChange }: TraitScaleRowsProps) {
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                aria-label={`Move ${option.label || "this rating"} up`}
+                aria-label={`Move ${option.label || option.value || "this rating"} up`}
                 className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-30"
                 disabled={index === 0}
                 onClick={() => move(index, -1)}
@@ -108,7 +107,7 @@ export function TraitScaleRows({ options, onChange }: TraitScaleRowsProps) {
               </button>
               <button
                 type="button"
-                aria-label={`Move ${option.label || "this rating"} down`}
+                aria-label={`Move ${option.label || option.value || "this rating"} down`}
                 className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-30"
                 disabled={index === options.length - 1}
                 onClick={() => move(index, 1)}

@@ -22,6 +22,12 @@ export interface SubjectView {
    * rejected by the backend (422), in either direction.
    */
   selective: boolean;
+  /**
+   * False for a non-graded subject (e.g. Assembly): still taught, but never
+   * assessed and left off every broadsheet, result view and report card.
+   * Can be flipped any time - recorded scores are hidden, not deleted.
+   */
+  graded: boolean;
   status: SubjectStatus;
 }
 
@@ -35,6 +41,8 @@ export interface CreateSubjectRequest {
   termNumbers?: number[];
   /** Defaults to false (mandatory) when omitted. */
   selective?: boolean;
+  /** Defaults to true when omitted; false makes it non-graded. */
+  graded?: boolean;
 }
 
 export interface UpdateSubjectRequest {
@@ -49,6 +57,8 @@ export interface UpdateSubjectRequest {
   termNumbers?: number[];
   /** Changing this once any score/rating has been recorded is rejected (422). */
   selective?: boolean;
+  /** Defaults to true when omitted; false makes it non-graded. */
+  graded?: boolean;
 }
 
 const BASE = "/api/v1/subjects";

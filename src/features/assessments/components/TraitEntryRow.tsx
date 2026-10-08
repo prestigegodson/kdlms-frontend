@@ -42,12 +42,12 @@ export function TraitEntryRow({ row, category, editable, dirty, traitDraft, onTr
                 <option value="">Select a rating…</option>
                 {category.scaleOptions.map((option) => (
                   <option key={option.id} value={option.id}>
-                    {option.value} - {option.label}
+                    {option.label ? `${option.value} - ${option.label}` : option.value}
                   </option>
                 ))}
               </Select>
             ) : (
-              <span className="text-slate-500">{selectedOption ? `${selectedOption.value} - ${selectedOption.label}` : "—"}</span>
+              <span className="text-slate-500">{selectedOption ? (selectedOption.label ? `${selectedOption.value} - ${selectedOption.label}` : selectedOption.value) : "—"}</span>
             )}
           </TableCell>
         );

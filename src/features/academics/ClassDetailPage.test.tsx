@@ -299,6 +299,7 @@ describe("ClassDetailPage - class teacher assignment", () => {
       name: "Further Maths",
       termNumbers: [1, 2, 3],
       selective: true,
+      graded: true,
       status: "ACTIVE",
     };
     vi.mocked(classesApi.getClass).mockResolvedValue(BASE_CLASS);

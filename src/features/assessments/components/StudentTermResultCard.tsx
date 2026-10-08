@@ -143,7 +143,7 @@ export function StudentTermResultCard({ result }: StudentTermResultCardProps) {
                     <div key={trait.traitName} className="flex items-baseline justify-between gap-2 text-sm">
                       <dt className="text-slate-600">{trait.traitName}</dt>
                       <dd className="font-medium text-slate-900">
-                        {trait.optionValue} - {trait.optionLabel}
+                        {trait.optionLabel ? `${trait.optionValue} - ${trait.optionLabel}` : trait.optionValue}
                       </dd>
                     </div>
                   ))}

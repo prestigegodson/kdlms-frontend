@@ -89,12 +89,28 @@ describe("AssessmentsPage", () => {
     expect(classesApi.listClasses).toHaveBeenCalledWith("branch-1", undefined, 0, 200);
   });
 
+  it("leaves a non-graded subject out of a teacher's subject picker", async () => {
+    vi.mocked(meApi.listMyClasses).mockResolvedValue([
+      { classId: "class-1", className: "JSS 1A", branchId: "branch-1", levelId: "level-1", isClassTeacher: true, isAssistantTeacher: false, subjectIds: [] },
+    ]);
+    vi.mocked(meApi.listRecordableSubjects).mockResolvedValue([
+      { id: "subject-1", schoolId: "school-1", levelId: "level-1", name: "Mathematics", selective: false, graded: true, termNumbers: [1, 2, 3], status: "ACTIVE" },
+      { id: "subject-2", schoolId: "school-1", levelId: "level-1", name: "Assembly", selective: false, graded: false, termNumbers: [1, 2, 3], status: "ACTIVE" },
+    ]);
+    vi.mocked(sessionsApi.listSessions).mockResolvedValue({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 50 });
+
+    renderAs("TEACHER", "/?classId=class-1");
+
+    expect(await screen.findByRole("option", { name: "Mathematics" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Assembly" })).not.toBeInTheDocument();
+  });
+
   it("seeds the class and subject from ?classId=&subjectId= (SubjectsPage's \"Record assessment\" row action)", async () => {
     vi.mocked(meApi.listMyClasses).mockResolvedValue([
       { classId: "class-1", className: "JSS 1A", branchId: "branch-1", levelId: "level-1", isClassTeacher: true, isAssistantTeacher: false, subjectIds: ["subject-1"] },
     ]);
     vi.mocked(meApi.listRecordableSubjects).mockResolvedValue([
-      { id: "subject-1", schoolId: "school-1", levelId: "level-1", name: "Mathematics", selective: false, termNumbers: [1, 2, 3], status: "ACTIVE" },
+      { id: "subject-1", schoolId: "school-1", levelId: "level-1", name: "Mathematics", selective: false, graded: true, termNumbers: [1, 2, 3], status: "ACTIVE" },
     ]);
     vi.mocked(sessionsApi.listSessions).mockResolvedValue({
       content: [

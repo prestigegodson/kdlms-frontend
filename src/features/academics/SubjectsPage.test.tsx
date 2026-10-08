@@ -87,6 +87,7 @@ const GROUPED_SUBJECT: SubjectView = {
   subjectGroupName: "Sciences",
   termNumbers: [1, 2, 3],
   selective: false,
+  graded: true,
   status: "ACTIVE",
 };
 
@@ -98,6 +99,7 @@ const UNGROUPED_SUBJECT: SubjectView = {
   code: "MTH",
   termNumbers: [1, 2, 3],
   selective: false,
+  graded: true,
   status: "ACTIVE",
 };
 
@@ -108,6 +110,7 @@ const TERM_THREE_ONLY_SUBJECT: SubjectView = {
   name: "Project Work",
   termNumbers: [3],
   selective: false,
+  graded: true,
   status: "ACTIVE",
 };
 
@@ -119,6 +122,7 @@ const SOURCE_PHYSICS: SubjectView = {
   code: "PHY",
   termNumbers: [1, 2, 3],
   selective: false,
+  graded: true,
   status: "ACTIVE",
 };
 
@@ -130,6 +134,7 @@ const SOURCE_CHEMISTRY: SubjectView = {
   code: "CHM",
   termNumbers: [1, 2, 3],
   selective: false,
+  graded: true,
   status: "ACTIVE",
 };
 
@@ -270,6 +275,7 @@ describe("SubjectsPage", () => {
       subjectGroupId: "group-1",
       termNumbers: [1, 2, 3],
       selective: false,
+      graded: true,
     });
   });
 
@@ -306,6 +312,7 @@ describe("SubjectsPage", () => {
       subjectGroupId: undefined,
       termNumbers: [3],
       selective: false,
+      graded: true,
     });
   });
 
@@ -332,7 +339,43 @@ describe("SubjectsPage", () => {
       subjectGroupId: undefined,
       termNumbers: [1, 2, 3],
       selective: true,
+      graded: true,
     });
+  });
+
+  it("creates a subject marked non-graded", async () => {
+    mockSubjects([]);
+    vi.mocked(subjectsApi.createSubject).mockResolvedValue({ ...UNGROUPED_SUBJECT, id: "subject-5", graded: false });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText(/No subjects yet/);
+
+    await user.click(screen.getByRole("button", { name: "Add subject" }));
+    const dialog = await screen.findByRole("dialog");
+
+    await user.type(within(dialog).getByLabelText("Name"), "Assembly");
+    await user.click(within(dialog).getByLabelText(/Non-graded/));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(subjectsApi.createSubject).toHaveBeenCalledWith({
+      levelId: "level-1",
+      name: "Assembly",
+      code: undefined,
+      subjectGroupId: undefined,
+      termNumbers: [1, 2, 3],
+      selective: false,
+      graded: false,
+    });
+  });
+
+  it("badges a non-graded subject in the list", async () => {
+    mockSubjects([{ ...UNGROUPED_SUBJECT, graded: false }]);
+
+    renderAsSchoolAdmin();
+
+    expect(await screen.findByText("Mathematics")).toBeInTheDocument();
+    expect(screen.getByText("Non-graded", { selector: "span" })).toBeInTheDocument();
   });
 
   it("badges a selective subject in the list", async () => {

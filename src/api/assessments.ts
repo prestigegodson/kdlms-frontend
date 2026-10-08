@@ -125,7 +125,7 @@ export interface TraitRatingView {
   category: "AFFECTIVE" | "PSYCHOMOTOR";
   traitName: string;
   optionValue: string;
-  optionLabel: string;
+  optionLabel?: string;
 }
 
 /** Mirrors backend assessment.application.port.in.StudentTermResultView. */
@@ -158,7 +158,7 @@ export interface TraitDefinitionSheet {
 export interface ScaleOptionSheet {
   id: string;
   value: string;
-  label: string;
+  label?: string;
 }
 
 /** Mirrors backend assessment.application.port.in.RemarksSheetView.TraitCategorySheet - `category` is `"AFFECTIVE"`/`"PSYCHOMOTOR"`. */

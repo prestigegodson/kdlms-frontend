@@ -64,8 +64,10 @@ export function TeacherEntryPanel({ initialClassId, initialSubjectId }: TeacherE
 
   useEffect(() => {
     if (!classId) return;
+    // A non-graded subject (e.g. Assembly) has no entry sheet, so it never
+    // reaches the picker - the backend refuses to open one anyway.
     listRecordableSubjects(classId)
-      .then(setSubjects)
+      .then((recordable) => setSubjects(recordable.filter((subject) => subject.graded)))
       .catch(() => setSubjects([]));
   }, [classId]);
 

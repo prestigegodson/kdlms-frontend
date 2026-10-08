@@ -63,13 +63,11 @@ function validateTraitCategory(
 ): string | null {
   if (!enabled) return null;
   if (scaleOptions.length < 2) return `Add at least two ${label} rating scale options.`;
-  if (scaleOptions.some((option) => !option.value.trim() || !option.label.trim())) {
-    return `Every ${label} rating needs a value and a label.`;
-  }
+  if (scaleOptions.some((option) => !option.value.trim())) return `Every ${label} rating needs a value.`;
   const values = new Set(scaleOptions.map((option) => option.value.trim().toLowerCase()));
   if (values.size !== scaleOptions.length) return `${label} rating values must be unique.`;
-  const labels = new Set(scaleOptions.map((option) => option.label.trim().toLowerCase()));
-  if (labels.size !== scaleOptions.length) return `${label} rating labels must be unique.`;
+  const givenLabels = scaleOptions.map((option) => option.label.trim().toLowerCase()).filter(Boolean);
+  if (new Set(givenLabels).size !== givenLabels.length) return `${label} rating labels must be unique.`;
   if (traits.some((trait) => !trait.name.trim())) return `Every ${label} trait needs a name.`;
   const names = new Set(traits.map((trait) => trait.name.trim().toLowerCase()));
   if (names.size !== traits.length) return `${label} trait names must be unique.`;
@@ -81,7 +79,7 @@ function toScaleRows(config: TraitConfigurationView, category: "affective" | "ps
   return config[category].scaleOptions.map((option) => ({
     id: option.id,
     value: option.value,
-    label: option.label,
+    label: option.label ?? "",
     description: option.description ?? "",
   }));
 }
@@ -232,7 +230,7 @@ export function GradingSystemEditorPage() {
           scaleOptions: affectiveScale.map((option) => ({
             id: option.id,
             value: option.value,
-            label: option.label,
+            label: option.label.trim() || undefined,
             description: option.description || undefined,
           })),
           traits: affectiveTraits.map((trait) => ({ id: trait.id, name: trait.name, active: trait.active })),
@@ -242,7 +240,7 @@ export function GradingSystemEditorPage() {
           scaleOptions: psychomotorScale.map((option) => ({
             id: option.id,
             value: option.value,
-            label: option.label,
+            label: option.label.trim() || undefined,
             description: option.description || undefined,
           })),
           traits: psychomotorTraits.map((trait) => ({ id: trait.id, name: trait.name, active: trait.active })),
