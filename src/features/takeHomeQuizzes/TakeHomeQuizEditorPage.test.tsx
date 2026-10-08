@@ -71,6 +71,8 @@ const SAVED_VIEW: takeHomeQuizzesApi.TakeHomeQuizView = {
     canUnpublishResults: false,
   },
   updatedAt: "2026-03-01T00:00:00Z",
+  subjectGroupId: null,
+  writable: true,
 };
 
 // isNew short-circuits the getTakeHomeQuiz fetch, so the editable branch renders with no API mocking needed.
@@ -115,6 +117,33 @@ describe("TakeHomeQuizEditorPage - a new quiz", () => {
     expect(await screen.findByText("Questions")).toBeInTheDocument();
     expect(takeHomeQuizzesApi.createTakeHomeQuiz).toHaveBeenCalledWith(
       expect.objectContaining({ classId: "class-1", subjectId: "subject-1", termId: "term-1", title: "Week 3 quiz" }),
+    );
+  });
+
+  it("creates a subject-group quiz from ?subjectGroupId= and offers only the Normal quiz type", async () => {
+    const groupView = { ...SAVED_VIEW, subjectId: null, subjectGroupId: "group-1", subjectName: "Sciences" };
+    vi.mocked(takeHomeQuizzesApi.createTakeHomeQuiz).mockResolvedValue(groupView);
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuiz).mockResolvedValue(groupView);
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizValidation).mockResolvedValue({
+      canPublish: false,
+      blockers: ["Add at least one question."],
+      totalPoints: 0,
+      midtermMax: null,
+      rosterSize: 3,
+    });
+    renderAt("/school/take-home-quizzes/new?classId=class-1&subjectGroupId=group-1&termId=term-1");
+    const user = userEvent.setup();
+
+    const quizType = await screen.findByLabelText("Quiz type");
+    expect(quizType).toBeDisabled();
+    expect(screen.queryByRole("option", { name: "Midterm" })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Title"), "Sciences quiz");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByText("Questions")).toBeInTheDocument();
+    expect(takeHomeQuizzesApi.createTakeHomeQuiz).toHaveBeenCalledWith(
+      expect.objectContaining({ classId: "class-1", subjectId: null, subjectGroupId: "group-1", quizType: "NORMAL" }),
     );
   });
 });

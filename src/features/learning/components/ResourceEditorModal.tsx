@@ -22,7 +22,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { RichTextField } from "@/components/richText/RichTextField";
 import { type GalleryLoader, GalleryPickerModal } from "@/features/learning/components/GalleryPickerModal";
-import { groupTargetKey, parseTargetKey, targetKeyOf } from "@/features/learning/resourceTarget";
+import { groupTargetKey, parseTargetKey, targetKeyOf } from "@/features/academics/subjectTarget";
 import { formatDuration } from "@/utils/duration";
 import { instantToLocalDate, localDateToEndInstant, localDateToStartInstant } from "@/utils/date";
 
@@ -133,7 +133,7 @@ export function ResourceEditorModal({
   onSaved,
 }: ResourceEditorModalProps) {
   const isEdit = resource != null;
-  // A target key (`resourceTarget.ts`): a subject's bare id, or `group:<id>` for a subject group.
+  // A target key (`academics/subjectTarget.ts`): a subject's bare id, or `group:<id>` for a subject group.
   const [targetKey, setTargetKey] = useState(
     resource && "subjectId" in resource ? targetKeyOf(resource) : targetKeyOf({ subjectId, subjectGroupId }),
   );

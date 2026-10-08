@@ -82,7 +82,8 @@ function snapshotOf(form: FormState): string {
 /**
  * Author/edit one take-home quiz - addressed either by a real `quizId`
  * (hydrated via `getTakeHomeQuiz`) or the literal `"new"` plus
- * `?classId=&subjectId=&termId=` in the query string (a not-yet-created
+ * `?classId=&subjectId=&termId=` (or `subjectGroupId=` for a subject-group
+ * quiz, which is always Normal) in the query string (a not-yet-created
  * quiz has no id to route on yet), the `LessonNoteEditorPage` pattern. A
  * `JSON.stringify` snapshot drives `dirty`, not per-field flags - same
  * reason: fewer places a field can be added and forgotten.
@@ -99,6 +100,7 @@ export function TakeHomeQuizEditorPage() {
 
   const classId = searchParams.get("classId") ?? "";
   const subjectId = searchParams.get("subjectId") ?? "";
+  const subjectGroupId = searchParams.get("subjectGroupId") ?? "";
   const termId = searchParams.get("termId") ?? "";
   const isNew = !quizId || quizId === "new";
 
@@ -134,6 +136,8 @@ export function TakeHomeQuizEditorPage() {
   // quiz is archived) locks every field including those two.
   const locked = readOnly || questionsReadOnly;
   const dirty = snapshotOf(form) !== snapshot;
+  // A subject-group quiz is always Normal - a midterm score belongs to exactly one subject.
+  const isGroupQuiz = isNew ? subjectGroupId !== "" : quiz?.subjectGroupId != null;
 
   function applyQuiz(loaded: TakeHomeQuizView) {
     setQuiz(loaded);
@@ -157,7 +161,8 @@ export function TakeHomeQuizEditorPage() {
       if (isNew) {
         saved = await createTakeHomeQuiz({
           classId,
-          subjectId,
+          subjectId: subjectGroupId ? null : subjectId,
+          subjectGroupId: subjectGroupId || null,
           termId,
           title: form.title,
           instructions: form.instructions || null,
@@ -197,10 +202,10 @@ export function TakeHomeQuizEditorPage() {
       }
       applyQuiz(saved);
       if (isNew) {
-        navigate(
-          `/school/take-home-quizzes/${saved.id}?classId=${classId}&subjectId=${subjectId}&termId=${termId}`,
-          { replace: true },
-        );
+        const target = subjectGroupId ? `subjectGroupId=${subjectGroupId}` : `subjectId=${subjectId}`;
+        navigate(`/school/take-home-quizzes/${saved.id}?classId=${classId}&${target}&termId=${termId}`, {
+          replace: true,
+        });
       }
     } catch (error) {
       setSaveError(error instanceof ApiError ? error.message : "Failed to save this quiz");
@@ -266,6 +271,12 @@ export function TakeHomeQuizEditorPage() {
 
       {showForm && (
         <div className="max-w-2xl space-y-6">
+          {quiz && !quiz.writable && (
+            <Alert variant="info">
+              This quiz covers the whole {quiz.subjectName} subject group. Only the class teacher or an
+              administrator can change it.
+            </Alert>
+          )}
           {questionsReadOnly && !readOnly && (
             <Alert variant="info">
               Students have already submitted this quiz. Only the closing date (later only) and the
@@ -297,10 +308,10 @@ export function TakeHomeQuizEditorPage() {
               id="quiz-type"
               value={form.quizType}
               onChange={(event) => setForm({ ...form, quizType: event.target.value as QuizType })}
-              disabled={questionsReadOnly}
+              disabled={questionsReadOnly || isGroupQuiz}
             >
               <option value="NORMAL">Normal</option>
-              <option value="MIDTERM">Midterm</option>
+              {!isGroupQuiz && <option value="MIDTERM">Midterm</option>}
             </Select>
           </FormField>
 
@@ -341,7 +352,7 @@ export function TakeHomeQuizEditorPage() {
         </div>
       )}
 
-      {showForm && !isNew && quiz && quiz.status !== "DRAFT" && (
+      {showForm && !isNew && quiz && quiz.writable && quiz.status !== "DRAFT" && (
         <StudentLinksPanel quizId={quiz.id} refreshToken={linksRefreshToken} />
       )}
 

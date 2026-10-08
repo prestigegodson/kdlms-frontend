@@ -13,7 +13,12 @@ import { resetFeatureStore, useFeatureStore } from "@/stores/featureStore";
 
 vi.mock("@/api/takeHomeQuizzes", async () => {
   const actual = await vi.importActual<typeof import("@/api/takeHomeQuizzes")>("@/api/takeHomeQuizzes");
-  return { ...actual, listTakeHomeQuizzes: vi.fn(), getAuthorableSubjects: vi.fn() };
+  return {
+    ...actual,
+    listTakeHomeQuizzes: vi.fn(),
+    getAuthorableSubjects: vi.fn(),
+    getAuthorableSubjectGroups: vi.fn(),
+  };
 });
 
 vi.mock("@/api/me", async () => {
@@ -74,6 +79,7 @@ describe("TakeHomeQuizzesPage", () => {
     });
     vi.mocked(sessionsApi.listTerms).mockResolvedValue([]);
     vi.mocked(takeHomeQuizzesApi.getAuthorableSubjects).mockResolvedValue([]);
+    vi.mocked(takeHomeQuizzesApi.getAuthorableSubjectGroups).mockResolvedValue([]);
     vi.mocked(takeHomeQuizzesApi.listTakeHomeQuizzes).mockResolvedValue({
       content: [],
       totalElements: 0,
@@ -125,6 +131,7 @@ describe("TakeHomeQuizzesPage", () => {
           opensAt: "2026-03-01T00:00:00Z",
           closesAt: "2026-03-08T00:00:00Z",
           updatedAt: "2026-03-01T00:00:00Z",
+          subjectGroupId: null,
         },
       ],
       totalElements: 1,
@@ -176,7 +183,7 @@ describe("TakeHomeQuizzesPage", () => {
       expect(takeHomeQuizzesApi.listTakeHomeQuizzes).toHaveBeenCalledWith(
         "class-1",
         "term-1",
-        "subject-1",
+        { subjectId: "subject-1", subjectGroupId: null },
         undefined,
         0,
         20,
@@ -184,6 +191,74 @@ describe("TakeHomeQuizzesPage", () => {
     );
     expect(await screen.findByLabelText("Class")).toHaveValue("class-1");
     expect(screen.getByLabelText("Subject")).toHaveValue("subject-1");
+  });
+
+  it("offers the class's subject groups above its subjects and filters by the chosen group", async () => {
+    vi.mocked(meApi.listMyClasses).mockResolvedValue([
+      { classId: "class-1", className: "JSS 1A", branchId: "branch-1", levelId: "level-1", isClassTeacher: true, isAssistantTeacher: false, subjectIds: [] },
+    ]);
+    vi.mocked(sessionsApi.listSessions).mockResolvedValue({
+      content: [
+        { id: "session-1", schoolId: "school-1", name: "2026/2027", startDate: "2026-09-01", endDate: null, current: true },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 50,
+    });
+    vi.mocked(sessionsApi.listTerms).mockResolvedValue([
+      { id: "term-1", schoolId: "school-1", sessionId: "session-1", termNumber: 1, name: "First Term", startDate: "2026-09-01", endDate: "2026-12-01", current: true },
+    ]);
+    vi.mocked(takeHomeQuizzesApi.getAuthorableSubjects).mockResolvedValue([
+      { subjectId: "subject-1", subjectName: "Basic Science" },
+    ]);
+    vi.mocked(takeHomeQuizzesApi.getAuthorableSubjectGroups).mockResolvedValue([
+      { subjectGroupId: "group-1", subjectGroupName: "Sciences" },
+    ]);
+    vi.mocked(takeHomeQuizzesApi.listTakeHomeQuizzes).mockResolvedValue({
+      content: [
+        {
+          id: "quiz-1",
+          title: "Sciences quiz",
+          subjectName: "Sciences",
+          className: "JSS 1A",
+          quizType: "NORMAL",
+          status: "DRAFT",
+          availability: null,
+          questionCount: 1,
+          totalPoints: 1,
+          opensAt: "2026-03-01T00:00:00Z",
+          closesAt: "2026-03-08T00:00:00Z",
+          updatedAt: "2026-03-01T00:00:00Z",
+          subjectGroupId: "group-1",
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 20,
+    });
+
+    renderAs("TEACHER", "/?classId=class-1");
+    const user = userEvent.setup();
+    const subject = await screen.findByLabelText("Subject");
+    expect(await screen.findByRole("group", { name: "Subject groups" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Subjects" })).toBeInTheDocument();
+
+    await user.selectOptions(subject, "Sciences");
+
+    await vi.waitFor(() =>
+      expect(takeHomeQuizzesApi.listTakeHomeQuizzes).toHaveBeenCalledWith(
+        "class-1",
+        "term-1",
+        { subjectId: null, subjectGroupId: "group-1" },
+        undefined,
+        0,
+        20,
+      ),
+    );
+    expect(await screen.findByText("Group")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New quiz" })).toBeInTheDocument();
   });
 
   it("sources classes from listClasses (school-wide, branch-filtered), not listMyClasses, for a SCHOOL_ADMIN", async () => {

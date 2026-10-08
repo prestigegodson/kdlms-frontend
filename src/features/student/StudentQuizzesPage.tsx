@@ -15,7 +15,7 @@ const PAGE_SIZE = 20;
 
 /** `Badge` variant + label for one quiz row's status - availability first, then attempt state, then whether results are out. */
 function statusBadge(quiz: MyTakeHomeQuizSummaryView): { variant: "success" | "warning" | "neutral"; label: string } {
-  if (quiz.score !== null) {
+  if (quiz.score && quiz.score !== null) {
     return { variant: "success", label: `${quiz.score}/${quiz.totalPoints}` };
   }
   if (quiz.resultsPublished) {

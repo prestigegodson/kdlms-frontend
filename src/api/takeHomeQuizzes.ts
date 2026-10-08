@@ -1,5 +1,6 @@
 import { apiFetch, apiFetchBlob } from "@/api/client";
 import type { Page } from "@/api/types";
+import type { SubjectTarget } from "@/features/academics/subjectTarget";
 
 export type QuizType = "MIDTERM" | "NORMAL";
 export type QuestionType = "SINGLE_CHOICE" | "MULTI_CHOICE" | "FILL_IN_THE_GAP";
@@ -10,6 +11,7 @@ export type TakeHomeQuizAvailability = "SCHEDULED" | "OPEN" | "CLOSED";
 export interface TakeHomeQuizSummaryView {
   id: string;
   title: string;
+  /** The subject's name, or - for a subject-group quiz - the group's. */
   subjectName: string;
   className: string;
   quizType: QuizType;
@@ -20,6 +22,8 @@ export interface TakeHomeQuizSummaryView {
   opensAt: string;
   closesAt: string;
   updatedAt: string;
+  /** Set (instead of a subject) on a quiz that targets a subject group. */
+  subjectGroupId: string | null;
 }
 
 /** Mirrors backend takehomequiz.application.port.in.TakeHomeQuizView.OptionView. */
@@ -73,7 +77,8 @@ export interface TakeHomeQuizView {
   id: string;
   classId: string;
   className: string;
-  subjectId: string;
+  /** Null on a subject-group quiz, which carries `subjectGroupId` instead; `subjectName` is then the group's. */
+  subjectId: string | null;
   subjectName: string;
   termId: string;
   title: string;
@@ -90,6 +95,9 @@ export interface TakeHomeQuizView {
   questions: TakeHomeQuizQuestionView[];
   actions: TakeHomeQuizActionsView;
   updatedAt: string;
+  subjectGroupId: string | null;
+  /** False for a subject teacher reading a group quiz of one of their subjects - every action flag is then false too. */
+  writable: boolean;
 }
 
 /** Mirrors backend takehomequiz.application.port.in.PublishReadinessView. */
@@ -105,6 +113,12 @@ export interface PublishReadinessView {
 export interface AuthorableSubjectView {
   subjectId: string;
   subjectName: string;
+}
+
+/** Mirrors backend takehomequiz.application.port.in.AuthorableSubjectGroupView. */
+export interface AuthorableSubjectGroupView {
+  subjectGroupId: string;
+  subjectGroupName: string;
 }
 
 export interface OptionCommand {
@@ -128,9 +142,11 @@ export interface QuestionCommand {
   answerKeys: AnswerKeyCommand[];
 }
 
+/** Exactly one of `subjectId`/`subjectGroupId`; a subject-group quiz must be `NORMAL`. */
 export interface CreateTakeHomeQuizRequest {
   classId: string;
-  subjectId: string;
+  subjectId: string | null;
+  subjectGroupId: string | null;
   termId: string;
   title: string;
   instructions: string | null;
@@ -192,16 +208,18 @@ export interface RevokeSupersededLinksOutcome {
 
 const BASE = "/api/v1/take-home-quizzes";
 
+/** `target` narrows to one subject (which also takes in its own group's quizzes) or one subject group; omitted means every quiz the caller may see. */
 export function listTakeHomeQuizzes(
   classId: string,
   termId: string,
-  subjectId?: string,
+  target?: Partial<SubjectTarget>,
   status?: TakeHomeQuizStatus,
   page = 0,
   size = 20,
 ): Promise<Page<TakeHomeQuizSummaryView>> {
   const params = new URLSearchParams({ classId, termId, page: String(page), size: String(size) });
-  if (subjectId) params.set("subjectId", subjectId);
+  if (target?.subjectId) params.set("subjectId", target.subjectId);
+  if (target?.subjectGroupId) params.set("subjectGroupId", target.subjectGroupId);
   if (status) params.set("status", status);
   return apiFetch<Page<TakeHomeQuizSummaryView>>(`${BASE}?${params.toString()}`);
 }
@@ -238,6 +256,11 @@ export function getTakeHomeQuizValidation(quizId: string): Promise<PublishReadin
 
 export function getAuthorableSubjects(classId: string): Promise<AuthorableSubjectView[]> {
   return apiFetch<AuthorableSubjectView[]>(`${BASE}/authorable-subjects?classId=${classId}`);
+}
+
+/** Whole-class staff only - empty for a subject-teach-only teacher. */
+export function getAuthorableSubjectGroups(classId: string): Promise<AuthorableSubjectGroupView[]> {
+  return apiFetch<AuthorableSubjectGroupView[]>(`${BASE}/authorable-subject-groups?classId=${classId}`);
 }
 
 export function publishTakeHomeQuiz(quizId: string): Promise<PublishOutcomeView> {

@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { getAuthorableSubjects, listTakeHomeQuizzes, type TakeHomeQuizSummaryView } from "@/api/takeHomeQuizzes";
+import {
+  getAuthorableSubjectGroups,
+  getAuthorableSubjects,
+  listTakeHomeQuizzes,
+  type AuthorableSubjectGroupView,
+  type TakeHomeQuizSummaryView,
+} from "@/api/takeHomeQuizzes";
 import { ApiError } from "@/api/client";
 import { listClasses, type SchoolClassView } from "@/api/classes";
 import { listMyClasses, type TeacherClassView } from "@/api/me";
@@ -17,6 +23,8 @@ import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
+import { SubjectTargetOptions } from "@/features/academics/components/SubjectTargetOptions";
+import { parseTargetKey } from "@/features/academics/subjectTarget";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
 import { quizStatusLabel, quizStatusVariant } from "@/features/takeHomeQuizzes/takeHomeQuizStatus";
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
@@ -35,7 +43,10 @@ import { ClipboardList } from "lucide-react";
  * splitting out. Composition mirrors
  * `features/assessments/components/AdminResultsPanel.tsx`. An optional
  * `?classId=&subjectId=` (from SubjectsPage's "Take-home quizzes" row
- * action) seeds the initial class + subject selection.
+ * action) seeds the initial class + subject selection. The Subject picker
+ * also offers the class's subject groups to whole-class staff, the Learning
+ * resources page's shape: a group quiz covers every subject in it, and a
+ * subject's own list takes in its group's quizzes too, labelled "Group".
  */
 export function TakeHomeQuizzesPage() {
   const navigate = useNavigate();
@@ -52,8 +63,11 @@ export function TakeHomeQuizzesPage() {
   const [teacherClasses, setTeacherClasses] = useState<TeacherClassView[] | null>(null);
   const [classId, setClassId] = useState(searchParams.get("classId") ?? "");
   const [termId, setTermId] = useState("");
-  const [subjectId, setSubjectId] = useState(searchParams.get("subjectId") ?? "");
+  // A target key (`academics/subjectTarget.ts`): a subject's bare id, or `group:<id>` for a subject group.
+  const [targetKey, setTargetKey] = useState(searchParams.get("subjectId") ?? "");
+  const target = parseTargetKey(targetKey);
   const [subjects, setSubjects] = useState<{ subjectId: string; subjectName: string }[] | null>(null);
+  const [subjectGroups, setSubjectGroups] = useState<AuthorableSubjectGroupView[]>([]);
 
   const [pageIndex, setPageIndex] = useState(0);
   const [page, setPage] = useState<Page<TakeHomeQuizSummaryView> | null>(null);
@@ -77,11 +91,12 @@ export function TakeHomeQuizzesPage() {
   const [lastClassId, setLastClassId] = useState(classId);
   if (classId !== lastClassId) {
     setLastClassId(classId);
-    setSubjectId("");
+    setTargetKey("");
     setSubjects(null);
+    setSubjectGroups([]);
   }
 
-  const selectionKey = `${classId}|${termId}|${subjectId}`;
+  const selectionKey = `${classId}|${termId}|${targetKey}`;
   const [lastSelectionKey, setLastSelectionKey] = useState(selectionKey);
   if (selectionKey !== lastSelectionKey) {
     setLastSelectionKey(selectionKey);
@@ -95,16 +110,19 @@ export function TakeHomeQuizzesPage() {
     getAuthorableSubjects(classId)
       .then(setSubjects)
       .catch(() => setSubjects([]));
+    getAuthorableSubjectGroups(classId)
+      .then(setSubjectGroups)
+      .catch(() => setSubjectGroups([]));
   }, [classId]);
 
   useEffect(() => {
     if (!classId || !termId) return;
-    listTakeHomeQuizzes(classId, termId, subjectId || undefined, undefined, pageIndex, 20)
+    listTakeHomeQuizzes(classId, termId, targetKey ? parseTargetKey(targetKey) : undefined, undefined, pageIndex, 20)
       .then(setPage)
       .catch((error: unknown) =>
         setLoadError(error instanceof ApiError ? error.message : "Failed to load CBT/Quizzes"),
       );
-  }, [classId, termId, subjectId, pageIndex]);
+  }, [classId, termId, targetKey, pageIndex]);
 
   const classes = isTeacher ? teacherClasses : adminClasses;
   const classesLoaded = classes !== null;
@@ -114,7 +132,9 @@ export function TakeHomeQuizzesPage() {
   const showsBranchFilter = can.selectBranch(role);
 
   function newQuizHref(): string {
-    const params = new URLSearchParams({ classId, subjectId, termId });
+    const params = new URLSearchParams({ classId, termId });
+    if (target.subjectGroupId) params.set("subjectGroupId", target.subjectGroupId);
+    else params.set("subjectId", target.subjectId ?? "");
     return `/school/take-home-quizzes/new?${params.toString()}`;
   }
 
@@ -127,7 +147,7 @@ export function TakeHomeQuizzesPage() {
           canAuthor &&
           classId &&
           termId &&
-          subjectId && (
+          targetKey && (
             <Button variant="accent" onClick={() => navigate(newQuizHref())}>
               New quiz
             </Button>
@@ -158,15 +178,10 @@ export function TakeHomeQuizzesPage() {
                 <FormField label="Subject" htmlFor="take-home-quiz-subject">
                   <Select
                     id="take-home-quiz-subject"
-                    value={subjectId}
-                    onChange={(event) => setSubjectId(event.target.value)}
+                    value={targetKey}
+                    onChange={(event) => setTargetKey(event.target.value)}
                   >
-                    <option value="">Select a subject…</option>
-                    {(subjects ?? []).map((subject) => (
-                      <option key={subject.subjectId} value={subject.subjectId}>
-                        {subject.subjectName}
-                      </option>
-                    ))}
+                    <SubjectTargetOptions subjects={subjects ?? []} subjectGroups={subjectGroups} />
                   </Select>
                 </FormField>
               )}
@@ -209,7 +224,12 @@ export function TakeHomeQuizzesPage() {
               {page.content.map((quiz) => (
                 <TableRow key={quiz.id} to={`/school/take-home-quizzes/${quiz.id}`}>
                   <TableCell label="Title">{quiz.title}</TableCell>
-                  <TableCell label="Subject">{quiz.subjectName}</TableCell>
+                  <TableCell label="Subject">
+                    <div className="flex flex-wrap items-center gap-1">
+                      {quiz.subjectName}
+                      {quiz.subjectGroupId && <Badge variant="info">Group</Badge>}
+                    </div>
+                  </TableCell>
                   <TableCell label="Status">
                     <Badge variant={quizStatusVariant(quiz.status, quiz.availability)}>
                       {quizStatusLabel(quiz.status, quiz.availability)}

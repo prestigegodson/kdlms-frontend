@@ -43,7 +43,8 @@ import {
   LEARNING_RESOURCE_STATUS_VARIANT,
   learningResourceAvailabilityBadge,
 } from "@/features/learning/learningResourceStatus";
-import { groupTargetKey, parseTargetKey } from "@/features/learning/resourceTarget";
+import { SubjectTargetOptions } from "@/features/academics/components/SubjectTargetOptions";
+import { parseTargetKey } from "@/features/academics/subjectTarget";
 import { useIsLevelHead } from "@/features/levelHeads/useLevelHead";
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
@@ -84,7 +85,7 @@ export function LearningResourcesPage() {
   const [teacherClasses, setTeacherClasses] = useState<TeacherClassView[] | null>(null);
   const [classId, setClassId] = useState(searchParams.get("classId") ?? "");
   const [termId, setTermId] = useState("");
-  // A target key (`resourceTarget.ts`): a subject's bare id, or `group:<id>` for a subject group.
+  // A target key (`academics/subjectTarget.ts`): a subject's bare id, or `group:<id>` for a subject group.
   const [targetKey, setTargetKey] = useState(searchParams.get("subjectId") ?? "");
   const [status, setStatus] = useState<LearningResourceStatus | "">("");
   const [subjects, setSubjects] = useState<AuthorableSubjectView[] | null>(null);
@@ -282,31 +283,7 @@ export function LearningResourcesPage() {
                     value={targetKey}
                     onChange={(event) => setTargetKey(event.target.value)}
                   >
-                    <option value="">Select a subject…</option>
-                    {subjectGroups.length === 0 ? (
-                      (subjects ?? []).map((subject) => (
-                        <option key={subject.subjectId} value={subject.subjectId}>
-                          {subject.subjectName}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <optgroup label="Subject groups">
-                          {subjectGroups.map((group) => (
-                            <option key={group.subjectGroupId} value={groupTargetKey(group.subjectGroupId)}>
-                              {group.subjectGroupName}
-                            </option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="Subjects">
-                          {(subjects ?? []).map((subject) => (
-                            <option key={subject.subjectId} value={subject.subjectId}>
-                              {subject.subjectName}
-                            </option>
-                          ))}
-                        </optgroup>
-                      </>
-                    )}
+                    <SubjectTargetOptions subjects={subjects ?? []} subjectGroups={subjectGroups} />
                   </Select>
                 </FormField>
               )}
