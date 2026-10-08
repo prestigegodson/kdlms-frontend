@@ -9,12 +9,15 @@ import { FormField } from "@/components/ui/FormField";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { LevelSelect } from "@/features/academics/components/LevelSelect";
+import { type SubjectTerms, subjectTerms } from "@/features/academics/subjectTerminology";
 import { termNumbersLabel } from "@/features/academics/subjectTerms";
 
 interface CopySubjectsModalProps {
   targetLevelId: string;
   targetLevelName: string;
   levels: LevelView[];
+  /** The target level's wording (learning areas on an early-years level). */
+  terms?: SubjectTerms;
   onClose: () => void;
   /** Called once at least one row actually copied, so the caller can reload subjects/groups and the level store's counts. */
   onCopied: () => void;
@@ -33,6 +36,7 @@ export function CopySubjectsModal({
   targetLevelId,
   targetLevelName,
   levels,
+  terms = subjectTerms(undefined),
   onClose,
   onCopied,
 }: CopySubjectsModalProps) {
@@ -101,14 +105,14 @@ export function CopySubjectsModal({
         onCopied();
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to copy subjects");
+      setError(err instanceof ApiError ? err.message : `Failed to copy ${terms.items}`);
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal open onClose={onClose} title={`Copy subjects to ${targetLevelName}`} size="lg">
+    <Modal open onClose={onClose} title={`Copy ${terms.items} to ${targetLevelName}`} size="lg">
       {outcomes ? (
         <div className="space-y-4">
           <ul className="space-y-1.5 text-sm">
@@ -144,16 +148,16 @@ export function CopySubjectsModal({
 
           {loadingSubjects && (
             <div className="flex items-center gap-2 text-sm text-slate-500">
-              <Spinner /> Loading subjects…
+              <Spinner /> Loading {terms.items}…
             </div>
           )}
 
           {!loadingSubjects && sourceLevelId && subjects.length === 0 && (
-            <p className="text-sm text-slate-500">This class has no active subjects to copy.</p>
+            <p className="text-sm text-slate-500">This class has no active {terms.items} to copy.</p>
           )}
 
           {!loadingSubjects && subjects.length > 0 && (
-            <FormField label={`Subjects (${selected.size} selected)`}>
+            <FormField label={`${terms.Items} (${selected.size} selected)`}>
               <div className="max-h-72 space-y-1 overflow-y-auto overscroll-contain rounded-control border border-slate-200 p-2">
                 <label className="flex min-h-11 cursor-pointer items-center gap-2 border-b border-slate-100 px-1 text-sm font-medium">
                   <Checkbox checked={allSelected} onChange={toggleAll} />

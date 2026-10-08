@@ -75,6 +75,8 @@ const SECONDARY_LEVEL: LevelView = {
   subjectGroupCount: 0,
 };
 
+const NURSERY_LEVEL: LevelView = { ...PRIMARY_LEVEL, baseLevel: "NURSERY", displayName: "Nursery" };
+
 const SCIENCES_GROUP: SubjectGroupView = { id: "group-1", schoolId: "school-1", levelId: "level-1", name: "Sciences" };
 
 const GROUPED_SUBJECT: SubjectView = {
@@ -242,30 +244,32 @@ describe("SubjectsPage", () => {
     vi.mocked(subjectGroupsApi.listSubjectGroups).mockResolvedValue([SCIENCES_GROUP]);
   });
 
-  it("sections subjects by group, with ungrouped subjects trailing", async () => {
+  it("sections an early-years level's learning areas by subject, with ungrouped ones trailing", async () => {
+    vi.mocked(levelsApi.listLevels).mockResolvedValue([NURSERY_LEVEL, SECONDARY_LEVEL]);
     mockSubjects([GROUPED_SUBJECT, UNGROUPED_SUBJECT]);
 
     renderAsSchoolAdmin();
 
     expect(await screen.findByText("Basic Science")).toBeInTheDocument();
     expect(screen.getByText("Sciences")).toBeInTheDocument();
-    expect(screen.getByText("Ungrouped")).toBeInTheDocument();
+    expect(screen.getByText("No subject")).toBeInTheDocument();
     expect(screen.getByText("Mathematics")).toBeInTheDocument();
   });
 
-  it("creates a subject in the selected group", async () => {
+  it("creates an early-years learning area in the selected subject", async () => {
+    vi.mocked(levelsApi.listLevels).mockResolvedValue([NURSERY_LEVEL, SECONDARY_LEVEL]);
     mockSubjects([]);
     vi.mocked(subjectsApi.createSubject).mockResolvedValue(GROUPED_SUBJECT);
     const user = userEvent.setup();
 
     renderAsSchoolAdmin();
-    await screen.findByText(/No subjects yet/);
+    await screen.findByText(/No learning areas yet/);
 
-    await user.click(screen.getByRole("button", { name: "Add subject" }));
+    await user.click(screen.getByRole("button", { name: "Add learning area" }));
     const dialog = await screen.findByRole("dialog");
 
     await user.type(within(dialog).getByLabelText("Name"), "Basic Science");
-    await user.selectOptions(within(dialog).getByLabelText("Group"), "Sciences");
+    await user.selectOptions(within(dialog).getByLabelText("Subject"), "Sciences");
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
     expect(subjectsApi.createSubject).toHaveBeenCalledWith({
@@ -468,39 +472,76 @@ describe("SubjectsPage", () => {
     expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
   });
 
-  it("creates a subject group from the manage-groups dialog", async () => {
+  it("creates an early-years subject from the manage dialog", async () => {
+    vi.mocked(levelsApi.listLevels).mockResolvedValue([NURSERY_LEVEL, SECONDARY_LEVEL]);
     mockSubjects([]);
     vi.mocked(subjectGroupsApi.createSubjectGroup).mockResolvedValue(SCIENCES_GROUP);
     const user = userEvent.setup();
 
     renderAsSchoolAdmin();
-    await screen.findByText(/No subjects yet/);
+    await screen.findByText(/No learning areas yet/);
 
-    await user.click(screen.getByRole("button", { name: "Manage groups" }));
+    await user.click(screen.getByRole("button", { name: "Manage subjects" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Sciences")).toBeInTheDocument();
 
-    await user.type(within(dialog).getByLabelText("New group name"), "Languages");
+    await user.type(within(dialog).getByLabelText("New subject name"), "Languages");
     await user.click(within(dialog).getByRole("button", { name: "Add" }));
 
     expect(subjectGroupsApi.createSubjectGroup).toHaveBeenCalledWith({ levelId: "level-1", name: "Languages" });
   });
 
-  it("deletes a subject group after inline confirmation", async () => {
+  it("deletes an early-years subject after inline confirmation", async () => {
+    vi.mocked(levelsApi.listLevels).mockResolvedValue([NURSERY_LEVEL, SECONDARY_LEVEL]);
     mockSubjects([]);
     vi.mocked(subjectGroupsApi.deleteSubjectGroup).mockResolvedValue(undefined);
     const user = userEvent.setup();
 
     renderAsSchoolAdmin();
-    await screen.findByText(/No subjects yet/);
+    await screen.findByText(/No learning areas yet/);
 
-    await user.click(screen.getByRole("button", { name: "Manage groups" }));
+    await user.click(screen.getByRole("button", { name: "Manage subjects" }));
     const dialog = await screen.findByRole("dialog");
 
     await user.click(within(dialog).getByRole("button", { name: "Delete" }));
     await user.click(within(dialog).getByRole("button", { name: "Confirm" }));
 
     expect(subjectGroupsApi.deleteSubjectGroup).toHaveBeenCalledWith("group-1");
+  });
+
+  it("calls subjects learning areas and groups subjects on an early-years level", async () => {
+    vi.mocked(levelsApi.listLevels).mockResolvedValue([NURSERY_LEVEL, SECONDARY_LEVEL]);
+    mockSubjects([GROUPED_SUBJECT, UNGROUPED_SUBJECT]);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+
+    expect(await screen.findByText("Basic Science")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Learning areas" })).toBeInTheDocument();
+    expect(screen.getByText("No subject")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Manage subjects" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Add learning area" }));
+    const dialog = await screen.findByRole("dialog", { name: "Add learning area" });
+    expect(within(dialog).getByLabelText("Subject")).toBeInTheDocument();
+  });
+
+  it("shows a flat subject list with no group controls on a primary/secondary level", async () => {
+    mockSubjects([GROUPED_SUBJECT, UNGROUPED_SUBJECT]);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+
+    expect(await screen.findByText("Basic Science")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Subjects" })).toBeInTheDocument();
+    expect(screen.queryByText("Sciences")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ungrouped")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Manage groups" })).not.toBeInTheDocument();
+    expect(subjectGroupsApi.listSubjectGroups).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Add subject" }));
+    const dialog = await screen.findByRole("dialog", { name: "Add subject" });
+    expect(within(dialog).queryByLabelText("Group")).not.toBeInTheDocument();
   });
 
   it("shows the current term for a TEACHER's already server-filtered subject list", async () => {

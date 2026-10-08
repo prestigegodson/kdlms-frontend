@@ -38,6 +38,7 @@ import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { CopySubjectsModal } from "@/features/academics/components/CopySubjectsModal";
 import { LevelSelect } from "@/features/academics/components/LevelSelect";
+import { isEarlyYearsLevel, type SubjectTerms, subjectTerms } from "@/features/academics/subjectTerminology";
 import { ALL_TERM_NUMBERS, termNumbersLabel } from "@/features/academics/subjectTerms";
 import { LevelHeadViewSwitch } from "@/features/levelHeads/LevelHeadViewSwitch";
 import { useHeadedLevels, useIsLevelHead } from "@/features/levelHeads/useLevelHead";
@@ -51,8 +52,6 @@ type ListState =
   | { kind: "loading" }
   | { kind: "loaded"; subjects: SubjectView[] }
   | { kind: "error"; message: string };
-
-const UNGROUPED_LABEL = "Ungrouped";
 
 /**
  * Subject management per level for the caller's own school, sectioned by the
@@ -348,6 +347,12 @@ function AdminSubjects() {
   // to the first level once the store has loaded, with no setState-in-effect.
   const [selectedLevelId, setSelectedLevelId] = useState<string | null>(null);
   const levelId = selectedLevelId ?? levels[0]?.id ?? "";
+  const selectedLevel = levels.find((level) => level.id === levelId);
+  // Early-years levels say "learning area" for a subject and "subject" for a group.
+  const terms = subjectTerms(selectedLevel);
+  // Only early-years levels group their catalogue (learning areas under subjects);
+  // Primary/Secondary subjects are one flat list with no group controls.
+  const groupsEnabled = isEarlyYearsLevel(selectedLevel);
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [groups, setGroups] = useState<SubjectGroupView[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
@@ -374,14 +379,14 @@ function AdminSubjects() {
   }
 
   function fetchGroups() {
-    if (!levelId) return;
+    if (!levelId || !groupsEnabled) return;
     listSubjectGroups(levelId)
       .then(setGroups)
       .catch(() => setGroups([]));
   }
 
   useEffect(fetchSubjects, [levelId]);
-  useEffect(fetchGroups, [levelId]);
+  useEffect(fetchGroups, [levelId, groupsEnabled]);
 
   function load() {
     setState({ kind: "loading" });
@@ -403,24 +408,35 @@ function AdminSubjects() {
     }
   }
 
-  const sections = state.kind === "loaded" ? sectionByGroup(state.subjects) : [];
+  const sections: SubjectSection[] =
+    state.kind !== "loaded"
+      ? []
+      : groupsEnabled
+        ? sectionByGroup(state.subjects, terms.ungrouped)
+        : [{ label: "", subjects: state.subjects }];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Subjects"
-        description="The subject catalogue for each class, sectioned by group."
+        title={terms.Items}
+        description={
+          groupsEnabled
+            ? `The ${terms.item} catalogue for each class, sectioned by ${terms.group}.`
+            : `The ${terms.item} catalogue for each class.`
+        }
         actions={
           canManage && (
             <>
-              <Button variant="secondary" onClick={() => setManagingGroups(true)} disabled={!levelId}>
-                Manage groups
-              </Button>
+              {groupsEnabled && (
+                <Button variant="secondary" onClick={() => setManagingGroups(true)} disabled={!levelId}>
+                  Manage {terms.groups}
+                </Button>
+              )}
               <Button variant="secondary" onClick={() => setCopying(true)} disabled={!levelId || levels.length < 2}>
                 Copy from class…
               </Button>
               <Button onClick={() => setCreateOpen(true)} disabled={!levelId}>
-                Add subject
+                Add {terms.item}
               </Button>
             </>
           )
@@ -449,24 +465,26 @@ function AdminSubjects() {
 
       {state.kind === "loading" && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading subjects…
+          <Spinner /> Loading {terms.items}…
         </div>
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {state.kind === "loaded" && state.subjects.length === 0 && (
         <EmptyState
           icon={BookOpen}
-          title="No subjects yet"
-          description="Add a subject for this class to get started."
+          title={`No ${terms.items} yet`}
+          description={`Add a ${terms.item} for this class to get started.`}
         />
       )}
       {state.kind === "loaded" && state.subjects.length > 0 && (
         <div className="space-y-6">
           {sections.map((section) => (
             <Card key={section.label} className="p-0">
-              <div className="border-b border-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
-                {section.label}
-              </div>
+              {section.label && (
+                <div className="border-b border-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
+                  {section.label}
+                </div>
+              )}
               <Table>
                 <TableHead>
                   <TableRow>
@@ -540,8 +558,9 @@ function AdminSubjects() {
 
       {createOpen && levelId && (
         <SubjectFormModal
-          title="Add subject"
-          groups={groups}
+          title={`Add ${terms.item}`}
+          terms={terms}
+          groups={groupsEnabled ? groups : null}
           onClose={() => setCreateOpen(false)}
           onSubmit={async (values) => {
             await createSubject({
@@ -563,9 +582,10 @@ function AdminSubjects() {
       {editing && (
         <SubjectFormModal
           key={editing.id}
-          title="Edit subject"
+          title={`Edit ${terms.item}`}
+          terms={terms}
           initial={editing}
-          groups={groups}
+          groups={groupsEnabled ? groups : null}
           onClose={() => setEditing(null)}
           onSubmit={async (values) => {
             await updateSubject(editing.id, {
@@ -583,9 +603,10 @@ function AdminSubjects() {
           }}
         />
       )}
-      {managingGroups && (
+      {managingGroups && groupsEnabled && (
         <SubjectGroupsModal
           levelId={levelId}
+          terms={terms}
           groups={groups}
           onClose={() => setManagingGroups(false)}
           onChanged={load}
@@ -594,7 +615,8 @@ function AdminSubjects() {
       {copying && levelId && (
         <CopySubjectsModal
           targetLevelId={levelId}
-          targetLevelName={levels.find((level) => level.id === levelId)?.displayName ?? "this class"}
+          targetLevelName={selectedLevel?.displayName ?? "this class"}
+          terms={terms}
           levels={levels}
           onClose={() => setCopying(false)}
           onCopied={() => {
@@ -605,7 +627,7 @@ function AdminSubjects() {
       )}
       {deleting && (
         <ConfirmDialog
-          title="Delete this subject?"
+          title={`Delete this ${terms.item}?`}
           message={
             <>
               <strong>{deleting.name}</strong> will be removed, along with any teacher assigned to it in a classroom.
@@ -642,8 +664,8 @@ interface SubjectSection {
   subjects: SubjectView[];
 }
 
-/** Alphabetical by group name, with any ungrouped subjects trailing under {@link UNGROUPED_LABEL}. */
-function sectionByGroup(subjects: SubjectView[]): SubjectSection[] {
+/** Alphabetical by group name, with any ungrouped subjects trailing under `ungroupedLabel`. */
+function sectionByGroup(subjects: SubjectView[], ungroupedLabel: string): SubjectSection[] {
   const byGroupName = new Map<string, SubjectView[]>();
   const ungrouped: SubjectView[] = [];
 
@@ -662,7 +684,7 @@ function sectionByGroup(subjects: SubjectView[]): SubjectSection[] {
     .map(([label, groupSubjects]) => ({ label, subjects: groupSubjects }));
 
   if (ungrouped.length > 0) {
-    sections.push({ label: UNGROUPED_LABEL, subjects: ungrouped });
+    sections.push({ label: ungroupedLabel, subjects: ungrouped });
   }
 
   return sections;
@@ -679,14 +701,16 @@ interface SubjectFormValues {
 
 interface SubjectFormModalProps {
   title: string;
+  terms: SubjectTerms;
   initial?: SubjectFormValues;
-  groups: SubjectGroupView[];
+  /** `null` hides the group picker (levels that don't group their subjects). */
+  groups: SubjectGroupView[] | null;
   onClose: () => void;
   onSubmit: (values: SubjectFormValues) => Promise<void>;
   onSaved: () => void;
 }
 
-function SubjectFormModal({ title, initial, groups, onClose, onSubmit, onSaved }: SubjectFormModalProps) {
+function SubjectFormModal({ title, terms, initial, groups, onClose, onSubmit, onSaved }: SubjectFormModalProps) {
   const [name, setName] = useState(initial?.name ?? "");
   const [code, setCode] = useState(initial?.code ?? "");
   const [subjectGroupId, setSubjectGroupId] = useState(initial?.subjectGroupId ?? "");
@@ -723,7 +747,7 @@ function SubjectFormModal({ title, initial, groups, onClose, onSubmit, onSaved }
       });
       onSaved();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to save subject");
+      setError(err instanceof ApiError ? err.message : `Failed to save ${terms.item}`);
     } finally {
       setSubmitting(false);
     }
@@ -739,20 +763,22 @@ function SubjectFormModal({ title, initial, groups, onClose, onSubmit, onSaved }
         <FormField label="Code" htmlFor="subject-code">
           <Input id="subject-code" value={code} onChange={(event) => setCode(event.target.value)} />
         </FormField>
-        <FormField label="Group" htmlFor="subject-group">
-          <Select
-            id="subject-group"
-            value={subjectGroupId}
-            onChange={(event) => setSubjectGroupId(event.target.value)}
-          >
-            <option value="">— None —</option>
-            {groups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {group.name}
-              </option>
-            ))}
-          </Select>
-        </FormField>
+        {groups && (
+          <FormField label={terms.Group} htmlFor="subject-group">
+            <Select
+              id="subject-group"
+              value={subjectGroupId}
+              onChange={(event) => setSubjectGroupId(event.target.value)}
+            >
+              <option value="">— None —</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        )}
         <FormField label="Terms" htmlFor="subject-term-1">
           <div className="flex gap-4">
             {ALL_TERM_NUMBERS.map((termNumber) => (
@@ -773,7 +799,7 @@ function SubjectFormModal({ title, initial, groups, onClose, onSubmit, onSaved }
             Selective - only registered students take it
           </label>
           <p className="mt-1 text-xs text-slate-500">
-            Leave unchecked for a mandatory subject every student at this class takes. Once any score or rating has
+            Leave unchecked for a mandatory {terms.item} every student at this class takes. Once any score or rating has
             been recorded, this can no longer be changed.
           </p>
         </FormField>
@@ -802,6 +828,7 @@ function SubjectFormModal({ title, initial, groups, onClose, onSubmit, onSaved }
 
 interface SubjectGroupsModalProps {
   levelId: string;
+  terms: SubjectTerms;
   groups: SubjectGroupView[];
   onClose: () => void;
   onChanged: () => void;
@@ -813,7 +840,7 @@ interface SubjectGroupsModalProps {
  * nested dialog, matching this app's Modal (no portal, not designed to
  * stack).
  */
-function SubjectGroupsModal({ levelId, groups, onClose, onChanged }: SubjectGroupsModalProps) {
+function SubjectGroupsModal({ levelId, terms, groups, onClose, onChanged }: SubjectGroupsModalProps) {
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -831,7 +858,7 @@ function SubjectGroupsModal({ levelId, groups, onClose, onChanged }: SubjectGrou
       setNewName("");
       onChanged();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to create subject group");
+      setError(err instanceof ApiError ? err.message : `Failed to create ${terms.groupFull}`);
     } finally {
       setCreating(false);
     }
@@ -851,7 +878,7 @@ function SubjectGroupsModal({ levelId, groups, onClose, onChanged }: SubjectGrou
       setEditingId(null);
       onChanged();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to rename subject group");
+      setError(err instanceof ApiError ? err.message : `Failed to rename ${terms.groupFull}`);
     } finally {
       setBusyId(null);
     }
@@ -865,18 +892,18 @@ function SubjectGroupsModal({ levelId, groups, onClose, onChanged }: SubjectGrou
       setConfirmingDeleteId(null);
       onChanged();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to delete subject group");
+      setError(err instanceof ApiError ? err.message : `Failed to delete ${terms.groupFull}`);
     } finally {
       setBusyId(null);
     }
   }
 
   return (
-    <Modal open onClose={onClose} title="Manage subject groups">
+    <Modal open onClose={onClose} title={`Manage ${terms.groupsFull}`}>
       <div className="space-y-4">
         {error && <Alert variant="error">{error}</Alert>}
 
-        {groups.length === 0 && <p className="text-sm text-slate-500">No groups yet for this class.</p>}
+        {groups.length === 0 && <p className="text-sm text-slate-500">No {terms.groups} yet for this class.</p>}
         {groups.length > 0 && (
           <ul className="divide-y divide-slate-100 rounded-control border border-slate-200">
             {groups.map((group) => (
@@ -906,7 +933,7 @@ function SubjectGroupsModal({ levelId, groups, onClose, onChanged }: SubjectGrou
                   </div>
                 ) : confirmingDeleteId === group.id ? (
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-slate-700">Delete "{group.name}"? Its subjects become ungrouped.</span>
+                    <span className="text-slate-700">Delete "{group.name}"? {terms.groupDeleteNote}</span>
                     <div className="flex shrink-0 gap-3">
                       <button
                         type="button"
@@ -955,7 +982,7 @@ function SubjectGroupsModal({ levelId, groups, onClose, onChanged }: SubjectGrou
         )}
 
         <form className="flex flex-wrap items-end gap-2" onSubmit={handleCreate}>
-          <FormField label="New group name" htmlFor="new-subject-group-name" className="flex-1">
+          <FormField label={`New ${terms.group} name`} htmlFor="new-subject-group-name" className="flex-1">
             <Input
               id="new-subject-group-name"
               required
