@@ -3,7 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as learningApi from "@/api/learning";
 import type { LearningCommentView, LearningResourceView } from "@/api/learning";
+import type { Role } from "@/api/types";
 import { CommentsModal } from "@/features/learning/components/CommentsModal";
+import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 
 vi.mock("@/api/learning", async () => {
   const actual = await vi.importActual<typeof import("@/api/learning")>("@/api/learning");
@@ -11,6 +13,7 @@ vi.mock("@/api/learning", async () => {
     ...actual,
     getLearningResource: vi.fn(),
     listLearningComments: vi.fn(),
+    postLearningComment: vi.fn(),
     hideLearningComment: vi.fn(),
     unhideLearningComment: vi.fn(),
     deleteLearningComment: vi.fn(),
@@ -44,6 +47,8 @@ const RESOURCE: LearningResourceView = {
 const COMMENT: LearningCommentView = {
   commentId: "comment-1",
   resourceId: "resource-1",
+  parentCommentId: null,
+  authorRole: "STUDENT",
   authorName: "Ada Obi",
   isSelf: false,
   body: "Great lesson!",
@@ -55,7 +60,18 @@ const COMMENT: LearningCommentView = {
   editableUntil: "2026-08-15T09:15:00Z",
 };
 
-beforeEach(() => vi.clearAllMocks());
+function signInAs(role: Role) {
+  useAuthStore.setState({
+    user: { id: "user-1", email: "user@school.example", firstName: "A", lastName: "B", role, schoolId: "school-1" },
+    accessToken: "access",
+    refreshToken: "refresh",
+  });
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  resetAuthStore();
+});
 
 describe("CommentsModal", () => {
   it("loads the resource and its comments, then renders both", async () => {
@@ -68,7 +84,8 @@ describe("CommentsModal", () => {
     expect(screen.getByText("Great lesson!")).toBeInTheDocument();
   });
 
-  it("never shows a composer - staff only moderates, this phase has no staff post endpoint", async () => {
+  it("never shows a composer or Reply to an admin - admins moderate but never post", async () => {
+    signInAs("SCHOOL_ADMIN");
     vi.mocked(learningApi.getLearningResource).mockResolvedValue(RESOURCE);
     vi.mocked(learningApi.listLearningComments).mockResolvedValue([COMMENT]);
 
@@ -76,6 +93,25 @@ describe("CommentsModal", () => {
 
     await screen.findByText("Great lesson!");
     expect(screen.queryByPlaceholderText("Write a comment…")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reply" })).not.toBeInTheDocument();
+  });
+
+  it("lets a teacher reply to a student's comment", async () => {
+    signInAs("TEACHER");
+    vi.mocked(learningApi.getLearningResource).mockResolvedValue(RESOURCE);
+    vi.mocked(learningApi.listLearningComments).mockResolvedValue([COMMENT]);
+    vi.mocked(learningApi.postLearningComment).mockResolvedValue({ ...COMMENT, commentId: "reply-1" });
+    const user = userEvent.setup();
+
+    render(<CommentsModal resourceId="resource-1" onClose={vi.fn()} />);
+
+    await screen.findByText("Great lesson!");
+    expect(screen.getByPlaceholderText("Write a comment…")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reply" }));
+    await user.type(screen.getByPlaceholderText("Write a reply…"), "Glad it helped!");
+    await user.click(screen.getByRole("button", { name: "Reply" }));
+
+    expect(learningApi.postLearningComment).toHaveBeenCalledWith("resource-1", "Glad it helped!", COMMENT.commentId);
   });
 
   it("toggles comments_enabled through the checkbox", async () => {

@@ -154,6 +154,8 @@ describe("LearningResourcePreviewPage", () => {
       {
         commentId: "comment-1",
         resourceId: "resource-1",
+        parentCommentId: null,
+        authorRole: "STUDENT",
         authorName: "Ada Obi",
         isSelf: false,
         body: "Great lesson!",
@@ -168,6 +170,8 @@ describe("LearningResourcePreviewPage", () => {
     vi.mocked(learningApi.hideLearningComment).mockResolvedValue({
       commentId: "comment-1",
       resourceId: "resource-1",
+      parentCommentId: null,
+      authorRole: "STUDENT",
       authorName: "Ada Obi",
       isSelf: false,
       body: "Great lesson!",

@@ -7,6 +7,8 @@ import { CommentsPanel } from "@/features/learning/components/CommentsPanel";
 const COMMENT: LearningCommentView = {
   commentId: "comment-1",
   resourceId: "resource-1",
+  parentCommentId: null,
+  authorRole: "STUDENT",
   authorName: "Ada Obi",
   isSelf: true,
   body: "This really helped, thanks!",
@@ -119,5 +121,46 @@ describe("CommentsPanel", () => {
     await user.click(screen.getByRole("button", { name: "Hide" }));
 
     expect(onHide).toHaveBeenCalledWith("comment-1");
+  });
+
+  it("nests replies under their top-level comment and labels a teacher's", () => {
+    const teacherReply: LearningCommentView = {
+      ...COMMENT,
+      commentId: "reply-1",
+      parentCommentId: COMMENT.commentId,
+      authorRole: "TEACHER",
+      authorName: "Tara Teacher",
+      isSelf: false,
+      canEdit: false,
+      body: "Glad it helped!",
+    };
+    render(<CommentsPanel comments={[COMMENT, teacherReply]} commentsEnabled canPost onPost={vi.fn()} />);
+
+    expect(screen.getByText("Teacher")).toBeInTheDocument();
+    // Only the top-level comment offers Reply - replies are one level deep.
+    expect(screen.getAllByRole("button", { name: "Reply" })).toHaveLength(1);
+  });
+
+  it("posts a reply with its parent's id and closes the reply composer", async () => {
+    const onPost = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<CommentsPanel comments={[COMMENT]} commentsEnabled canPost onPost={onPost} />);
+
+    await user.click(screen.getByRole("button", { name: "Reply" }));
+    await user.type(screen.getByPlaceholderText("Write a reply…"), "Me too");
+    await user.click(screen.getByRole("button", { name: "Reply" }));
+
+    expect(onPost).toHaveBeenCalledWith("Me too", COMMENT.commentId);
+    expect(screen.queryByPlaceholderText("Write a reply…")).not.toBeInTheDocument();
+  });
+
+  it("offers no Reply once comments are turned off, or on a hidden comment", () => {
+    const { rerender } = render(
+      <CommentsPanel comments={[COMMENT]} commentsEnabled={false} canPost onPost={vi.fn()} />,
+    );
+    expect(screen.queryByRole("button", { name: "Reply" })).not.toBeInTheDocument();
+
+    rerender(<CommentsPanel comments={[{ ...COMMENT, hidden: true }]} commentsEnabled canPost onPost={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Reply" })).not.toBeInTheDocument();
   });
 });

@@ -712,13 +712,13 @@ export const can = {
   },
 
   /**
-   * Posting into a learning resource's class-wide discussion (Phase 35G) - STUDENT only, the
-   * only posting path this phase; a teacher/admin moderates instead (`moderateLearningComments`
-   * below). Per-comment `canEdit` still comes from the server, never re-derived here - this only
-   * gates whether the composer itself is reachable.
+   * Posting and replying in a learning resource's class-wide discussion (Phase 35G) - a STUDENT,
+   * or a TEACHER; admins moderate but never post (`moderateLearningComments` below). Whether this
+   * teacher may read the resource at all, and per-comment `canEdit`, still come from the server -
+   * this only gates whether the composer and Reply buttons are reachable.
    */
   postLearningComments(role: Role | undefined, entitled: boolean): boolean {
-    return entitled && role === "STUDENT";
+    return entitled && (role === "STUDENT" || role === "TEACHER");
   },
 
   /**

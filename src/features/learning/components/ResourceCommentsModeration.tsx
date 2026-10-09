@@ -2,18 +2,22 @@ import { useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
 import {
   deleteLearningComment,
+  editLearningComment,
   getLearningResource,
   hideLearningComment,
   listLearningComments,
+  postLearningComment,
   setLearningResourceCommentsEnabled,
   unhideLearningComment,
   type LearningCommentView,
   type LearningResourceView,
 } from "@/api/learning";
+import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Spinner } from "@/components/ui/Spinner";
 import { CommentsPanel } from "@/features/learning/components/CommentsPanel";
+import { useAuthStore } from "@/stores/authStore";
 
 interface ResourceCommentsModerationProps {
   resourceId: string;
@@ -22,10 +26,11 @@ interface ResourceCommentsModerationProps {
 }
 
 /**
- * Staff comment moderation (Phase 35G): resolve the resource (for `commentsEnabled` and its
- * toggle) and its comments before rendering anything real, then wrap the same `CommentsPanel` the
- * student resource detail page renders, in moderation mode (`onHide`/`onUnhide`/`onDelete`, no
- * `onPost` - staff never posts into a resource's discussion, only moderates it). Extracted from
+ * The staff side of a resource's discussion (Phase 35G): resolve the resource (for
+ * `commentsEnabled` and its toggle) and its comments before rendering anything real, then wrap the
+ * same `CommentsPanel` the student resource detail page renders, with the moderation actions
+ * (`onHide`/`onUnhide`/`onDelete`) and - for a TEACHER only, `can.postLearningComments` - the
+ * composer and Reply buttons too. Admins moderate but never post. Extracted from
  * `CommentsModal` so it can be embedded directly on `LearningResourcePreviewPage` as well as
  * inside `CommentsModal`'s own modal chrome - the two callers differ only in layout.
  */
@@ -35,6 +40,7 @@ export function ResourceCommentsModeration({ resourceId, onResourceLoaded }: Res
   const [error, setError] = useState<string | null>(null);
   const [toggleError, setToggleError] = useState<string | null>(null);
   const [togglingComments, setTogglingComments] = useState(false);
+  const role = useAuthStore((state) => state.user?.role);
 
   function load() {
     Promise.all([getLearningResource(resourceId), listLearningComments(resourceId)])
@@ -48,6 +54,16 @@ export function ResourceCommentsModeration({ resourceId, onResourceLoaded }: Res
 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- re-fetching keys off resourceId alone; onResourceLoaded is an inline callback at the CommentsModal call site and isn't itself a reason to reload
   useEffect(load, [resourceId]);
+
+  async function handlePost(body: string, parentCommentId?: string) {
+    await postLearningComment(resourceId, body, parentCommentId);
+    load();
+  }
+
+  async function handleEdit(commentId: string, body: string) {
+    await editLearningComment(resourceId, commentId, body);
+    load();
+  }
 
   async function handleHide(commentId: string) {
     await hideLearningComment(resourceId, commentId);
@@ -104,7 +120,10 @@ export function ResourceCommentsModeration({ resourceId, onResourceLoaded }: Res
       <CommentsPanel
         comments={comments}
         commentsEnabled={resource.commentsEnabled}
-        canPost={false}
+        // The resource and its comments only load for an entitled school, so entitlement holds here.
+        canPost={can.postLearningComments(role, true)}
+        onPost={handlePost}
+        onEdit={handleEdit}
         onHide={handleHide}
         onUnhide={handleUnhide}
         onDelete={handleDelete}

@@ -1,4 +1,4 @@
-import { PencilLine } from "lucide-react";
+import { PencilLine, Reply } from "lucide-react";
 import { useState } from "react";
 import type { LearningCommentView } from "@/api/learning";
 import { ApiError, getErrorMessage } from "@/api/client";
@@ -22,9 +22,10 @@ function errorMessage(error: unknown, fallback: string): string {
 interface CommentsPanelProps {
   comments: LearningCommentView[];
   commentsEnabled: boolean;
-  /** Student mode - the composer renders only when this and `commentsEnabled` are both true. */
+  /** The caller may post and reply (a student, or a teacher) - the composer and Reply buttons render only when this and `commentsEnabled` are both true. */
   canPost: boolean;
-  onPost?: (body: string) => Promise<void>;
+  /** A top-level comment when `parentCommentId` is omitted, else a reply to it. */
+  onPost?: (body: string, parentCommentId?: string) => Promise<void>;
   onEdit?: (commentId: string, body: string) => Promise<void>;
   /** Staff mode - present only for the moderation surface. */
   onHide?: (commentId: string) => Promise<void>;
@@ -34,8 +35,9 @@ interface CommentsPanelProps {
 
 /**
  * A resource's class-wide discussion - shared between the student resource detail page
- * (`canPost`, `onPost`/`onEdit`) and the staff moderation modal (`onHide`/`onUnhide`/
- * `onDelete`), the `ThreadCard` reuse pattern: every per-comment affordance (`canEdit`/
+ * (`canPost`, `onPost`/`onEdit`) and the staff surface (`onHide`/`onUnhide`/`onDelete`, plus
+ * `onPost`/`onEdit` for a teacher), the `ThreadCard` reuse pattern. The server sends a flat list,
+ * oldest first; replies (one level deep) are nested under their top-level comment here: every per-comment affordance (`canEdit`/
  * `canModerate`/`hidden`) is server-derived, so this component never re-derives permission or
  * role from who's viewing it. Body is always rendered as a plain React text child - no
  * `RichContent`, no `dangerouslySetInnerHTML` - the entire XSS argument for a comment (see the
@@ -51,6 +53,23 @@ export function CommentsPanel({
   onUnhide,
   onDelete,
 }: CommentsPanelProps) {
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const { topLevel, repliesByParent } = groupThreads(comments);
+  const canReply = commentsEnabled && canPost && onPost !== undefined;
+
+  function rowFor(comment: LearningCommentView, onReply?: () => void) {
+    return (
+      <CommentRow
+        comment={comment}
+        onReply={onReply}
+        onEdit={onEdit ? (body) => onEdit(comment.commentId, body) : undefined}
+        onHide={onHide ? () => onHide(comment.commentId) : undefined}
+        onUnhide={onUnhide ? () => onUnhide(comment.commentId) : undefined}
+        onDelete={onDelete ? () => onDelete(comment.commentId) : undefined}
+      />
+    );
+  }
+
   return (
     <div className="rounded-card border border-slate-200 bg-white p-5">
       <h2 className="text-base font-semibold text-slate-900">Comments</h2>
@@ -59,21 +78,42 @@ export function CommentsPanel({
         <p className="mt-3 text-sm text-slate-500">No comments yet.</p>
       ) : (
         <div className="mt-4 space-y-4">
-          {comments.map((comment) => (
-            <CommentRow
-              key={comment.commentId}
-              comment={comment}
-              onEdit={onEdit ? (body) => onEdit(comment.commentId, body) : undefined}
-              onHide={onHide ? () => onHide(comment.commentId) : undefined}
-              onUnhide={onUnhide ? () => onUnhide(comment.commentId) : undefined}
-              onDelete={onDelete ? () => onDelete(comment.commentId) : undefined}
-            />
-          ))}
+          {topLevel.map((comment) => {
+            const replies = repliesByParent.get(comment.commentId) ?? [];
+            return (
+              <div key={comment.commentId}>
+                {rowFor(
+                  comment,
+                  canReply && !comment.hidden && replyingTo !== comment.commentId
+                    ? () => setReplyingTo(comment.commentId)
+                    : undefined,
+                )}
+                {(replies.length > 0 || replyingTo === comment.commentId) && (
+                  <div className="ml-6 mt-3 space-y-3 border-l border-slate-200 pl-4">
+                    {replies.map((reply) => (
+                      <div key={reply.commentId}>{rowFor(reply)}</div>
+                    ))}
+                    {canReply && replyingTo === comment.commentId && (
+                      <Composer
+                        placeholder="Write a reply…"
+                        submitLabel="Reply"
+                        onPost={async (body) => {
+                          await onPost(body, comment.commentId);
+                          setReplyingTo(null);
+                        }}
+                        onCancel={() => setReplyingTo(null)}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {commentsEnabled && canPost && onPost ? (
-        <Composer onPost={onPost} />
+      {canReply ? (
+        <Composer docked onPost={(body) => onPost(body)} />
       ) : (
         !commentsEnabled && <p className="mt-4 text-sm text-slate-500">Comments are turned off for this resource.</p>
       )}
@@ -81,15 +121,38 @@ export function CommentsPanel({
   );
 }
 
+/**
+ * Splits the server's flat, oldest-first list into top-level comments and their replies. A reply
+ * whose parent isn't in the list (the server filters those out, so this shouldn't happen) is shown
+ * as top-level rather than dropped.
+ */
+function groupThreads(comments: LearningCommentView[]) {
+  const ids = new Set(comments.map((comment) => comment.commentId));
+  const topLevel: LearningCommentView[] = [];
+  const repliesByParent = new Map<string, LearningCommentView[]>();
+  for (const comment of comments) {
+    if (comment.parentCommentId && ids.has(comment.parentCommentId)) {
+      const replies = repliesByParent.get(comment.parentCommentId) ?? [];
+      replies.push(comment);
+      repliesByParent.set(comment.parentCommentId, replies);
+    } else {
+      topLevel.push(comment);
+    }
+  }
+  return { topLevel, repliesByParent };
+}
+
 interface CommentRowProps {
   comment: LearningCommentView;
+  /** Present on a top-level row when the caller may reply - opens the inline reply composer. */
+  onReply?: () => void;
   onEdit?: (body: string) => Promise<void>;
   onHide?: () => Promise<void>;
   onUnhide?: () => Promise<void>;
   onDelete?: () => Promise<void>;
 }
 
-function CommentRow({ comment, onEdit, onHide, onUnhide, onDelete }: CommentRowProps) {
+function CommentRow({ comment, onReply, onEdit, onHide, onUnhide, onDelete }: CommentRowProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.body);
   const [submitting, setSubmitting] = useState(false);
@@ -128,10 +191,21 @@ function CommentRow({ comment, onEdit, onHide, onUnhide, onDelete }: CommentRowP
     <div>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="font-medium text-slate-900">{comment.authorName}</span>
+        {comment.authorRole === "TEACHER" && <Badge variant="brand">Teacher</Badge>}
         {comment.hidden && <Badge variant="warning">Hidden</Badge>}
         <span className="text-slate-400">{formatInstant(comment.createdAt)}</span>
         {comment.editedAt && <span className="text-xs text-slate-400">(edited)</span>}
         <div className="ml-auto flex items-center gap-3">
+          {onReply && (
+            <button
+              type="button"
+              onClick={onReply}
+              className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-800"
+            >
+              <Reply className="h-3.5 w-3.5" aria-hidden="true" />
+              Reply
+            </button>
+          )}
           {comment.canEdit && !editing && (
             <button
               type="button"
@@ -215,7 +289,23 @@ function CommentRow({ comment, onEdit, onHide, onUnhide, onDelete }: CommentRowP
   );
 }
 
-function Composer({ onPost }: { onPost: (body: string) => Promise<void> }) {
+interface ComposerProps {
+  onPost: (body: string) => Promise<void>;
+  placeholder?: string;
+  submitLabel?: string;
+  /** Shows a Cancel button - the inline reply composer. */
+  onCancel?: () => void;
+  /** The panel's own bottom composer: separated by a rule, and sticky on mobile. */
+  docked?: boolean;
+}
+
+function Composer({
+  onPost,
+  placeholder = "Write a comment…",
+  submitLabel = "Post",
+  onCancel,
+  docked = false,
+}: ComposerProps) {
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -238,24 +328,34 @@ function Composer({ onPost }: { onPost: (body: string) => Promise<void> }) {
 
   return (
     <div
-      data-sheet-dock
-      className="mt-5 border-t border-slate-100 pt-4 mobile:sticky mobile:bottom-0 mobile:-mx-5 mobile:-mb-5 mobile:bg-white/95 mobile:px-5 mobile:pb-5 mobile:backdrop-blur"
+      data-sheet-dock={docked ? "" : undefined}
+      className={
+        docked
+          ? "mt-5 border-t border-slate-100 pt-4 mobile:sticky mobile:bottom-0 mobile:-mx-5 mobile:-mb-5 mobile:bg-white/95 mobile:px-5 mobile:pb-5 mobile:backdrop-blur"
+          : undefined
+      }
     >
       <Textarea
         value={body}
         onChange={(event) => setBody(event.target.value)}
-        placeholder="Write a comment…"
+        placeholder={placeholder}
         rows={2}
         maxLength={MAX_COMMENT_LENGTH}
+        autoFocus={!docked}
       />
       {error && (
         <div className="mt-2">
           <Alert variant="error">{error}</Alert>
         </div>
       )}
-      <div className="mt-2 flex justify-end">
+      <div className="mt-2 flex justify-end gap-2">
+        {onCancel && (
+          <Button size="sm" variant="secondary" onClick={onCancel} disabled={submitting}>
+            Cancel
+          </Button>
+        )}
         <Button size="sm" onClick={submit} loading={submitting} disabled={!body.trim()}>
-          Post
+          {submitLabel}
         </Button>
       </div>
     </div>

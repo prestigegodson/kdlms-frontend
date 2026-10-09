@@ -108,9 +108,9 @@ export function StudentResourceDetailPage() {
       });
   }, [resourceId]);
 
-  async function handlePostComment(body: string) {
+  async function handlePostComment(body: string, parentCommentId?: string) {
     if (!resourceId) return;
-    await postMyLearningComment(resourceId, body);
+    await postMyLearningComment(resourceId, body, parentCommentId);
     loadComments();
   }
 

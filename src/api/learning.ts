@@ -150,6 +150,9 @@ export interface MyLearningResourceView {
 export interface LearningCommentView {
   commentId: string;
   resourceId: string;
+  /** The top-level comment this replies to, or null for a top-level comment - replies are one level deep. */
+  parentCommentId: string | null;
+  authorRole: "STUDENT" | "TEACHER";
   authorName: string;
   isSelf: boolean;
   body: string;
@@ -296,11 +299,29 @@ export function reorderLearningResources(
   });
 }
 
-// Comment moderation (Phase 35G) - staff never posts into a resource's discussion, only
-// moderates it; see the backend's ManageLearningCommentsUseCase for why.
+// Comments (Phase 35G) - every staff role moderates; only a TEACHER also posts and replies.
 
 export function listLearningComments(resourceId: string): Promise<LearningCommentView[]> {
   return apiFetch<LearningCommentView[]>(`${BASE}/${resourceId}/comments`);
+}
+
+/** A TEACHER's own top-level comment, or a reply when `parentCommentId` is given. */
+export function postLearningComment(
+  resourceId: string,
+  body: string,
+  parentCommentId?: string,
+): Promise<LearningCommentView> {
+  return apiFetch<LearningCommentView>(`${BASE}/${resourceId}/comments`, {
+    method: "POST",
+    body: JSON.stringify({ body, parentCommentId: parentCommentId ?? null }),
+  });
+}
+
+export function editLearningComment(resourceId: string, commentId: string, body: string): Promise<LearningCommentView> {
+  return apiFetch<LearningCommentView>(`${BASE}/${resourceId}/comments/${commentId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ body }),
+  });
 }
 
 export function hideLearningComment(resourceId: string, commentId: string): Promise<LearningCommentView> {
@@ -387,17 +408,21 @@ export function downloadMyLearningResourceFileWithProgress(
   return apiFetchBlobWithProgress(`${ME_BASE}/${resourceId}/file`, onProgress);
 }
 
-// Comments (Phase 35G) - the STUDENT's own post/edit surface. The only posting path this phase;
-// staff only moderate, via the functions above.
+// Comments (Phase 35G) - the STUDENT's own post/edit surface; teachers post through the
+// functions above.
 
 export function listMyLearningComments(resourceId: string): Promise<LearningCommentView[]> {
   return apiFetch<LearningCommentView[]>(`${ME_BASE}/${resourceId}/comments`);
 }
 
-export function postMyLearningComment(resourceId: string, body: string): Promise<LearningCommentView> {
+export function postMyLearningComment(
+  resourceId: string,
+  body: string,
+  parentCommentId?: string,
+): Promise<LearningCommentView> {
   return apiFetch<LearningCommentView>(`${ME_BASE}/${resourceId}/comments`, {
     method: "POST",
-    body: JSON.stringify({ body }),
+    body: JSON.stringify({ body, parentCommentId: parentCommentId ?? null }),
   });
 }
 

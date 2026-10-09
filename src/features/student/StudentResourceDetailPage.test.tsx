@@ -121,6 +121,8 @@ describe("StudentResourceDetailPage", () => {
       {
         commentId: "comment-1",
         resourceId: "resource-1",
+        parentCommentId: null,
+        authorRole: "STUDENT",
         authorName: "Ada Obi",
         isSelf: true,
         body: "Thanks for this!",

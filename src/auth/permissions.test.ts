@@ -706,6 +706,14 @@ describe("can.viewLearningCompletions", () => {
     }
   });
 
+  it("lets a STUDENT or a TEACHER post comments, never an admin, and nobody unentitled", () => {
+    expect(can.postLearningComments("STUDENT", true)).toBe(true);
+    expect(can.postLearningComments("TEACHER", true)).toBe(true);
+    expect(can.postLearningComments("SCHOOL_ADMIN", true)).toBe(false);
+    expect(can.postLearningComments("BRANCH_ADMIN", true)).toBe(false);
+    expect(can.postLearningComments("TEACHER", false)).toBe(false);
+  });
+
   it("is true for an authoring role when entitled, false for a STUDENT even when entitled", () => {
     expect(can.viewLearningCompletions("SCHOOL_ADMIN", true)).toBe(true);
     expect(can.viewLearningCompletions("TEACHER", true)).toBe(true);
