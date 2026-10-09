@@ -7,7 +7,7 @@ import { ResourceEditorModal } from "@/features/learning/components/ResourceEdit
 
 vi.mock("@/api/files", async () => {
   const actual = await vi.importActual<typeof import("@/api/files")>("@/api/files");
-  return { ...actual, uploadFile: vi.fn() };
+  return { ...actual, uploadFile: vi.fn(), uploadMediaFile: vi.fn() };
 });
 
 vi.mock("@/api/learning", async () => {
@@ -85,7 +85,7 @@ describe("ResourceEditorModal", () => {
     expect(screen.getByRole("option", { name: "Video (mp4)" })).toBeInTheDocument();
   });
 
-  it("rejects an over-cap mp3 before ever calling uploadFile", async () => {
+  it("rejects an over-cap mp3 before ever uploading it", async () => {
     renderModal(true);
     const user = userEvent.setup();
     await user.selectOptions(screen.getByLabelText("Type"), "AUDIO");
@@ -94,8 +94,33 @@ describe("ResourceEditorModal", () => {
     const fileInput = screen.getByLabelText(/File/) as HTMLInputElement;
     await user.upload(fileInput, oversized);
 
-    expect(filesApi.uploadFile).not.toHaveBeenCalled();
+    expect(filesApi.uploadMediaFile).not.toHaveBeenCalled();
     expect(await screen.findByText(/larger than/)).toBeInTheDocument();
+  });
+
+  it("uploads a video in parts with a progress bar, and Cancel upload aborts it", async () => {
+    let signal: AbortSignal | undefined;
+    vi.mocked(filesApi.uploadMediaFile).mockImplementation((_file, options) => {
+      signal = options?.signal;
+      options?.onProgress?.(0.4);
+      return new Promise(() => {});
+    });
+    renderModal(true);
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByLabelText("Type"), "VIDEO");
+
+    await user.upload(screen.getByLabelText(/File/) as HTMLInputElement, fileOfSize("lesson.mp4", "video/mp4", 1000));
+
+    expect(filesApi.uploadFile).not.toHaveBeenCalled();
+    const uploaded = vi.mocked(filesApi.uploadMediaFile).mock.calls[0][0];
+    expect(uploaded.type).toBe("video/mp4");
+    expect(screen.getByRole("progressbar", { name: "Upload progress" })).toHaveAttribute("aria-valuenow", "40");
+    expect(screen.getByText("Uploading 40%")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Cancel upload" }));
+
+    expect(signal?.aborted).toBe(true);
+    expect(screen.queryByRole("progressbar", { name: "Upload progress" })).not.toBeInTheDocument();
   });
 
   // jsdom's HTMLMediaElement never fires `loadedmetadata`, so the modal's duration probe always
@@ -104,7 +129,7 @@ describe("ResourceEditorModal", () => {
   it(
     "submits an AUDIO resource with the uploaded fileId and resourceType AUDIO",
     async () => {
-      vi.mocked(filesApi.uploadFile).mockResolvedValue({
+      vi.mocked(filesApi.uploadMediaFile).mockResolvedValue({
         fileId: "file-1",
         fileName: "lesson.mp3",
         contentType: "audio/mpeg",

@@ -1,7 +1,7 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import type { ClassLearningResourceView } from "@/api/classLearningResources";
 import { ApiError } from "@/api/client";
-import { uploadFile, uploadLimitFor, uploadLimitLabel } from "@/api/files";
+import { uploadFile, uploadLimitFor, uploadLimitLabel, uploadMediaFile } from "@/api/files";
 import {
   type AuthorableSubjectGroupView,
   type AuthorableSubjectView,
@@ -151,6 +151,11 @@ export function ResourceEditorModal({
   const [galleryOpen, setGalleryOpen] = useState(false);
 
   const [uploading, setUploading] = useState(false);
+  // An mp3/mp4 goes up in parts straight to the bucket (`uploadMediaFile`) - this tracks its
+  // progress (0-100) and lets the author cancel it; closing the form cancels it too.
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const uploadAbort = useRef<AbortController | null>(null);
+  useEffect(() => () => uploadAbort.current?.abort(), []);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -164,22 +169,50 @@ export function ResourceEditorModal({
       setError(`File is larger than ${uploadLimitLabel(contentType)}. Please choose a smaller file.`);
       return;
     }
+    uploadAbort.current?.abort();
+    const abort = new AbortController();
+    uploadAbort.current = abort;
     setUploading(true);
     setError(null);
-    setDurationSeconds(null);
     try {
-      const stored = await uploadFile(file);
+      let stored;
+      if (isMedia) {
+        setUploadProgress(0);
+        // Declared as the type the resource expects: a browser may label an mp3 `audio/mp3`, or
+        // nothing at all, and the server checks the bytes either way.
+        const media = new File([file], file.name, { type: contentType });
+        stored = await uploadMediaFile(media, {
+          signal: abort.signal,
+          onProgress: (fraction) => setUploadProgress(Math.round(fraction * 100)),
+        });
+      } else {
+        stored = await uploadFile(file);
+      }
+      if (abort.signal.aborted) return;
       setFileId(stored.fileId);
       setFileName(stored.fileName);
+      setDurationSeconds(null);
       if (isMedia) {
         const probed = await probeMediaDuration(file, resourceType === "AUDIO" ? "audio" : "video");
         setDurationSeconds(probed);
       }
     } catch (err) {
+      if (abort.signal.aborted) return;
       setError(err instanceof ApiError ? err.message : "Failed to upload file");
     } finally {
-      setUploading(false);
+      if (uploadAbort.current === abort) {
+        uploadAbort.current = null;
+        setUploading(false);
+        setUploadProgress(null);
+      }
     }
+  }
+
+  function cancelUpload() {
+    uploadAbort.current?.abort();
+    uploadAbort.current = null;
+    setUploading(false);
+    setUploadProgress(null);
   }
 
   /**
@@ -343,8 +376,30 @@ export function ResourceEditorModal({
                 <Button type="button" variant="secondary" disabled={uploading} onClick={() => setGalleryOpen(true)}>
                   Choose from gallery
                 </Button>
-                {uploading && <span className="text-sm text-slate-500">Uploading…</span>}
+                {uploading && uploadProgress === null && <span className="text-sm text-slate-500">Uploading…</span>}
               </div>
+              {uploading && uploadProgress !== null && (
+                <div className="mt-3 flex items-center gap-3" aria-live="polite">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div
+                      className="h-1.5 overflow-hidden rounded-full bg-slate-100"
+                      role="progressbar"
+                      aria-label="Upload progress"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={uploadProgress}
+                    >
+                      <div className="h-full bg-brand-500 transition-all" style={{ width: `${uploadProgress}%` }} />
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      {uploadProgress < 100 ? `Uploading ${uploadProgress}%` : "Checking file…"}
+                    </p>
+                  </div>
+                  <Button type="button" variant="secondary" size="sm" onClick={cancelUpload}>
+                    Cancel upload
+                  </Button>
+                </div>
+              )}
               <div className="mt-3">
                 {!uploading && fileId && (
                   <p className="text-sm text-slate-600">

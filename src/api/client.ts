@@ -423,6 +423,65 @@ function sendXhr(
 }
 
 /**
+ * PUTs one part of a chunked upload straight to the bucket, on a presigned URL the API handed out
+ * (`uploadMediaFile` in `api/files.ts`). Deliberately not {@link sendXhr}: the URL is absolute and
+ * already carries its own signature, so no `BASE_URL` prefix and no Authorization header - sending
+ * our bearer token to the bucket would both leak it and break the signature. Resolves to the
+ * part's `ETag` response header, which completing the upload needs; the bucket's CORS rule must
+ * expose it.
+ */
+export function putToPresignedUrl(
+  url: string,
+  body: Blob,
+  options: { onProgress?: (loadedBytes: number) => void; signal?: AbortSignal } = {},
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (options.signal?.aborted) {
+      reject(new DOMException("Upload cancelled", "AbortError"));
+      return;
+    }
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url);
+    if (options.onProgress) {
+      const onProgress = options.onProgress;
+      xhr.upload.onprogress = (event) => onProgress(event.loaded);
+    }
+    const onAbort = () => xhr.abort();
+    options.signal?.addEventListener("abort", onAbort, { once: true });
+    const cleanup = () => options.signal?.removeEventListener("abort", onAbort);
+    xhr.onload = () => {
+      cleanup();
+      const etag = xhr.getResponseHeader("ETag");
+      if (xhr.status >= 200 && xhr.status < 300 && etag) {
+        resolve(etag);
+      } else {
+        reject(new PresignedUploadError(xhr.status));
+      }
+    };
+    xhr.onerror = () => {
+      cleanup();
+      reject(new PresignedUploadError(0));
+    };
+    xhr.onabort = () => {
+      cleanup();
+      reject(new DOMException("Upload cancelled", "AbortError"));
+    };
+    xhr.send(body);
+  });
+}
+
+/** A part PUT the bucket refused (`status` 403 usually means the URL expired) or that never reached it (`status` 0). */
+export class PresignedUploadError extends Error {
+  readonly status: number;
+
+  constructor(status: number) {
+    super(status === 0 ? "Network request failed" : `Upload part failed (${status})`);
+    this.name = "PresignedUploadError";
+    this.status = status;
+  }
+}
+
+/**
  * Multipart upload that reports upload progress - `fetch` can't, so this is the app's one
  * `XMLHttpRequest` path (the guardian's fee-payment proof, Phase 45H, which can be several
  * phone photos over a slow connection). Otherwise the same contract as {@link apiFetch}: bearer
