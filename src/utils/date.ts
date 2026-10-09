@@ -243,8 +243,8 @@ export function toInstant(dateIso: string, clockTime: string): string | null {
 }
 
 /**
- * "2026-03-10" -> the ISO instant for local midnight that day - a resource's `availableFrom`
- * date-picker value, in the browser's own local zone per quiz-module.md's "Timezone handling".
+ * "2026-03-10" -> the ISO instant for local midnight that day - a date-picker
+ * value, in the browser's own local zone per quiz-module.md's "Timezone handling".
  * Returns `null` for missing/unparseable input, so a blank picker never sends a wrong instant.
  */
 export function localDateToStartInstant(dateIso: string | null | undefined): string | null {
@@ -257,8 +257,8 @@ export function localDateToStartInstant(dateIso: string | null | undefined): str
 
 /**
  * "2026-03-10" -> the ISO instant for the last millisecond of that local day (23:59:59.999) - the
- * inclusive-end counterpart to {@link localDateToStartInstant} for a resource's `availableUntil`
- * date-picker value. Returns `null` for missing/unparseable input.
+ * inclusive-end counterpart to {@link localDateToStartInstant} for an
+ * inclusive end date (a coupon's window, or a learning resource's `availableUntil` with no time picked). Returns `null` for missing/unparseable input.
  */
 export function localDateToEndInstant(dateIso: string | null | undefined): string | null {
   if (!dateIso) {

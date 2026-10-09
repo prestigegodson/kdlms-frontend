@@ -36,6 +36,43 @@ function renderModal(canAuthorMedia: boolean) {
   );
 }
 
+function renderModalWithWindow(availableFrom: string | null, availableUntil: string | null) {
+  vi.mocked(learningApi.updateLearningResource).mockResolvedValue({} as learningApi.LearningResourceView);
+  render(
+    <ResourceEditorModal
+      classId="class-1"
+      subjectId="subject-1"
+      termId="term-1"
+      subjects={SUBJECTS}
+      canAuthorMedia
+      resource={{
+        id: "resource-1",
+        classId: "class-1",
+        className: "Class 1",
+        subjectId: "subject-1",
+        subjectName: "Mathematics",
+        termId: "term-1",
+        title: "Handout",
+        description: null,
+        resourceType: "PDF",
+        bodyHtml: null,
+        fileId: "file-1",
+        youtubeVideoId: null,
+        durationSeconds: null,
+        commentsEnabled: true,
+        status: "DRAFT",
+        position: 0,
+        availableFrom,
+        availableUntil,
+        actions: { canEdit: true, canPublish: true, canUnpublish: false, canArchive: true, canDelete: true },
+        updatedAt: "2026-01-01T00:00:00Z",
+      }}
+      onClose={vi.fn()}
+      onSaved={vi.fn()}
+    />,
+  );
+}
+
 function fileOfSize(name: string, type: string, sizeBytes: number): File {
   const file = new File([""], name, { type });
   Object.defineProperty(file, "size", { value: sizeBytes });
@@ -230,6 +267,67 @@ describe("ResourceEditorModal", () => {
     );
   });
 
+  it("sends the availability window with the chosen times", async () => {
+    vi.mocked(filesApi.uploadFile).mockResolvedValue({
+      fileId: "file-1",
+      fileName: "handout.pdf",
+      contentType: "application/pdf",
+      sizeBytes: 1000,
+    });
+
+    renderModal(true);
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByLabelText("Type"), "PDF");
+    await user.type(screen.getByLabelText("Title"), "Handout");
+    await user.upload(screen.getByLabelText(/File/) as HTMLInputElement, fileOfSize("handout.pdf", "application/pdf", 1000));
+    expect(await screen.findByText("handout.pdf")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Available from"), "2026-03-10");
+    await user.type(screen.getByLabelText("Available from time"), "08:30");
+    await user.type(screen.getByLabelText("Available until"), "2026-03-20");
+    await user.type(screen.getByLabelText("Available until time"), "16:00");
+    await user.click(screen.getByRole("button", { name: "Add resource" }));
+
+    expect(learningApi.createLearningResource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        availableFrom: new Date(2026, 2, 10, 8, 30).toISOString(),
+        availableUntil: new Date(2026, 2, 20, 16, 0).toISOString(),
+      }),
+    );
+  });
+
+  it("refuses a same-day window whose end time is before its start time", async () => {
+    renderModal(true);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Title"), "Notes");
+    await user.type(screen.getByLabelText("Available from"), "2026-03-10");
+    await user.type(screen.getByLabelText("Available from time"), "14:00");
+    await user.type(screen.getByLabelText("Available until"), "2026-03-10");
+    await user.type(screen.getByLabelText("Available until time"), "09:00");
+
+    expect(screen.getByText(/cannot be before its start\./)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add resource" })).toBeDisabled();
+  });
+
+  it("shows a stored end-of-day 'until' as a blank time and a stored time as itself", () => {
+    renderModalWithWindow(new Date(2026, 2, 10, 14, 0).toISOString(), new Date(2026, 2, 20, 23, 59, 59, 999).toISOString());
+
+    expect(screen.getByLabelText("Available from time")).toHaveValue("14:00");
+    expect(screen.getByLabelText("Available until time")).toHaveValue("");
+  });
+
+  it("re-saves an untouched end-of-day 'until' as the identical instant", async () => {
+    const until = new Date(2026, 2, 20, 23, 59, 59, 999).toISOString();
+    renderModalWithWindow(null, until);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(learningApi.updateLearningResource).toHaveBeenCalledWith(
+      "resource-1",
+      expect.objectContaining({ availableFrom: null, availableUntil: until }),
+    );
+  });
+
   it("blocks typing an 'Available until' date earlier than the chosen 'Available from' date", async () => {
     renderModal(true);
     const user = userEvent.setup();
@@ -238,7 +336,7 @@ describe("ResourceEditorModal", () => {
     // onChange - so the draft is left uncommitted rather than producing an invalid window.
     await user.type(screen.getByLabelText("Available until"), "2026-03-10");
 
-    expect(screen.queryByText(/cannot be before its start date/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/cannot be before its start\./)).not.toBeInTheDocument();
   });
 
   it("disables submit and refuses to save when an existing resource's availability window is already inconsistent", () => {
@@ -277,7 +375,7 @@ describe("ResourceEditorModal", () => {
     );
 
     expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
-    expect(screen.getByText(/cannot be before its start date/)).toBeInTheDocument();
+    expect(screen.getByText(/cannot be before its start\./)).toBeInTheDocument();
     expect(learningApi.updateLearningResource).not.toHaveBeenCalled();
   });
 });

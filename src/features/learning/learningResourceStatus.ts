@@ -1,5 +1,5 @@
 import type { LearningResourceStatus } from "@/api/learning";
-import { formatInstantDate } from "@/utils/date";
+import { formatInstant } from "@/utils/date";
 
 /** Separate from `components/LearningResourceStatusBadge.tsx` so fast refresh doesn't warn about a file mixing a component with plain helpers - mirrors `lessonNotes/lessonNoteStatus.ts`. */
 export const LEARNING_RESOURCE_STATUS_VARIANT: Record<LearningResourceStatus, "neutral" | "success" | "warning"> = {
@@ -26,10 +26,10 @@ export function learningResourceAvailabilityBadge(
   }
   const now = Date.now();
   if (availableFrom && new Date(availableFrom).getTime() > now) {
-    return { label: `Scheduled · from ${formatInstantDate(availableFrom)}`, variant: "neutral" };
+    return { label: `Scheduled · from ${formatInstant(availableFrom)}`, variant: "neutral" };
   }
   if (availableUntil && new Date(availableUntil).getTime() < now) {
-    return { label: `Ended ${formatInstantDate(availableUntil)}`, variant: "warning" };
+    return { label: `Ended ${formatInstant(availableUntil)}`, variant: "warning" };
   }
   return null;
 }

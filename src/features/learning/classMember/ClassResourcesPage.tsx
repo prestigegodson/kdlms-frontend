@@ -17,7 +17,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { DrillRow } from "@/features/guardian/components/DrillRow";
-import { formatInstantDate } from "@/utils/date";
+import { formatInstant } from "@/utils/date";
 import { formatDuration } from "@/utils/duration";
 
 export type ClassResourcesAudience = "LEARNER" | "GUARDIAN";
@@ -191,7 +191,7 @@ export function ClassResourcesPage({ audience }: { audience: ClassResourcesAudie
                 const meta = [
                   TYPE_LABEL[resource.resourceType] ?? resource.resourceType,
                   formatDuration(resource.durationSeconds),
-                  resource.availableUntil ? `Available until ${formatInstantDate(resource.availableUntil)}` : null,
+                  resource.availableUntil ? `Available until ${formatInstant(resource.availableUntil)}` : null,
                 ]
                   .filter(Boolean)
                   .join(" · ");

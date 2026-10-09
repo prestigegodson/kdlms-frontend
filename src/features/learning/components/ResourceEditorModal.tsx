@@ -24,7 +24,7 @@ import { RichTextField } from "@/components/richText/RichTextField";
 import { type GalleryLoader, GalleryPickerModal } from "@/features/learning/components/GalleryPickerModal";
 import { groupTargetKey, parseTargetKey, targetKeyOf } from "@/features/academics/subjectTarget";
 import { formatDuration } from "@/utils/duration";
-import { instantToLocalDate, localDateToEndInstant, localDateToStartInstant } from "@/utils/date";
+import { localDateToEndInstant, splitInstant, toInstant } from "@/utils/date";
 
 /** Mirrors backend `learning.domain.LearningRichText.MAX_IMAGES_PER_RESOURCE`. */
 const MAX_IMAGES_PER_RESOURCE = 30;
@@ -37,6 +37,31 @@ const FILE_CONTENT_TYPE: Record<string, string> = {
 };
 
 const FILE_BACKED_TYPES: LearningResourceType[] = ["PDF", "AUDIO", "VIDEO"];
+
+/** A blank "Available from" time means local midnight. */
+function availableFromInstant(dateIso: string, clockTime: string): string | null {
+  return dateIso ? toInstant(dateIso, clockTime || "00:00") : null;
+}
+
+/** A blank "Available until" time means the end of that local day (23:59:59.999), the window's original date-only meaning. */
+function availableUntilInstant(dateIso: string, clockTime: string): string | null {
+  if (!dateIso) {
+    return null;
+  }
+  return clockTime ? toInstant(dateIso, clockTime) : localDateToEndInstant(dateIso);
+}
+
+/**
+ * Splits a stored `availableUntil` back into its date and time - leaving the time blank when the
+ * instant is exactly the end of its local day, so a date-only window (every resource saved before
+ * times existed) reads as "end of day" and re-saves unchanged rather than drifting to 23:59:00.
+ */
+function splitAvailableUntil(instant: string | null | undefined): { dateIso: string; clockTime: string } {
+  const split = splitInstant(instant);
+  return split.dateIso && availableUntilInstant(split.dateIso, "") === new Date(instant as string).toISOString()
+    ? { dateIso: split.dateIso, clockTime: "" }
+    : split;
+}
 
 /** How long to wait for a picked media file's `loadedmetadata` event before giving up on probing its duration - a slow decode (or a test runner with no real media pipeline) must never block submit. */
 const DURATION_PROBE_TIMEOUT_MS = 4000;
@@ -146,8 +171,12 @@ export function ResourceEditorModal({
   const [fileName, setFileName] = useState<string | null>(null);
   const [durationSeconds, setDurationSeconds] = useState<number | null>(resource?.durationSeconds ?? null);
   const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [availableFromDate, setAvailableFromDate] = useState(instantToLocalDate(resource?.availableFrom));
-  const [availableUntilDate, setAvailableUntilDate] = useState(instantToLocalDate(resource?.availableUntil));
+  const initialFrom = splitInstant(resource?.availableFrom);
+  const initialUntil = splitAvailableUntil(resource?.availableUntil);
+  const [availableFromDate, setAvailableFromDate] = useState(initialFrom.dateIso);
+  const [availableFromTime, setAvailableFromTime] = useState(initialFrom.clockTime);
+  const [availableUntilDate, setAvailableUntilDate] = useState(initialUntil.dateIso);
+  const [availableUntilTime, setAvailableUntilTime] = useState(initialUntil.clockTime);
   const [galleryOpen, setGalleryOpen] = useState(false);
 
   const [uploading, setUploading] = useState(false);
@@ -240,8 +269,8 @@ export function ResourceEditorModal({
         fileId: isFileBacked ? fileId : null,
         youtubeUrl: resourceType === "YOUTUBE" ? (isEdit ? youtubeUrl || null : youtubeUrl) : null,
         durationSeconds: isMedia ? durationSeconds : null,
-        availableFrom: localDateToStartInstant(availableFromDate),
-        availableUntil: localDateToEndInstant(availableUntilDate),
+        availableFrom: availableFromInstant(availableFromDate, availableFromTime),
+        availableUntil: availableUntilInstant(availableUntilDate, availableUntilTime),
       };
       if (save) {
         await save({ ...payload, resourceType: resource?.resourceType ?? resourceType });
@@ -265,8 +294,10 @@ export function ResourceEditorModal({
     }
   }
 
+  const availableFrom = availableFromInstant(availableFromDate, availableFromTime);
+  const availableUntil = availableUntilInstant(availableUntilDate, availableUntilTime);
   const availabilityWindowInvalid =
-    availableFromDate.length > 0 && availableUntilDate.length > 0 && availableUntilDate < availableFromDate;
+    availableFrom !== null && availableUntil !== null && new Date(availableUntil) < new Date(availableFrom);
 
   const canSubmit =
     !submitting &&
@@ -279,13 +310,17 @@ export function ResourceEditorModal({
 
   return (
     <>
-      <Modal open onClose={onClose} title={isEdit ? "Edit resource" : "Add resource"} size="xl">
+      <Modal open onClose={onClose} title={isEdit ? "Edit resource" : "Add resource"} size="xxl">
         <form className="space-y-4" onSubmit={handleSubmit}>
           {error && <Alert variant="error">{error}</Alert>}
 
           {!isEdit && subjects.length + subjectGroups.length > 1 && (
             <FormField label="Subject" htmlFor="resource-subject">
-              <Select id="resource-subject" value={targetKey} onChange={(event) => setTargetKey(event.target.value)}>
+              <Select
+                id="resource-subject"
+                value={targetKey}
+                onChange={(event) => setTargetKey(event.target.value)}
+              >
                 {subjectGroups.length === 0 ? (
                   subjects.map((subject) => (
                     <option key={subject.subjectId} value={subject.subjectId}>
@@ -303,7 +338,10 @@ export function ResourceEditorModal({
                     </optgroup>
                     <optgroup label="Subject groups">
                       {subjectGroups.map((group) => (
-                        <option key={group.subjectGroupId} value={groupTargetKey(group.subjectGroupId)}>
+                        <option
+                          key={group.subjectGroupId}
+                          value={groupTargetKey(group.subjectGroupId)}
+                        >
                           {group.subjectGroupName}
                         </option>
                       ))}
@@ -331,7 +369,12 @@ export function ResourceEditorModal({
           )}
 
           <FormField label="Title" htmlFor="resource-title">
-            <Input id="resource-title" required value={title} onChange={(event) => setTitle(event.target.value)} />
+            <Input
+              id="resource-title"
+              required
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+            />
           </FormField>
 
           <FormField label="Description" htmlFor="resource-description">
@@ -363,8 +406,8 @@ export function ResourceEditorModal({
           {isFileBacked && contentType && (
             <FormField label="File" htmlFor="resource-file">
               <p className="mb-2 text-sm text-slate-500">
-                {resourceType === "PDF" ? "PDF" : resourceType === "AUDIO" ? "mp3" : "mp4"} only · max{" "}
-                {uploadLimitLabel(contentType)}
+                {resourceType === "PDF" ? "PDF" : resourceType === "AUDIO" ? "mp3" : "mp4"} only ·
+                max {uploadLimitLabel(contentType)}
               </p>
               <div className="flex flex-wrap items-center gap-3">
                 <input
@@ -373,10 +416,17 @@ export function ResourceEditorModal({
                   accept={contentType}
                   onChange={(event) => handleFileSelected(event.target.files?.[0])}
                 />
-                <Button type="button" variant="secondary" disabled={uploading} onClick={() => setGalleryOpen(true)}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={uploading}
+                  onClick={() => setGalleryOpen(true)}
+                >
                   Choose from gallery
                 </Button>
-                {uploading && uploadProgress === null && <span className="text-sm text-slate-500">Uploading…</span>}
+                {uploading && uploadProgress === null && (
+                  <span className="text-sm text-slate-500">Uploading…</span>
+                )}
               </div>
               {uploading && uploadProgress !== null && (
                 <div className="mt-3 flex items-center gap-3" aria-live="polite">
@@ -389,7 +439,10 @@ export function ResourceEditorModal({
                       aria-valuemax={100}
                       aria-valuenow={uploadProgress}
                     >
-                      <div className="h-full bg-brand-500 transition-all" style={{ width: `${uploadProgress}%` }} />
+                      <div
+                        className="h-full bg-brand-500 transition-all"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
                     </div>
                     <p className="text-xs text-slate-500">
                       {uploadProgress < 100 ? `Uploading ${uploadProgress}%` : "Checking file…"}
@@ -403,7 +456,10 @@ export function ResourceEditorModal({
               <div className="mt-3">
                 {!uploading && fileId && (
                   <p className="text-sm text-slate-600">
-                    Selected: <span className="font-medium text-slate-900">{fileName ?? "File uploaded"}</span>
+                    Selected:{" "}
+                    <span className="font-medium text-slate-900">
+                      {fileName ?? "File uploaded"}
+                    </span>
                     {isMedia && durationSeconds != null && ` · ${formatDuration(durationSeconds)}`}
                   </p>
                 )}
@@ -416,7 +472,9 @@ export function ResourceEditorModal({
               label="YouTube URL"
               htmlFor="resource-youtube"
               description={
-                isEdit ? "Leave blank to keep the current video." : "A full youtube.com or youtu.be link."
+                isEdit
+                  ? "Leave blank to keep the current video."
+                  : "A full youtube.com or youtu.be link."
               }
             >
               <Input
@@ -433,30 +491,54 @@ export function ResourceEditorModal({
             <FormField
               label="Available from"
               htmlFor="resource-available-from"
-              description="Leave blank for no start limit."
+              description="Leave blank for no start limit. A blank time means midnight."
             >
-              <DateInput
-                id="resource-available-from"
-                value={availableFromDate}
-                onChange={setAvailableFromDate}
-                max={availableUntilDate || undefined}
-              />
+              <div className="flex gap-2">
+                <DateInput
+                  id="resource-available-from"
+                  value={availableFromDate}
+                  onChange={(value) => {
+                    setAvailableFromDate(value);
+                    if (!value) setAvailableFromTime("");
+                  }}
+                  max={availableUntilDate || undefined}
+                />
+                <Input
+                  type="time"
+                  aria-label="Available from time"
+                  value={availableFromTime}
+                  onChange={(event) => setAvailableFromTime(event.target.value)}
+                  disabled={!availableFromDate}
+                />
+              </div>
             </FormField>
             <FormField
               label="Available until"
               htmlFor="resource-available-until"
-              description={`${audienceLabel} only see this resource within this window. Leave blank for no end limit.`}
+              description={`${audienceLabel} only see this resource within this window. Leave blank for no end limit; a blank time means the end of that day.`}
             >
-              <DateInput
-                id="resource-available-until"
-                value={availableUntilDate}
-                onChange={setAvailableUntilDate}
-                min={availableFromDate || undefined}
-              />
+              <div className="flex gap-2">
+                <DateInput
+                  id="resource-available-until"
+                  value={availableUntilDate}
+                  onChange={(value) => {
+                    setAvailableUntilDate(value);
+                    if (!value) setAvailableUntilTime("");
+                  }}
+                  min={availableFromDate || undefined}
+                />
+                <Input
+                  type="time"
+                  aria-label="Available until time"
+                  value={availableUntilTime}
+                  onChange={(event) => setAvailableUntilTime(event.target.value)}
+                  disabled={!availableUntilDate}
+                />
+              </div>
             </FormField>
           </div>
           {availabilityWindowInvalid && (
-            <Alert variant="error">The availability end date cannot be before its start date.</Alert>
+            <Alert variant="error">The availability end cannot be before its start.</Alert>
           )}
 
           <div className="flex justify-end gap-2">

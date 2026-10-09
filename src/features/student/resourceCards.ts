@@ -1,5 +1,5 @@
 import type { MyLearningResourceSummaryView, MyResourceCardKind } from "@/api/learning";
-import { formatInstantDate } from "@/utils/date";
+import { formatInstant } from "@/utils/date";
 import { formatDuration } from "@/utils/duration";
 
 export const RESOURCE_TYPE_LABEL: Record<string, string> = {
@@ -20,7 +20,7 @@ export function resourceRowMeta(resource: MyLearningResourceSummaryView): string
   const parts = [
     resource.description ?? undefined,
     formatDuration(resource.durationSeconds) || undefined,
-    resource.availableUntil ? `Available until ${formatInstantDate(resource.availableUntil)}` : undefined,
+    resource.availableUntil ? `Available until ${formatInstant(resource.availableUntil)}` : undefined,
   ].filter((part): part is string => Boolean(part));
   return parts.length > 0 ? parts.join(" · ") : undefined;
 }
