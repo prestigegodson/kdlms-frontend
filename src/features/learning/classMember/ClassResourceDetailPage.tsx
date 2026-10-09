@@ -5,7 +5,8 @@ import {
   type ClassResourceReader,
   classResourceFilePath,
   downloadClassResourceFile,
-  downloadClassResourceFileWithProgress,
+  classResourceMediaUrlPath,
+  getClassResourceMediaUrl,
   getMemberClassResource,
   recordLearnerClassResourceInteraction,
 } from "@/api/classLearningResources";
@@ -18,7 +19,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { ClassResourceImage } from "@/features/learning/classMember/ClassResourceImage";
 import type { ClassResourcesAudience } from "@/features/learning/classMember/ClassResourcesPage";
 import { ResourceViewer } from "@/features/learning/components/ResourceViewer";
-import { useMediaObjectUrl } from "@/hooks/useMediaObjectUrl";
+import { useMediaStreamUrl } from "@/hooks/useMediaStreamUrl";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
 import { useThrottledSave } from "@/hooks/useThrottledSave";
 import { formatInstant } from "@/utils/date";
@@ -112,7 +113,10 @@ export function ClassResourceDetailPage({ audience }: { audience: ClassResources
   const filePath = classResourceFilePath(reader, resourceId);
   const isMedia = resource?.resourceType === "AUDIO" || resource?.resourceType === "VIDEO";
   const pdfUrl = useObjectUrl(resource?.resourceType === "PDF" ? filePath : undefined, downloadClassResourceFile);
-  const mediaState = useMediaObjectUrl(isMedia ? filePath : undefined, downloadClassResourceFileWithProgress);
+  const mediaState = useMediaStreamUrl(
+    isMedia ? classResourceMediaUrlPath(reader, resourceId) : undefined,
+    getClassResourceMediaUrl,
+  );
   const renderImage = useCallback(
     (fileId: string, alt: string) => (
       <ClassResourceImage reader={reader} resourceId={resourceId} fileId={fileId} alt={alt} />
@@ -153,8 +157,7 @@ export function ClassResourceDetailPage({ audience }: { audience: ClassResources
         renderImage={renderImage}
         fileUrl={resource.resourceType === "PDF" ? pdfUrl : mediaState.url}
         fileError={mediaState.error}
-        loadedBytes={mediaState.loadedBytes}
-        totalBytes={mediaState.totalBytes ?? resource.fileSizeBytes}
+        onMediaUrlExpired={mediaState.refresh}
         downloadName={`${resource.title}.${fileExtension}`}
         initialPositionSeconds={tracksProgress ? resource.positionSeconds : undefined}
         onTimeUpdate={tracksProgress ? schedulePosition : undefined}

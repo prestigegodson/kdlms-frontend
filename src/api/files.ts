@@ -1,12 +1,11 @@
 import {
   apiFetch,
   apiFetchBlob,
-  apiFetchBlobWithProgress,
   apiUpload,
-  type DownloadProgress,
   PresignedUploadError,
   putToPresignedUrl,
 } from "@/api/client";
+import type { MediaStreamUrlView } from "@/api/learning";
 
 const BASE = "/api/v1/files";
 
@@ -56,12 +55,9 @@ export function downloadFile(fileId: string): Promise<Blob> {
   return apiFetchBlob(`${BASE}/${fileId}`);
 }
 
-/** Like {@link downloadFile}, but reports download progress - for a large mp3/mp4 (e.g. a staff learning-resource preview) whose player shows a determinate progress bar rather than an indeterminate spinner. */
-export function downloadFileWithProgress(
-  fileId: string,
-  onProgress: (progress: DownloadProgress) => void,
-): Promise<Blob> {
-  return apiFetchBlobWithProgress(`${BASE}/${fileId}`, onProgress);
+/** A presigned bucket URL an mp3/mp4 plays from directly (e.g. a staff learning-resource preview) - the browser's media element makes its own `Range` requests, so nothing is downloaded up front. */
+export function getFileMediaUrl(fileId: string): Promise<MediaStreamUrlView> {
+  return apiFetch<MediaStreamUrlView>(`${BASE}/${fileId}/media-url`);
 }
 
 export function deleteFile(fileId: string): Promise<void> {

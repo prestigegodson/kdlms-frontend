@@ -27,7 +27,7 @@ vi.mock("@/api/files", async () => {
   return {
     ...actual,
     downloadFile: vi.fn(),
-    downloadFileWithProgress: vi.fn(),
+    getFileMediaUrl: vi.fn(),
   };
 });
 
@@ -95,34 +95,26 @@ describe("LearningResourcePreviewPage", () => {
     const iframe = await screen.findByTitle("Fractions Explainer");
     expect(iframe.tagName).toBe("IFRAME");
     expect(filesApi.downloadFile).toHaveBeenCalledWith("file-1");
-    expect(filesApi.downloadFileWithProgress).not.toHaveBeenCalled();
+    expect(filesApi.getFileMediaUrl).not.toHaveBeenCalled();
   });
 
-  it("shows a determinate progress bar while a video downloads, then the video element once it resolves", async () => {
+  it("streams a video from the presigned URL the files proxy hands out", async () => {
     vi.mocked(learningApi.getLearningResource).mockResolvedValue({
       ...BASE_RESOURCE,
       resourceType: "VIDEO",
       fileId: "file-1",
       durationSeconds: 300,
     });
-    let resolveDownload: (blob: Blob) => void = () => {};
-    vi.mocked(filesApi.downloadFileWithProgress).mockImplementation(
-      (_fileId, onProgress) =>
-        new Promise((resolve) => {
-          onProgress({ loadedBytes: 1_000_000, totalBytes: 2_000_000 });
-          resolveDownload = resolve;
-        }),
-    );
+    const signed = "https://bucket.example/school/2026/file-1.mp4?X-Amz-Signature=abc";
+    vi.mocked(filesApi.getFileMediaUrl).mockResolvedValue({ url: signed, expiresAt: "2026-10-09T12:00:00Z" });
 
     renderPage();
 
-    expect(await screen.findByText(/Downloading… 50%/)).toBeInTheDocument();
-
-    resolveDownload(new Blob(["fake-mp4-bytes"], { type: "video/mp4" }));
-
     const video = await screen.findByTitle("Fractions Explainer");
     expect(video.tagName).toBe("VIDEO");
-    expect(filesApi.downloadFileWithProgress).toHaveBeenCalledWith("file-1", expect.any(Function));
+    expect(video.getAttribute("src")).toBe(signed);
+    expect(filesApi.getFileMediaUrl).toHaveBeenCalledWith("file-1");
+    expect(filesApi.downloadFile).not.toHaveBeenCalled();
   });
 
   it("renders the sandboxed YouTube embed for a YOUTUBE resource", async () => {

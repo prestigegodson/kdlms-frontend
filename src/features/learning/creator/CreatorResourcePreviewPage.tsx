@@ -8,7 +8,7 @@ import {
   publishClassResource,
   unpublishClassResource,
 } from "@/api/classLearningResources";
-import { downloadFile, downloadFileWithProgress } from "@/api/files";
+import { downloadFile, getFileMediaUrl } from "@/api/files";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -18,7 +18,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { AuthenticatedRichImage } from "@/components/richText/AuthenticatedRichImage";
 import { ResourceViewer } from "@/features/learning/components/ResourceViewer";
 import { LEARNING_RESOURCE_STATUS_VARIANT } from "@/features/learning/learningResourceStatus";
-import { useMediaObjectUrl } from "@/hooks/useMediaObjectUrl";
+import { useMediaStreamUrl } from "@/hooks/useMediaStreamUrl";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
 import { formatDuration } from "@/utils/duration";
 
@@ -58,7 +58,7 @@ export function CreatorResourcePreviewPage() {
 
   const isMedia = resource?.resourceType === "AUDIO" || resource?.resourceType === "VIDEO";
   const pdfUrl = useObjectUrl(resource?.resourceType === "PDF" ? (resource.fileId ?? undefined) : undefined, downloadFile);
-  const mediaState = useMediaObjectUrl(isMedia ? (resource?.fileId ?? undefined) : undefined, downloadFileWithProgress);
+  const mediaState = useMediaStreamUrl(isMedia ? (resource?.fileId ?? undefined) : undefined, getFileMediaUrl);
 
   if (error) {
     return (
@@ -116,8 +116,7 @@ export function CreatorResourcePreviewPage() {
         renderImage={renderCreatorImage}
         fileUrl={resource.resourceType === "PDF" ? pdfUrl : mediaState.url}
         fileError={mediaState.error}
-        loadedBytes={mediaState.loadedBytes}
-        totalBytes={mediaState.totalBytes}
+        onMediaUrlExpired={mediaState.refresh}
         downloadName={`${resource.title}.${fileExtension}`}
       />
     </div>

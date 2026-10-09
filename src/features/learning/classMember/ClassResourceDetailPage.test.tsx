@@ -11,7 +11,7 @@ vi.mock("@/api/classLearningResources", async (importOriginal) => ({
   getMemberClassResource: vi.fn(),
   recordLearnerClassResourceInteraction: vi.fn(),
   downloadClassResourceFile: vi.fn(),
-  downloadClassResourceFileWithProgress: vi.fn(),
+  getClassResourceMediaUrl: vi.fn(),
   downloadClassResourceImage: vi.fn(),
 }));
 
@@ -77,5 +77,27 @@ describe("ClassResourceDetailPage", () => {
     expect(classResourcesApi.getMemberClassResource).toHaveBeenCalledWith({ classId: "c1", learnerId: "l1" }, "r1");
     expect(screen.queryByRole("button", { name: "Mark as done" })).not.toBeInTheDocument();
     expect(classResourcesApi.recordLearnerClassResourceInteraction).not.toHaveBeenCalled();
+  });
+
+  it("streams a video from the guardian's own media-url endpoint", async () => {
+    vi.mocked(classResourcesApi.getMemberClassResource).mockResolvedValue({
+      ...NOTES,
+      title: "Rhythm",
+      resourceType: "VIDEO",
+      bodyHtml: null,
+    });
+    const signed = "https://bucket.example/creator/2026/r1.mp4?X-Amz-Signature=abc";
+    vi.mocked(classResourcesApi.getClassResourceMediaUrl).mockResolvedValue({
+      url: signed,
+      expiresAt: "2026-10-09T12:00:00Z",
+    });
+    renderAt("/guardian/class-resources/l1/c1/r1", "GUARDIAN");
+
+    const video = await screen.findByTitle("Rhythm");
+    expect(video.getAttribute("src")).toBe(signed);
+    expect(classResourcesApi.getClassResourceMediaUrl).toHaveBeenCalledWith(
+      "/api/v1/me/online-classes/l1/classes/c1/learning-resources/r1/media-url",
+    );
+    expect(classResourcesApi.downloadClassResourceFile).not.toHaveBeenCalled();
   });
 });

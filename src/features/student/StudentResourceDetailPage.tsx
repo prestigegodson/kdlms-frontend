@@ -3,7 +3,7 @@ import { useParams } from "react-router";
 import { ApiError } from "@/api/client";
 import {
   downloadMyLearningResourceFile,
-  downloadMyLearningResourceFileWithProgress,
+  getMyLearningResourceMediaUrl,
   editMyLearningComment,
   getMyLearningResource,
   listMyLearningComments,
@@ -19,7 +19,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { CommentsPanel } from "@/features/learning/components/CommentsPanel";
 import { ResourceViewer } from "@/features/learning/components/ResourceViewer";
-import { useMediaObjectUrl } from "@/hooks/useMediaObjectUrl";
+import { useMediaStreamUrl } from "@/hooks/useMediaStreamUrl";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
 import { useThrottledSave } from "@/hooks/useThrottledSave";
 import { useNewResourcesStore } from "@/stores/newResourcesStore";
@@ -32,8 +32,8 @@ import { formatDuration } from "@/utils/duration";
  * `LearningResourcePreviewPage`), passing no `renderImage` - a student has no access to
  * `/api/v1/files/{id}` at all (CLAUDE.md's Domain Rules), so an embedded rich-text image is
  * silently dropped rather than 403ing the whole note, the guardian document-mode-note precedent.
- * `PDF`/`AUDIO`/`VIDEO` are fed by this resource's own `/file` endpoint (downloads allowed - the
- * locked decision - via a plain `download` link on the already-fetched blob URL); resume-seek and
+ * `PDF` is fed by this resource's own `/file` endpoint (a blob URL); `AUDIO`/`VIDEO` stream straight
+ * from the bucket on the presigned URL its `/media-url` endpoint hands out; resume-seek and
  * throttled position autosave for `AUDIO`/`VIDEO` are wired through `ResourceViewer`'s optional
  * `onLoadedMetadata`/`onTimeUpdate` callbacks, this page's own responsibility since a resource
  * interaction is a student's own, never staff's.
@@ -136,9 +136,9 @@ export function StudentResourceDetailPage() {
     resource?.resourceType === "PDF" ? resourceId : undefined,
     downloadMyLearningResourceFile,
   );
-  const mediaState = useMediaObjectUrl(
+  const mediaState = useMediaStreamUrl(
     resource?.resourceType === "AUDIO" || resource?.resourceType === "VIDEO" ? resourceId : undefined,
-    downloadMyLearningResourceFileWithProgress,
+    getMyLearningResourceMediaUrl,
   );
 
   // Phase 35H: the resume-position autosave (~15s throttle) via `recordMyLearningInteraction` - a
@@ -191,8 +191,7 @@ export function StudentResourceDetailPage() {
         youtubeVideoId={resource.youtubeVideoId}
         fileUrl={resource.resourceType === "PDF" ? pdfUrl : mediaState.url}
         fileError={mediaState.error}
-        loadedBytes={mediaState.loadedBytes}
-        totalBytes={mediaState.totalBytes ?? resource.fileSizeBytes}
+        onMediaUrlExpired={mediaState.refresh}
         downloadName={`${resource.title}.${fileExtension}`}
         initialPositionSeconds={resource.positionSeconds}
         onTimeUpdate={schedulePosition}

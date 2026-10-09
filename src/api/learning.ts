@@ -1,4 +1,4 @@
-import { apiFetch, apiFetchBlob, apiFetchBlobWithProgress, type DownloadProgress } from "@/api/client";
+import { apiFetch, apiFetchBlob } from "@/api/client";
 import type { Page } from "@/api/types";
 
 export type LearningResourceType = "PDF" | "RICH_TEXT" | "YOUTUBE" | "AUDIO" | "VIDEO";
@@ -400,12 +400,15 @@ export function downloadMyLearningResourceFile(resourceId: string): Promise<Blob
   return apiFetchBlob(`${ME_BASE}/${resourceId}/file`);
 }
 
-/** Like {@link downloadMyLearningResourceFile}, but reports download progress - for a large mp3/mp4 (Phase 35F) whose player shows a determinate progress bar rather than an indeterminate spinner. */
-export function downloadMyLearningResourceFileWithProgress(
-  resourceId: string,
-  onProgress: (progress: DownloadProgress) => void,
-): Promise<Blob> {
-  return apiFetchBlobWithProgress(`${ME_BASE}/${resourceId}/file`, onProgress);
+/** Mirrors backend `learning.application.port.in.MediaStreamUrlView` - a presigned bucket URL an audio/video player streams from directly (its own `Range` requests), valid until `expiresAt`. */
+export interface MediaStreamUrlView {
+  url: string;
+  expiresAt: string;
+}
+
+/** Where an `AUDIO`/`VIDEO` resource plays from - a fresh presigned URL on every call. */
+export function getMyLearningResourceMediaUrl(resourceId: string): Promise<MediaStreamUrlView> {
+  return apiFetch<MediaStreamUrlView>(`${ME_BASE}/${resourceId}/media-url`);
 }
 
 // Comments (Phase 35G) - the STUDENT's own post/edit surface; teachers post through the

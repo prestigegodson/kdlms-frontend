@@ -2,7 +2,7 @@ import { Archive, Pencil, Undo2, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { ApiError } from "@/api/client";
-import { downloadFile, downloadFileWithProgress } from "@/api/files";
+import { downloadFile, getFileMediaUrl } from "@/api/files";
 import {
   archiveLearningResource,
   getLearningResource,
@@ -23,7 +23,7 @@ import { ResourceCommentsModeration } from "@/features/learning/components/Resou
 import { ResourceEditorModal } from "@/features/learning/components/ResourceEditorModal";
 import { ResourceViewer } from "@/features/learning/components/ResourceViewer";
 import { LEARNING_RESOURCE_STATUS_VARIANT } from "@/features/learning/learningResourceStatus";
-import { useMediaObjectUrl } from "@/hooks/useMediaObjectUrl";
+import { useMediaStreamUrl } from "@/hooks/useMediaStreamUrl";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
@@ -41,8 +41,8 @@ function renderStaffImage(fileId: string, alt: string) {
  * (`ResourceViewer`, shared with `StudentResourceDetailPage`), plus the comment-moderation panel
  * and the publish/unpublish/archive/edit actions the list page already offers.
  * <p>
- * Unlike the student viewer, this page fetches a file-backed resource's bytes through the
- * authenticated `GET /api/v1/files/{id}` proxy (`downloadFile`/`downloadFileWithProgress`), not
+ * Unlike the student viewer, this page reaches a file-backed resource through the authenticated
+ * `/api/v1/files/{id}` proxy (`downloadFile` for a PDF, `getFileMediaUrl` for audio/video), not
  * this module's narrow `/me/learning-resources/{id}/file` endpoint - that endpoint exists only
  * because a `STUDENT` may never reach `/api/v1/files/{id}`; staff already can. It also passes
  * `renderImage` into `ResourceViewer`, so a `RICH_TEXT` resource's embedded images render here even
@@ -97,10 +97,7 @@ export function LearningResourcePreviewPage() {
 
   const pdfUrl = useObjectUrl(resource?.resourceType === "PDF" ? (resource.fileId ?? undefined) : undefined, downloadFile);
   const isMedia = resource?.resourceType === "AUDIO" || resource?.resourceType === "VIDEO";
-  const mediaState = useMediaObjectUrl(
-    isMedia ? (resource?.fileId ?? undefined) : undefined,
-    downloadFileWithProgress,
-  );
+  const mediaState = useMediaStreamUrl(isMedia ? (resource?.fileId ?? undefined) : undefined, getFileMediaUrl);
 
   if (error) {
     return (
@@ -172,8 +169,7 @@ export function LearningResourcePreviewPage() {
         renderImage={renderStaffImage}
         fileUrl={resource.resourceType === "PDF" ? pdfUrl : mediaState.url}
         fileError={mediaState.error}
-        loadedBytes={mediaState.loadedBytes}
-        totalBytes={mediaState.totalBytes}
+        onMediaUrlExpired={mediaState.refresh}
         downloadName={`${resource.title}.${fileExtension}`}
       />
 

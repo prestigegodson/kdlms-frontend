@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,7 +11,7 @@ vi.mock("@/api/learning", async () => {
     ...actual,
     getMyLearningResource: vi.fn(),
     downloadMyLearningResourceFile: vi.fn(),
-    downloadMyLearningResourceFileWithProgress: vi.fn(),
+    getMyLearningResourceMediaUrl: vi.fn(),
     listMyLearningComments: vi.fn(),
     postMyLearningComment: vi.fn(),
     editMyLearningComment: vi.fn(),
@@ -46,7 +46,14 @@ function renderPage(resourceId = "resource-1") {
     [{ path: "/student/resources/:resourceId", element: <StudentResourceDetailPage /> }],
     { initialEntries: [`/student/resources/${resourceId}`] },
   );
-  render(<RouterProvider router={router} />);
+  return render(<RouterProvider router={router} />);
+}
+
+function mediaUrl(version: string): learningApi.MediaStreamUrlView {
+  return {
+    url: `https://bucket.example/school/2026/video.mp4?X-Amz-Signature=${version}`,
+    expiresAt: "2026-10-09T12:00:00Z",
+  };
 }
 
 beforeEach(() => {
@@ -60,7 +67,7 @@ afterEach(() => {
 });
 
 describe("StudentResourceDetailPage", () => {
-  it("renders the PDF iframe for a PDF resource, fed by the plain (non-progress) blob fetch", async () => {
+  it("renders the PDF iframe for a PDF resource, fed by the blob fetch rather than a media URL", async () => {
     vi.mocked(learningApi.getMyLearningResource).mockResolvedValue({
       ...BASE_RESOURCE,
       resourceType: "PDF",
@@ -74,33 +81,62 @@ describe("StudentResourceDetailPage", () => {
 
     const iframe = await screen.findByTitle("Fractions Explainer");
     expect(iframe.tagName).toBe("IFRAME");
-    expect(learningApi.downloadMyLearningResourceFileWithProgress).not.toHaveBeenCalled();
+    expect(learningApi.getMyLearningResourceMediaUrl).not.toHaveBeenCalled();
   });
 
-  it("shows a determinate progress bar while a video downloads, then the video element once it resolves", async () => {
+  it("streams a video straight from its presigned URL, without downloading it first", async () => {
     vi.mocked(learningApi.getMyLearningResource).mockResolvedValue({
       ...BASE_RESOURCE,
       resourceType: "VIDEO",
       fileSizeBytes: 2_000_000,
       durationSeconds: 300,
     });
-    let resolveDownload: (blob: Blob) => void = () => {};
-    vi.mocked(learningApi.downloadMyLearningResourceFileWithProgress).mockImplementation(
-      (_resourceId, onProgress) =>
-        new Promise((resolve) => {
-          onProgress({ loadedBytes: 1_000_000, totalBytes: 2_000_000 });
-          resolveDownload = resolve;
-        }),
-    );
+    vi.mocked(learningApi.getMyLearningResourceMediaUrl).mockResolvedValue(mediaUrl("first"));
 
     renderPage();
 
-    expect(await screen.findByText(/Downloading… 50%/)).toBeInTheDocument();
-
-    resolveDownload(new Blob(["fake-mp4-bytes"], { type: "video/mp4" }));
-
-    const video = await screen.findByTitle("Fractions Explainer");
+    const video = (await screen.findByTitle("Fractions Explainer")) as HTMLVideoElement;
     expect(video.tagName).toBe("VIDEO");
+    expect(video.getAttribute("src")).toBe(mediaUrl("first").url);
+    expect(learningApi.downloadMyLearningResourceFile).not.toHaveBeenCalled();
+  });
+
+  it("fetches a fresh URL when the current one stops working and resumes where it left off", async () => {
+    vi.mocked(learningApi.getMyLearningResource).mockResolvedValue({
+      ...BASE_RESOURCE,
+      resourceType: "VIDEO",
+      positionSeconds: 5,
+    });
+    vi.mocked(learningApi.getMyLearningResourceMediaUrl)
+      .mockResolvedValueOnce(mediaUrl("first"))
+      .mockResolvedValueOnce(mediaUrl("second"));
+
+    renderPage();
+    const video = (await screen.findByTitle("Fractions Explainer")) as HTMLVideoElement;
+    video.currentTime = 120;
+    video.dispatchEvent(new Event("error"));
+
+    await waitFor(() => expect(video.getAttribute("src")).toBe(mediaUrl("second").url));
+    expect(learningApi.getMyLearningResourceMediaUrl).toHaveBeenCalledTimes(2);
+    video.dispatchEvent(new Event("loadedmetadata"));
+    // The position it had reached, not the page's original resume point.
+    expect(video.currentTime).toBe(120);
+  });
+
+  it("gives up after a refreshed URL fails too", async () => {
+    vi.mocked(learningApi.getMyLearningResource).mockResolvedValue({ ...BASE_RESOURCE, resourceType: "AUDIO" });
+    vi.mocked(learningApi.getMyLearningResourceMediaUrl)
+      .mockResolvedValueOnce(mediaUrl("first"))
+      .mockResolvedValueOnce(mediaUrl("second"));
+
+    const { container } = renderPage();
+    await waitFor(() => expect(container.querySelector("audio")?.getAttribute("src")).toBe(mediaUrl("first").url));
+    container.querySelector("audio")!.dispatchEvent(new Event("error"));
+    await waitFor(() => expect(container.querySelector("audio")?.getAttribute("src")).toBe(mediaUrl("second").url));
+    container.querySelector("audio")!.dispatchEvent(new Event("error"));
+
+    expect(await screen.findByText(/Failed to load this file/)).toBeInTheDocument();
+    expect(learningApi.getMyLearningResourceMediaUrl).toHaveBeenCalledTimes(2);
   });
 
   it("shows an error message when the media file fails to load", async () => {
@@ -108,7 +144,7 @@ describe("StudentResourceDetailPage", () => {
       ...BASE_RESOURCE,
       resourceType: "AUDIO",
     });
-    vi.mocked(learningApi.downloadMyLearningResourceFileWithProgress).mockRejectedValue(new Error("network down"));
+    vi.mocked(learningApi.getMyLearningResourceMediaUrl).mockRejectedValue(new Error("network down"));
 
     renderPage();
 
@@ -189,9 +225,7 @@ describe("StudentResourceDetailPage", () => {
       resourceType: "VIDEO",
       positionSeconds: 42,
     });
-    vi.mocked(learningApi.downloadMyLearningResourceFileWithProgress).mockResolvedValue(
-      new Blob(["fake-mp4-bytes"], { type: "video/mp4" }),
-    );
+    vi.mocked(learningApi.getMyLearningResourceMediaUrl).mockResolvedValue(mediaUrl("first"));
 
     renderPage();
 
@@ -207,9 +241,7 @@ describe("StudentResourceDetailPage", () => {
       resourceType: "VIDEO",
       positionSeconds: null,
     });
-    vi.mocked(learningApi.downloadMyLearningResourceFileWithProgress).mockResolvedValue(
-      new Blob(["fake-mp4-bytes"], { type: "video/mp4" }),
-    );
+    vi.mocked(learningApi.getMyLearningResourceMediaUrl).mockResolvedValue(mediaUrl("first"));
 
     renderPage();
     const video = (await screen.findByTitle("Fractions Explainer")) as HTMLVideoElement;

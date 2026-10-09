@@ -1,10 +1,11 @@
-import { apiFetch, apiFetchBlob, apiFetchBlobWithProgress, type DownloadProgress } from "@/api/client";
+import { apiFetch, apiFetchBlob } from "@/api/client";
 import type {
   LearningGalleryFileView,
   LearningResourceActionsView,
   LearningResourceStatus,
   LearningResourceSummaryView,
   LearningResourceType,
+  MediaStreamUrlView,
   MyLearningInteractionView,
   MyLearningResourceSummaryView,
   MyLearningResourceView,
@@ -199,7 +200,7 @@ export function getMemberClassResource(reader: ClassResourceReader, resourceId: 
   return apiFetch<MyLearningResourceView>(`${readerBase(reader)}/${resourceId}`);
 }
 
-/** A file-backed resource's narrow file endpoint - the `useObjectUrl`/`useMediaObjectUrl` key its bytes are fetched under. */
+/** A PDF resource's narrow file endpoint - the `useObjectUrl` key its bytes are fetched under. */
 export function classResourceFilePath(reader: ClassResourceReader, resourceId: string): string {
   return `${readerBase(reader)}/${resourceId}/file`;
 }
@@ -209,12 +210,14 @@ export function downloadClassResourceFile(path: string): Promise<Blob> {
   return apiFetchBlob(path);
 }
 
-/** Like {@link downloadClassResourceFile}, reporting progress for a large mp3/mp4. */
-export function downloadClassResourceFileWithProgress(
-  path: string,
-  onProgress: (progress: DownloadProgress) => void,
-): Promise<Blob> {
-  return apiFetchBlobWithProgress(path, onProgress);
+/** An audio/video resource's media-url endpoint - the `useMediaStreamUrl` key its playback URL is fetched under. */
+export function classResourceMediaUrlPath(reader: ClassResourceReader, resourceId: string): string {
+  return `${readerBase(reader)}/${resourceId}/media-url`;
+}
+
+/** Fetches a fresh presigned playback URL by its {@link classResourceMediaUrlPath}. */
+export function getClassResourceMediaUrl(path: string): Promise<MediaStreamUrlView> {
+  return apiFetch<MediaStreamUrlView>(path);
 }
 
 /** The `useObjectUrl` key an embedded image is fetched under - one per (reader, resource, image). */
