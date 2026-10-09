@@ -109,8 +109,8 @@ export function GradingSystemEditorPage() {
   const [weighting, setWeighting] = useState<WeightingValues>({
     quizWeight: 30,
     examWeight: 70,
-    quizMax: 100,
-    examMax: 100,
+    quizMax: 30,
+    examMax: 70,
   });
   const [showPosition, setShowPosition] = useState(true);
   const [showMidtermGrade, setShowMidtermGrade] = useState(true);
@@ -137,8 +137,8 @@ export function GradingSystemEditorPage() {
         setWeighting({
           quizWeight: system.quizWeight ?? 30,
           examWeight: system.examWeight ?? 70,
-          quizMax: system.quizMax ?? 100,
-          examMax: system.examMax ?? 100,
+          quizMax: system.quizMax ?? 30,
+          examMax: system.examMax ?? 70,
         });
         setShowPosition(system.showPosition);
         setShowMidtermGrade(system.showMidtermGrade);
