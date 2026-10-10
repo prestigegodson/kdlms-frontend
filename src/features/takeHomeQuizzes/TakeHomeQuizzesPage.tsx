@@ -228,6 +228,11 @@ export function TakeHomeQuizzesPage() {
                     <div className="flex flex-wrap items-center gap-1">
                       {quiz.subjectName}
                       {quiz.subjectGroupId && <Badge variant="info">Group</Badge>}
+                      {(quiz.classes?.length ?? 0) > 1 && (
+                        <Badge variant="neutral">
+                          {quiz.writable ? `Shared · ${quiz.classes.length} classes` : `Shared from ${quiz.className}`}
+                        </Badge>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell label="Status">

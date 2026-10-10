@@ -29,7 +29,7 @@ const STATE_VARIANTS: Record<TakeHomeQuizAttemptState, "neutral" | "info" | "suc
 };
 
 function formatScore(score: number | null, totalPoints: number): string {
-  return score === null ? "—" : `${score} / ${totalPoints}`;
+  return !score ? "—" : `${score} / ${totalPoints}`;
 }
 
 /**
@@ -49,6 +49,8 @@ export function ResultsTable({
   onReset,
   participantLabel = "Student",
 }: ResultsTableProps) {
+  // A quiz shared across arms spans several classes - only then is each row's class worth showing.
+  const spansClasses = new Set(rows.map((row) => row.className).filter(Boolean)).size > 1;
   return (
     <Table>
       <TableHead>
@@ -66,7 +68,10 @@ export function ResultsTable({
             <TableCell label={participantLabel}>
               <div>
                 <div className="font-medium text-slate-900">{row.fullName}</div>
-                <div className="text-xs text-slate-500">{row.admissionNumber}</div>
+                <div className="text-xs text-slate-500">
+                  {row.admissionNumber}
+                  {spansClasses && row.className ? ` · ${row.className}` : ""}
+                </div>
               </div>
             </TableCell>
             <TableCell label="State">

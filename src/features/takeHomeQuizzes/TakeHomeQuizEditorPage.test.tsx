@@ -12,6 +12,7 @@ vi.mock("@/api/takeHomeQuizzes", async () => {
   return {
     ...actual,
     createTakeHomeQuiz: vi.fn(),
+    getShareableClasses: vi.fn().mockResolvedValue([]),
     getTakeHomeQuiz: vi.fn(),
     getTakeHomeQuizValidation: vi.fn(),
     saveTakeHomeQuizQuestions: vi.fn(),
@@ -73,7 +74,13 @@ const SAVED_VIEW: takeHomeQuizzesApi.TakeHomeQuizView = {
   updatedAt: "2026-03-01T00:00:00Z",
   subjectGroupId: null,
   writable: true,
+  classes: [{ classId: "class-1", className: "JSS 1A" }],
 };
+
+const ARMS: takeHomeQuizzesApi.SharedClassView[] = [
+  { classId: "class-1", className: "JSS 1A" },
+  { classId: "class-2", className: "JSS 1B" },
+];
 
 // isNew short-circuits the getTakeHomeQuiz fetch, so the editable branch renders with no API mocking needed.
 describe("TakeHomeQuizEditorPage - a new quiz", () => {
@@ -145,6 +152,81 @@ describe("TakeHomeQuizEditorPage - a new quiz", () => {
     expect(takeHomeQuizzesApi.createTakeHomeQuiz).toHaveBeenCalledWith(
       expect.objectContaining({ classId: "class-1", subjectId: null, subjectGroupId: "group-1", quizType: "NORMAL" }),
     );
+  });
+});
+
+describe("TakeHomeQuizEditorPage - sharing with other classes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(takeHomeQuizzesApi.getShareableClasses).mockResolvedValue(ARMS);
+  });
+
+  it("shares a new Normal quiz with the ticked arms, the home class always included", async () => {
+    const sharedView = { ...SAVED_VIEW, classes: ARMS };
+    vi.mocked(takeHomeQuizzesApi.createTakeHomeQuiz).mockResolvedValue(sharedView);
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuiz).mockResolvedValue(sharedView);
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizValidation).mockResolvedValue({
+      canPublish: false,
+      blockers: [],
+      totalPoints: 0,
+      midtermMax: null,
+      rosterSize: 6,
+    });
+    renderAt("/school/take-home-quizzes/new?classId=class-1&subjectId=subject-1&termId=term-1");
+    const user = userEvent.setup();
+
+    const home = await screen.findByLabelText("JSS 1A");
+    expect(home).toBeChecked();
+    expect(home).toBeDisabled();
+    await user.click(screen.getByLabelText("JSS 1B"));
+    expect(screen.getByRole("option", { name: /Midterm/ })).toBeDisabled();
+
+    await user.type(screen.getByLabelText("Title"), "Shared quiz");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByText("Questions")).toBeInTheDocument();
+    expect(takeHomeQuizzesApi.createTakeHomeQuiz).toHaveBeenCalledWith(
+      expect.objectContaining({ classIds: ["class-1", "class-2"] }),
+    );
+  });
+
+  it("hides the class picker for a Midterm quiz", async () => {
+    renderAt("/school/take-home-quizzes/new?classId=class-1&subjectId=subject-1&termId=term-1");
+    const user = userEvent.setup();
+
+    expect(await screen.findByLabelText("JSS 1B")).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Quiz type"), "MIDTERM");
+
+    expect(screen.queryByLabelText("JSS 1B")).not.toBeInTheDocument();
+  });
+
+  it("shows another arm's teacher a read-only notice and no class picker", async () => {
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuiz).mockResolvedValue({
+      ...SAVED_VIEW,
+      classes: ARMS,
+      writable: false,
+      actions: {
+        canEditMetadata: false,
+        canEditQuestions: false,
+        canDelete: false,
+        canPublish: false,
+        canPublishResults: false,
+        canUnpublishResults: false,
+      },
+    });
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizValidation).mockResolvedValue({
+      canPublish: false,
+      blockers: [],
+      totalPoints: 0,
+      midtermMax: null,
+      rosterSize: 6,
+    });
+
+    renderAt("/school/take-home-quizzes/quiz-1?classId=class-2&subjectId=subject-1&termId=term-1");
+
+    expect(await screen.findByText(/shared with your class from JSS 1A/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("JSS 1B")).not.toBeInTheDocument();
+    expect(takeHomeQuizzesApi.getShareableClasses).not.toHaveBeenCalled();
   });
 });
 

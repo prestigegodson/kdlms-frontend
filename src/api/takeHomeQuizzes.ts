@@ -7,6 +7,12 @@ export type QuestionType = "SINGLE_CHOICE" | "MULTI_CHOICE" | "FILL_IN_THE_GAP";
 export type TakeHomeQuizStatus = "DRAFT" | "PUBLISHED" | "RESULTS_PUBLISHED" | "ARCHIVED";
 export type TakeHomeQuizAvailability = "SCHEDULED" | "OPEN" | "CLOSED";
 
+/** Mirrors backend takehomequiz.application.port.in.SharedClassView - one class a school quiz reaches. */
+export interface SharedClassView {
+  classId: string;
+  className: string;
+}
+
 /** Mirrors backend takehomequiz.application.port.in.TakeHomeQuizSummaryView - one row of the paginated list. */
 export interface TakeHomeQuizSummaryView {
   id: string;
@@ -24,6 +30,10 @@ export interface TakeHomeQuizSummaryView {
   updatedAt: string;
   /** Set (instead of a subject) on a quiz that targets a subject group. */
   subjectGroupId: string | null;
+  /** Every class the quiz reaches, its home class (`className`) included - more than one for a quiz shared across arms. */
+  classes: SharedClassView[];
+  /** False when the caller only reads it - e.g. a teacher of another arm the quiz is shared with. */
+  writable: boolean;
 }
 
 /** Mirrors backend takehomequiz.application.port.in.TakeHomeQuizView.OptionView. */
@@ -96,8 +106,10 @@ export interface TakeHomeQuizView {
   actions: TakeHomeQuizActionsView;
   updatedAt: string;
   subjectGroupId: string | null;
-  /** False for a subject teacher reading a group quiz of one of their subjects - every action flag is then false too. */
+  /** False for a subject teacher reading a group quiz of one of their subjects, or a teacher of another arm it is shared with - every action flag is then false too. */
   writable: boolean;
+  /** Every class the quiz reaches, its home `classId` included. */
+  classes: SharedClassView[];
 }
 
 /** Mirrors backend takehomequiz.application.port.in.PublishReadinessView. */
@@ -156,6 +168,8 @@ export interface CreateTakeHomeQuizRequest {
   opensAt: string;
   closesAt: string;
   revealResultsOnSubmit: boolean;
+  /** Other arms of `classId`'s level and branch to share a Normal quiz with (`getShareableClasses`); `classId` is always included. */
+  classIds?: string[];
 }
 
 export interface UpdateTakeHomeQuizRequest {
@@ -167,6 +181,8 @@ export interface UpdateTakeHomeQuizRequest {
   opensAt: string;
   closesAt: string;
   revealResultsOnSubmit: boolean;
+  /** Omitted leaves the classes the quiz reaches unchanged. Once a submission exists, classes can only be added. */
+  classIds?: string[];
 }
 
 /** Mirrors backend takehomequiz.application.port.in.PublishOutcomeView.RowOutcome. */
@@ -263,6 +279,14 @@ export function getAuthorableSubjectGroups(classId: string): Promise<AuthorableS
   return apiFetch<AuthorableSubjectGroupView[]>(`${BASE}/authorable-subject-groups?classId=${classId}`);
 }
 
+/** The classes a quiz authored in `classId` for `target` may be shared with - every arm of the level and branch, `classId` included. */
+export function getShareableClasses(classId: string, target: SubjectTarget): Promise<SharedClassView[]> {
+  const params = new URLSearchParams({ classId });
+  if (target.subjectId) params.set("subjectId", target.subjectId);
+  if (target.subjectGroupId) params.set("subjectGroupId", target.subjectGroupId);
+  return apiFetch<SharedClassView[]>(`${BASE}/shareable-classes?${params.toString()}`);
+}
+
 export function publishTakeHomeQuiz(quizId: string): Promise<PublishOutcomeView> {
   return apiFetch<PublishOutcomeView>(`${BASE}/${quizId}/publish`, { method: "POST" });
 }
@@ -309,6 +333,8 @@ export interface StudentResultRowView {
   submittedAt: string | null;
   autoSubmitted: boolean;
   resetCount: number;
+  /** The class the student took it in - a quiz shared across arms spans several. */
+  className?: string | null;
 }
 
 /** Mirrors backend ReviewTakeHomeQuizResultsUseCase.TakeHomeQuizResultsView. */
