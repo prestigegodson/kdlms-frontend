@@ -175,14 +175,23 @@ export function LearningResourcesPage() {
   }
 
   /**
-   * A group resource the caller can't author for (a subject teacher of one of its subjects sees it
-   * on their list, Phase 35M) is read-only - the server refuses every change to it.
+   * A resource the caller can't change is read-only - the server refuses every change to it. That's
+   * a group resource read by a subject teacher of one of its subjects (Phase 35M), or a resource
+   * shared into this class from another arm the caller doesn't author in (`writable` false).
    */
   function isReadOnly(resource: LearningResourceSummaryView) {
     return (
-      resource.subjectGroupId != null &&
-      !subjectGroups.some((group) => group.subjectGroupId === resource.subjectGroupId)
+      resource.writable === false ||
+      (resource.subjectGroupId != null &&
+        !subjectGroups.some((group) => group.subjectGroupId === resource.subjectGroupId))
     );
+  }
+
+  /** The other arms a shared resource reaches, for its "Also in ..." line. */
+  function otherClassNames(resource: LearningResourceSummaryView): string[] {
+    return (resource.classes ?? [])
+      .filter((sharedClass) => sharedClass.classId !== classId)
+      .map((sharedClass) => sharedClass.className);
   }
 
   function resourceActions(resource: LearningResourceSummaryView) {
@@ -337,7 +346,12 @@ export function LearningResourcesPage() {
             <TableBody>
               {page.content.map((resource) => (
                 <TableRow key={resource.id} to={`/school/learning-resources/${resource.id}`}>
-                  <TableCell label="Title">{resource.title}</TableCell>
+                  <TableCell label="Title">
+                    {resource.title}
+                    {otherClassNames(resource).length > 0 && (
+                      <div className="text-xs text-slate-500">Also in {otherClassNames(resource).join(", ")}</div>
+                    )}
+                  </TableCell>
                   <TableCell label="Subject">
                     <div className="flex flex-wrap items-center gap-1">
                       {resource.subjectName}

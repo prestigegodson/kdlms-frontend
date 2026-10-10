@@ -17,6 +17,7 @@ vi.mock("@/api/learning", async () => {
     createLearningResource: vi.fn(),
     updateLearningResource: vi.fn(),
     listLearningGalleryFiles: vi.fn(),
+    getShareableClasses: vi.fn(),
   };
 });
 
@@ -36,7 +37,11 @@ function renderModal(canAuthorMedia: boolean) {
   );
 }
 
-function renderModalWithWindow(availableFrom: string | null, availableUntil: string | null) {
+function renderModalWithWindow(
+  availableFrom: string | null,
+  availableUntil: string | null,
+  classes?: learningApi.SharedClassView[],
+) {
   vi.mocked(learningApi.updateLearningResource).mockResolvedValue({} as learningApi.LearningResourceView);
   render(
     <ResourceEditorModal
@@ -66,6 +71,7 @@ function renderModalWithWindow(availableFrom: string | null, availableUntil: str
         availableUntil,
         actions: { canEdit: true, canPublish: true, canUnpublish: false, canArchive: true, canDelete: true },
         updatedAt: "2026-01-01T00:00:00Z",
+        classes,
       }}
       onClose={vi.fn()}
       onSaved={vi.fn()}
@@ -79,7 +85,16 @@ function fileOfSize(name: string, type: string, sizeBytes: number): File {
   return file;
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(learningApi.getShareableClasses).mockResolvedValue([]);
+});
+
+const ARMS = [
+  { classId: "class-1", className: "JSS 1A" },
+  { classId: "class-2", className: "JSS 1B" },
+  { classId: "class-3", className: "JSS 1C" },
+];
 
 describe("ResourceEditorModal", () => {
   it("creates a resource for a subject group picked beside the subjects", async () => {
@@ -105,6 +120,56 @@ describe("ResourceEditorModal", () => {
 
     expect(learningApi.createLearningResource).toHaveBeenCalledWith(
       expect.objectContaining({ classId: "class-1", subjectId: null, subjectGroupId: "group-1", termId: "term-1" }),
+    );
+  });
+
+  it("shares a new resource with the arms ticked, the home class always included", async () => {
+    vi.mocked(learningApi.getShareableClasses).mockResolvedValue(ARMS);
+    vi.mocked(learningApi.createLearningResource).mockResolvedValue({} as learningApi.LearningResourceView);
+    renderModal(false);
+    const user = userEvent.setup();
+
+    const home = await screen.findByLabelText("JSS 1A");
+    expect(home).toBeChecked();
+    expect(home).toBeDisabled();
+    expect(learningApi.getShareableClasses).toHaveBeenCalledWith("class-1", {
+      subjectId: "subject-1",
+      subjectGroupId: null,
+    });
+
+    await user.click(screen.getByLabelText("JSS 1C"));
+    await user.selectOptions(screen.getByLabelText("Type"), "YOUTUBE");
+    await user.type(screen.getByLabelText("Title"), "Fractions");
+    await user.type(screen.getByLabelText("YouTube URL"), "https://youtu.be/dQw4w9WgXcQ");
+    await user.click(screen.getByRole("button", { name: "Add resource" }));
+
+    expect(learningApi.createLearningResource).toHaveBeenCalledWith(
+      expect.objectContaining({ classId: "class-1", classIds: ["class-1", "class-3"] }),
+    );
+  });
+
+  it("hides the class picker when the level has only one class", async () => {
+    vi.mocked(learningApi.getShareableClasses).mockResolvedValue([ARMS[0]]);
+    renderModal(false);
+
+    await vi.waitFor(() => expect(learningApi.getShareableClasses).toHaveBeenCalled());
+    expect(screen.queryByText("Classes")).not.toBeInTheDocument();
+  });
+
+  it("pre-ticks an existing resource's arms and saves a removed one", async () => {
+    vi.mocked(learningApi.getShareableClasses).mockResolvedValue(ARMS);
+    renderModalWithWindow(null, null, [ARMS[0], ARMS[1]]);
+    const user = userEvent.setup();
+
+    const armB = await screen.findByLabelText("JSS 1B");
+    expect(armB).toBeChecked();
+    expect(screen.getByLabelText("JSS 1C")).not.toBeChecked();
+    await user.click(armB);
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(learningApi.updateLearningResource).toHaveBeenCalledWith(
+      "resource-1",
+      expect.objectContaining({ classIds: ["class-1"] }),
     );
   });
 

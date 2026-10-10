@@ -39,6 +39,8 @@ interface CompletionsPanelProps {
  * `lastOpenedAt` alone, never re-fetched or re-derived server-side twice.
  */
 export function CompletionsPanel({ completions, personLabel = "Student" }: CompletionsPanelProps) {
+  // A resource shared across several arms has one roster spanning them all - name each row's class then.
+  const showsClass = new Set(completions.students.map((row) => row.className).filter(Boolean)).size > 1;
   return (
     <div className="space-y-4">
       <RegisterProgress
@@ -51,6 +53,7 @@ export function CompletionsPanel({ completions, personLabel = "Student" }: Compl
         <TableHead>
           <TableRow>
             <TableHeaderCell>{personLabel}</TableHeaderCell>
+            {showsClass && <TableHeaderCell>Class</TableHeaderCell>}
             <TableHeaderCell>Status</TableHeaderCell>
             <TableHeaderCell>Last opened</TableHeaderCell>
             <TableHeaderCell>Completed</TableHeaderCell>
@@ -67,6 +70,7 @@ export function CompletionsPanel({ completions, personLabel = "Student" }: Compl
                     {row.admissionNumber && <div className="text-xs text-slate-500">{row.admissionNumber}</div>}
                   </div>
                 </TableCell>
+                {showsClass && <TableCell label="Class">{row.className}</TableCell>}
                 <TableCell label="Status">
                   <Badge variant={STATUS_VARIANTS[status]}>{STATUS_LABELS[status]}</Badge>
                 </TableCell>

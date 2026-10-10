@@ -6,14 +6,17 @@ import {
   type AuthorableSubjectGroupView,
   type AuthorableSubjectView,
   createLearningResource,
+  getShareableClasses,
   type LearningGalleryFileView,
   type LearningResourceType,
   type LearningResourceView,
+  type SharedClassView,
   updateLearningResource,
   type UpdateLearningResourceRequest,
 } from "@/api/learning";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { DateInput } from "@/components/ui/DateInput";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
@@ -179,6 +182,62 @@ export function ResourceEditorModal({
   const [availableUntilTime, setAvailableUntilTime] = useState(initialUntil.clockTime);
   const [galleryOpen, setGalleryOpen] = useState(false);
 
+  // A school resource may reach several arms of its level (e.g. JSS 1A, 1B and 1C) - one resource,
+  // not a copy per class. Its home class (the one it was authored from) is always included.
+  const isSchoolResource = !save;
+  const homeClassId = resource && "classId" in resource ? resource.classId : classId;
+  // The arms offered for the current target - kept with the request they answer, so a stale answer
+  // (the author has since picked another subject) is never shown.
+  const shareKey =
+    isSchoolResource && homeClassId && (target.subjectId || target.subjectGroupId)
+      ? `${homeClassId}|${targetKey}`
+      : null;
+  const [loadedArms, setLoadedArms] = useState<{ key: string; classes: SharedClassView[] } | null>(null);
+  const shareableClasses = shareKey && loadedArms?.key === shareKey ? loadedArms.classes : [];
+  const [sharedClassIds, setSharedClassIds] = useState<Set<string>>(
+    () =>
+      new Set(
+        resource && "classes" in resource && resource.classes?.length
+          ? resource.classes.map((sharedClass) => sharedClass.classId)
+          : [homeClassId],
+      ),
+  );
+  useEffect(() => {
+    if (!shareKey) return;
+    let cancelled = false;
+    getShareableClasses(homeClassId, target)
+      .then((classes) => {
+        if (!cancelled) setLoadedArms({ key: shareKey, classes });
+      })
+      .catch(() => {
+        // Not being able to list the other arms only hides the picker; the resource still saves for its home class.
+        if (!cancelled) setLoadedArms({ key: shareKey, classes: [] });
+      });
+    return () => {
+      cancelled = true;
+    };
+    // `homeClassId` and `target` are both encoded in `shareKey`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shareKey]);
+
+  function toggleSharedClass(sharedClassId: string) {
+    setSharedClassIds((current) => {
+      const next = new Set(current);
+      if (next.has(sharedClassId)) {
+        next.delete(sharedClassId);
+      } else {
+        next.add(sharedClassId);
+      }
+      return next;
+    });
+  }
+
+  /** The chosen arms still offered for the current target, the home class always among them. */
+  function chosenClassIds(): string[] {
+    const offered = new Set(shareableClasses.map((sharedClass) => sharedClass.classId));
+    return [homeClassId, ...[...sharedClassIds].filter((id) => id !== homeClassId && offered.has(id))];
+  }
+
   const [uploading, setUploading] = useState(false);
   // An mp3/mp4 goes up in parts straight to the bucket (`uploadMediaFile`) - this tracks its
   // progress (0-100) and lets the author cancel it; closing the form cancels it too.
@@ -272,10 +331,12 @@ export function ResourceEditorModal({
         availableFrom: availableFromInstant(availableFromDate, availableFromTime),
         availableUntil: availableUntilInstant(availableUntilDate, availableUntilTime),
       };
+      // Sent only once the arms have loaded, so a failed lookup never drops a resource's other arms.
+      const classIds = shareableClasses.length > 0 ? chosenClassIds() : undefined;
       if (save) {
         await save({ ...payload, resourceType: resource?.resourceType ?? resourceType });
       } else if (isEdit) {
-        await updateLearningResource(resource.id, payload);
+        await updateLearningResource(resource.id, { ...payload, classIds });
       } else {
         await createLearningResource({
           classId,
@@ -283,6 +344,7 @@ export function ResourceEditorModal({
           termId,
           resourceType,
           ...payload,
+          classIds,
         });
       }
       onSaved();
@@ -349,6 +411,33 @@ export function ResourceEditorModal({
                   </>
                 )}
               </Select>
+            </FormField>
+          )}
+
+          {shareableClasses.length > 1 && (
+            <FormField label="Classes" htmlFor={`resource-class-${homeClassId}`}>
+              <div className="flex flex-wrap gap-x-4 gap-y-2">
+                {shareableClasses.map((sharedClass) => {
+                  const isHome = sharedClass.classId === homeClassId;
+                  return (
+                    <label
+                      key={sharedClass.classId}
+                      className="flex items-center gap-2 text-sm text-slate-700"
+                    >
+                      <Checkbox
+                        id={`resource-class-${sharedClass.classId}`}
+                        checked={isHome || sharedClassIds.has(sharedClass.classId)}
+                        disabled={isHome}
+                        onChange={() => toggleSharedClass(sharedClass.classId)}
+                      />
+                      {sharedClass.className}
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                One resource for every class you tick - edits, publishing and comments are shared.
+              </p>
             </FormField>
           )}
 

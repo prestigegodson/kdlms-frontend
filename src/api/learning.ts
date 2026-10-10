@@ -16,10 +16,20 @@ export interface AuthorableSubjectGroupView {
   subjectGroupName: string;
 }
 
+/** Mirrors backend learning.application.port.in.SharedClassView - one class a school resource reaches. */
+export interface SharedClassView {
+  classId: string;
+  className: string;
+}
+
 /** Mirrors backend learning.application.port.in.LearningResourceSummaryView - one row of the staff list. */
 export interface LearningResourceSummaryView {
   id: string;
   title: string;
+  /** False when the caller may only read the resource - e.g. one shared into their class from an arm they don't author in. */
+  writable?: boolean;
+  /** Every class a school resource reaches, its home class first. More than one means it's shared across arms of the level. */
+  classes?: SharedClassView[];
   /** The subject's name - or, for a resource targeting a subject group (Phase 35M), the group's. */
   subjectName: string;
   /** Set when the resource targets a whole subject group rather than one subject (Phase 35M). */
@@ -70,6 +80,8 @@ export interface LearningResourceView {
   availableUntil: string | null;
   actions: LearningResourceActionsView;
   updatedAt: string;
+  /** Every class a school resource reaches - `classId` (its home class) first. */
+  classes?: SharedClassView[];
 }
 
 /** Mirrors backend learning.adapter.in.web.LearningResourceController.CreateLearningResourceRequest. Exactly one of `bodyHtml`/`fileId`/`youtubeUrl` applies, matching `resourceType`; exactly one of `subjectId`/`subjectGroupId` (Phase 35M). */
@@ -89,6 +101,8 @@ export interface CreateLearningResourceRequest {
   /** Optional, independent visibility window (Phase 35L) - build with `localDateToStartInstant`/`localDateToEndInstant` from a date picker, never a raw local time. */
   availableFrom: string | null;
   availableUntil: string | null;
+  /** Other arms of `classId`'s level and branch to share the resource with (`getShareableClasses`); `classId` is always included. */
+  classIds?: string[];
 }
 
 /** Mirrors backend learning.adapter.in.web.LearningResourceController.UpdateLearningResourceRequest. `resourceType` isn't here - it's immutable once created. */
@@ -101,6 +115,8 @@ export interface UpdateLearningResourceRequest {
   durationSeconds: number | null;
   availableFrom: string | null;
   availableUntil: string | null;
+  /** Replaces the classes the resource reaches (its home class always stays); omit to leave them unchanged. */
+  classIds?: string[];
 }
 
 /** Mirrors backend learning.application.port.in.MyLearningResourceSummaryView - one row of the calling STUDENT's own resource list, published only. `completed` (Phase 35H) is the caller's own interaction state, resolved in one batched query for the whole list. */
@@ -220,6 +236,8 @@ export interface StudentCompletionView {
   completedAt: string | null;
   positionSeconds: number | null;
   lastOpenedAt: string | null;
+  /** The student's class - a shared resource's roster spans several arms. */
+  className?: string | null;
 }
 
 const BASE = "/api/v1/learning-resources";
@@ -257,6 +275,14 @@ export function getAuthorableSubjects(classId: string): Promise<AuthorableSubjec
 /** The subject groups the caller may author for on `classId` (Phase 35M) - empty for a subject-only teacher. */
 export function getAuthorableSubjectGroups(classId: string): Promise<AuthorableSubjectGroupView[]> {
   return apiFetch<AuthorableSubjectGroupView[]>(`${BASE}/authorable-subject-groups?classId=${classId}`);
+}
+
+/** The classes a resource authored in `classId` for `target` may be shared with - every arm of the level and branch, `classId` included. */
+export function getShareableClasses(classId: string, target: ResourceTarget): Promise<SharedClassView[]> {
+  const params = new URLSearchParams({ classId });
+  if (target.subjectId) params.set("subjectId", target.subjectId);
+  if (target.subjectGroupId) params.set("subjectGroupId", target.subjectGroupId);
+  return apiFetch<SharedClassView[]>(`${BASE}/shareable-classes?${params.toString()}`);
 }
 
 export function createLearningResource(request: CreateLearningResourceRequest): Promise<LearningResourceView> {

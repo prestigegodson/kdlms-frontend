@@ -242,6 +242,34 @@ describe("LearningResourcesPage", () => {
     expect(screen.queryByRole("menuitem", { name: "Edit" })).not.toBeInTheDocument();
   });
 
+  it("names a shared resource's other arms and leaves one the caller can't change read-only", async () => {
+    vi.mocked(learningApi.listLearningResources).mockResolvedValue({
+      content: [
+        {
+          ...RESOURCE_ROW,
+          title: "Shared fractions",
+          writable: false,
+          classes: [
+            { classId: "class-0", className: "JSS 1B" },
+            { classId: "class-1", className: "JSS 1A" },
+            { classId: "class-2", className: "JSS 1C" },
+          ],
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 20,
+    });
+    renderAs("TEACHER");
+    const user = await selectClassAndSubject();
+
+    expect(await screen.findByText("Also in JSS 1B, JSS 1C")).toBeInTheDocument();
+    await openRowMenu(user, "Shared fractions");
+    expect(screen.getByRole("menuitem", { name: "Preview" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Edit" })).not.toBeInTheDocument();
+  });
+
   it("seeds the class and subject from ?classId=&subjectId= (SubjectsPage's row action)", async () => {
     renderAs("TEACHER", "/?classId=class-1&subjectId=subject-1");
 
