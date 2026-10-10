@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ApiError } from "@/api/client";
 import {
@@ -127,6 +127,15 @@ export function GradingSystemEditorPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  // Bumped on every submit outcome so a repeated, identical error still scrolls back into view.
+  const [feedbackSeq, setFeedbackSeq] = useState(0);
+  const feedbackRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (feedbackSeq === 0) return;
+    // jsdom (the test environment) has no scrollIntoView implementation at all - guard past it
+    feedbackRef.current?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+  }, [feedbackSeq]);
 
   useEffect(() => {
     if (!levelId) return;
@@ -176,27 +185,32 @@ export function GradingSystemEditorPage() {
     setError(null);
     setSaved(false);
 
+    const fail = (message: string) => {
+      setError(message);
+      setFeedbackSeq((n) => n + 1);
+    };
+
     if (mode === "NUMERIC") {
       if (weighting.quizWeight + weighting.examWeight !== 100) {
-        setError("Midterm quiz and exam weight must sum to 100.");
+        fail("Midterm quiz and exam weight must sum to 100.");
         return;
       }
       const boundaryError = validateBoundaries(boundaries);
       if (boundaryError) {
-        setError(boundaryError);
+        fail(boundaryError);
         return;
       }
     } else {
       const ratingError = validateRatingOptions(ratingOptions);
       if (ratingError) {
-        setError(ratingError);
+        fail(ratingError);
         return;
       }
     }
 
     const affectiveError = validateTraitCategory("affective disposition", affectiveEnabled, affectiveScale, affectiveTraits);
     if (affectiveError) {
-      setError(affectiveError);
+      fail(affectiveError);
       return;
     }
     const psychomotorError = validateTraitCategory(
@@ -206,7 +220,7 @@ export function GradingSystemEditorPage() {
       psychomotorTraits,
     );
     if (psychomotorError) {
-      setError(psychomotorError);
+      fail(psychomotorError);
       return;
     }
 
@@ -247,8 +261,9 @@ export function GradingSystemEditorPage() {
         },
       });
       setSaved(true);
+      setFeedbackSeq((n) => n + 1);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to save grading system");
+      fail(err instanceof ApiError ? err.message : "Failed to save grading system");
     } finally {
       setSubmitting(false);
     }
@@ -278,8 +293,10 @@ export function GradingSystemEditorPage() {
       />
 
       <form className="space-y-6" onSubmit={handleSubmit}>
-        {error && <Alert variant="error">{error}</Alert>}
-        {saved && <Alert variant="success">Grading system saved.</Alert>}
+        <div ref={feedbackRef} className="space-y-6 empty:hidden">
+          {error && <Alert variant="error">{error}</Alert>}
+          {saved && <Alert variant="success">Grading system saved.</Alert>}
+        </div>
 
         <div className="inline-flex rounded-control border border-slate-200 bg-white p-1">
           <button
