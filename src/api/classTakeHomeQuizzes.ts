@@ -1,4 +1,4 @@
-import { apiFetch, apiFetchBlob } from "@/api/client";
+import { apiFetch, apiFetchBlob, apiUpload } from "@/api/client";
 import type { MyQuizInterstitialView, MyTakeHomeQuizSummaryView } from "@/api/myTakeHomeQuizzes";
 import type {
   AnswerCommand,
@@ -11,6 +11,7 @@ import type {
   AnsweredQuestionView,
   PublishReadinessView,
   QuestionCommand,
+  QuestionTemplateFormat,
   TakeHomeQuizActionsView,
   TakeHomeQuizAttemptState,
   TakeHomeQuizAvailability,
@@ -155,6 +156,17 @@ export function updateClassQuiz(
     method: "PUT",
     body: JSON.stringify(request),
   });
+}
+
+/** The class twin of `importTakeHomeQuizQuestions` - parses into unsaved questions, never saves. */
+export function importClassQuizQuestions(classId: string, quizId: string, file: File): Promise<QuestionCommand[]> {
+  return apiUpload<{ questions: QuestionCommand[] }>(`${creatorBase(classId)}/${quizId}/questions/import`, file).then(
+    (response) => response.questions,
+  );
+}
+
+export function fetchClassQuestionTemplate(classId: string, format: QuestionTemplateFormat): Promise<Blob> {
+  return apiFetchBlob(`${creatorBase(classId)}/question-template?format=${format}`);
 }
 
 export function saveClassQuizQuestions(

@@ -1,4 +1,4 @@
-import type { QuestionType, TakeHomeQuizQuestionView } from "@/api/takeHomeQuizzes";
+import type { QuestionCommand, QuestionType, TakeHomeQuizQuestionView } from "@/api/takeHomeQuizzes";
 
 /**
  * `QuestionEditor`'s local, keyed editing shape for one question - split
@@ -66,4 +66,41 @@ export function toEditableQuestion(question: TakeHomeQuizQuestionView): Editable
     })),
     answerKeys: question.answerKeys.map((key) => ({ key: key.id, id: key.id, expectedAnswer: key.expectedAnswer })),
   };
+}
+
+/** Converts a not-yet-saved question command (a bulk import's output) into this editor's local, keyed shape. */
+export function fromQuestionCommand(question: QuestionCommand): EditableQuestion {
+  return {
+    key: crypto.randomUUID(),
+    id: null,
+    questionType: question.questionType,
+    prompt: question.prompt,
+    points: String(question.points),
+    options: question.options.map((option) => ({
+      key: crypto.randomUUID(),
+      id: null,
+      label: option.label,
+      correct: option.correct,
+    })),
+    answerKeys: question.answerKeys.map((key) => ({
+      key: crypto.randomUUID(),
+      id: null,
+      expectedAnswer: key.expectedAnswer,
+    })),
+  };
+}
+
+/** True for a row added this session and never filled in - what an import replaces rather than appends after. */
+export function isUntouchedQuestion(question: EditableQuestion): boolean {
+  return (
+    question.id === null &&
+    isBlankRichText(question.prompt) &&
+    question.options.every((option) => isBlankRichText(option.label)) &&
+    question.answerKeys.every((key) => key.expectedAnswer.trim() === "")
+  );
+}
+
+/** No visible text, and no embedded image or maths (which carry no text of their own). */
+function isBlankRichText(html: string): boolean {
+  return !/data-(file-id|latex)=/.test(html) && html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() === "";
 }

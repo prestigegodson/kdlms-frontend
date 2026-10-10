@@ -1,4 +1,5 @@
-import { ChevronDown, ChevronUp, Plus, X } from "lucide-react";
+import { ChevronDown, ChevronUp, FileSpreadsheet, Plus, X } from "lucide-react";
+import { useState } from "react";
 import type { QuestionType } from "@/api/takeHomeQuizzes";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -8,7 +9,13 @@ import { RichTextField } from "@/components/richText/RichTextField";
 import { Select } from "@/components/ui/Select";
 import { ChoiceOptionsField } from "@/features/takeHomeQuizzes/components/ChoiceOptionsField";
 import { FillInTheGapField } from "@/features/takeHomeQuizzes/components/FillInTheGapField";
-import { blankQuestion, type EditableQuestion } from "@/features/takeHomeQuizzes/editableQuestion";
+import { QuestionImportModal, type QuestionImporter } from "@/features/takeHomeQuizzes/components/QuestionImportModal";
+import {
+  blankQuestion,
+  type EditableQuestion,
+  fromQuestionCommand,
+  isUntouchedQuestion,
+} from "@/features/takeHomeQuizzes/editableQuestion";
 
 const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   SINGLE_CHOICE: "Single choice",
@@ -20,6 +27,8 @@ interface QuestionEditorProps {
   questions: EditableQuestion[];
   onChange: (questions: EditableQuestion[]) => void;
   disabled?: boolean;
+  /** Offers "Import from file" (a csv/xlsx/xls bulk upload) when given - see `QuestionImportModal`. */
+  importer?: QuestionImporter;
 }
 
 /**
@@ -32,7 +41,9 @@ interface QuestionEditorProps {
  * `TemplateDesignerPage` canvas is this app's one drag-and-drop precedent,
  * reserved for a genuinely spatial layout tool.
  */
-export function QuestionEditor({ questions, onChange, disabled = false }: QuestionEditorProps) {
+export function QuestionEditor({ questions, onChange, disabled = false, importer }: QuestionEditorProps) {
+  const [importOpen, setImportOpen] = useState(false);
+
   function updateAt(index: number, patch: Partial<EditableQuestion>) {
     onChange(questions.map((question, i) => (i === index ? { ...question, ...patch } : question)));
   }
@@ -174,9 +185,32 @@ export function QuestionEditor({ questions, onChange, disabled = false }: Questi
       ))}
 
       {!disabled && (
-        <Button type="button" variant="secondary" onClick={() => onChange([...questions, blankQuestion()])}>
-          <Plus className="h-4 w-4" aria-hidden="true" /> Add question
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" onClick={() => onChange([...questions, blankQuestion()])}>
+            <Plus className="h-4 w-4" aria-hidden="true" /> Add question
+          </Button>
+          {importer && (
+            <Button type="button" variant="secondary" onClick={() => setImportOpen(true)}>
+              <FileSpreadsheet className="h-4 w-4" aria-hidden="true" /> Import from file
+            </Button>
+          )}
+        </div>
+      )}
+
+      {importer && (
+        <QuestionImportModal
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          importer={importer}
+          // Appended after the questions already written; an empty row added but never filled in is
+          // dropped rather than left stranded above the imported ones.
+          onImport={(imported) =>
+            onChange([
+              ...questions.filter((question) => !isUntouchedQuestion(question)),
+              ...imported.map(fromQuestionCommand),
+            ])
+          }
+        />
       )}
     </div>
   );

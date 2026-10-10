@@ -3,9 +3,11 @@ import { useNavigate, useParams, useSearchParams } from "react-router";
 import {
   createTakeHomeQuiz,
   deleteTakeHomeQuiz,
+  fetchQuestionTemplate,
   getShareableClasses,
   getTakeHomeQuiz,
   getTakeHomeQuizValidation,
+  importTakeHomeQuizQuestions,
   type PublishReadinessView,
   type QuizType,
   saveTakeHomeQuizQuestions,
@@ -28,6 +30,7 @@ import { UnsavedChangesBar } from "@/features/assessments/components/UnsavedChan
 import { PublishQuizModal } from "@/features/takeHomeQuizzes/components/PublishQuizModal";
 import { PublishReadinessPanel } from "@/features/takeHomeQuizzes/components/PublishReadinessPanel";
 import { QuestionEditor } from "@/features/takeHomeQuizzes/components/QuestionEditor";
+import { QuestionTemplateDownload } from "@/features/takeHomeQuizzes/components/QuestionImportModal";
 import { QuizWindowFields } from "@/features/takeHomeQuizzes/components/QuizWindowFields";
 import { StudentLinksPanel } from "@/features/takeHomeQuizzes/components/StudentLinksPanel";
 import { type EditableQuestion, toEditableQuestion } from "@/features/takeHomeQuizzes/editableQuestion";
@@ -440,6 +443,10 @@ export function TakeHomeQuizEditorPage() {
             questions={form.questions}
             onChange={(questions) => setForm({ ...form, questions })}
             disabled={questionsReadOnly}
+            importer={{
+              importFile: (file) => importTakeHomeQuizQuestions(quiz?.id ?? "", file),
+              fetchTemplate: fetchQuestionTemplate,
+            }}
           />
           <PublishReadinessPanel readiness={readiness} quizType={form.quizType} />
         </div>
@@ -450,7 +457,10 @@ export function TakeHomeQuizEditorPage() {
       )}
 
       {showForm && isNew && (
-        <Alert variant="info">Save the quiz's details first, then add questions.</Alert>
+        <div className="space-y-3">
+          <Alert variant="info">Save the quiz's details first, then add questions.</Alert>
+          <QuestionTemplateDownload fetchTemplate={fetchQuestionTemplate} />
+        </div>
       )}
 
       {showForm && !readOnly && (

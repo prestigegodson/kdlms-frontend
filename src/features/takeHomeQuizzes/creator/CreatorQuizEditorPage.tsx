@@ -5,8 +5,10 @@ import {
   type ClassQuizView,
   createClassQuiz,
   deleteClassQuiz,
+  fetchClassQuestionTemplate,
   getClassQuiz,
   getClassQuizValidation,
+  importClassQuizQuestions,
   publishClassQuiz,
   saveClassQuizQuestions,
   updateClassQuiz,
@@ -24,6 +26,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { UnsavedChangesBar } from "@/features/assessments/components/UnsavedChangesBar";
 import { PublishReadinessPanel } from "@/features/takeHomeQuizzes/components/PublishReadinessPanel";
 import { QuestionEditor } from "@/features/takeHomeQuizzes/components/QuestionEditor";
+import { QuestionTemplateDownload } from "@/features/takeHomeQuizzes/components/QuestionImportModal";
 import { QuizWindowFields } from "@/features/takeHomeQuizzes/components/QuizWindowFields";
 import { type EditableQuestion, toEditableQuestion } from "@/features/takeHomeQuizzes/editableQuestion";
 
@@ -296,12 +299,21 @@ export function CreatorQuizEditorPage() {
             questions={form.questions}
             onChange={(questions) => setForm({ ...form, questions })}
             disabled={questionsReadOnly}
+            importer={{
+              importFile: (file) => importClassQuizQuestions(classId, quiz?.id ?? "", file),
+              fetchTemplate: (format) => fetchClassQuestionTemplate(classId, format),
+            }}
           />
           <PublishReadinessPanel readiness={readiness} quizType="NORMAL" />
         </div>
       )}
 
-      {showForm && isNew && <Alert variant="info">Save the quiz's details first, then add questions.</Alert>}
+      {showForm && isNew && (
+        <div className="space-y-3">
+          <Alert variant="info">Save the quiz's details first, then add questions.</Alert>
+          <QuestionTemplateDownload fetchTemplate={(format) => fetchClassQuestionTemplate(classId, format)} />
+        </div>
+      )}
 
       {showForm && !readOnly && (
         <UnsavedChangesBar count={dirty ? 1 : 0} saving={saving} onSave={save} onDiscard={discard} saveVariant="primary" />

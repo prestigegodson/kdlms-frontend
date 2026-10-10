@@ -1,4 +1,4 @@
-import { apiFetch, apiFetchBlob } from "@/api/client";
+import { ApiError, apiFetch, apiFetchBlob, apiUpload } from "@/api/client";
 import type { Page } from "@/api/types";
 import type { SubjectTarget } from "@/features/academics/subjectTarget";
 
@@ -263,6 +263,39 @@ export function saveTakeHomeQuizQuestions(
     method: "PUT",
     body: JSON.stringify({ questions }),
   });
+}
+
+export type QuestionTemplateFormat = "xlsx" | "csv";
+
+/** Mirrors backend takehomequiz.domain.QuestionImportException.RowError - `row` is the file's own 1-based row (the header is 1). */
+export interface QuestionImportRowError {
+  row: number | null;
+  column: string | null;
+  message: string;
+}
+
+/**
+ * Parses an uploaded csv/xlsx/xls question file into new, unsaved questions (every id `null`) -
+ * the editor appends them and they're saved through {@link saveTakeHomeQuizQuestions} like any
+ * other. A rejected file is a 422 whose problem carries `errors` ({@link questionImportErrors}).
+ */
+export function importTakeHomeQuizQuestions(quizId: string, file: File): Promise<QuestionCommand[]> {
+  return apiUpload<{ questions: QuestionCommand[] }>(`${BASE}/${quizId}/questions/import`, file).then(
+    (response) => response.questions,
+  );
+}
+
+export function fetchQuestionTemplate(format: QuestionTemplateFormat): Promise<Blob> {
+  return apiFetchBlob(`${BASE}/question-template?format=${format}`);
+}
+
+/** The per-row problems of a rejected question import, or an empty list for any other error. */
+export function questionImportErrors(error: unknown): QuestionImportRowError[] {
+  if (!(error instanceof ApiError) || !error.problem?.type?.endsWith("/question-import-invalid")) {
+    return [];
+  }
+  const errors = error.problem.errors as unknown;
+  return Array.isArray(errors) ? (errors as QuestionImportRowError[]) : [];
 }
 
 export function deleteTakeHomeQuiz(quizId: string): Promise<void> {
