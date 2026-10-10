@@ -1,6 +1,7 @@
 import { NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 import { downloadFile } from "@/api/files";
 import { Spinner } from "@/components/ui/Spinner";
+import { RICH_IMAGE_SIZE_CLASS } from "@/components/richText/richImageSize";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
 
 /**
@@ -20,7 +21,7 @@ export function QuizImageNodeView({ node, selected }: ReactNodeViewProps) {
         <img
           src={previewUrl}
           alt={alt}
-          className={`inline-block max-h-32 rounded-control border ${
+          className={`${RICH_IMAGE_SIZE_CLASS} rounded-control border ${
             selected ? "border-brand-500 ring-2 ring-brand-100" : "border-slate-200"
           }`}
         />

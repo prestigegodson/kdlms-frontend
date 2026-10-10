@@ -3,6 +3,7 @@ import {
   classLessonNoteImagePath,
   downloadClassLessonNoteImage,
 } from "@/api/lessonNotes";
+import { RICH_IMAGE_SIZE_CLASS } from "@/components/richText/richImageSize";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
 
 interface ClassNoteImageProps {
@@ -22,5 +23,5 @@ export function ClassNoteImage({ reader, noteId, fileId, alt }: ClassNoteImagePr
   if (!url) {
     return null;
   }
-  return <img src={url} alt={alt} className="my-1 inline-block max-w-full rounded-control border border-slate-200" />;
+  return <img src={url} alt={alt} className={`my-1 ${RICH_IMAGE_SIZE_CLASS} rounded-control border border-slate-200`} />;
 }

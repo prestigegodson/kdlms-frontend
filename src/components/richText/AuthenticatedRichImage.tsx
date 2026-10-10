@@ -1,4 +1,5 @@
 import { downloadFile } from "@/api/files";
+import { RICH_IMAGE_SIZE_CLASS } from "@/components/richText/richImageSize";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
 
 /**
@@ -15,6 +16,6 @@ export function AuthenticatedRichImage({ fileId, alt }: { fileId: string; alt: s
     return null;
   }
   return (
-    <img src={previewUrl} alt={alt} className="my-1 inline-block max-h-40 rounded-control border border-slate-200" />
+    <img src={previewUrl} alt={alt} className={`my-1 ${RICH_IMAGE_SIZE_CLASS} rounded-control border border-slate-200`} />
   );
 }

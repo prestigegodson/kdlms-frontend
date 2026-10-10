@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { ApiError } from "@/api/client";
 import {
@@ -19,6 +19,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { CommentsPanel } from "@/features/learning/components/CommentsPanel";
 import { ResourceViewer } from "@/features/learning/components/ResourceViewer";
+import { StudentResourceImage } from "@/features/student/StudentResourceImage";
 import { useMediaStreamUrl } from "@/hooks/useMediaStreamUrl";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
 import { useThrottledSave } from "@/hooks/useThrottledSave";
@@ -29,9 +30,9 @@ import { formatDuration } from "@/utils/duration";
 /**
  * The student portal's own read of one published resource (Phase 35E; `AUDIO`/`VIDEO` added Phase
  * 35F). Delegates the actual payload rendering to `ResourceViewer` (shared with the staff preview,
- * `LearningResourcePreviewPage`), passing no `renderImage` - a student has no access to
- * `/api/v1/files/{id}` at all (CLAUDE.md's Domain Rules), so an embedded rich-text image is
- * silently dropped rather than 403ing the whole note, the guardian document-mode-note precedent.
+ * `LearningResourcePreviewPage`). A student has no access to `/api/v1/files/{id}` at all
+ * (CLAUDE.md's Domain Rules), so an embedded rich-text image is fetched through this resource's own
+ * `/images/{fileId}` endpoint (`StudentResourceImage`), which serves only files the body references.
  * `PDF` is fed by this resource's own `/file` endpoint (a blob URL); `AUDIO`/`VIDEO` stream straight
  * from the bucket on the presigned URL its `/media-url` endpoint hands out; resume-seek and
  * throttled position autosave for `AUDIO`/`VIDEO` are wired through `ResourceViewer`'s optional
@@ -136,6 +137,11 @@ export function StudentResourceDetailPage() {
     resource?.resourceType === "PDF" ? resourceId : undefined,
     downloadMyLearningResourceFile,
   );
+  const renderImage = useCallback(
+    (fileId: string, alt: string) =>
+      resourceId ? <StudentResourceImage resourceId={resourceId} fileId={fileId} alt={alt} /> : null,
+    [resourceId],
+  );
   const mediaState = useMediaStreamUrl(
     resource?.resourceType === "AUDIO" || resource?.resourceType === "VIDEO" ? resourceId : undefined,
     getMyLearningResourceMediaUrl,
@@ -189,6 +195,7 @@ export function StudentResourceDetailPage() {
         title={resource.title}
         bodyHtml={resource.bodyHtml}
         youtubeVideoId={resource.youtubeVideoId}
+        renderImage={renderImage}
         fileUrl={resource.resourceType === "PDF" ? pdfUrl : mediaState.url}
         fileError={mediaState.error}
         onMediaUrlExpired={mediaState.refresh}

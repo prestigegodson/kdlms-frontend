@@ -429,6 +429,16 @@ export function downloadMyLearningResourceFile(resourceId: string): Promise<Blob
   return apiFetchBlob(`${ME_BASE}/${resourceId}/file`);
 }
 
+/** The `useObjectUrl` key an embedded rich-text image is fetched under - one per (resource, image). */
+export function myLearningResourceImagePath(resourceId: string, fileId: string): string {
+  return `${ME_BASE}/${resourceId}/images/${fileId}`;
+}
+
+/** An image embedded in a rich-text resource - served only if the published body references it. */
+export function downloadMyLearningResourceImage(path: string): Promise<Blob> {
+  return apiFetchBlob(path);
+}
+
 /** Mirrors backend `learning.application.port.in.MediaStreamUrlView` - a presigned bucket URL an audio/video player streams from directly (its own `Range` requests), valid until `expiresAt`. */
 export interface MediaStreamUrlView {
   url: string;

@@ -11,6 +11,7 @@ vi.mock("@/api/learning", async () => {
     ...actual,
     getMyLearningResource: vi.fn(),
     downloadMyLearningResourceFile: vi.fn(),
+    downloadMyLearningResourceImage: vi.fn(),
     getMyLearningResourceMediaUrl: vi.fn(),
     listMyLearningComments: vi.fn(),
     postMyLearningComment: vi.fn(),
@@ -82,6 +83,24 @@ describe("StudentResourceDetailPage", () => {
     const iframe = await screen.findByTitle("Fractions Explainer");
     expect(iframe.tagName).toBe("IFRAME");
     expect(learningApi.getMyLearningResourceMediaUrl).not.toHaveBeenCalled();
+  });
+
+  it("renders a rich-text resource's embedded image through the resource's own image endpoint", async () => {
+    vi.mocked(learningApi.getMyLearningResource).mockResolvedValue({
+      ...BASE_RESOURCE,
+      resourceType: "RICH_TEXT",
+      bodyHtml: '<p>Look</p><img data-file-id="file-9" alt="A shaded triangle">',
+    });
+    vi.mocked(learningApi.downloadMyLearningResourceImage).mockResolvedValue(
+      new Blob(["png"], { type: "image/png" }),
+    );
+
+    renderPage();
+
+    expect(await screen.findByAltText("A shaded triangle")).toBeInTheDocument();
+    expect(learningApi.downloadMyLearningResourceImage).toHaveBeenCalledWith(
+      "/api/v1/me/learning-resources/resource-1/images/file-9",
+    );
   });
 
   it("streams a video straight from its presigned URL, without downloading it first", async () => {

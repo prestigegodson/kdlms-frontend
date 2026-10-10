@@ -16,12 +16,11 @@ import type { LearningResourceType } from "@/api/learning";
  * handed. A PDF's `fileUrl` is a blob URL; audio/video's is a presigned
  * bucket URL the player streams from directly.
  *
- * `renderImage` is optional - the student caller omits it (a `STUDENT` has
- * no access to `/api/v1/files/{id}`, so an embedded rich-text image is
- * silently dropped rather than 403ing the whole resource, the guardian
- * document-mode-note precedent); the staff caller passes
- * `AuthenticatedRichImage`, so staff genuinely see images the student
- * viewer can't - a deliberate asymmetry, not a gap to "fix".
+ * `renderImage` resolves an embedded rich-text image; each caller fetches it through its own
+ * reader's endpoint - the student through `/me/learning-resources/{id}/images/{fileId}`
+ * (`StudentResourceImage`), a learner/guardian through the class resource's equivalent
+ * (`ClassResourceImage`), staff through `/api/v1/files/{id}` (`AuthenticatedRichImage`). Omitting
+ * it drops the images rather than failing the whole resource.
  *
  * `onLoadedMetadata`/`onTimeUpdate` are optional too - only the student
  * caller wires resume-seek and a throttled position autosave onto them;
