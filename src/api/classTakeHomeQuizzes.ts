@@ -10,6 +10,7 @@ import type {
   AdjustScoreRequest,
   AnsweredQuestionView,
   PublishReadinessView,
+  QuizAnalytics,
   QuestionCommand,
   QuestionTemplateFormat,
   TakeHomeQuizActionsView,
@@ -194,6 +195,10 @@ export function publishClassQuiz(classId: string, quizId: string): Promise<Class
 
 export function getClassQuizResults(classId: string, quizId: string): Promise<ClassQuizResultsView> {
   return apiFetch<ClassQuizResultsView>(`${creatorBase(classId)}/${quizId}/results`);
+}
+
+export function getClassQuizAnalytics(classId: string, quizId: string): Promise<QuizAnalytics> {
+  return apiFetch<QuizAnalytics>(`${creatorBase(classId)}/${quizId}/analytics`);
 }
 
 export function getLearnerQuizResult(

@@ -2,6 +2,7 @@ import { BookOpen, CalendarDays, Home, ListChecks } from "lucide-react";
 import { useEffect } from "react";
 import { can } from "@/auth/permissions";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
+import { NAV_GATE_MAX_AGE_MS, useRevalidateOnResume } from "@/hooks/useRevalidateOnResume";
 import { useFeatureStore } from "@/stores/featureStore";
 import { useNewResourcesStore } from "@/stores/newResourcesStore";
 import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
@@ -66,6 +67,11 @@ export function StudentLayout() {
     fetchFeatures();
     fetchSchoolBranding();
   }, [fetchStudent, fetchFeatures, fetchSchoolBranding]);
+
+  // Heals a feature fetch that failed while the tab was asleep - see useRevalidateOnResume.
+  useRevalidateOnResume(() => {
+    useFeatureStore.getState().revalidate(NAV_GATE_MAX_AGE_MS);
+  });
 
   // Only once the school is known to have On-demand learning - the count endpoint 403s otherwise.
   useEffect(() => {

@@ -15,6 +15,7 @@ import { can } from "@/auth/permissions";
 import { VerifyEmailBanner } from "@/features/creators/components/VerifyEmailBanner";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useClassMessagesUnreadStore } from "@/stores/classMessagesUnreadStore";
+import { NAV_GATE_MAX_AGE_MS, useRevalidateOnResume } from "@/hooks/useRevalidateOnResume";
 import { useCreatorPlanStore } from "@/stores/creatorPlanStore";
 
 /**
@@ -106,6 +107,11 @@ export function CreatorLayout() {
     fetchPlan();
     fetchUnread("CREATOR");
   }, [fetchPlan, fetchUnread]);
+
+  // Heals a plan fetch that failed while the tab was asleep - see useRevalidateOnResume.
+  useRevalidateOnResume(() => {
+    useCreatorPlanStore.getState().revalidate(NAV_GATE_MAX_AGE_MS);
+  });
 
   return <PortalShell portalName="Creator" navItems={NAV_ITEMS} banner={<VerifyEmailBanner />} />;
 }

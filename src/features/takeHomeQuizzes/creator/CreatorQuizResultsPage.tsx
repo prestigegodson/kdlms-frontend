@@ -7,6 +7,7 @@ import {
   type ClassQuizView,
   clearLearnerQuizScoreAdjustment,
   getClassQuiz,
+  getClassQuizAnalytics,
   getClassQuizResults,
   getLearnerQuizResult,
   type LearnerResultRowView,
@@ -21,6 +22,8 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
+import { Tabs } from "@/components/ui/Tabs";
+import { QuizAnalyticsPanel } from "@/features/takeHomeQuizzes/components/analytics/QuizAnalyticsPanel";
 import { AdjustScoreModal } from "@/features/takeHomeQuizzes/components/AdjustScoreModal";
 import { ResultsTable } from "@/features/takeHomeQuizzes/components/ResultsTable";
 import { StudentAnswersModal } from "@/features/takeHomeQuizzes/components/StudentAnswersModal";
@@ -54,6 +57,7 @@ export function CreatorQuizResultsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const [tab, setTab] = useState<"results" | "analytics">("results");
 
   const [answersTarget, setAnswersTarget] = useState<StudentResultRowView | null>(null);
   const [adjustTarget, setAdjustTarget] = useState<StudentResultRowView | null>(null);
@@ -72,7 +76,9 @@ export function CreatorQuizResultsPage() {
 
   useEffect(() => {
     load();
-  }, [load, reloadToken]);
+  }, [load]);
+
+  const loadAnalytics = useCallback(() => getClassQuizAnalytics(classId, quizId), [classId, quizId]);
 
   function refetch() {
     setReloadToken((token) => token + 1);
@@ -126,29 +132,45 @@ export function CreatorQuizResultsPage() {
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
-      <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-        <Badge variant={quizStatusVariant(quiz.status, quiz.availability)}>
-          {quizStatusLabel(quiz.status, quiz.availability)}
-        </Badge>
-        <span>
-          {results.submittedCount || 0} of {results.rosterSize} learners submitted
-        </span>
-      </div>
+      <Tabs
+        ariaLabel="Quiz results views"
+        value={tab}
+        onChange={setTab}
+        items={[
+          { value: "results", label: "Results" },
+          { value: "analytics", label: "Analytics" },
+        ]}
+      />
 
-      {results.rows.length === 0 ? (
-        <EmptyState title="No learners in this class yet" />
+      {tab === "analytics" ? (
+        <QuizAnalyticsPanel load={loadAnalytics} reloadKey={reloadToken} participantNoun="learners" />
       ) : (
-        <ResultsTable
-          rows={results.rows.map(toTableRow)}
-          totalPoints={results.totalPoints}
-          participantLabel="Learner"
-          canAdjust={writable}
-          canReset={writable}
-          onViewAnswers={setAnswersTarget}
-          onAdjust={setAdjustTarget}
-          onClearAdjustment={handleClearAdjustment}
-          onReset={setResetTarget}
-        />
+        <>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+            <Badge variant={quizStatusVariant(quiz.status, quiz.availability)}>
+              {quizStatusLabel(quiz.status, quiz.availability)}
+            </Badge>
+            <span>
+              {results.submittedCount || 0} of {results.rosterSize} learners submitted
+            </span>
+          </div>
+
+          {results.rows.length === 0 ? (
+            <EmptyState title="No learners in this class yet" />
+          ) : (
+            <ResultsTable
+              rows={results.rows.map(toTableRow)}
+              totalPoints={results.totalPoints}
+              participantLabel="Learner"
+              canAdjust={writable}
+              canReset={writable}
+              onViewAnswers={setAnswersTarget}
+              onAdjust={setAdjustTarget}
+              onClearAdjustment={handleClearAdjustment}
+              onReset={setResetTarget}
+            />
+          )}
+        </>
       )}
 
       {answersTarget && (

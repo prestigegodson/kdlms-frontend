@@ -31,6 +31,7 @@ import { SubscriptionBanner } from "@/features/subscription/SubscriptionBanner";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useAcademicContextStore } from "@/stores/academicContextStore";
 import { useAuthStore } from "@/stores/authStore";
+import { NAV_GATE_MAX_AGE_MS, useRevalidateOnResume } from "@/hooks/useRevalidateOnResume";
 import { useFeatureStore } from "@/stores/featureStore";
 import { usePendingFeePaymentsStore } from "@/stores/pendingFeePaymentsStore";
 import { usePendingLessonNotesStore } from "@/stores/pendingLessonNotesStore";
@@ -412,6 +413,13 @@ export function SchoolLayout() {
     fetchUnreadMessages,
     fetchPendingLessonNotes,
   ]);
+
+  // Heals a nav-gate fetch that failed while the tab was asleep (and picks up entitlement changes)
+  // - see useRevalidateOnResume. revalidate() is a no-op for a store that was never fetched.
+  useRevalidateOnResume(() => {
+    useFeatureStore.getState().revalidate(NAV_GATE_MAX_AGE_MS);
+    useTeacherScopeStore.getState().revalidate(NAV_GATE_MAX_AGE_MS);
+  });
 
   // The fee-payments badge waits for the entitlement flags - an unentitled school's count would
   // only ever 403 (full lockout, D1).

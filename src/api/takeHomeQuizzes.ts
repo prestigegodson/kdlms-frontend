@@ -421,6 +421,80 @@ export function getTakeHomeQuizResults(quizId: string): Promise<TakeHomeQuizResu
   return apiFetch<TakeHomeQuizResultsView>(`${BASE}/${quizId}/results`);
 }
 
+/** Mirrors backend `takehomequiz.domain.QuizAnalytics` - derived at read time from submitted attempts only. */
+export interface QuizAnalytics {
+  totalPoints: number;
+  participation: QuizParticipation;
+  scores: QuizScoreSummary;
+  /** Null for an untimed quiz. */
+  timing: QuizTiming | null;
+  /** Hardest first (lowest correct rate), then by position. */
+  questions: QuizQuestionStats[];
+}
+
+export interface QuizParticipation {
+  rosterSize: number;
+  started: number;
+  submitted: number;
+  inProgress: number;
+  notStarted: number;
+}
+
+/** Every figure is null until someone submits. `bands` are ten 10% score bands, the last including 100%. */
+export interface QuizScoreSummary {
+  mean: number | null;
+  median: number | null;
+  highest: number | null;
+  lowest: number | null;
+  standardDeviation: number | null;
+  meanPercent: number | null;
+  bands: { fromPercent: number; toPercent: number; count: number }[];
+}
+
+/** Seconds, over attempts the student submitted themselves; auto-submitted ones count as timed out. */
+export interface QuizTiming {
+  durationMinutes: number;
+  measuredCount: number;
+  averageSeconds: number | null;
+  medianSeconds: number | null;
+  fastestSeconds: number | null;
+  slowestSeconds: number | null;
+  timedOutCount: number;
+  timedOutPercent: number | null;
+  averageTimeUsedPercent: number | null;
+}
+
+export interface QuizQuestionStats {
+  questionId: string;
+  position: number;
+  questionType: QuestionType;
+  /** Sanitized HTML - render with `RichContent`. */
+  prompt: string;
+  points: number;
+  answeredCount: number;
+  correctCount: number;
+  correctPercent: number | null;
+  averagePoints: number | null;
+  options: QuizOptionStats[];
+  commonWrongAnswers: { answer: string; count: number }[];
+  /** A wrong option was picked more often than every correct one - often a wrong key or an ambiguous question. */
+  distractorFlag: boolean;
+}
+
+export interface QuizOptionStats {
+  optionId: string;
+  position: number;
+  /** Sanitized HTML - render with `RichContent`. */
+  label: string;
+  correct: boolean;
+  pickedCount: number;
+  pickedPercent: number | null;
+}
+
+export function getTakeHomeQuizAnalytics(quizId: string): Promise<QuizAnalytics> {
+  return apiFetch<QuizAnalytics>(`${BASE}/${quizId}/analytics`);
+}
+
 export function getStudentTakeHomeQuizResult(
   quizId: string,
   studentId: string,

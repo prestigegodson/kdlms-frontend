@@ -16,6 +16,7 @@ import {
 import { useEffect } from "react";
 import { can } from "@/auth/permissions";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
+import { NAV_GATE_MAX_AGE_MS, useRevalidateOnResume } from "@/hooks/useRevalidateOnResume";
 import { useFeatureStore } from "@/stores/featureStore";
 import { useClassMessagesUnreadStore } from "@/stores/classMessagesUnreadStore";
 import { useUnreadMessagesStore } from "@/stores/unreadMessagesStore";
@@ -170,6 +171,11 @@ export function GuardianLayout() {
     fetchFeatures();
     fetchUnreadMessages("GUARDIAN");
   }, [fetchFeatures, fetchUnreadMessages]);
+
+  // Heals a feature fetch that failed while the tab was asleep - see useRevalidateOnResume.
+  useRevalidateOnResume(() => {
+    useFeatureStore.getState().revalidate(NAV_GATE_MAX_AGE_MS);
+  });
 
   // Only a guardian who follows a creator's learner has class messages to count.
   useEffect(() => {
