@@ -105,7 +105,7 @@ export const REPORT_TOKENS: Array<{ key: string; description: string }> = [
   { key: "session.name", description: "Session name, e.g. 2026/2027" },
   { key: "term.name", description: "Term name" },
   { key: "term.endDate", description: "Term end date" },
-  { key: "nextTerm.startDate", description: "Next term's start date" },
+  { key: "nextTerm.startDate", description: "Next term begins (start date)" },
   { key: "result.total", description: "Term total (NUMERIC only)" },
   { key: "result.average", description: "Term average (NUMERIC only)" },
   { key: "result.position", description: "Class position (NUMERIC only)" },
