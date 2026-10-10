@@ -33,7 +33,7 @@ function validateBoundaries(boundaries: GradeBoundary[]): string | null {
   if (grades.size !== sorted.length) return "Grade letters must be unique.";
   let expectedStart = 0;
   for (const boundary of sorted) {
-    if (!boundary.grade.trim() || !boundary.remark.trim()) return "Every boundary needs a grade and a remark.";
+    if (!boundary.grade.trim()) return "Every boundary needs a grade.";
     if (boundary.minScore > boundary.maxScore) return `"${boundary.grade}" has a min score greater than its max.`;
     if (Math.round(boundary.minScore * 100) !== Math.round(expectedStart * 100)) {
       return "Boundaries must be contiguous and cover 0-100 with no gaps or overlaps.";

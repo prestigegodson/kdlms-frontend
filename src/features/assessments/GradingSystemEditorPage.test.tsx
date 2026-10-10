@@ -88,6 +88,25 @@ describe("GradingSystemEditorPage", () => {
     expect(gradingApi.saveNumericGradingSystem).not.toHaveBeenCalled();
   });
 
+  it("saves boundaries whose remarks are left blank - a remark is optional", async () => {
+    const user = userEvent.setup();
+    vi.mocked(gradingApi.saveNumericGradingSystem).mockResolvedValue(NUMERIC_SYSTEM);
+    renderPage();
+
+    await screen.findByText("Grade boundaries");
+    for (const input of screen.getAllByLabelText("Remark (optional)")) {
+      await user.clear(input);
+    }
+    await user.click(screen.getByRole("button", { name: "Save grading system" }));
+
+    expect(gradingApi.saveNumericGradingSystem).toHaveBeenCalledWith(
+      "level-1",
+      expect.objectContaining({
+        boundaries: [expect.objectContaining({ grade: "A", remark: "" }), expect.objectContaining({ grade: "F", remark: "" })],
+      }),
+    );
+  });
+
   it("show position defaults to checked and saves true when left alone", async () => {
     const user = userEvent.setup();
     vi.mocked(gradingApi.saveNumericGradingSystem).mockResolvedValue(NUMERIC_SYSTEM);

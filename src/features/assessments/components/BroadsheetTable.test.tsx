@@ -65,7 +65,7 @@ describe("BroadsheetTable", () => {
     expect(screen.queryByText("Position")).not.toBeInTheDocument();
   });
 
-  it("renders a mid-term score as the raw mark over its snapshotted max, not a percentage", () => {
+  it("renders a mid-term score as the bare raw mark, with its snapshotted max in the subject header", () => {
     const midtermBroadsheet: BroadsheetView = {
       ...NUMERIC_BROADSHEET,
       rows: [
@@ -80,7 +80,9 @@ describe("BroadsheetTable", () => {
     };
     render(<BroadsheetTable broadsheet={midtermBroadsheet} scope="MIDTERM" />);
 
-    expect(screen.getByText("18 / 20")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "MTH (20)" })).toBeInTheDocument();
+    expect(screen.getByText("18")).toBeInTheDocument();
+    expect(screen.queryByText("18 / 20")).not.toBeInTheDocument();
     expect(screen.queryByText("90")).not.toBeInTheDocument();
   });
 
@@ -118,7 +120,7 @@ describe("BroadsheetTable", () => {
     render(<BroadsheetTable broadsheet={midtermWithClassAverage} scope="MIDTERM" />);
 
     expect(screen.getByText("Class average")).toBeInTheDocument();
-    expect(screen.getByText("14.2 / 20")).toBeInTheDocument();
+    expect(screen.getByText("14.2")).toBeInTheDocument();
   });
 
   it("never shows a Class average row for a qualitative class", () => {

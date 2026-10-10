@@ -2,7 +2,7 @@ import type { StudentTermResultView, TraitRatingView } from "@/api/assessments";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
-import { classAverageCellText, scoreCellText } from "@/features/assessments/finalScore";
+import { classAverageCellText, commonScoreMax, scoreCellText, scoreHeader } from "@/features/assessments/finalScore";
 import { possessive } from "@/utils/text";
 
 const TRAIT_CATEGORY_LABELS: Record<TraitRatingView["category"], string> = {
@@ -37,6 +37,7 @@ export function StudentTermResultCard({ result }: StudentTermResultCardProps) {
   // Mirrors the printed report (TemplateRenderer#ratingTable): the Observation
   // column is dropped entirely, not just left as an em dash, when none of this
   // student's subjects carry a recorded observation.
+  const headerMax = isNumeric ? commonScoreMax(result.subjectResults) : undefined;
   const showObservation = !isNumeric && result.subjectResults.some((subject) => subject.observation?.trim());
 
   return (
@@ -56,7 +57,7 @@ export function StudentTermResultCard({ result }: StudentTermResultCardProps) {
               <TableHeaderCell>Subject</TableHeaderCell>
               {isNumeric ? (
                 <>
-                  <TableHeaderCell numeric>Score</TableHeaderCell>
+                  <TableHeaderCell numeric>{scoreHeader("Score", headerMax)}</TableHeaderCell>
                   {showClassAverage && <TableHeaderCell numeric>Class avg</TableHeaderCell>}
                   <TableHeaderCell>Grade</TableHeaderCell>
                 </>
@@ -76,12 +77,12 @@ export function StudentTermResultCard({ result }: StudentTermResultCardProps) {
                 </TableCell>
                 {isNumeric ? (
                   <>
-                    <TableCell label="Score" numeric>
-                      {scoreCellText(subject)}
+                    <TableCell label={scoreHeader("Score", headerMax)} numeric>
+                      {scoreCellText(subject, headerMax)}
                     </TableCell>
                     {showClassAverage && (
                       <TableCell label="Class avg" numeric>
-                        {classAverageCellText(subjectColumn(subject.subjectId)?.classAverage, subject.scoreMax)}
+                        {classAverageCellText(subjectColumn(subject.subjectId)?.classAverage, subject.scoreMax, headerMax)}
                       </TableCell>
                     )}
                     <TableCell label="Grade">{subject.grade ?? "—"}</TableCell>

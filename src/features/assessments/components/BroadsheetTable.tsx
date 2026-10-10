@@ -1,6 +1,6 @@
 import type { BroadsheetView } from "@/api/assessments";
 import type { ResultScope } from "@/api/types";
-import { classAverageCellText, scoreCellText } from "@/features/assessments/finalScore";
+import { classAverageCellText, scoreCellText, scoreHeader } from "@/features/assessments/finalScore";
 
 interface BroadsheetTableProps {
   broadsheet: BroadsheetView;
@@ -32,7 +32,8 @@ export function BroadsheetTable({ broadsheet, scope = "TERM" }: BroadsheetTableP
   const showClassAverage = isNumeric && broadsheet.subjects.some((subject) => subject.classAverage != null);
   // A MIDTERM subject's scoreMax (the raw mark's denominator) is uniform across
   // the class - reused from whichever row happens to carry it, the same
-  // assumption the backend's own class-average computation makes.
+  // assumption the backend's own class-average computation makes. It prints
+  // once in the subject's header ("MTH (20)"), leaving bare marks in the cells.
   const scoreMaxFor = (subjectId: string) =>
     broadsheet.rows.map((row) => row.subjectResults.find((result) => result.subjectId === subjectId)?.scoreMax)
       .find((scoreMax) => scoreMax != null);
@@ -57,7 +58,9 @@ export function BroadsheetTable({ broadsheet, scope = "TERM" }: BroadsheetTableP
                   title={subject.name}
                   className="whitespace-nowrap px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500"
                 >
-                  {subject.code || subject.name}
+                  {isNumeric
+                    ? scoreHeader(subject.code || subject.name, scoreMaxFor(subject.subjectId))
+                    : subject.code || subject.name}
                 </th>
               ))}
               {showsAggregates && (
@@ -97,7 +100,7 @@ export function BroadsheetTable({ broadsheet, scope = "TERM" }: BroadsheetTableP
                     const result = resultBySubject.get(subject.subjectId);
                     return (
                       <td key={subject.subjectId} className="whitespace-nowrap px-3 py-3 text-center tabular-nums text-slate-700">
-                        {isNumeric ? scoreCellText(result) : (result?.ratingLabel ?? "—")}
+                        {isNumeric ? scoreCellText(result, scoreMaxFor(subject.subjectId)) : (result?.ratingLabel ?? "—")}
                         {isNumeric && result?.grade && <span className="ml-1 text-xs text-slate-500">({result.grade})</span>}
                       </td>
                     );
@@ -133,7 +136,7 @@ export function BroadsheetTable({ broadsheet, scope = "TERM" }: BroadsheetTableP
                     key={subject.subjectId}
                     className="whitespace-nowrap px-3 py-3 text-center tabular-nums font-medium text-slate-700"
                   >
-                    {classAverageCellText(subject.classAverage, scoreMaxFor(subject.subjectId))}
+                    {classAverageCellText(subject.classAverage, scoreMaxFor(subject.subjectId), scoreMaxFor(subject.subjectId))}
                   </td>
                 ))}
                 {showsAggregates && <td colSpan={3} />}

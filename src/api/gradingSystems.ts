@@ -7,7 +7,8 @@ export interface GradeBoundary {
   grade: string;
   minScore: number;
   maxScore: number;
-  remark: string;
+  /** Optional - null when the school grades with letters alone. */
+  remark: string | null;
 }
 
 /** Mirrors backend assessment.application.port.in.GradingSystemView.RatingOptionView. */

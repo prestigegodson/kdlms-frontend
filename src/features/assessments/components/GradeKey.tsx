@@ -16,7 +16,8 @@ export function GradeKey({ system }: GradeKeyProps) {
               className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-700"
             >
               <strong className="text-slate-900">{boundary.grade}</strong>
-              {boundary.minScore}&ndash;{boundary.maxScore} &middot; {boundary.remark}
+              {boundary.minScore}&ndash;{boundary.maxScore}
+              {boundary.remark?.trim() && <> &middot; {boundary.remark}</>}
             </span>
           ))
       : [...system.ratingOptions]

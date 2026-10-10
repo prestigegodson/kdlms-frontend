@@ -78,11 +78,10 @@ export function GradeBoundaryRows({ boundaries, onChange }: GradeBoundaryRowsPro
                 onChange={(event) => updateRow(index, { maxScore: Number(event.target.value) })}
               />
             </FormField>
-            <FormField label="Remark" htmlFor={`boundary-${index}-remark`}>
+            <FormField label="Remark (optional)" htmlFor={`boundary-${index}-remark`}>
               <Input
                 id={`boundary-${index}-remark`}
-                required
-                value={boundary.remark}
+                value={boundary.remark ?? ""}
                 onChange={(event) => updateRow(index, { remark: event.target.value })}
               />
             </FormField>

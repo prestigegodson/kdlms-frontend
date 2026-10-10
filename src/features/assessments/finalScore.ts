@@ -68,17 +68,37 @@ export function computeMidtermScore(
 }
 
 /**
- * Renders a subject result's score cell for both scopes, shared by
- * BroadsheetTable and StudentTermResultCard. A non-null `scoreMax` (a
- * MIDTERM result) means `finalScore` is the raw entered mark rather than a
- * percentage - render it as "18 / 20"; a TERM result (already out of 100)
- * carries no `scoreMax` and renders as today.
+ * The MIDTERM max a score table's header carries ("Score (20)"): the first
+ * non-null `scoreMax` among its results - every row of a class normally shares
+ * it. Undefined for a TERM result, which is already out of 100.
  */
-export function scoreCellText(result: { finalScore?: number; scoreMax?: number } | undefined): string {
+export function commonScoreMax(results: ReadonlyArray<{ scoreMax?: number } | undefined>): number | undefined {
+  return results.find((result) => result?.scoreMax != null)?.scoreMax;
+}
+
+/** A score column's header: `"Score (20)"` when a MIDTERM max applies, else the bare label. */
+export function scoreHeader(label: string, headerMax: number | undefined): string {
+  return headerMax == null ? label : `${label} (${headerMax})`;
+}
+
+/**
+ * Renders a subject result's score cell for both scopes, shared by
+ * BroadsheetTable and StudentTermResultCard. A MIDTERM result's max lives in
+ * the column header (see `scoreHeader`), so the cell shows the bare mark; a
+ * row whose own `scoreMax` differs from `headerMax` (a score recorded under an
+ * older quiz max) keeps the "18 / 20" form so it never reads as out of the
+ * wrong number. A TERM result carries no `scoreMax` and renders bare.
+ */
+export function scoreCellText(
+  result: { finalScore?: number; scoreMax?: number } | undefined,
+  headerMax?: number,
+): string {
   if (result?.finalScore == null) {
     return "—";
   }
-  return result.scoreMax == null ? String(result.finalScore) : `${result.finalScore} / ${result.scoreMax}`;
+  return result.scoreMax == null || result.scoreMax === headerMax
+    ? String(result.finalScore)
+    : `${result.finalScore} / ${result.scoreMax}`;
 }
 
 /**
@@ -86,9 +106,13 @@ export function scoreCellText(result: { finalScore?: number; scoreMax?: number }
  * per subject" opt-in) - shared by BroadsheetTable and StudentTermResultCard.
  * `classAverage` is undefined unless the school has turned the setting on
  * (or always, for a QUALITATIVE class); `scoreMax` is the row's own MIDTERM
- * denominator, reused rather than carried separately, since the average and
- * the student's own score share the same subject/term max.
+ * denominator, reused rather than carried separately, and printed bare under
+ * the header's max exactly like `scoreCellText`.
  */
-export function classAverageCellText(classAverage: number | undefined, scoreMax: number | undefined): string {
-  return scoreCellText({ finalScore: classAverage, scoreMax });
+export function classAverageCellText(
+  classAverage: number | undefined,
+  scoreMax: number | undefined,
+  headerMax?: number,
+): string {
+  return scoreCellText({ finalScore: classAverage, scoreMax }, headerMax);
 }

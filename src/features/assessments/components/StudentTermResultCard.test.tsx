@@ -30,7 +30,7 @@ describe("StudentTermResultCard", () => {
     expect(screen.getByText(/Total:/)).toBeInTheDocument();
   });
 
-  it("renders a MIDTERM score as the raw mark over its snapshotted max, with no total/average line", () => {
+  it("renders a MIDTERM score as the bare raw mark under a \"Score (max)\" header, with no total/average line", () => {
     const midtermResult: StudentTermResultView = {
       ...TERM_RESULT,
       subjectResults: [{ subjectId: "subject-1", finalScore: 18, scoreMax: 20, grade: "A" }],
@@ -40,7 +40,9 @@ describe("StudentTermResultCard", () => {
     };
     render(<StudentTermResultCard result={midtermResult} />);
 
-    expect(screen.getByText("18 / 20")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Score (20)" })).toBeInTheDocument();
+    expect(screen.getByText("18")).toBeInTheDocument();
+    expect(screen.queryByText("18 / 20")).not.toBeInTheDocument();
     expect(screen.queryByText(/Total:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Position/)).not.toBeInTheDocument();
   });
@@ -74,7 +76,7 @@ describe("StudentTermResultCard", () => {
     expect(screen.getByText("72.4")).toBeInTheDocument();
   });
 
-  it("renders a MIDTERM class average as the raw average over the row's own snapshotted max", () => {
+  it("renders a MIDTERM class average bare, under the Score header's max", () => {
     const midtermWithClassAverage: StudentTermResultView = {
       ...TERM_RESULT,
       subjects: [{ subjectId: "subject-1", name: "Mathematics", classAverage: 14.2 }],
@@ -85,7 +87,7 @@ describe("StudentTermResultCard", () => {
     };
     render(<StudentTermResultCard result={midtermWithClassAverage} />);
 
-    expect(screen.getByText("14.2 / 20")).toBeInTheDocument();
+    expect(screen.getByText("14.2")).toBeInTheDocument();
   });
 
   it("renders rated behavioural traits grouped by category", () => {
