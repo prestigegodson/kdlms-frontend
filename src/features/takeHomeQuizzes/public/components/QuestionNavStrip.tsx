@@ -25,11 +25,11 @@ export function QuestionNavStrip({ count, currentIndex, answeredIndexes, onSelec
             onClick={() => onSelect(index)}
             aria-current={current ? "step" : undefined}
             aria-label={`Question ${index + 1}${answered ? ", answered" : ", not answered"}`}
-            className={`flex h-9 w-9 items-center justify-center rounded-full border text-sm font-medium transition-colors ${
+            className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-semibold transition-colors ${
               current
                 ? "border-brand-500 bg-brand-500 text-white"
                 : answered
-                  ? "border-brand-200 bg-brand-50 text-brand-700"
+                  ? "border-brand-200 bg-brand-100 text-brand-800"
                   : "border-slate-200 bg-white text-slate-600"
             }`}
           >

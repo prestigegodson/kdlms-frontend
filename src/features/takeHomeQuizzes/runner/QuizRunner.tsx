@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, PartyPopper } from "lucide-react";
 import type {
   AnswerCommand,
   PublicAnswerView,
@@ -231,6 +231,34 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
           serverTime={attempt.serverTime}
           onExpire={handleSubmit}
         />
+      </div>
+
+      <div className="mb-4">
+        <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
+          <span className="font-display font-semibold text-slate-900">
+            Question {currentIndex + 1} of {questions.length}
+          </span>
+          <span className="text-slate-500">{answeredIndexes.size} answered</span>
+        </div>
+        <div
+          role="progressbar"
+          aria-label="Questions answered"
+          aria-valuemin={0}
+          aria-valuemax={questions.length}
+          aria-valuenow={answeredIndexes.size}
+          className="h-2.5 overflow-hidden rounded-full bg-slate-100"
+        >
+          <div
+            className="h-full rounded-full bg-brand-500 transition-[width] duration-300"
+            style={{ width: `${questions.length === 0 ? 0 : (answeredIndexes.size / questions.length) * 100}%` }}
+          />
+        </div>
+        {questions.length > 0 && unansweredIndexes.length === 0 && (
+          <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-green-600">
+            <PartyPopper className="h-4 w-4" aria-hidden="true" />
+            All done! Ready to submit.
+          </p>
+        )}
       </div>
 
       <div className="mb-4">

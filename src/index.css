@@ -156,6 +156,25 @@ h4 {
     opacity: 1;
   }
 }
+/*
+ * A quiz answer's letter badge pops as it turns into a tick (QuestionCard).
+ * The badge is keyed on its selected state, so it remounts and replays on
+ * every pick. Neutralised by the prefers-reduced-motion block above.
+ */
+@keyframes quiz-option-pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.quiz-option-pop {
+  animation: quiz-option-pop 220ms ease-out;
+}
 .drawer-panel {
   animation: drawer-slide-in 240ms cubic-bezier(0.32, 0.72, 0, 1);
 }
