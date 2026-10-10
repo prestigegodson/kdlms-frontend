@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { RichContent } from "@/components/richText/RichContent";
 import { Spinner } from "@/components/ui/Spinner";
+import { usePauseWhenHidden } from "@/hooks/usePauseWhenHidden";
 import type { LearningResourceType } from "@/api/learning";
 
 //const DOWNLOAD_LINK_CLASSES = "inline-flex items-center justify-center gap-1.5 rounded-control border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 mobile:min-h-11";
@@ -90,19 +91,42 @@ export function ResourceViewer({
         />
       )}
 
-      {resourceType === "YOUTUBE" && youtubeVideoId && (
-        <div className="aspect-video w-full overflow-hidden rounded-card border border-slate-200">
-          <iframe
-            className="h-full w-full"
-            src={`https://www.youtube-nocookie.com/embed/${youtubeVideoId}`}
-            title={title}
-            sandbox="allow-scripts allow-same-origin allow-presentation"
-            referrerPolicy="strict-origin-when-cross-origin"
-            allowFullScreen
-          />
-        </div>
-      )}
+      {resourceType === "YOUTUBE" && youtubeVideoId && <YouTubeEmbed videoId={youtubeVideoId} title={title} />}
     </>
+  );
+}
+
+const YOUTUBE_ORIGIN = "https://www.youtube-nocookie.com";
+
+/**
+ * The `YOUTUBE` payload's embed. `enablejsapi=1` lets it take a `pauseVideo` command over
+ * `postMessage`, sent when the tab is hidden. Window blur is deliberately ignored - clicking into
+ * the iframe itself blurs this window, so it would pause the video the moment play is pressed.
+ */
+function YouTubeEmbed({ videoId, title }: { videoId: string; title: string }) {
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  usePauseWhenHidden(
+    () => {
+      iframeRef.current?.contentWindow?.postMessage(
+        JSON.stringify({ event: "command", func: "pauseVideo", args: [] }),
+        YOUTUBE_ORIGIN,
+      );
+    },
+    { onBlur: false },
+  );
+
+  return (
+    <div className="aspect-video w-full overflow-hidden rounded-card border border-slate-200">
+      <iframe
+        ref={iframeRef}
+        className="h-full w-full"
+        src={`${YOUTUBE_ORIGIN}/embed/${videoId}?enablejsapi=1`}
+        title={title}
+        sandbox="allow-scripts allow-same-origin allow-presentation"
+        referrerPolicy="strict-origin-when-cross-origin"
+        allowFullScreen
+      />
+    </div>
   );
 }
 
@@ -120,6 +144,9 @@ export function ResourceViewer({
  * <p>
  * `onLoadedMetadata`/`onTimeUpdate` are the student caller's resume-seek and throttled position
  * autosave hooks - both optional, since the staff preview has no interaction row to save against.
+ * <p>
+ * Playback pauses when the tab is hidden or the window loses focus (`usePauseWhenHidden`); it
+ * never resumes by itself.
  */
 function MediaPlayer({
   resourceType,
@@ -153,6 +180,13 @@ function MediaPlayer({
   function setMediaRef(node: HTMLMediaElement | null) {
     mediaRef.current = node;
   }
+  // Switching tab or app pauses playback; pausing fires `timeupdate`, so the position is saved.
+  usePauseWhenHidden(() => {
+    const media = mediaRef.current;
+    if (media && !media.paused) {
+      media.pause();
+    }
+  });
 
   if (error || (url !== null && failedUrl === url)) {
     return <p className="text-sm text-red-600">Failed to load this file. Please try again.</p>;
