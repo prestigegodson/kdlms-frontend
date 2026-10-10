@@ -104,7 +104,8 @@ export function RichTextField({
         attributes: {
           ...(id ? { id } : {}),
           ...(ariaLabel ? { "aria-label": ariaLabel } : {}),
-          class: "rich-text-content min-h-11 px-3 py-2 text-sm text-slate-900 focus:outline-none mobile:text-base",
+          // A multi-line field opens ten lines tall (`lh` tracks the responsive font size; +1rem for py-2).
+          class: `rich-text-content ${singleLine ? "min-h-11" : "min-h-[calc(10lh+1rem)]"} px-3 py-2 text-sm text-slate-900 focus:outline-none mobile:text-base`,
         },
         handleKeyDown: singleLine ? (_view, event) => event.key === "Enter" : undefined,
       },
