@@ -8,7 +8,7 @@ import { richTextIsBlank } from "@/components/richText/richTextIsBlank";
  */
 
 export const EMPTY_CONTENT: LessonNoteContentView = {
-  mode: "STRUCTURED",
+  mode: "UPLOAD",
   body: "",
   subTopic: "",
   duration: "",

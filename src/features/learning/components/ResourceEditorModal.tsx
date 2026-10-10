@@ -25,7 +25,8 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { RichTextField } from "@/components/richText/RichTextField";
 import { type GalleryLoader, GalleryPickerModal } from "@/features/learning/components/GalleryPickerModal";
-import { groupTargetKey, parseTargetKey, targetKeyOf } from "@/features/academics/subjectTarget";
+import { SubjectTargetOptions } from "@/features/academics/components/SubjectTargetOptions";
+import { parseTargetKey, targetKeyOf } from "@/features/academics/subjectTarget";
 import { formatDuration } from "@/utils/duration";
 import { localDateToEndInstant, splitInstant, toInstant } from "@/utils/date";
 
@@ -383,33 +384,7 @@ export function ResourceEditorModal({
                 value={targetKey}
                 onChange={(event) => setTargetKey(event.target.value)}
               >
-                {subjectGroups.length === 0 ? (
-                  subjects.map((subject) => (
-                    <option key={subject.subjectId} value={subject.subjectId}>
-                      {subject.subjectName}
-                    </option>
-                  ))
-                ) : (
-                  <>
-                    <optgroup label="Subjects">
-                      {subjects.map((subject) => (
-                        <option key={subject.subjectId} value={subject.subjectId}>
-                          {subject.subjectName}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Subject groups">
-                      {subjectGroups.map((group) => (
-                        <option
-                          key={group.subjectGroupId}
-                          value={groupTargetKey(group.subjectGroupId)}
-                        >
-                          {group.subjectGroupName}
-                        </option>
-                      ))}
-                    </optgroup>
-                  </>
-                )}
+                <SubjectTargetOptions subjects={subjects} subjectGroups={subjectGroups} placeholder={null} />
               </Select>
             </FormField>
           )}

@@ -3,12 +3,16 @@ import { type AcademicSessionView, listSessions, listTerms, type TermView } from
 import { FormField } from "@/components/ui/FormField";
 import { Select } from "@/components/ui/Select";
 import { useFilterChip } from "@/components/ui/StickySubHeader";
+import { SubjectTargetOptions } from "@/features/academics/components/SubjectTargetOptions";
 
 export interface SubjectOption {
   id: string;
   name: string;
   /** Shown alongside the subject name where the caller's subjects span several levels (the admin catalogue). */
   levelName?: string;
+  /** The subject's own group - the picker lists subjects under their group's heading. */
+  subjectGroupId?: string | null;
+  subjectGroupName?: string | null;
 }
 
 interface SubjectTermPickerProps {
@@ -77,13 +81,16 @@ export function SubjectTermPicker({
           value={subjectId}
           onChange={(event) => onSubjectChange(event.target.value)}
         >
-          <option value="">Select a {itemKey}…</option>
-          {subjects.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.name}
-              {option.levelName ? ` (${option.levelName})` : ""}
-            </option>
-          ))}
+          <SubjectTargetOptions
+            placeholder={`Select a ${itemKey}…`}
+            subjects={subjects.map((option) => ({
+              subjectId: option.id,
+              subjectName: option.name,
+              levelName: option.levelName,
+              subjectGroupId: option.subjectGroupId,
+              subjectGroupName: option.subjectGroupName,
+            }))}
+          />
         </Select>
       </FormField>
       <FormField label="Session" htmlFor="lesson-note-picker-session">

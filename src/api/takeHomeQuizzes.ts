@@ -125,6 +125,9 @@ export interface PublishReadinessView {
 export interface AuthorableSubjectView {
   subjectId: string;
   subjectName: string;
+  /** The subject's own group - absent (null) when it's ungrouped. */
+  subjectGroupId?: string | null;
+  subjectGroupName?: string | null;
 }
 
 /** Mirrors backend takehomequiz.application.port.in.AuthorableSubjectGroupView. */

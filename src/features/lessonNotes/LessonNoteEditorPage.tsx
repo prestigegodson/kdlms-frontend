@@ -1,4 +1,4 @@
-import { Eye, FileText, FileUp, ListTree, Pencil, Sparkles, Wand2 } from "lucide-react";
+import { Eye, FileText, FileUp, Pencil, Sparkles, Wand2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { can } from "@/auth/permissions";
@@ -471,28 +471,18 @@ export function LessonNoteEditorPage() {
           aria-label="Lesson note format"
           className="inline-flex rounded-control border border-slate-300 bg-white p-0.5"
         >
-          {!isClassNote && (
-            <Button
-              type="button"
-              variant={effectiveMode === "STRUCTURED" ? "secondary" : "ghost"}
-              size="sm"
-              aria-pressed={effectiveMode === "STRUCTURED"}
-              onClick={() => setContent({ ...content, mode: "STRUCTURED" })}
-            >
-              <ListTree className="h-4 w-4" aria-hidden="true" />
-              Structured form
-            </Button>
-          )}
-          <Button
-            type="button"
-            variant={documentMode ? "secondary" : "ghost"}
-            size="sm"
-            aria-pressed={documentMode}
-            onClick={() => setContent({ ...content, mode: "DOCUMENT" })}
-          >
-            <FileText className="h-4 w-4" aria-hidden="true" />
-            Free-form document
-          </Button>
+          {/*{!isClassNote && (*/}
+          {/*  <Button*/}
+          {/*    type="button"*/}
+          {/*    variant={effectiveMode === "STRUCTURED" ? "secondary" : "ghost"}*/}
+          {/*    size="sm"*/}
+          {/*    aria-pressed={effectiveMode === "STRUCTURED"}*/}
+          {/*    onClick={() => setContent({ ...content, mode: "STRUCTURED" })}*/}
+          {/*  >*/}
+          {/*    <ListTree className="h-4 w-4" aria-hidden="true" />*/}
+          {/*    Structured form 2*/}
+          {/*  </Button>*/}
+          {/*)}*/}
           <Button
             type="button"
             variant={uploadMode ? "secondary" : "ghost"}
@@ -502,6 +492,16 @@ export function LessonNoteEditorPage() {
           >
             <FileUp className="h-4 w-4" aria-hidden="true" />
             Upload document
+          </Button>
+          <Button
+            type="button"
+            variant={documentMode ? "secondary" : "ghost"}
+            size="sm"
+            aria-pressed={documentMode}
+            onClick={() => setContent({ ...content, mode: "DOCUMENT" })}
+          >
+            <FileText className="h-4 w-4" aria-hidden="true" />
+            Free-form document
           </Button>
         </div>
       )}
@@ -550,7 +550,12 @@ export function LessonNoteEditorPage() {
                 <Alert variant="info">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span>Your structured content hasn't been copied into this document yet.</span>
-                    <Button type="button" variant="secondary" size="sm" onClick={convertStructuredToDocument}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={convertStructuredToDocument}
+                    >
                       <Wand2 className="h-4 w-4" aria-hidden="true" />
                       Convert now
                     </Button>
@@ -615,7 +620,11 @@ export function LessonNoteEditorPage() {
               subjectId,
               termId,
               weekNumber,
-              { topic: input.topic, classHint: input.hint, extraInstructions: input.extraInstructions },
+              {
+                topic: input.topic,
+                classHint: input.hint,
+                extraInstructions: input.extraInstructions,
+              },
               handlers,
               { signal, branchId },
             )

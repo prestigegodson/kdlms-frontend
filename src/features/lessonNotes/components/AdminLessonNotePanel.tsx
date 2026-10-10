@@ -211,6 +211,8 @@ function BrowseBySubjectPanel() {
     id: subject.id,
     name: subject.name,
     levelName: levelNameOf(subject.levelId),
+    subjectGroupId: subject.subjectGroupId,
+    subjectGroupName: subject.subjectGroupName,
   }));
 
   return (

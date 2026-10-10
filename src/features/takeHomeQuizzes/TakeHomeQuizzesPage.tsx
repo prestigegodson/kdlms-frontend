@@ -5,6 +5,7 @@ import {
   getAuthorableSubjects,
   listTakeHomeQuizzes,
   type AuthorableSubjectGroupView,
+  type AuthorableSubjectView,
   type TakeHomeQuizSummaryView,
 } from "@/api/takeHomeQuizzes";
 import { ApiError } from "@/api/client";
@@ -66,7 +67,7 @@ export function TakeHomeQuizzesPage() {
   // A target key (`academics/subjectTarget.ts`): a subject's bare id, or `group:<id>` for a subject group.
   const [targetKey, setTargetKey] = useState(searchParams.get("subjectId") ?? "");
   const target = parseTargetKey(targetKey);
-  const [subjects, setSubjects] = useState<{ subjectId: string; subjectName: string }[] | null>(null);
+  const [subjects, setSubjects] = useState<AuthorableSubjectView[] | null>(null);
   const [subjectGroups, setSubjectGroups] = useState<AuthorableSubjectGroupView[]>([]);
 
   const [pageIndex, setPageIndex] = useState(0);

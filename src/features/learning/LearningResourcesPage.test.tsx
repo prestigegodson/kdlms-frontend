@@ -211,7 +211,7 @@ describe("LearningResourcesPage", () => {
     const user = userEvent.setup();
     await user.selectOptions(await screen.findByLabelText("Class"), "JSS 1A");
     const subjectPicker = await screen.findByLabelText("Subject");
-    expect(await within(subjectPicker).findByRole("group", { name: "Subject groups" })).toBeInTheDocument();
+    expect(await within(subjectPicker).findByRole("option", { name: "Sciences" })).toHaveValue("group:group-1");
     await user.selectOptions(subjectPicker, "Sciences");
 
     const row = (await screen.findByText("Lab safety")).closest("tr") as HTMLElement;

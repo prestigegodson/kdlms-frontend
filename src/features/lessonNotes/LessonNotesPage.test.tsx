@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -219,6 +219,28 @@ describe("LessonNotesPage", () => {
       // the moment the (auto-selected) current term resolves alongside it.
       await vi.waitFor(() => expect(lessonNotesApi.getWeekGrid).toHaveBeenCalledWith("subject-1", "term-1"));
       expect(await screen.findByLabelText("Subject")).toHaveValue("subject-1");
+    });
+
+    it("lists subjects under their group's non-selectable heading, ungrouped ones trailing", async () => {
+      vi.mocked(lessonNotesApi.getMyLessonNoteSubjects).mockResolvedValue([
+        { levelId: "level-1", levelName: "Primary", subjectId: "subject-1", subjectName: "Mathematics", authorable: true },
+        {
+          levelId: "level-1",
+          levelName: "Primary",
+          subjectId: "subject-2",
+          subjectName: "Basic Science",
+          subjectGroupId: "group-1",
+          subjectGroupName: "Sciences",
+          authorable: true,
+        },
+      ]);
+      renderAs("TEACHER");
+
+      const picker = await screen.findByLabelText("Subject");
+      const group = await within(picker).findByRole("group", { name: "Sciences (Primary)" });
+      expect(within(group).getByRole("option", { name: "Basic Science (Primary)" })).toBeInTheDocument();
+      expect(within(picker).queryByRole("option", { name: "Sciences (Primary)" })).not.toBeInTheDocument();
+      expect(within(picker).getByRole("group", { name: "Other subjects" })).toHaveTextContent("Mathematics (Primary)");
     });
 
     it("shows a class teacher's subject that has a subject teacher read-only, with no copy trigger", async () => {

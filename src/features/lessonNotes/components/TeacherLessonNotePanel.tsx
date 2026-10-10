@@ -85,6 +85,8 @@ export function TeacherLessonNotePanel({ initialSubjectId }: TeacherLessonNotePa
     id: subject.subjectId,
     name: subject.subjectName,
     levelName: subject.levelName,
+    subjectGroupId: subject.subjectGroupId,
+    subjectGroupName: subject.subjectGroupName,
   });
   const subjectOptions = (subjects ?? []).map(toOption);
   const authorableSubjectOptions = (subjects ?? []).filter((subject) => subject.authorable).map(toOption);
@@ -112,8 +114,8 @@ export function TeacherLessonNotePanel({ initialSubjectId }: TeacherLessonNotePa
           value={view}
           onChange={setView}
           items={[
-            { value: "subject", label: "By subject" },
             { value: "class", label: "By class" },
+            { value: "subject", label: "By subject" },
           ]}
         />
       )}
@@ -164,7 +166,12 @@ export function TeacherLessonNotePanel({ initialSubjectId }: TeacherLessonNotePa
           )}
 
           {weeks && weeks.length > 0 && (
-            <WeekGridTable weeks={weeks} subjectId={subjectId} termId={termId} authorable={selectedAuthorable} />
+            <WeekGridTable
+              weeks={weeks}
+              subjectId={subjectId}
+              termId={termId}
+              authorable={selectedAuthorable}
+            />
           )}
           {weeks && weeks.length === 0 && (
             <EmptyState

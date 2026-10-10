@@ -10,6 +10,9 @@ export interface LevelSubjectView {
   levelName: string;
   subjectId: string;
   subjectName: string;
+  /** The subject's own group - absent (null) when it's ungrouped. */
+  subjectGroupId?: string | null;
+  subjectGroupName?: string | null;
   /** False for a class teacher's subject that already has a subject teacher - its notes are read-only to them. */
   authorable: boolean;
 }

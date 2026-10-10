@@ -8,6 +8,9 @@ export type LearningResourceStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 export interface AuthorableSubjectView {
   subjectId: string;
   subjectName: string;
+  /** The subject's own group - absent (null) when it's ungrouped. */
+  subjectGroupId?: string | null;
+  subjectGroupName?: string | null;
 }
 
 /** Mirrors backend learning.application.port.in.AuthorableSubjectGroupView (Phase 35M). */

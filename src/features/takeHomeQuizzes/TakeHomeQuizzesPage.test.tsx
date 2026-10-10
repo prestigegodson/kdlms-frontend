@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -212,7 +212,8 @@ describe("TakeHomeQuizzesPage", () => {
       { id: "term-1", schoolId: "school-1", sessionId: "session-1", termNumber: 1, name: "First Term", startDate: "2026-09-01", endDate: "2026-12-01", current: true },
     ]);
     vi.mocked(takeHomeQuizzesApi.getAuthorableSubjects).mockResolvedValue([
-      { subjectId: "subject-1", subjectName: "Basic Science" },
+      { subjectId: "subject-2", subjectName: "Mathematics" },
+      { subjectId: "subject-1", subjectName: "Basic Science", subjectGroupId: "group-1", subjectGroupName: "Sciences" },
     ]);
     vi.mocked(takeHomeQuizzesApi.getAuthorableSubjectGroups).mockResolvedValue([
       { subjectGroupId: "group-1", subjectGroupName: "Sciences" },
@@ -246,8 +247,15 @@ describe("TakeHomeQuizzesPage", () => {
     renderAs("TEACHER", "/?classId=class-1");
     const user = userEvent.setup();
     const subject = await screen.findByLabelText("Subject");
-    expect(await screen.findByRole("group", { name: "Subject groups" })).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "Subjects" })).toBeInTheDocument();
+    // The group is itself an option, its subjects indented under it; ungrouped subjects trail.
+    await within(subject).findByRole("option", { name: "Sciences" });
+    expect(within(subject).getAllByRole("option").map((option) => option.textContent?.trim())).toEqual([
+      "Select a subject…",
+      "Sciences",
+      "Basic Science",
+      "Mathematics",
+    ]);
+    expect(within(subject).getByRole("group", { name: "Other subjects" })).toHaveTextContent("Mathematics");
 
     await user.selectOptions(subject, "Sciences");
 
