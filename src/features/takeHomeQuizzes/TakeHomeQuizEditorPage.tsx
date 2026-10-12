@@ -28,6 +28,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { targetKeyOf } from "@/features/academics/subjectTarget";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { Textarea } from "@/components/ui/Textarea";
@@ -296,11 +297,20 @@ export function TakeHomeQuizEditorPage() {
     }
   }
 
+  // Back to the list filtered to this quiz's class (and, when we came from the list's own
+  // filters, its subject) - `TakeHomeQuizzesPage` seeds its filters from these params.
+  const listClassId = classId || quiz?.classId || "";
+  const listTargetKey = targetKeyOf({ subjectId: subjectId || null, subjectGroupId: subjectGroupId || null });
+  const listParams = new URLSearchParams();
+  if (listClassId) listParams.set("classId", listClassId);
+  if (listClassId && listTargetKey) listParams.set("subjectId", listTargetKey);
+  const listPath = `/school/take-home-quizzes${listParams.size ? `?${listParams.toString()}` : ""}`;
+
   async function handleDelete() {
     if (!quiz) return;
     await deleteTakeHomeQuiz(quiz.id);
     setConfirmDelete(false);
-    navigate("/school/take-home-quizzes");
+    navigate(listPath);
   }
 
   /** The modal itself stays open to show the outcome - closed only when the user dismisses it. */
@@ -324,7 +334,8 @@ export function TakeHomeQuizEditorPage() {
       <PageHeader
         title={isNew ? "New CBT/Quiz" : form.title || "CBT/Quiz"}
         description={isNew ? "Set up a new CBT/Quiz for this class." : undefined}
-        backTo="/school/take-home-quizzes"
+        backTo={listPath}
+        backLabel="Back to CBT/Quizzes"
         actions={
           quiz && (
             <div className="flex flex-wrap items-center gap-2">

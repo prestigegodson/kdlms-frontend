@@ -21,8 +21,8 @@ const INDENT = "    ";
  * subject listed under its own group (`groupSubjects`). A group the caller may target is itself an
  * option, its subjects indented after it; any other group is a non-selectable `<optgroup>` heading.
  * Ungrouped subjects trail under "Other subjects" - or, when nothing is grouped, the list stays flat.
- * Shared by the Learning resources and CBT/Quizzes pages, the resource editor, and the lesson-notes
- * subject picker.
+ * Shared by the Learning resources, CBT/Quizzes and teacher Assessments pages, the resource editor,
+ * and the lesson-notes subject picker.
  */
 export function SubjectTargetOptions({
   subjects,

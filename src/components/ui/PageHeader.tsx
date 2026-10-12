@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { useId, useLayoutEffect } from "react";
+import { Link } from "react-router";
+import { ArrowLeft } from "lucide-react";
 import { useAppBarStore } from "@/stores/appBarStore";
 
 interface PageHeaderProps {
@@ -13,6 +15,12 @@ interface PageHeaderProps {
    * enough.
    */
   backTo?: string;
+  /**
+   * Opt-in: also shows `backTo` as a "← label" link above the title at
+   * `lg` and above, for detail pages whose way back isn't in the sidebar.
+   * Ignored without `backTo`.
+   */
+  backLabel?: string;
 }
 
 /**
@@ -28,7 +36,7 @@ interface PageHeaderProps {
  * below `lg`, visible at `lg`+) rather than being duplicated, since the app
  * bar's own title is `aria-hidden`.
  */
-export function PageHeader({ title, description, actions, backTo }: PageHeaderProps) {
+export function PageHeader({ title, description, actions, backTo, backLabel }: PageHeaderProps) {
   const ownerId = useId();
   const claim = useAppBarStore((state) => state.claim);
   const release = useAppBarStore((state) => state.release);
@@ -49,6 +57,14 @@ export function PageHeader({ title, description, actions, backTo }: PageHeaderPr
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div data-tour="page-header">
+        {backTo && backLabel && (
+          <Link
+            to={backTo}
+            className="mb-2 hidden items-center gap-1 text-sm text-slate-600 hover:text-slate-900 lg:inline-flex"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> {backLabel}
+          </Link>
+        )}
         <h1 className="sr-only font-display text-3xl font-medium text-slate-900 lg:not-sr-only">
           {title}
         </h1>

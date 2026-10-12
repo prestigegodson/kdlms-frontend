@@ -105,6 +105,7 @@ export function TakeHomeQuizResultsPage() {
         title={quiz.title}
         description={`${quiz.subjectName} · ${quiz.className} · ${results.totalPoints} points`}
         backTo={`/school/take-home-quizzes/${quiz.id}`}
+        backLabel="Back to quiz"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {canPublishResults && quiz.actions.canPublishResults && (

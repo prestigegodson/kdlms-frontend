@@ -114,6 +114,7 @@ export function CreatorQuizResultsPage() {
         title={quiz.title}
         description={`${quiz.className} · ${results.totalPoints} points`}
         backTo={`/creator/quizzes/${classId}/${quiz.id}`}
+        backLabel="Back to quiz"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {quiz.actions.canPublishResults && quiz.status === "PUBLISHED" && (

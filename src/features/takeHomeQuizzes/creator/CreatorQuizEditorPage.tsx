@@ -219,6 +219,7 @@ export function CreatorQuizEditorPage() {
         title={isNew ? "New quiz" : form.title || "Quiz"}
         description={quiz ? quiz.className : "Set up a new auto-marked quiz for this class."}
         backTo={listPath}
+        backLabel="Back to quizzes"
         actions={
           quiz && (
             <div className="flex flex-wrap items-center gap-2">

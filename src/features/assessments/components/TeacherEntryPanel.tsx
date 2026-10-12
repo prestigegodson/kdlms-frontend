@@ -9,6 +9,7 @@ import { FormField } from "@/components/ui/FormField";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader, useFilterChip } from "@/components/ui/StickySubHeader";
+import { SubjectTargetOptions } from "@/features/academics/components/SubjectTargetOptions";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
 import { RatingEntryGrid } from "@/features/assessments/components/RatingEntryGrid";
 import { SaveOutcomeList } from "@/features/assessments/components/SaveOutcomeList";
@@ -115,12 +116,14 @@ export function TeacherEntryPanel({ initialClassId, initialSubjectId }: TeacherE
             {classId && (
               <FormField label="Subject" htmlFor="entry-subject">
                 <Select id="entry-subject" value={subjectId} onChange={(event) => setSubjectId(event.target.value)}>
-                  <option value="">Select a subject…</option>
-                  {(subjects ?? []).map((subject) => (
-                    <option key={subject.id} value={subject.id}>
-                      {subject.name}
-                    </option>
-                  ))}
+                  <SubjectTargetOptions
+                    subjects={(subjects ?? []).map((subject) => ({
+                      subjectId: subject.id,
+                      subjectName: subject.name,
+                      subjectGroupId: subject.subjectGroupId,
+                      subjectGroupName: subject.subjectGroupName,
+                    }))}
+                  />
                 </Select>
               </FormField>
             )}
