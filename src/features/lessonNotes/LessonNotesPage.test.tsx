@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { openSubjectPicker } from "@/test/subjectPicker";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as lessonNotesApi from "@/api/lessonNotes";
@@ -218,7 +219,7 @@ describe("LessonNotesPage", () => {
       // No manual subject selection - it seeds from the query string, and the week grid fetches
       // the moment the (auto-selected) current term resolves alongside it.
       await vi.waitFor(() => expect(lessonNotesApi.getWeekGrid).toHaveBeenCalledWith("subject-1", "term-1"));
-      expect(await screen.findByLabelText("Subject")).toHaveValue("subject-1");
+      expect(await screen.findByLabelText("Subject")).toHaveValue("Mathematics (Primary)");
     });
 
     it("lists subjects under their group's non-selectable heading, ungrouped ones trailing", async () => {
@@ -236,7 +237,7 @@ describe("LessonNotesPage", () => {
       ]);
       renderAs("TEACHER");
 
-      const picker = await screen.findByLabelText("Subject");
+      const picker = await openSubjectPicker(userEvent.setup());
       const group = await within(picker).findByRole("group", { name: "Sciences (Primary)" });
       expect(within(group).getByRole("option", { name: "Basic Science (Primary)" })).toBeInTheDocument();
       expect(within(picker).queryByRole("option", { name: "Sciences (Primary)" })).not.toBeInTheDocument();

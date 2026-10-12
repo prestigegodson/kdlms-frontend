@@ -20,11 +20,10 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Pagination } from "@/components/ui/Pagination";
-import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
-import { SubjectTargetOptions } from "@/features/academics/components/SubjectTargetOptions";
+import { SubjectTargetSelect } from "@/features/academics/components/SubjectTargetSelect";
 import { parseTargetKey } from "@/features/academics/subjectTarget";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
 import { quizStatusLabel, quizStatusVariant } from "@/features/takeHomeQuizzes/takeHomeQuizStatus";
@@ -177,13 +176,13 @@ export function TakeHomeQuizzesPage() {
             <ClassTermPicker classes={classOptions} classId={classId} onClassChange={setClassId} termId={termId} onTermChange={setTermId}>
               {classId && (
                 <FormField label="Subject" htmlFor="take-home-quiz-subject">
-                  <Select
+                  <SubjectTargetSelect
                     id="take-home-quiz-subject"
                     value={targetKey}
-                    onChange={(event) => setTargetKey(event.target.value)}
-                  >
-                    <SubjectTargetOptions subjects={subjects ?? []} subjectGroups={subjectGroups} />
-                  </Select>
+                    onChange={setTargetKey}
+                    subjects={subjects ?? []}
+                    subjectGroups={subjectGroups}
+                  />
                 </FormField>
               )}
             </ClassTermPicker>

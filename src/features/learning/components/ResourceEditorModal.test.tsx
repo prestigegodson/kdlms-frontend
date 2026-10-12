@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { pickSubject } from "@/test/subjectPicker";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as filesApi from "@/api/files";
 import * as learningApi from "@/api/learning";
@@ -112,7 +113,7 @@ describe("ResourceEditorModal", () => {
       />,
     );
     const user = userEvent.setup();
-    await user.selectOptions(screen.getByLabelText("Subject"), "Sciences");
+    await pickSubject(user, "Sciences");
     await user.selectOptions(screen.getByLabelText("Type"), "YOUTUBE");
     await user.type(screen.getByLabelText("Title"), "Lab safety");
     await user.type(screen.getByLabelText("YouTube URL"), "https://youtu.be/dQw4w9WgXcQ");

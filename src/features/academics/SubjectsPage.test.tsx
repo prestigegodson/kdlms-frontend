@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -670,6 +670,45 @@ describe("SubjectsPage", () => {
 
       expect(screen.getByLabelText("Classroom")).toHaveValue("");
       expect(screen.getAllByRole("row").slice(1)).toHaveLength(3);
+    });
+
+    it("narrows rows to subjects whose name matches the search, ignoring case", async () => {
+      const user = userEvent.setup();
+      renderAsTeacher();
+      await screen.findByText("Physics");
+
+      await user.type(screen.getByLabelText("Search"), "phys");
+
+      await waitFor(() => expect(screen.queryByText("Mathematics")).not.toBeInTheDocument());
+      const rows = screen.getAllByRole("row").slice(1);
+      expect(rows).toHaveLength(1);
+      expect(within(rows[0]).getByText("Physics")).toBeInTheDocument();
+    });
+
+    it("combines the search with the classroom filter", async () => {
+      const user = userEvent.setup();
+      renderAsTeacher();
+      await screen.findByText("Physics");
+
+      await user.type(screen.getByLabelText("Search"), "math");
+      await waitFor(() => expect(screen.queryByText("Physics")).not.toBeInTheDocument());
+      expect(screen.getAllByRole("row").slice(1)).toHaveLength(2);
+
+      await user.selectOptions(screen.getByLabelText("Classroom"), "class-2");
+
+      const rows = screen.getAllByRole("row").slice(1);
+      expect(rows).toHaveLength(1);
+      expect(within(rows[0]).getByText("Little Star 2")).toBeInTheDocument();
+    });
+
+    it("shows the no-match state when no subject matches the search", async () => {
+      const user = userEvent.setup();
+      renderAsTeacher();
+      await screen.findByText("Physics");
+
+      await user.type(screen.getByLabelText("Search"), "chemistry");
+
+      expect(await screen.findByText("No subjects match these filters")).toBeInTheDocument();
     });
   });
 

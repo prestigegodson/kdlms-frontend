@@ -6,10 +6,9 @@ import type { SubjectView } from "@/api/subjects";
 import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField } from "@/components/ui/FormField";
-import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader, useFilterChip } from "@/components/ui/StickySubHeader";
-import { SubjectTargetOptions } from "@/features/academics/components/SubjectTargetOptions";
+import { SubjectTargetSelect } from "@/features/academics/components/SubjectTargetSelect";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
 import { RatingEntryGrid } from "@/features/assessments/components/RatingEntryGrid";
 import { SaveOutcomeList } from "@/features/assessments/components/SaveOutcomeList";
@@ -115,16 +114,17 @@ export function TeacherEntryPanel({ initialClassId, initialSubjectId }: TeacherE
           <ClassTermPicker classes={classOptions} classId={classId} onClassChange={setClassId} termId={termId} onTermChange={setTermId}>
             {classId && (
               <FormField label="Subject" htmlFor="entry-subject">
-                <Select id="entry-subject" value={subjectId} onChange={(event) => setSubjectId(event.target.value)}>
-                  <SubjectTargetOptions
-                    subjects={(subjects ?? []).map((subject) => ({
-                      subjectId: subject.id,
-                      subjectName: subject.name,
-                      subjectGroupId: subject.subjectGroupId,
-                      subjectGroupName: subject.subjectGroupName,
-                    }))}
-                  />
-                </Select>
+                <SubjectTargetSelect
+                  id="entry-subject"
+                  value={subjectId}
+                  onChange={setSubjectId}
+                  subjects={(subjects ?? []).map((subject) => ({
+                    subjectId: subject.id,
+                    subjectName: subject.name,
+                    subjectGroupId: subject.subjectGroupId,
+                    subjectGroupName: subject.subjectGroupName,
+                  }))}
+                />
               </FormField>
             )}
           </ClassTermPicker>

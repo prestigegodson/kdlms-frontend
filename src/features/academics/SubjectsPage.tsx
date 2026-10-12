@@ -32,6 +32,7 @@ import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { SearchInput } from "@/components/ui/SearchInput";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
@@ -109,6 +110,7 @@ function MySubjects() {
   // "" means all. Class = level, classroom = class, matching the table's column headers.
   const [levelFilter, setLevelFilter] = useState("");
   const [classFilter, setClassFilter] = useState("");
+  const [subjectQuery, setSubjectQuery] = useState("");
 
   useEffect(() => {
     listMySubjects()
@@ -203,9 +205,12 @@ function MySubjects() {
       .filter((assignment) => !levelFilter || assignment.levelId === levelFilter)
       .map((assignment) => ({ id: assignment.classId, name: assignment.className })),
   );
+  const normalizedQuery = subjectQuery.trim().toLowerCase();
   const filtered = assignments.filter(
     (assignment) =>
-      (!levelFilter || assignment.levelId === levelFilter) && (!classFilter || assignment.classId === classFilter),
+      (!levelFilter || assignment.levelId === levelFilter) &&
+      (!classFilter || assignment.classId === classFilter) &&
+      (!normalizedQuery || assignment.subjectName.toLowerCase().includes(normalizedQuery)),
   );
 
   function changeLevel(nextLevelId: string) {
@@ -249,6 +254,19 @@ function MySubjects() {
       )}
       {state.kind === "loaded" && state.assignments.length > 0 && (
         <StickySubHeader>
+          <FormField
+            label="Search"
+            htmlFor="my-subjects-search"
+            className="min-w-0 flex-1 lg:max-w-xs"
+            labelClassName="sr-only lg:not-sr-only"
+          >
+            <SearchInput
+              id="my-subjects-search"
+              value={subjectQuery}
+              onChange={setSubjectQuery}
+              placeholder="Search subject"
+            />
+          </FormField>
           <FormField
             label="Class"
             htmlFor="my-subjects-level-filter"

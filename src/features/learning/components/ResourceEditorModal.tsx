@@ -25,7 +25,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { RichTextField } from "@/components/richText/RichTextField";
 import { type GalleryLoader, GalleryPickerModal } from "@/features/learning/components/GalleryPickerModal";
-import { SubjectTargetOptions } from "@/features/academics/components/SubjectTargetOptions";
+import { SubjectTargetSelect } from "@/features/academics/components/SubjectTargetSelect";
 import { parseTargetKey, targetKeyOf } from "@/features/academics/subjectTarget";
 import { formatDuration } from "@/utils/duration";
 import { localDateToEndInstant, splitInstant, toInstant } from "@/utils/date";
@@ -379,13 +379,14 @@ export function ResourceEditorModal({
 
           {!isEdit && subjects.length + subjectGroups.length > 1 && (
             <FormField label="Subject" htmlFor="resource-subject">
-              <Select
+              <SubjectTargetSelect
                 id="resource-subject"
                 value={targetKey}
-                onChange={(event) => setTargetKey(event.target.value)}
-              >
-                <SubjectTargetOptions subjects={subjects} subjectGroups={subjectGroups} placeholder={null} />
-              </Select>
+                onChange={setTargetKey}
+                subjects={subjects}
+                subjectGroups={subjectGroups}
+                placeholder={null}
+              />
             </FormField>
           )}
 

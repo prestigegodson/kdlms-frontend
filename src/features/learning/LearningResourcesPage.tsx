@@ -43,7 +43,7 @@ import {
   LEARNING_RESOURCE_STATUS_VARIANT,
   learningResourceAvailabilityBadge,
 } from "@/features/learning/learningResourceStatus";
-import { SubjectTargetOptions } from "@/features/academics/components/SubjectTargetOptions";
+import { SubjectTargetSelect } from "@/features/academics/components/SubjectTargetSelect";
 import { parseTargetKey } from "@/features/academics/subjectTarget";
 import { useIsLevelHead } from "@/features/levelHeads/useLevelHead";
 import { useAuthStore } from "@/stores/authStore";
@@ -287,13 +287,13 @@ export function LearningResourcesPage() {
             <ClassTermPicker classes={classOptions} classId={classId} onClassChange={setClassId} termId={termId} onTermChange={setTermId}>
               {classId && (
                 <FormField label="Subject" htmlFor="learning-resource-subject">
-                  <Select
+                  <SubjectTargetSelect
                     id="learning-resource-subject"
                     value={targetKey}
-                    onChange={(event) => setTargetKey(event.target.value)}
-                  >
-                    <SubjectTargetOptions subjects={subjects ?? []} subjectGroups={subjectGroups} />
-                  </Select>
+                    onChange={setTargetKey}
+                    subjects={subjects ?? []}
+                    subjectGroups={subjectGroups}
+                  />
                 </FormField>
               )}
               <FormField label="Status" htmlFor="learning-resource-status">

@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { openSubjectPicker } from "@/test/subjectPicker";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as classesApi from "@/api/classes";
@@ -192,7 +193,7 @@ describe("TakeHomeQuizzesPage", () => {
       ),
     );
     expect(await screen.findByLabelText("Class")).toHaveValue("class-1");
-    expect(screen.getByLabelText("Subject")).toHaveValue("subject-1");
+    expect(screen.getByLabelText("Subject")).toHaveValue("Mathematics");
   });
 
   it("offers the class's subject groups above its subjects and filters by the chosen group", async () => {
@@ -246,7 +247,7 @@ describe("TakeHomeQuizzesPage", () => {
 
     renderAs("TEACHER", "/?classId=class-1");
     const user = userEvent.setup();
-    const subject = await screen.findByLabelText("Subject");
+    const subject = await openSubjectPicker(user);
     // The group is itself an option, its subjects indented under it; ungrouped subjects trail.
     await within(subject).findByRole("option", { name: "Sciences" });
     expect(within(subject).getAllByRole("option").map((option) => option.textContent?.trim())).toEqual([
@@ -257,7 +258,7 @@ describe("TakeHomeQuizzesPage", () => {
     ]);
     expect(within(subject).getByRole("group", { name: "Other subjects" })).toHaveTextContent("Mathematics");
 
-    await user.selectOptions(subject, "Sciences");
+    await user.click(within(subject).getByRole("option", { name: "Sciences" }));
 
     await vi.waitFor(() =>
       expect(takeHomeQuizzesApi.listTakeHomeQuizzes).toHaveBeenCalledWith(

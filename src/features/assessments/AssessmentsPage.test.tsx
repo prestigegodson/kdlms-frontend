@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { openSubjectPicker } from "@/test/subjectPicker";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as assessmentsApi from "@/api/assessments";
@@ -101,6 +102,7 @@ describe("AssessmentsPage", () => {
 
     renderAs("TEACHER", "/?classId=class-1");
 
+    await openSubjectPicker(userEvent.setup());
     expect(await screen.findByRole("option", { name: "Mathematics" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Assembly" })).not.toBeInTheDocument();
   });
@@ -118,6 +120,7 @@ describe("AssessmentsPage", () => {
 
     renderAs("TEACHER", "/?classId=class-1");
 
+    await openSubjectPicker(userEvent.setup());
     const sciences = await screen.findByRole("group", { name: "Sciences" });
     expect(within(sciences).getAllByRole("option").map((option) => option.textContent)).toEqual(["Chemistry", "Physics"]);
     const other = screen.getByRole("group", { name: "Other subjects" });
@@ -160,6 +163,6 @@ describe("AssessmentsPage", () => {
     // moment the (auto-selected) current term resolves alongside them.
     await vi.waitFor(() => expect(assessmentsApi.openSheet).toHaveBeenCalledWith("class-1", "subject-1", "term-1"));
     expect(await screen.findByLabelText("Class")).toHaveValue("class-1");
-    expect(screen.getByLabelText("Subject")).toHaveValue("subject-1");
+    expect(screen.getByLabelText("Subject")).toHaveValue("Mathematics");
   });
 });

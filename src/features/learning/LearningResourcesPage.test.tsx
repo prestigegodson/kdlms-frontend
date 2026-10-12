@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { pickSubject } from "@/test/subjectPicker";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as classesApi from "@/api/classes";
@@ -103,7 +104,7 @@ function renderAs(role: "TEACHER" | "SCHOOL_ADMIN", initialEntry = "/") {
 async function selectClassAndSubject() {
   const user = userEvent.setup();
   await user.selectOptions(await screen.findByLabelText("Class"), "JSS 1A");
-  await user.selectOptions(await screen.findByLabelText("Subject"), "Mathematics");
+  await pickSubject(user, "Mathematics");
   return user;
 }
 
@@ -210,9 +211,7 @@ describe("LearningResourcesPage", () => {
     renderAs("TEACHER");
     const user = userEvent.setup();
     await user.selectOptions(await screen.findByLabelText("Class"), "JSS 1A");
-    const subjectPicker = await screen.findByLabelText("Subject");
-    expect(await within(subjectPicker).findByRole("option", { name: "Sciences" })).toHaveValue("group:group-1");
-    await user.selectOptions(subjectPicker, "Sciences");
+    await pickSubject(user, "Sciences");
 
     const row = (await screen.findByText("Lab safety")).closest("tr") as HTMLElement;
     expect(within(row).getByText("Group")).toBeInTheDocument();
@@ -284,7 +283,7 @@ describe("LearningResourcesPage", () => {
       20,
     );
     expect(screen.getByLabelText("Class")).toHaveValue("class-1");
-    expect(screen.getByLabelText("Subject")).toHaveValue("subject-1");
+    expect(screen.getByLabelText("Subject")).toHaveValue("Mathematics");
   });
 
   it("shows a status badge matching each resource's status", async () => {

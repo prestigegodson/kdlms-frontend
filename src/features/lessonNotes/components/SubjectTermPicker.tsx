@@ -3,7 +3,8 @@ import { type AcademicSessionView, listSessions, listTerms, type TermView } from
 import { FormField } from "@/components/ui/FormField";
 import { Select } from "@/components/ui/Select";
 import { useFilterChip } from "@/components/ui/StickySubHeader";
-import { SubjectTargetOptions } from "@/features/academics/components/SubjectTargetOptions";
+import { SubjectTargetSelect } from "@/features/academics/components/SubjectTargetSelect";
+import { withLevelName } from "@/features/academics/subjectTarget";
 
 export interface SubjectOption {
   id: string;
@@ -36,7 +37,8 @@ interface SubjectTermPickerProps {
  * than fetched here, since the two lesson-notes panels source their subject
  * list differently (a teacher's own `/me/lesson-note-subjects` vs. the
  * admin catalogue's `listSubjects()`). `itemLabel="Class"` repurposes the
- * first picker for the whole-class note grid's class list.
+ * first picker for the whole-class note grid's class list - a plain dropdown there, since only the
+ * subject picker is searchable (`SubjectTargetSelect`).
  */
 export function SubjectTermPicker({
   subjects,
@@ -76,13 +78,21 @@ export function SubjectTermPicker({
   return (
     <div className="grid min-w-0 flex-1 gap-2 lg:grid-flow-col lg:auto-cols-fr lg:gap-4">
       <FormField label={itemLabel} htmlFor={`lesson-note-picker-${itemKey}`}>
-        <Select
-          id={`lesson-note-picker-${itemKey}`}
-          value={subjectId}
-          onChange={(event) => onSubjectChange(event.target.value)}
-        >
-          <SubjectTargetOptions
-            placeholder={`Select a ${itemKey}…`}
+        {itemLabel === "Class" ? (
+          <Select id="lesson-note-picker-class" value={subjectId} onChange={(event) => onSubjectChange(event.target.value)}>
+            <option value="">Select a class…</option>
+            {subjects.map((option) => (
+              <option key={option.id} value={option.id}>
+                {withLevelName(option.name, option.levelName)}
+              </option>
+            ))}
+          </Select>
+        ) : (
+          <SubjectTargetSelect
+            id="lesson-note-picker-subject"
+            value={subjectId}
+            onChange={onSubjectChange}
+            placeholder="Select a subject…"
             subjects={subjects.map((option) => ({
               subjectId: option.id,
               subjectName: option.name,
@@ -91,7 +101,7 @@ export function SubjectTermPicker({
               subjectGroupName: option.subjectGroupName,
             }))}
           />
-        </Select>
+        )}
       </FormField>
       <FormField label="Session" htmlFor="lesson-note-picker-session">
         <Select
