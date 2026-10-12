@@ -166,14 +166,20 @@ export function DiagramLabelPlayer({ config, value, onChange, disabled, renderIm
   );
 }
 
+/** A zone this close to the image's top edge gets its chip below it, where the stage won't clip it. */
+const CHIP_BELOW_UNDER_Y = 0.08;
+
 /**
  * A zone drawn where it is on the image - a drop and tap target for pointer and touch. It stays out
  * of the tab order and the accessibility tree: the zone list below is the same target, full size.
+ * The region itself is only outlined, never filled, and its number and placed label sit in a chip
+ * just outside it, so the part of the picture being labelled stays fully visible.
  */
 function ZoneOnImage({ id, shape, number, text }: { id: string; shape: RectShape; number: number; text: string | null }) {
   const { tap, disabled } = useDragLayer();
   const { setNodeRef, isOver } = useDroppable({ id, disabled });
   const awaiting = tap.selected !== null;
+  const chipBelow = shape.y < CHIP_BELOW_UNDER_Y;
   return (
     <div
       ref={setNodeRef}
@@ -181,15 +187,25 @@ function ZoneOnImage({ id, shape, number, text }: { id: string; shape: RectShape
       tabIndex={-1}
       aria-hidden="true"
       data-over={isOver || undefined}
-      className={`absolute flex items-start gap-1 overflow-hidden rounded border-2 border-dashed p-0.5 text-xs ${
-        isOver ? "border-brand-600 bg-brand-100/80" : awaiting ? "border-brand-500 bg-white/70" : "border-slate-800 bg-white/60"
+      className={`absolute rounded border-2 shadow-[0_0_0_1px_rgba(255,255,255,0.9)] ${
+        isOver
+          ? "border-solid border-brand-600 bg-brand-500/10"
+          : awaiting
+            ? "border-dashed border-brand-500 bg-transparent"
+            : "border-dashed border-slate-800 bg-transparent"
       }`}
       style={{ left: percent(shape.x), top: percent(shape.y), width: percent(shape.w), height: percent(shape.h) }}
     >
-      <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-slate-900 px-0.5 text-[10px] font-semibold text-white">
-        {number}
+      <span
+        className={`pointer-events-none absolute left-0 flex max-w-[10rem] items-center gap-1 whitespace-nowrap rounded-full bg-white p-0.5 text-xs shadow ${text ? "pr-1.5" : ""} ${
+          chipBelow ? "top-full mt-0.5" : "bottom-full mb-0.5"
+        }`}
+      >
+        <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-slate-900 px-0.5 text-[10px] font-semibold text-white">
+          {number}
+        </span>
+        {text && <span className="truncate font-medium text-slate-900">{text}</span>}
       </span>
-      {text && <span className="truncate font-medium text-slate-900">{text}</span>}
     </div>
   );
 }
