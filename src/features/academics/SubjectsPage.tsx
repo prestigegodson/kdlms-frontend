@@ -15,6 +15,7 @@ import {
   deactivateSubject,
   deleteSubject,
   listSubjects,
+  type SubjectAssessmentPeriods,
   type SubjectView,
   updateSubject,
 } from "@/api/subjects";
@@ -529,7 +530,13 @@ function AdminSubjects() {
                         {subject.selective ? <Badge variant="neutral">Selective</Badge> : "—"}
                       </TableCell>
                       <TableCell label="Graded">
-                        {subject.graded ? "—" : <Badge variant="neutral">Non-graded</Badge>}
+                        {!subject.graded ? (
+                          <Badge variant="neutral">Non-graded</Badge>
+                        ) : subject.assessmentPeriods !== "BOTH" ? (
+                          <Badge variant="neutral">{ASSESSMENT_PERIOD_LABELS[subject.assessmentPeriods]}</Badge>
+                        ) : (
+                          "—"
+                        )}
                       </TableCell>
                       <TableCell label="Status">
                         <Badge variant={subject.status === "ACTIVE" ? "success" : "neutral"}>
@@ -589,6 +596,7 @@ function AdminSubjects() {
               termNumbers: values.termNumbers,
               selective: values.selective,
               graded: values.graded,
+              assessmentPeriods: values.assessmentPeriods,
             });
           }}
           onSaved={() => {
@@ -613,6 +621,7 @@ function AdminSubjects() {
               termNumbers: values.termNumbers,
               selective: values.selective,
               graded: values.graded,
+              assessmentPeriods: values.assessmentPeriods,
             });
           }}
           onSaved={() => {
@@ -715,7 +724,14 @@ interface SubjectFormValues {
   termNumbers?: number[];
   selective?: boolean;
   graded?: boolean;
+  assessmentPeriods?: SubjectAssessmentPeriods;
 }
+
+const ASSESSMENT_PERIOD_LABELS: Record<SubjectAssessmentPeriods, string> = {
+  BOTH: "Midterm and exam",
+  MIDTERM_ONLY: "Midterm only",
+  EXAM_ONLY: "Exam only",
+};
 
 interface SubjectFormModalProps {
   title: string;
@@ -735,6 +751,9 @@ function SubjectFormModal({ title, terms, initial, groups, onClose, onSubmit, on
   const [termNumbers, setTermNumbers] = useState<number[]>(initial?.termNumbers ?? ALL_TERM_NUMBERS);
   const [selective, setSelective] = useState(initial?.selective ?? false);
   const [graded, setGraded] = useState(initial?.graded ?? true);
+  const [assessmentPeriods, setAssessmentPeriods] = useState<SubjectAssessmentPeriods>(
+    initial?.assessmentPeriods ?? "BOTH",
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -762,6 +781,7 @@ function SubjectFormModal({ title, terms, initial, groups, onClose, onSubmit, on
         termNumbers,
         selective,
         graded,
+        assessmentPeriods,
       });
       onSaved();
     } catch (err) {
@@ -831,6 +851,26 @@ function SubjectFormModal({ title, terms, initial, groups, onClose, onSubmit, on
             scores already recorded are kept and reappear if you make it graded again.
           </p>
         </FormField>
+        {graded && (
+          <FormField label="Assessed in" htmlFor="subject-assessment-periods">
+            <Select
+              id="subject-assessment-periods"
+              value={assessmentPeriods}
+              onChange={(event) => setAssessmentPeriods(event.target.value as SubjectAssessmentPeriods)}
+            >
+              {(Object.keys(ASSESSMENT_PERIOD_LABELS) as SubjectAssessmentPeriods[]).map((periods) => (
+                <option key={periods} value={periods}>
+                  {ASSESSMENT_PERIOD_LABELS[periods]}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-1 text-xs text-slate-500">
+              A midterm-only {terms.item} has no exam column and is left off end-of-term reports; an exam-only one has
+              no midterm column and is left off mid-term reports. A period can't be removed once marks are recorded
+              for it.
+            </p>
+          </FormField>
+        )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel

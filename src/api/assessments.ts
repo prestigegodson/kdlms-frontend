@@ -1,6 +1,7 @@
 import { apiFetch } from "@/api/client";
 import type { AssessmentMode, GradeBoundary, RatingOption } from "@/api/gradingSystems";
 import type { ResultScope } from "@/api/types";
+import type { SubjectAssessmentPeriods } from "@/api/subjects";
 
 /** Mirrors backend assessment.application.port.in.AssessmentSheetView.SheetRowView. */
 export interface SheetRow {
@@ -32,6 +33,8 @@ export interface AssessmentSheetView {
   subjectId: string;
   termId: string;
   assessmentMode: AssessmentMode;
+  /** Which columns the subject has: midterm-only hides the exam side, exam-only the midterm side. */
+  assessmentPeriods: SubjectAssessmentPeriods;
   quizWeight?: number;
   examWeight?: number;
   quizMax?: number;

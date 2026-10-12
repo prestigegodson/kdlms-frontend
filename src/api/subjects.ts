@@ -3,6 +3,13 @@ import type { Page } from "@/api/types";
 
 export type SubjectStatus = "ACTIVE" | "INACTIVE";
 
+/**
+ * Which assessment periods a graded subject is assessed in. A midterm-only
+ * subject has no exam column and is left off end-of-term results; an
+ * exam-only one has no midterm column and is left off mid-term results.
+ */
+export type SubjectAssessmentPeriods = "BOTH" | "MIDTERM_ONLY" | "EXAM_ONLY";
+
 /** Mirrors backend academics.application.port.in.SubjectView. */
 export interface SubjectView {
   id: string;
@@ -28,6 +35,11 @@ export interface SubjectView {
    * Can be flipped any time - recorded scores are hidden, not deleted.
    */
   graded: boolean;
+  /**
+   * Removing a period that already has recorded marks is rejected by the
+   * backend (422); adding one is always allowed.
+   */
+  assessmentPeriods: SubjectAssessmentPeriods;
   status: SubjectStatus;
 }
 
@@ -43,6 +55,8 @@ export interface CreateSubjectRequest {
   selective?: boolean;
   /** Defaults to true when omitted; false makes it non-graded. */
   graded?: boolean;
+  /** Defaults to BOTH when omitted. */
+  assessmentPeriods?: SubjectAssessmentPeriods;
 }
 
 export interface UpdateSubjectRequest {
@@ -59,6 +73,8 @@ export interface UpdateSubjectRequest {
   selective?: boolean;
   /** Defaults to true when omitted; false makes it non-graded. */
   graded?: boolean;
+  /** Defaults to BOTH when omitted. */
+  assessmentPeriods?: SubjectAssessmentPeriods;
 }
 
 const BASE = "/api/v1/subjects";

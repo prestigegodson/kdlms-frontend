@@ -40,7 +40,8 @@ interface RatingEntryGridProps {
  * pairs, either of which may be recorded before the other - see
  * CLAUDE.md's ResultScope domain rule). No scores anywhere. Shares
  * ScoreEntryGrid's shell: same dirty rule, same sticky save bar, same
- * navigate-away guard.
+ * navigate-away guard. A midterm-only or exam-only subject shows (and sends)
+ * only its own pair.
  */
 export function RatingEntryGrid({ sheet, onSaved }: RatingEntryGridProps) {
   const [drafts, setDrafts] = useState<Record<string, Draft>>(() => draftsFromSheet(sheet));
@@ -79,18 +80,26 @@ export function RatingEntryGrid({ sheet, onSaved }: RatingEntryGridProps) {
     setDirty(new Set());
   }
 
+  const showMidterm = sheet.assessmentPeriods !== "EXAM_ONLY";
+  const showExam = sheet.assessmentPeriods !== "MIDTERM_ONLY";
+
   async function handleSave() {
     setSaving(true);
     setError(null);
     try {
       const entries = Array.from(dirty)
-        .filter((enrollmentId) => drafts[enrollmentId]?.midtermRatingOptionId || drafts[enrollmentId]?.ratingOptionId)
+        .filter(
+          (enrollmentId) =>
+            (showMidterm && drafts[enrollmentId]?.midtermRatingOptionId) ||
+            (showExam && drafts[enrollmentId]?.ratingOptionId),
+        )
         .map((enrollmentId) => ({
           enrollmentId,
-          midtermRatingOptionId: drafts[enrollmentId].midtermRatingOptionId || null,
-          midtermObservation: drafts[enrollmentId].midtermObservation.trim() === "" ? null : drafts[enrollmentId].midtermObservation,
-          ratingOptionId: drafts[enrollmentId].ratingOptionId || null,
-          observation: drafts[enrollmentId].observation.trim() === "" ? null : drafts[enrollmentId].observation,
+          midtermRatingOptionId: showMidterm ? drafts[enrollmentId].midtermRatingOptionId || null : null,
+          midtermObservation:
+            !showMidterm || drafts[enrollmentId].midtermObservation.trim() === "" ? null : drafts[enrollmentId].midtermObservation,
+          ratingOptionId: showExam ? drafts[enrollmentId].ratingOptionId || null : null,
+          observation: !showExam || drafts[enrollmentId].observation.trim() === "" ? null : drafts[enrollmentId].observation,
         }));
       const outcome = await saveRatings(sheet.classId, sheet.subjectId, sheet.termId, entries);
       setDirty(new Set());
@@ -110,10 +119,10 @@ export function RatingEntryGrid({ sheet, onSaved }: RatingEntryGridProps) {
         <TableHead>
           <TableRow>
             <TableHeaderCell>Student</TableHeaderCell>
-            <TableHeaderCell>Midterm rating</TableHeaderCell>
-            <TableHeaderCell>Midterm observation</TableHeaderCell>
-            <TableHeaderCell>End-of-term rating</TableHeaderCell>
-            <TableHeaderCell>End-of-term observation</TableHeaderCell>
+            {showMidterm && <TableHeaderCell>Midterm rating</TableHeaderCell>}
+            {showMidterm && <TableHeaderCell>Midterm observation</TableHeaderCell>}
+            {showExam && <TableHeaderCell>End-of-term rating</TableHeaderCell>}
+            {showExam && <TableHeaderCell>End-of-term observation</TableHeaderCell>}
           </TableRow>
         </TableHead>
         <TableBody>
@@ -132,54 +141,62 @@ export function RatingEntryGrid({ sheet, onSaved }: RatingEntryGridProps) {
                   <span className="font-medium text-slate-900">{row.studentName}</span>
                   <span className="block text-xs text-slate-500">{row.admissionNumber}</span>
                 </TableCell>
-                <TableCell label="Midterm rating">
-                  <Select
-                    aria-label={`Midterm rating for ${row.studentName}`}
-                    className={isDirty ? "border-brand-400" : ""}
-                    value={draft.midtermRatingOptionId}
-                    onChange={(event) => updateCell(row.enrollmentId, "midtermRatingOptionId", event.target.value)}
-                  >
-                    <option value="">Select a rating…</option>
-                    {sheet.ratingOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </Select>
-                </TableCell>
-                <TableCell label="Midterm observation">
-                  <Textarea
-                    aria-label={`Midterm observation for ${row.studentName}`}
-                    rows={2}
-                    className={isDirty ? "border-brand-400" : ""}
-                    value={draft.midtermObservation}
-                    onChange={(event) => updateCell(row.enrollmentId, "midtermObservation", event.target.value)}
-                  />
-                </TableCell>
-                <TableCell label="End-of-term rating">
-                  <Select
-                    aria-label={`End-of-term rating for ${row.studentName}`}
-                    className={isDirty ? "border-brand-400" : ""}
-                    value={draft.ratingOptionId}
-                    onChange={(event) => updateCell(row.enrollmentId, "ratingOptionId", event.target.value)}
-                  >
-                    <option value="">Select a rating…</option>
-                    {sheet.ratingOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </Select>
-                </TableCell>
-                <TableCell label="End-of-term observation">
-                  <Textarea
-                    aria-label={`End-of-term observation for ${row.studentName}`}
-                    rows={2}
-                    className={isDirty ? "border-brand-400" : ""}
-                    value={draft.observation}
-                    onChange={(event) => updateCell(row.enrollmentId, "observation", event.target.value)}
-                  />
-                </TableCell>
+                {showMidterm && (
+                  <TableCell label="Midterm rating">
+                    <Select
+                      aria-label={`Midterm rating for ${row.studentName}`}
+                      className={isDirty ? "border-brand-400" : ""}
+                      value={draft.midtermRatingOptionId}
+                      onChange={(event) => updateCell(row.enrollmentId, "midtermRatingOptionId", event.target.value)}
+                    >
+                      <option value="">Select a rating…</option>
+                      {sheet.ratingOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </TableCell>
+                )}
+                {showMidterm && (
+                  <TableCell label="Midterm observation">
+                    <Textarea
+                      aria-label={`Midterm observation for ${row.studentName}`}
+                      rows={2}
+                      className={isDirty ? "border-brand-400" : ""}
+                      value={draft.midtermObservation}
+                      onChange={(event) => updateCell(row.enrollmentId, "midtermObservation", event.target.value)}
+                    />
+                  </TableCell>
+                )}
+                {showExam && (
+                  <TableCell label="End-of-term rating">
+                    <Select
+                      aria-label={`End-of-term rating for ${row.studentName}`}
+                      className={isDirty ? "border-brand-400" : ""}
+                      value={draft.ratingOptionId}
+                      onChange={(event) => updateCell(row.enrollmentId, "ratingOptionId", event.target.value)}
+                    >
+                      <option value="">Select a rating…</option>
+                      {sheet.ratingOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </TableCell>
+                )}
+                {showExam && (
+                  <TableCell label="End-of-term observation">
+                    <Textarea
+                      aria-label={`End-of-term observation for ${row.studentName}`}
+                      rows={2}
+                      className={isDirty ? "border-brand-400" : ""}
+                      value={draft.observation}
+                      onChange={(event) => updateCell(row.enrollmentId, "observation", event.target.value)}
+                    />
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}

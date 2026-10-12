@@ -16,6 +16,7 @@ const SHEET: AssessmentSheetView = {
   subjectId: "subject-1",
   termId: "term-1",
   assessmentMode: "QUALITATIVE",
+  assessmentPeriods: "BOTH",
   showMidtermGrade: true,
   boundaries: [],
   ratingOptions: [
@@ -31,9 +32,9 @@ const SHEET: AssessmentSheetView = {
   ],
 };
 
-function renderGrid(onSaved = vi.fn()) {
+function renderGrid(onSaved = vi.fn(), sheet: AssessmentSheetView = SHEET) {
   const router = createMemoryRouter(
-    [{ path: "/", element: <RatingEntryGrid sheet={SHEET} onSaved={onSaved} /> }],
+    [{ path: "/", element: <RatingEntryGrid sheet={sheet} onSaved={onSaved} /> }],
     { initialEntries: ["/"] },
   );
   render(<RouterProvider router={router} />);
@@ -88,6 +89,22 @@ describe("RatingEntryGrid", () => {
       },
     ]);
     expect(onSaved).toHaveBeenCalledWith([{ enrollmentId: "enrollment-1", success: true }]);
+  });
+
+  it("shows only the end-of-term pair for an exam-only subject", () => {
+    renderGrid(vi.fn(), { ...SHEET, assessmentPeriods: "EXAM_ONLY" });
+
+    expect(screen.queryByLabelText("Midterm rating for Zara Bello")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Midterm observation for Zara Bello")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("End-of-term rating for Zara Bello")).toBeInTheDocument();
+  });
+
+  it("shows only the midterm pair for a midterm-only subject", () => {
+    renderGrid(vi.fn(), { ...SHEET, assessmentPeriods: "MIDTERM_ONLY" });
+
+    expect(screen.getByLabelText("Midterm rating for Zara Bello")).toBeInTheDocument();
+    expect(screen.queryByLabelText("End-of-term rating for Zara Bello")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("End-of-term observation for Zara Bello")).not.toBeInTheDocument();
   });
 
   it("shows no score, grade, or total anywhere in a qualitative row", () => {

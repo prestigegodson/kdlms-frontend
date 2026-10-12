@@ -90,6 +90,7 @@ const GROUPED_SUBJECT: SubjectView = {
   termNumbers: [1, 2, 3],
   selective: false,
   graded: true,
+  assessmentPeriods: "BOTH",
   status: "ACTIVE",
 };
 
@@ -102,6 +103,7 @@ const UNGROUPED_SUBJECT: SubjectView = {
   termNumbers: [1, 2, 3],
   selective: false,
   graded: true,
+  assessmentPeriods: "BOTH",
   status: "ACTIVE",
 };
 
@@ -113,6 +115,7 @@ const TERM_THREE_ONLY_SUBJECT: SubjectView = {
   termNumbers: [3],
   selective: false,
   graded: true,
+  assessmentPeriods: "BOTH",
   status: "ACTIVE",
 };
 
@@ -125,6 +128,7 @@ const SOURCE_PHYSICS: SubjectView = {
   termNumbers: [1, 2, 3],
   selective: false,
   graded: true,
+  assessmentPeriods: "BOTH",
   status: "ACTIVE",
 };
 
@@ -137,6 +141,7 @@ const SOURCE_CHEMISTRY: SubjectView = {
   termNumbers: [1, 2, 3],
   selective: false,
   graded: true,
+  assessmentPeriods: "BOTH",
   status: "ACTIVE",
 };
 
@@ -280,6 +285,7 @@ describe("SubjectsPage", () => {
       termNumbers: [1, 2, 3],
       selective: false,
       graded: true,
+      assessmentPeriods: "BOTH",
     });
   });
 
@@ -317,6 +323,7 @@ describe("SubjectsPage", () => {
       termNumbers: [3],
       selective: false,
       graded: true,
+      assessmentPeriods: "BOTH",
     });
   });
 
@@ -344,6 +351,7 @@ describe("SubjectsPage", () => {
       termNumbers: [1, 2, 3],
       selective: true,
       graded: true,
+      assessmentPeriods: "BOTH",
     });
   });
 
@@ -370,6 +378,7 @@ describe("SubjectsPage", () => {
       termNumbers: [1, 2, 3],
       selective: false,
       graded: false,
+      assessmentPeriods: "BOTH",
     });
   });
 
@@ -380,6 +389,54 @@ describe("SubjectsPage", () => {
 
     expect(await screen.findByText("Mathematics")).toBeInTheDocument();
     expect(screen.getByText("Non-graded", { selector: "span" })).toBeInTheDocument();
+  });
+
+  it("creates an exam-only subject", async () => {
+    mockSubjects([]);
+    vi.mocked(subjectsApi.createSubject).mockResolvedValue({
+      ...UNGROUPED_SUBJECT,
+      id: "subject-6",
+      assessmentPeriods: "EXAM_ONLY",
+    });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText(/No subjects yet/);
+
+    await user.click(screen.getByRole("button", { name: "Add subject" }));
+    const dialog = await screen.findByRole("dialog");
+
+    await user.type(within(dialog).getByLabelText("Name"), "Practicals");
+    await user.selectOptions(within(dialog).getByLabelText("Assessed in"), "EXAM_ONLY");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(subjectsApi.createSubject).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Practicals", graded: true, assessmentPeriods: "EXAM_ONLY" }),
+    );
+  });
+
+  it("hides the assessed-in choice for a non-graded subject", async () => {
+    mockSubjects([]);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText(/No subjects yet/);
+
+    await user.click(screen.getByRole("button", { name: "Add subject" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByLabelText("Assessed in")).toBeInTheDocument();
+
+    await user.click(within(dialog).getByLabelText(/Non-graded/));
+    expect(within(dialog).queryByLabelText("Assessed in")).not.toBeInTheDocument();
+  });
+
+  it("badges a midterm-only subject in the list", async () => {
+    mockSubjects([{ ...UNGROUPED_SUBJECT, assessmentPeriods: "MIDTERM_ONLY" }]);
+
+    renderAsSchoolAdmin();
+
+    expect(await screen.findByText("Mathematics")).toBeInTheDocument();
+    expect(screen.getByText("Midterm only", { selector: "span" })).toBeInTheDocument();
   });
 
   it("badges a selective subject in the list", async () => {

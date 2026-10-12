@@ -51,7 +51,9 @@ interface ScoreEntryGridProps {
  * live in a trailing read-only column, before anything is saved. Edits
  * batch into a sticky "Save changes" bar rather than autosaving per cell,
  * and Enter/arrow keys move focus down the same column - the highest-volume
- * typing task in the product.
+ * typing task in the product. A midterm-only subject shows only the midterm
+ * columns and an exam-only one only the exam/final/grade columns - the
+ * hidden side is never sent, and an exam-only final is the exam scaled to 100.
  */
 export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
   const [drafts, setDrafts] = useState<Record<string, Draft>>(() => draftsFromSheet(sheet));
@@ -85,6 +87,8 @@ export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
   const examMax = sheet.examMax ?? 100;
   const quizWeight = sheet.quizWeight ?? 0;
   const examWeight = sheet.examWeight ?? 0;
+  const showMidterm = sheet.assessmentPeriods !== "EXAM_ONLY";
+  const showExam = sheet.assessmentPeriods !== "MIDTERM_ONLY";
 
   function updateCell(enrollmentId: string, field: "quiz" | "exam", value: string) {
     setDrafts((current) => ({ ...current, [enrollmentId]: { ...current[enrollmentId], [field]: value } }));
@@ -116,8 +120,8 @@ export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
     try {
       const entries = Array.from(dirty).map((enrollmentId) => ({
         enrollmentId,
-        quizScore: parseScore(drafts[enrollmentId]?.quiz ?? ""),
-        examScore: parseScore(drafts[enrollmentId]?.exam ?? ""),
+        quizScore: showMidterm ? parseScore(drafts[enrollmentId]?.quiz ?? "") : null,
+        examScore: showExam ? parseScore(drafts[enrollmentId]?.exam ?? "") : null,
       }));
       const outcome = await saveScores(sheet.classId, sheet.subjectId, sheet.termId, entries);
       setDirty(new Set());
@@ -137,11 +141,11 @@ export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
         <TableHead>
           <TableRow>
             <TableHeaderCell>Student</TableHeaderCell>
-            <TableHeaderCell numeric>Midterm quiz (/{quizMax})</TableHeaderCell>
-            <TableHeaderCell numeric>Midterm %</TableHeaderCell>
-            <TableHeaderCell numeric>Exam (/{examMax})</TableHeaderCell>
-            <TableHeaderCell numeric>Final</TableHeaderCell>
-            <TableHeaderCell>Grade</TableHeaderCell>
+            {showMidterm && <TableHeaderCell numeric>Midterm quiz (/{quizMax})</TableHeaderCell>}
+            {showMidterm && <TableHeaderCell numeric>Midterm %</TableHeaderCell>}
+            {showExam && <TableHeaderCell numeric>Exam (/{examMax})</TableHeaderCell>}
+            {showExam && <TableHeaderCell numeric>Final</TableHeaderCell>}
+            {showExam && <TableHeaderCell>Grade</TableHeaderCell>}
           </TableRow>
         </TableHead>
         <TableBody>
@@ -151,7 +155,7 @@ export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
             const quizError = rowError(draft.quiz, quizMax);
             const examError = rowError(draft.exam, examMax);
             const computed = computeFinalScore(
-              parseScore(draft.quiz),
+              showMidterm ? parseScore(draft.quiz) : null,
               parseScore(draft.exam),
               quizMax,
               examMax,
@@ -167,50 +171,60 @@ export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
                   <span className="font-medium text-slate-900">{row.studentName}</span>
                   <span className="block text-xs text-slate-500">{row.admissionNumber}</span>
                 </TableCell>
-                <TableCell label={`Midterm quiz (/${quizMax})`} numeric>
-                  <Input
-                    id={`score-${index}-quiz`}
-                    type="number"
-                    inputMode="decimal"
-                    enterKeyHint="next"
-                    step="any"
-                    aria-label={`Midterm quiz score for ${row.studentName}`}
-                    className={`text-right tabular-nums ${isDirty ? "border-brand-400" : ""}`}
-                    value={draft.quiz}
-                    aria-invalid={quizError ? "true" : undefined}
-                    onChange={(event) => updateCell(row.enrollmentId, "quiz", event.target.value)}
-                    onKeyDown={(event) => handleKeyDown(event, index, "quiz")}
-                  />
-                  {quizError && <p className="mt-1 text-xs text-red-600">{quizError}</p>}
-                </TableCell>
-                <TableCell label="Midterm %" numeric className="tabular-nums text-slate-700">
-                  {midterm.midtermScore ?? "—"}
-                  {sheet.showMidtermGrade && midterm.grade && (
-                    <span className="ml-1 text-xs text-slate-500">({midterm.grade})</span>
-                  )}
-                </TableCell>
-                <TableCell label={`Exam (/${examMax})`} numeric>
-                  <Input
-                    id={`score-${index}-exam`}
-                    type="number"
-                    inputMode="decimal"
-                    enterKeyHint="next"
-                    step="any"
-                    aria-label={`Exam score for ${row.studentName}`}
-                    className={`text-right tabular-nums ${isDirty ? "border-brand-400" : ""}`}
-                    value={draft.exam}
-                    aria-invalid={examError ? "true" : undefined}
-                    onChange={(event) => updateCell(row.enrollmentId, "exam", event.target.value)}
-                    onKeyDown={(event) => handleKeyDown(event, index, "exam")}
-                  />
-                  {examError && <p className="mt-1 text-xs text-red-600">{examError}</p>}
-                </TableCell>
-                <TableCell label="Final" numeric className="tabular-nums text-slate-700">
-                  {computed.finalScore ?? "—"}
-                </TableCell>
-                <TableCell label="Grade">
-                  {computed.grade ? <Badge variant="brand">{computed.grade}</Badge> : "—"}
-                </TableCell>
+                {showMidterm && (
+                  <TableCell label={`Midterm quiz (/${quizMax})`} numeric>
+                    <Input
+                      id={`score-${index}-quiz`}
+                      type="number"
+                      inputMode="decimal"
+                      enterKeyHint="next"
+                      step="any"
+                      aria-label={`Midterm quiz score for ${row.studentName}`}
+                      className={`text-right tabular-nums ${isDirty ? "border-brand-400" : ""}`}
+                      value={draft.quiz}
+                      aria-invalid={quizError ? "true" : undefined}
+                      onChange={(event) => updateCell(row.enrollmentId, "quiz", event.target.value)}
+                      onKeyDown={(event) => handleKeyDown(event, index, "quiz")}
+                    />
+                    {quizError && <p className="mt-1 text-xs text-red-600">{quizError}</p>}
+                  </TableCell>
+                )}
+                {showMidterm && (
+                  <TableCell label="Midterm %" numeric className="tabular-nums text-slate-700">
+                    {midterm.midtermScore ?? "—"}
+                    {sheet.showMidtermGrade && midterm.grade && (
+                      <span className="ml-1 text-xs text-slate-500">({midterm.grade})</span>
+                    )}
+                  </TableCell>
+                )}
+                {showExam && (
+                  <TableCell label={`Exam (/${examMax})`} numeric>
+                    <Input
+                      id={`score-${index}-exam`}
+                      type="number"
+                      inputMode="decimal"
+                      enterKeyHint="next"
+                      step="any"
+                      aria-label={`Exam score for ${row.studentName}`}
+                      className={`text-right tabular-nums ${isDirty ? "border-brand-400" : ""}`}
+                      value={draft.exam}
+                      aria-invalid={examError ? "true" : undefined}
+                      onChange={(event) => updateCell(row.enrollmentId, "exam", event.target.value)}
+                      onKeyDown={(event) => handleKeyDown(event, index, "exam")}
+                    />
+                    {examError && <p className="mt-1 text-xs text-red-600">{examError}</p>}
+                  </TableCell>
+                )}
+                {showExam && (
+                  <TableCell label="Final" numeric className="tabular-nums text-slate-700">
+                    {computed.finalScore ?? "—"}
+                  </TableCell>
+                )}
+                {showExam && (
+                  <TableCell label="Grade">
+                    {computed.grade ? <Badge variant="brand">{computed.grade}</Badge> : "—"}
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}

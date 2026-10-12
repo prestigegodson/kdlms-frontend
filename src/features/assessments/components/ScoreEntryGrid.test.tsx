@@ -16,6 +16,7 @@ const SHEET: AssessmentSheetView = {
   subjectId: "subject-1",
   termId: "term-1",
   assessmentMode: "NUMERIC",
+  assessmentPeriods: "BOTH",
   quizWeight: 30,
   examWeight: 70,
   quizMax: 20,
@@ -66,6 +67,34 @@ describe("ScoreEntryGrid", () => {
     expect(await screen.findAllByText("100")).toHaveLength(2);
     expect(screen.getByText("A")).toBeInTheDocument();
     expect(assessmentsApi.saveScores).not.toHaveBeenCalled();
+  });
+
+  it("hides the midterm columns for an exam-only subject and scales the exam alone to 100", async () => {
+    const user = userEvent.setup();
+    vi.mocked(assessmentsApi.saveScores).mockResolvedValue({
+      outcomes: [{ enrollmentId: "enrollment-1", success: true }],
+    });
+    renderGrid(vi.fn(), { ...SHEET, assessmentPeriods: "EXAM_ONLY" });
+
+    expect(screen.queryByLabelText(/Midterm quiz/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Midterm %")).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText(/Exam/), "40");
+
+    // 40/80 scaled to 100 with no quiz weighting.
+    expect(await screen.findByText("50")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(assessmentsApi.saveScores).toHaveBeenCalledWith("class-1", "subject-1", "term-1", [
+      { enrollmentId: "enrollment-1", quizScore: null, examScore: 40 },
+    ]);
+  });
+
+  it("hides the exam, final and grade columns for a midterm-only subject", () => {
+    renderGrid(vi.fn(), { ...SHEET, assessmentPeriods: "MIDTERM_ONLY" });
+
+    expect(screen.getByLabelText(/Midterm quiz/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Exam score/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Final")).not.toBeInTheDocument();
+    expect(screen.queryByText("Grade")).not.toBeInTheDocument();
   });
 
   it("leaves the final score and grade blank when only the quiz has been typed", async () => {

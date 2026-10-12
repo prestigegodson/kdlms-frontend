@@ -95,8 +95,8 @@ describe("AssessmentsPage", () => {
       { classId: "class-1", className: "JSS 1A", branchId: "branch-1", levelId: "level-1", isClassTeacher: true, isAssistantTeacher: false, subjectIds: [] },
     ]);
     vi.mocked(meApi.listRecordableSubjects).mockResolvedValue([
-      { id: "subject-1", schoolId: "school-1", levelId: "level-1", name: "Mathematics", selective: false, graded: true, termNumbers: [1, 2, 3], status: "ACTIVE" },
-      { id: "subject-2", schoolId: "school-1", levelId: "level-1", name: "Assembly", selective: false, graded: false, termNumbers: [1, 2, 3], status: "ACTIVE" },
+      { id: "subject-1", schoolId: "school-1", levelId: "level-1", name: "Mathematics", selective: false, graded: true, assessmentPeriods: "BOTH", termNumbers: [1, 2, 3], status: "ACTIVE" },
+      { id: "subject-2", schoolId: "school-1", levelId: "level-1", name: "Assembly", selective: false, graded: false, assessmentPeriods: "BOTH", termNumbers: [1, 2, 3], status: "ACTIVE" },
     ]);
     vi.mocked(sessionsApi.listSessions).mockResolvedValue({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 50 });
 
@@ -112,9 +112,9 @@ describe("AssessmentsPage", () => {
       { classId: "class-1", className: "JSS 1A", branchId: "branch-1", levelId: "level-1", isClassTeacher: true, isAssistantTeacher: false, subjectIds: [] },
     ]);
     vi.mocked(meApi.listRecordableSubjects).mockResolvedValue([
-      { id: "subject-1", schoolId: "school-1", levelId: "level-1", name: "Physics", subjectGroupId: "group-1", subjectGroupName: "Sciences", selective: false, graded: true, termNumbers: [1, 2, 3], status: "ACTIVE" },
-      { id: "subject-2", schoolId: "school-1", levelId: "level-1", name: "Chemistry", subjectGroupId: "group-1", subjectGroupName: "Sciences", selective: false, graded: true, termNumbers: [1, 2, 3], status: "ACTIVE" },
-      { id: "subject-3", schoolId: "school-1", levelId: "level-1", name: "Mathematics", selective: false, graded: true, termNumbers: [1, 2, 3], status: "ACTIVE" },
+      { id: "subject-1", schoolId: "school-1", levelId: "level-1", name: "Physics", subjectGroupId: "group-1", subjectGroupName: "Sciences", selective: false, graded: true, assessmentPeriods: "BOTH", termNumbers: [1, 2, 3], status: "ACTIVE" },
+      { id: "subject-2", schoolId: "school-1", levelId: "level-1", name: "Chemistry", subjectGroupId: "group-1", subjectGroupName: "Sciences", selective: false, graded: true, assessmentPeriods: "BOTH", termNumbers: [1, 2, 3], status: "ACTIVE" },
+      { id: "subject-3", schoolId: "school-1", levelId: "level-1", name: "Mathematics", selective: false, graded: true, assessmentPeriods: "BOTH", termNumbers: [1, 2, 3], status: "ACTIVE" },
     ]);
     vi.mocked(sessionsApi.listSessions).mockResolvedValue({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 50 });
 
@@ -132,7 +132,7 @@ describe("AssessmentsPage", () => {
       { classId: "class-1", className: "JSS 1A", branchId: "branch-1", levelId: "level-1", isClassTeacher: true, isAssistantTeacher: false, subjectIds: ["subject-1"] },
     ]);
     vi.mocked(meApi.listRecordableSubjects).mockResolvedValue([
-      { id: "subject-1", schoolId: "school-1", levelId: "level-1", name: "Mathematics", selective: false, graded: true, termNumbers: [1, 2, 3], status: "ACTIVE" },
+      { id: "subject-1", schoolId: "school-1", levelId: "level-1", name: "Mathematics", selective: false, graded: true, assessmentPeriods: "BOTH", termNumbers: [1, 2, 3], status: "ACTIVE" },
     ]);
     vi.mocked(sessionsApi.listSessions).mockResolvedValue({
       content: [
@@ -151,6 +151,7 @@ describe("AssessmentsPage", () => {
       subjectId: "subject-1",
       termId: "term-1",
       assessmentMode: "NUMERIC",
+      assessmentPeriods: "BOTH",
       showMidtermGrade: false,
       boundaries: [],
       ratingOptions: [],
