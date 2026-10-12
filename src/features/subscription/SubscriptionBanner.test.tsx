@@ -40,6 +40,7 @@ const ACTIVE_SUMMARY: SubscriptionSummaryView = {
   freemium: false,
   graceUntil: null,
   autoRenew: false,
+  interactiveQuestions: false,
 };
 
 function signInAs(role: Role) {
@@ -142,6 +143,7 @@ describe("SubscriptionBanner", () => {
       daysRemaining: 0,
       graceUntil: "2026-10-07",
       autoRenew: true,
+      interactiveQuestions: false,
     });
 
     renderBanner();
@@ -167,6 +169,7 @@ describe("SubscriptionBanner", () => {
       ...ACTIVE_SUMMARY,
       daysRemaining: 5,
       autoRenew: true,
+      interactiveQuestions: false,
     });
 
     const { container } = renderBanner();

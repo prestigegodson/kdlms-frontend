@@ -57,6 +57,7 @@ function highlights(plan: PackageView): string[] {
   if (plan.guardianAccess) items.push("Guardian access");
   if (plan.lessonNotes) items.push("Lesson notes");
   if (plan.takeHomeQuiz) items.push("Quizzes");
+  if (plan.takeHomeQuiz && plan.interactiveQuestions) items.push("Interactive questions");
   if (plan.onDemandLearning) items.push("Learning resources");
   if (plan.communication) items.push("Class messaging");
   return items;

@@ -7,6 +7,7 @@ import {
 } from "@/api/publicTakeHomeQuiz";
 import { RichContent } from "@/components/richText/RichContent";
 import { Input } from "@/components/ui/Input";
+import { pluginFor } from "@/features/takeHomeQuizzes/interactions/registry";
 
 interface QuestionCardProps {
   question: PublicQuestionView;
@@ -60,6 +61,7 @@ export function QuestionCard({ question, answer, answered, onChange, renderImage
   const multi = question.questionType === "MULTI_CHOICE";
   const choice = multi || question.questionType === "SINGLE_CHOICE";
   const grid = choice && allOptionsShort(question.options);
+  const plugin = question.playerConfig ? pluginFor(question.questionType) : undefined;
 
   function renderOptionImage(fallbackAlt: string) {
     return (fileId: string, alt: string) => renderImage(fileId, alt || fallbackAlt, "option");
@@ -149,6 +151,20 @@ export function QuestionCard({ question, answer, answered, onChange, renderImage
               </label>
             );
           })}
+        </div>
+      )}
+
+      {plugin && (
+        <div className="clear-both pt-4">
+          <plugin.Player
+            config={question.playerConfig}
+            value={answer?.interaction ?? null}
+            onChange={(response: object) =>
+              onChange({ selectedOptionIds: [], textAnswer: null, interaction: response })
+            }
+            disabled={false}
+            renderImage={(fileId: string, alt: string) => renderImage(fileId, alt, "option")}
+          />
         </div>
       )}
 

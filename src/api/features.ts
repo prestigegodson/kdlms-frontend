@@ -22,6 +22,8 @@ export interface MyFeaturesView {
   studentLogins: boolean;
   /** Creators Phase C5 - GUARDIAN only: follows a learner in an education creator's online classes. */
   onlineClasses: boolean;
+  /** interaction-quiz.md §12 - the caller's own tenant may author interactive quiz question types. */
+  interactiveQuestions: boolean;
 }
 
 export function getMyFeatures(): Promise<MyFeaturesView> {

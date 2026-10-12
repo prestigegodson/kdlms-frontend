@@ -61,6 +61,8 @@ const SAVED_VIEW: takeHomeQuizzesApi.TakeHomeQuizView = {
   opensAt: "2026-03-01T00:00:00Z",
   closesAt: "2026-03-08T00:00:00Z",
   revealResultsOnSubmit: false,
+  shuffleQuestions: false,
+  shuffleChoices: false,
   totalPoints: 0,
   questions: [],
   actions: {
@@ -124,6 +126,29 @@ describe("TakeHomeQuizEditorPage - a new quiz", () => {
     expect(await screen.findByText("Questions")).toBeInTheDocument();
     expect(takeHomeQuizzesApi.createTakeHomeQuiz).toHaveBeenCalledWith(
       expect.objectContaining({ classId: "class-1", subjectId: "subject-1", termId: "term-1", title: "Week 3 quiz" }),
+    );
+  });
+
+  it("sends the shuffle toggles with the quiz's details", async () => {
+    vi.mocked(takeHomeQuizzesApi.createTakeHomeQuiz).mockResolvedValue(SAVED_VIEW);
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuiz).mockResolvedValue(SAVED_VIEW);
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizValidation).mockResolvedValue({
+      canPublish: false,
+      blockers: ["Add at least one question."],
+      totalPoints: 0,
+      midtermMax: null,
+      rosterSize: 3,
+    });
+    renderAt("/school/take-home-quizzes/new?classId=class-1&subjectId=subject-1&termId=term-1");
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByLabelText("Title"), "Week 3 quiz");
+    await user.click(screen.getByLabelText("Shuffle question order"));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByText("Questions")).toBeInTheDocument();
+    expect(takeHomeQuizzesApi.createTakeHomeQuiz).toHaveBeenCalledWith(
+      expect.objectContaining({ shuffleQuestions: true, shuffleChoices: false }),
     );
   });
 

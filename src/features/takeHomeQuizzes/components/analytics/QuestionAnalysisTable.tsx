@@ -1,16 +1,13 @@
 import { useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
-import type { QuestionType, QuizQuestionStats } from "@/api/takeHomeQuizzes";
+import type { QuizQuestionStats } from "@/api/takeHomeQuizzes";
 import { AuthenticatedRichImage } from "@/components/richText/AuthenticatedRichImage";
 import { RichContent } from "@/components/richText/RichContent";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
-
-const TYPE_LABELS: Record<QuestionType, string> = {
-  SINGLE_CHOICE: "Single choice",
-  MULTI_CHOICE: "Multiple choice",
-  FILL_IN_THE_GAP: "Fill in the gap",
-};
+import { QUESTION_TYPE_LABELS } from "@/features/takeHomeQuizzes/editableQuestion";
+import { PartBreakdown } from "@/features/takeHomeQuizzes/components/analytics/PartBreakdown";
+import { isInteractive } from "@/features/takeHomeQuizzes/interactions/registry";
 
 /** Below 40% correct is hard, below 70% moderate - the bar's colour only, never a stored judgement. */
 function difficultyClass(percent: number | null): string {
@@ -39,14 +36,16 @@ export function QuestionAnalysisTable({ questions }: QuestionAnalysisTableProps)
           Questions, hardest first
         </h3>
         <p className="mt-1 text-xs text-slate-500">
-          Ranked by the share of submitted attempts that got each question right. Open a question to
-          see its answers.
+          Ranked by the average share of each question's points earned in submitted attempts - for
+          a question without partial credit, the share that got it right. Open a question to see
+          its answers.
         </p>
       </div>
       <ul className="divide-y divide-slate-100">
         {questions.map((question) => {
           const open = expanded === question.questionId;
-          const percent = question.correctPercent;
+          const interactive = isInteractive(question.questionType);
+          const percent = question.averagePercent ?? question.correctPercent;
           return (
             <li key={question.questionId}>
               <button
@@ -58,7 +57,7 @@ export function QuestionAnalysisTable({ questions }: QuestionAnalysisTableProps)
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                     <span className="font-medium text-slate-700">Question {question.position}</span>
-                    <span>{TYPE_LABELS[question.questionType]}</span>
+                    <span>{QUESTION_TYPE_LABELS[question.questionType]}</span>
                     <span>· {question.points} pts</span>
                     {question.distractorFlag && <Badge variant="warning">Check answer key</Badge>}
                   </div>
@@ -73,7 +72,11 @@ export function QuestionAnalysisTable({ questions }: QuestionAnalysisTableProps)
                       />
                     </div>
                     <span className="w-28 shrink-0 text-right text-xs tabular-nums text-slate-600">
-                      {percent != null ? `${percent}% correct` : "No submissions"}
+                      {percent == null
+                        ? "No submissions"
+                        : interactive
+                          ? `${percent}% average`
+                          : `${percent}% correct`}
                     </span>
                   </div>
                 </div>
@@ -100,7 +103,9 @@ function QuestionDetail({ question }: { question: QuizQuestionStats }) {
         {question.averagePoints ?? 0} of {question.points} pts
       </p>
 
-      {question.questionType === "FILL_IN_THE_GAP" ? (
+      {isInteractive(question.questionType) ? (
+        <PartBreakdown questionType={question.questionType} parts={question.parts ?? []} />
+      ) : question.questionType === "FILL_IN_THE_GAP" ? (
         <div>
           <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Common wrong answers

@@ -14,6 +14,7 @@ interface FeatureState {
   learningMedia: boolean;
   studentLogins: boolean;
   onlineClasses: boolean;
+  interactiveQuestions: boolean;
   status: FetchStatus;
   /** When the flags were last fetched successfully - null until the first success. */
   loadedAt: number | null;
@@ -38,6 +39,7 @@ const UNFETCHED_FLAGS = {
   learningMedia: false,
   studentLogins: false,
   onlineClasses: false,
+  interactiveQuestions: false,
 } as const;
 
 /**
@@ -77,6 +79,7 @@ export const useFeatureStore = create<FeatureState>((set, get) => {
         learningMedia: features.learningMedia,
         studentLogins: features.studentLogins,
         onlineClasses: features.onlineClasses ?? false,
+        interactiveQuestions: features.interactiveQuestions ?? false,
         status: "loaded",
         loadedAt: Date.now(),
       });

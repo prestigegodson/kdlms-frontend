@@ -1,5 +1,6 @@
 import { apiFetch, apiFetchBlob, apiUpload } from "@/api/client";
 import type { MyQuizInterstitialView, MyTakeHomeQuizSummaryView } from "@/api/myTakeHomeQuizzes";
+import type { Page } from "@/api/types";
 import type {
   AnswerCommand,
   QuizAttemptView,
@@ -11,6 +12,8 @@ import type {
   AnsweredQuestionView,
   PublishReadinessView,
   QuizAnalytics,
+  QuestionBankItemView,
+  QuestionBankQuery,
   QuestionCommand,
   QuestionTemplateFormat,
   TakeHomeQuizActionsView,
@@ -19,6 +22,7 @@ import type {
   TakeHomeQuizQuestionView,
   TakeHomeQuizStatus,
 } from "@/api/takeHomeQuizzes";
+import { questionBankParams } from "@/api/takeHomeQuizzes";
 
 /**
  * An education creator's quizzes for one virtual class, and a learner's/guardian's side of them
@@ -64,6 +68,10 @@ export interface ClassQuizView {
   opensAt: string;
   closesAt: string;
   revealResultsOnSubmit: boolean;
+  /** Each attempt sees its questions in its own seeded order - off by default, frozen once a submission exists. */
+  shuffleQuestions: boolean;
+  /** Each attempt sees a choice question's options in its own seeded order - off by default, frozen once a submission exists. */
+  shuffleChoices: boolean;
   totalPoints: number;
   hasSubmissions: boolean;
   questions: TakeHomeQuizQuestionView[];
@@ -80,6 +88,8 @@ export interface SaveClassQuizRequest {
   opensAt: string;
   closesAt: string;
   revealResultsOnSubmit: boolean;
+  shuffleQuestions: boolean;
+  shuffleChoices: boolean;
 }
 
 /** Mirrors backend `LearnerResultRowView` - `overLimit` means the plan's class size keeps them from taking it. */
@@ -168,6 +178,45 @@ export function importClassQuizQuestions(classId: string, quizId: string, file: 
 
 export function fetchClassQuestionTemplate(classId: string, format: QuestionTemplateFormat): Promise<Blob> {
   return apiFetchBlob(`${creatorBase(classId)}/question-template?format=${format}`);
+}
+
+/** The class twin of `saveTakeHomeQuizQuestionToBank` - into the creator's own bank, tagged with the class's subject label. */
+export function saveClassQuizQuestionToBank(
+  classId: string,
+  quizId: string,
+  question: QuestionCommand,
+): Promise<QuestionBankItemView> {
+  return apiFetch<QuestionBankItemView>(`${creatorBase(classId)}/${quizId}/bank-items`, {
+    method: "POST",
+    body: JSON.stringify(question),
+  });
+}
+
+/** The class twin of `addTakeHomeQuizQuestionsFromBank` - copies out unsaved, never saves. */
+export function addClassQuizQuestionsFromBank(
+  classId: string,
+  quizId: string,
+  itemIds: string[],
+): Promise<QuestionCommand[]> {
+  return apiFetch<{ questions: QuestionCommand[] }>(`${creatorBase(classId)}/${quizId}/questions/from-bank`, {
+    method: "POST",
+    body: JSON.stringify({ itemIds }),
+  }).then((response) => response.questions);
+}
+
+/** The creator's own question bank, newest first - `levelId`/`subjectId`/`mine` don't apply. */
+export function searchCreatorQuestionBank(
+  query: QuestionBankQuery,
+  page = 0,
+  size = 20,
+): Promise<Page<QuestionBankItemView>> {
+  return apiFetch<Page<QuestionBankItemView>>(
+    `/api/v1/virtual-classes/question-bank?${questionBankParams(query, page, size)}`,
+  );
+}
+
+export function deleteCreatorQuestionBankItem(itemId: string): Promise<void> {
+  return apiFetch<void>(`/api/v1/virtual-classes/question-bank/${itemId}`, { method: "DELETE" });
 }
 
 export function saveClassQuizQuestions(

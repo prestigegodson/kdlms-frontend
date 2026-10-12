@@ -33,6 +33,9 @@ function toReviewQuestions(detail: AttemptDetail) {
     selectedOptionIds: question.selectedOptionIds,
     textAnswer: question.textAnswer,
     awardedPoints: question.awardedPoints,
+    interaction: question.interaction,
+    response: question.response,
+    parts: question.parts,
   }));
 }
 

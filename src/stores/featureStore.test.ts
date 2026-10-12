@@ -16,6 +16,7 @@ const FEATURES: MyFeaturesView = {
   learningMedia: false,
   studentLogins: false,
   onlineClasses: false,
+  interactiveQuestions: false,
 };
 
 const MAX_AGE = 5 * 60_000;

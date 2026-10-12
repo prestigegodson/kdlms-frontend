@@ -33,6 +33,7 @@ const PLAN = {
   learningMedia: false,
   communication: false,
   guardianAccess: false,
+  interactiveQuestions: false,
   autoRenew: false,
   graceUntil: null,
 } satisfies CreatorPlanView;

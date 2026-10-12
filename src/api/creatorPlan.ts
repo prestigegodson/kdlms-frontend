@@ -29,6 +29,8 @@ export interface CreatorPlanView {
   learningMedia: boolean;
   communication: boolean;
   guardianAccess: boolean;
+  /** Authoring the interactive quiz question types - an add-on on top of `takeHomeQuiz`. */
+  interactiveQuestions: boolean;
   /** A Paystack-paid plan renews itself from the saved card while this is on (Phase C8). */
   autoRenew: boolean;
   /** Set while a failed renewal is being retried - the plan stays active until this day. */

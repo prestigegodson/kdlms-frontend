@@ -43,6 +43,7 @@ const ACTIVE_SUMMARY: SubscriptionSummaryView = {
   freemium: false,
   graceUntil: null,
   autoRenew: false,
+  interactiveQuestions: false,
 };
 
 const GROWTH = plan({

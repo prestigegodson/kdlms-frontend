@@ -184,6 +184,9 @@ export function PackagesPage() {
                       {pkg.timetable && <Badge variant="brand">Timetables</Badge>}
                       {pkg.lessonNotes && <Badge variant="brand">Lesson notes</Badge>}
                       {pkg.takeHomeQuiz && <Badge variant="brand">CBT/Quizzes</Badge>}
+                      {pkg.takeHomeQuiz && pkg.interactiveQuestions && (
+                        <Badge variant="neutral">Interactive questions</Badge>
+                      )}
                       {pkg.aiLessonNotes && <Badge variant="brand">AI lesson notes</Badge>}
                       {pkg.billing && <Badge variant="brand">Fees & bills</Badge>}
                       {pkg.learningMedia && <Badge variant="neutral">Learning media</Badge>}

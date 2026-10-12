@@ -93,6 +93,12 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
   const [submitting, setSubmitting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  // An attempt's question set never changes, so neither does each question's type - what an
+  // interactive answer is tagged with on save.
+  const [questionTypes] = useState(
+    () => new Map(initialAttempt.questions.map((question) => [question.id, question.questionType])),
+  );
+
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pendingAnswersRef = useRef<AnswersState | null>(null);
 
@@ -119,8 +125,12 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
       setSaveStatus("saving");
       const commands: AnswerCommand[] = Object.entries(toSave).map(([questionId, answer]) => ({
         questionId,
-        selectedOptionIds: answer.selectedOptionIds,
-        textAnswer: answer.textAnswer,
+        selectedOptionIds: answer.selectedOptionIds ?? [],
+        textAnswer: answer.textAnswer ?? null,
+        interaction:
+          answer.interaction && questionTypes.has(questionId)
+            ? { type: questionTypes.get(questionId)!, response: answer.interaction }
+            : null,
       }));
       saveAnswers(commands)
         .then((updated) => {
@@ -134,7 +144,7 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
           setSaveStatus(navigator.onLine ? "saved" : "offline");
         });
     },
-    [bufferKey, saveAnswers],
+    [bufferKey, questionTypes, saveAnswers],
   );
 
   // Flush any locally-buffered edits from a previous, interrupted session once, on mount - the
@@ -203,9 +213,9 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
     const indexes = new Set<number>();
     questions.forEach((question, index) => {
       const answer = answers[question.id];
-      const hasSelection = (answer?.selectedOptionIds.length ?? 0) > 0;
+      const hasSelection = (answer?.selectedOptionIds?.length ?? 0) > 0;
       const hasText = !!answer?.textAnswer?.trim();
-      if (hasSelection || hasText) {
+      if (hasSelection || hasText || !!answer?.interaction) {
         indexes.add(index);
       }
     });

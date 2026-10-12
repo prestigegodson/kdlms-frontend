@@ -82,6 +82,7 @@ export function CreatorPlanCard() {
       included: plan.aiLessonNotes,
     },
     { label: "Quizzes", included: plan.takeHomeQuiz },
+    { label: "Interactive questions", included: plan.takeHomeQuiz && plan.interactiveQuestions },
     { label: "Learning resources", included: plan.onDemandLearning },
     { label: "Audio & video", included: plan.learningMedia },
     { label: "Guardian access", included: plan.guardianAccess },

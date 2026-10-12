@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import {
+  addTakeHomeQuizQuestionsFromBank,
   createTakeHomeQuiz,
+  deleteQuestionBankItem,
   deleteTakeHomeQuiz,
   fetchQuestionTemplate,
   getShareableClasses,
@@ -11,6 +13,8 @@ import {
   type PublishReadinessView,
   type QuizType,
   saveTakeHomeQuizQuestions,
+  saveTakeHomeQuizQuestionToBank,
+  searchQuestionBank,
   type SharedClassView,
   type TakeHomeQuizView,
   updateTakeHomeQuiz,
@@ -19,6 +23,7 @@ import { ApiError } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { ShuffleFields } from "@/features/takeHomeQuizzes/components/ShuffleFields";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
@@ -29,11 +34,12 @@ import { Textarea } from "@/components/ui/Textarea";
 import { UnsavedChangesBar } from "@/features/assessments/components/UnsavedChangesBar";
 import { PublishQuizModal } from "@/features/takeHomeQuizzes/components/PublishQuizModal";
 import { PublishReadinessPanel } from "@/features/takeHomeQuizzes/components/PublishReadinessPanel";
+import type { QuestionBankSource } from "@/features/takeHomeQuizzes/components/QuestionBankModal";
 import { QuestionEditor } from "@/features/takeHomeQuizzes/components/QuestionEditor";
 import { QuestionTemplateDownload } from "@/features/takeHomeQuizzes/components/QuestionImportModal";
 import { QuizWindowFields } from "@/features/takeHomeQuizzes/components/QuizWindowFields";
 import { StudentLinksPanel } from "@/features/takeHomeQuizzes/components/StudentLinksPanel";
-import { type EditableQuestion, toEditableQuestion } from "@/features/takeHomeQuizzes/editableQuestion";
+import { type EditableQuestion, toEditableQuestion, toQuestionCommand } from "@/features/takeHomeQuizzes/editableQuestion";
 import { TAKE_HOME_QUIZ_FIELD_HELP } from "@/features/takeHomeQuizzes/takeHomeQuizFieldHelp";
 
 interface FormState {
@@ -45,6 +51,8 @@ interface FormState {
   opensAt: string;
   closesAt: string;
   revealResultsOnSubmit: boolean;
+  shuffleQuestions: boolean;
+  shuffleChoices: boolean;
   /** The other arms of the home class's level a Normal quiz is shared with - never the home class itself. */
   sharedClassIds: string[];
   questions: EditableQuestion[];
@@ -64,6 +72,8 @@ function blankForm(): FormState {
     opensAt: nowPlusHours(24),
     closesAt: nowPlusHours(24 * 8),
     revealResultsOnSubmit: false,
+    shuffleQuestions: false,
+    shuffleChoices: false,
     sharedClassIds: [],
     questions: [],
   };
@@ -79,6 +89,8 @@ function fromView(view: TakeHomeQuizView): FormState {
     opensAt: view.opensAt,
     closesAt: view.closesAt,
     revealResultsOnSubmit: view.revealResultsOnSubmit,
+    shuffleQuestions: view.shuffleQuestions,
+    shuffleChoices: view.shuffleChoices,
     sharedClassIds: (view.classes ?? [])
       .map((sharedClass) => sharedClass.classId)
       .filter((id) => id !== view.classId),
@@ -125,6 +137,23 @@ export function TakeHomeQuizEditorPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [linksRefreshToken, setLinksRefreshToken] = useState(0);
+
+  // Memoized: the bank modal re-searches whenever its `search` or `context` changes identity.
+  const quizIdForBank = quiz?.id ?? null;
+  const bankSubjectId = quiz?.subjectId ?? null;
+  const bankSubjectName = quiz?.subjectName ?? "";
+  const bank = useMemo<QuestionBankSource | undefined>(() => {
+    if (!quizIdForBank) return undefined;
+    return {
+      search: searchQuestionBank,
+      add: (itemIds) => addTakeHomeQuizQuestionsFromBank(quizIdForBank, itemIds),
+      save: (question) => saveTakeHomeQuizQuestionToBank(quizIdForBank, question),
+      remove: deleteQuestionBankItem,
+      // A subject-group quiz has no one subject to narrow the bank to.
+      context: bankSubjectId ? { label: bankSubjectName, query: { subjectId: bankSubjectId } } : undefined,
+      offerMine: true,
+    };
+  }, [quizIdForBank, bankSubjectId, bankSubjectName]);
 
   useEffect(() => {
     if (isNew) return;
@@ -228,6 +257,8 @@ export function TakeHomeQuizEditorPage() {
           opensAt: form.opensAt,
           closesAt: form.closesAt,
           revealResultsOnSubmit: form.revealResultsOnSubmit,
+          shuffleQuestions: form.shuffleQuestions,
+          shuffleChoices: form.shuffleChoices,
           classIds: chosenClassIds(),
         });
       } else {
@@ -240,22 +271,15 @@ export function TakeHomeQuizEditorPage() {
           opensAt: form.opensAt,
           closesAt: form.closesAt,
           revealResultsOnSubmit: form.revealResultsOnSubmit,
+          shuffleQuestions: form.shuffleQuestions,
+          shuffleChoices: form.shuffleChoices,
           classIds: chosenClassIds(),
         });
       }
       if (form.questions.length > 0 || (quiz && quiz.questions.length > 0)) {
         saved = await saveTakeHomeQuizQuestions(
           saved.id,
-          form.questions.map((question) => ({
-            id: question.id,
-            questionType: question.questionType,
-            prompt: question.prompt,
-            points: Number(question.points) || 0,
-            options: question.options.map((option) => ({ id: option.id, label: option.label, correct: option.correct })),
-            answerKeys: question.answerKeys
-              .filter((key) => key.expectedAnswer.trim() !== "")
-              .map((key) => ({ id: key.id, expectedAnswer: key.expectedAnswer })),
-          })),
+          form.questions.map(toQuestionCommand),
         );
       }
       applyQuiz(saved);
@@ -433,6 +457,13 @@ export function TakeHomeQuizEditorPage() {
             Show students their score and correct answers after they submit
           </label>
           <p className="text-xs text-slate-500">{TAKE_HOME_QUIZ_FIELD_HELP.revealResultsOnSubmit}</p>
+
+          <ShuffleFields
+            shuffleQuestions={form.shuffleQuestions}
+            shuffleChoices={form.shuffleChoices}
+            onChange={(value) => setForm({ ...form, ...value })}
+            disabled={locked}
+          />
         </div>
       )}
 
@@ -447,6 +478,7 @@ export function TakeHomeQuizEditorPage() {
               importFile: (file) => importTakeHomeQuizQuestions(quiz?.id ?? "", file),
               fetchTemplate: fetchQuestionTemplate,
             }}
+            bank={bank}
           />
           <PublishReadinessPanel readiness={readiness} quizType={form.quizType} />
         </div>

@@ -29,6 +29,7 @@ export function plan(overrides: Partial<PackageView> = {}): PackageView {
     learningMedia: false,
     studentLogins: false,
     guardianAccess: true,
+    interactiveQuestions: false,
     status: "ACTIVE",
     ...overrides,
   };

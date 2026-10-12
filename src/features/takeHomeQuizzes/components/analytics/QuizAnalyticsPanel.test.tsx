@@ -19,6 +19,7 @@ function question(overrides: Partial<QuizQuestionStats>): QuizQuestionStats {
     options: [],
     commonWrongAnswers: [],
     distractorFlag: false,
+    parts: [],
     ...overrides,
   };
 }
@@ -85,6 +86,7 @@ const analytics: QuizAnalytics = {
       ],
     }),
   ],
+  tags: [],
 };
 
 describe("QuizAnalyticsPanel", () => {
@@ -108,6 +110,73 @@ describe("QuizAnalyticsPanel", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: /Question 2/ }));
     expect(screen.getByText("“Lagos”")).toBeInTheDocument();
+  });
+
+  it("expands an interactive question into its parts and their common confusions", async () => {
+    const interactive: QuizAnalytics = {
+      ...analytics,
+      questions: [
+        question({
+          questionId: "match",
+          position: 3,
+          questionType: "MATCHING",
+          prompt: "<p>Match each city</p>",
+          averagePercent: 50,
+          parts: [
+            {
+              partId: "kano",
+              position: 2,
+              label: "<p>Kano</p>",
+              expectedLabel: "<p>North-west</p>",
+              correctCount: 1,
+              correctPercent: 25,
+              unansweredCount: 1,
+              topWrong: [{ ref: "ne", label: "<p>North-east</p>", count: 2 }],
+            },
+            {
+              partId: "zone",
+              position: 1,
+              label: null,
+              expectedLabel: null,
+              correctCount: 4,
+              correctPercent: 100,
+              unansweredCount: 0,
+              topWrong: [],
+            },
+          ],
+        }),
+      ],
+    };
+    render(<QuizAnalyticsPanel load={() => Promise.resolve(interactive)} participantNoun="students" />);
+
+    await userEvent.click(await screen.findByRole("button", { name: /Question 3/ }));
+    expect(screen.getByText("Kano")).toBeInTheDocument();
+    expect(screen.getByText("North-west")).toBeInTheDocument();
+    expect(screen.getByText("25% correct")).toBeInTheDocument();
+    expect(screen.getByText("North-east")).toBeInTheDocument();
+    expect(screen.getByText("1 left unanswered")).toBeInTheDocument();
+    expect(screen.getByText("Pair 1")).toBeInTheDocument();
+  });
+
+  it("shows topic mastery only when a question is tagged", async () => {
+    const { unmount } = render(
+      <QuizAnalyticsPanel load={() => Promise.resolve(analytics)} participantNoun="students" />,
+    );
+    await screen.findByText("2 / 3");
+    expect(screen.queryByText("Topic mastery")).not.toBeInTheDocument();
+    unmount();
+
+    const tagged: QuizAnalytics = {
+      ...analytics,
+      tags: [
+        { tag: "photosynthesis", questionCount: 2, points: 4, averagePercent: 35.5 },
+        { tag: "cells", questionCount: 1, points: 2, averagePercent: 80 },
+      ],
+    };
+    render(<QuizAnalyticsPanel load={() => Promise.resolve(tagged)} participantNoun="students" />);
+    expect(await screen.findByText("Topic mastery")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "photosynthesis: 35.5%" })).toBeInTheDocument();
+    expect(screen.getByText("2 questions · 35.5%")).toBeInTheDocument();
   });
 
   it("shows an empty state until someone submits", async () => {

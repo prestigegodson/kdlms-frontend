@@ -80,6 +80,9 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
   );
   const [limits, setLimits] = useState(() => initialLimits(initial));
   const [takeHomeQuiz, setTakeHomeQuiz] = useState(initial?.takeHomeQuiz ?? false);
+  const [interactiveQuestions, setInteractiveQuestions] = useState(
+    initial?.interactiveQuestions ?? false,
+  );
   const [onDemandLearning, setOnDemandLearning] = useState(initial?.onDemandLearning ?? false);
   const [communication, setCommunication] = useState(initial?.communication ?? false);
   const [timetable, setTimetable] = useState(initial?.timetable ?? false);
@@ -126,6 +129,7 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
         maxParticipantsPerSession: isCreator ? limitValue(limits.maxParticipantsPerSession) : null,
         maxMonthlySessionHours: isCreator ? limitValue(limits.maxMonthlySessionHours) : null,
         takeHomeQuiz,
+        interactiveQuestions: takeHomeQuiz && interactiveQuestions,
         onDemandLearning,
         communication,
         timetable: !isCreator && timetable,
@@ -263,6 +267,13 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
               ? "Quizzes the creator sets and learners take in their portal."
               : "Entitlement for the teacher-authored CBT/Quiz module - does not affect midterm quiz recording, which is available on every package."
           }
+        />
+        <Flag
+          checked={takeHomeQuiz && interactiveQuestions}
+          onChange={setInteractiveQuestions}
+          disabled={!takeHomeQuiz}
+          label="Interactive questions"
+          help="An add-on on top of CBT/Quizzes for authoring drag-and-drop, matching, sequencing, sorting, diagram-labelling and hotspot questions. Quizzes that already have them keep working after a downgrade."
         />
         <Flag
           checked={onDemandLearning}

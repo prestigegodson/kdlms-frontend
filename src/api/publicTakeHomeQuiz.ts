@@ -1,5 +1,14 @@
 import { apiFetch } from "@/api/client";
-import type { QuestionType } from "@/api/takeHomeQuizzes";
+import type {
+  InteractionConfig,
+  InteractionResponse,
+  PartFeedback,
+  QuestionType,
+  ScoringMode,
+} from "@/api/takeHomeQuizzes";
+
+/** An interactive question's answer-free, shuffled shape - the type's own player view (interaction-quiz.md §10.1). */
+export type PlayerConfig = object;
 
 /**
  * The unauthenticated take-home quiz surface (Phase 20D) - mirrors backend
@@ -27,11 +36,15 @@ export interface PublicQuestionView {
   prompt: string;
   points: number;
   options: PublicOptionView[];
+  /** An interactive question's player view - absent for the original three types. */
+  playerConfig?: PlayerConfig | null;
 }
 
 export interface PublicAnswerView {
   selectedOptionIds: string[];
   textAnswer: string | null;
+  /** An interactive question's saved answer. */
+  interaction?: InteractionResponse | null;
 }
 
 /** Mirrors backend `TakeTakeHomeQuizUseCase.QuizInterstitialView` - shown before Start is pressed. */
@@ -67,6 +80,8 @@ export interface AnswerCommand {
   questionId: string;
   selectedOptionIds: string[];
   textAnswer: string | null;
+  /** An interactive question's answer, tagged with the type it answers. */
+  interaction?: { type: QuestionType; response: InteractionResponse } | null;
 }
 
 export interface SubmitConfirmationView {
@@ -104,6 +119,11 @@ export interface ReviewQuestionView {
   textAnswer: string | null;
   awardedPoints: number | null;
   correct: boolean | null;
+  /** An interactive question's config (answer included), the student's own response, and the per-part feedback frozen at submit. */
+  interaction?: InteractionConfig | null;
+  scoring?: ScoringMode | null;
+  response?: InteractionResponse | null;
+  parts?: PartFeedback[];
 }
 
 /** Mirrors backend `TakeTakeHomeQuizUseCase.QuizReviewView`. `score` is the attempt's effective score - a later teacher adjustment is reflected here too. */

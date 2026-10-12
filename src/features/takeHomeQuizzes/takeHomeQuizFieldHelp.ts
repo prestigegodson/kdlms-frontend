@@ -13,4 +13,7 @@ export const TAKE_HOME_QUIZ_FIELD_HELP = {
   durationMinutes: "How long a student has once they press Start.",
   revealResultsOnSubmit:
     "Off by default. When on, a student sees their score and which answers were correct as soon as they submit - including a student who finishes before their classmates, who could then share the answers.",
+  shuffle:
+    "Off by default. Each student gets their own order, which stays the same if they leave and come back and in their review. Locked once a student has started.",
+  tags: "Optional topic tags, e.g. photosynthesis - up to 5 per question. Only staff see them.",
 } as const;

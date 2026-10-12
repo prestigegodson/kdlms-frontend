@@ -65,6 +65,8 @@ export interface PackageView extends CreatorPlanLimitFields {
   studentLogins: boolean;
   /** CREATOR plans only: a minor learner's guardian gets access to their classes (dormant until creators Phase C5). */
   guardianAccess: boolean;
+  /** An add-on on top of takeHomeQuiz: authoring the interactive question types. Taking and reviewing them are never gated. */
+  interactiveQuestions: boolean;
   status: PackageStatus;
 }
 
@@ -89,6 +91,7 @@ export interface SavePackageRequest extends CreatorPlanLimitFields {
   learningMedia: boolean;
   studentLogins: boolean;
   guardianAccess: boolean;
+  interactiveQuestions: boolean;
 }
 
 const BASE = "/api/v1/admin/packages";

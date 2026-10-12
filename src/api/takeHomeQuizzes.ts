@@ -3,7 +3,36 @@ import type { Page } from "@/api/types";
 import type { SubjectTarget } from "@/features/academics/subjectTarget";
 
 export type QuizType = "MIDTERM" | "NORMAL";
-export type QuestionType = "SINGLE_CHOICE" | "MULTI_CHOICE" | "FILL_IN_THE_GAP";
+export type QuestionType =
+  | "SINGLE_CHOICE"
+  | "MULTI_CHOICE"
+  | "FILL_IN_THE_GAP"
+  | "SEQUENCE"
+  | "CATEGORIZE"
+  | "MATCHING"
+  | "DIAGRAM_LABEL"
+  | "HOTSPOT";
+
+/** Mirrors backend `takehomequiz.domain.interaction.ScoringMode` - only an interactive question scores partially. */
+export type ScoringMode = "PARTIAL" | "ALL_OR_NOTHING";
+
+/**
+ * An interactive question's authored config, answer included (interaction-quiz.md §5). Each type's
+ * own shape lives in `features/takeHomeQuizzes/interactions/types.ts`; here it is opaque, keyed by
+ * the question's `questionType`.
+ */
+export type InteractionConfig = object;
+
+/** A student's answer to an interactive question - the type's own response shape. */
+export type InteractionResponse = object;
+
+/** Mirrors backend `PartFeedback` - one scored part (a pair, an item...), frozen at submit. */
+export interface PartFeedback {
+  partId: string;
+  correct: boolean;
+  expectedRef: string | null;
+  givenRef: string | null;
+}
 export type TakeHomeQuizStatus = "DRAFT" | "PUBLISHED" | "RESULTS_PUBLISHED" | "ARCHIVED";
 export type TakeHomeQuizAvailability = "SCHEDULED" | "OPEN" | "CLOSED";
 
@@ -62,6 +91,11 @@ export interface TakeHomeQuizQuestionView {
   points: number;
   options: TakeHomeQuizOptionView[];
   answerKeys: TakeHomeQuizAnswerKeyView[];
+  /** Staff-only topic tags - lower-cased, at most 5 of 40 characters each, alphabetical. */
+  tags: string[];
+  /** An interactive question's config, answer included; absent for the original three types. */
+  interaction?: InteractionConfig | null;
+  scoring?: ScoringMode | null;
 }
 
 /**
@@ -101,6 +135,10 @@ export interface TakeHomeQuizView {
   closesAt: string;
   /** Off by default - see backend `TakeHomeQuiz`'s Javadoc. Never frozen once a submission exists, unlike most of this view's other fields. */
   revealResultsOnSubmit: boolean;
+  /** Each attempt sees its questions in its own seeded order - off by default, frozen once a submission exists. */
+  shuffleQuestions: boolean;
+  /** Each attempt sees a choice question's options in its own seeded order - off by default, frozen once a submission exists. */
+  shuffleChoices: boolean;
   totalPoints: number;
   questions: TakeHomeQuizQuestionView[];
   actions: TakeHomeQuizActionsView;
@@ -155,6 +193,12 @@ export interface QuestionCommand {
   points: number;
   options: OptionCommand[];
   answerKeys: AnswerKeyCommand[];
+  /** Topic tags, normalized by the server (trimmed, lower-cased, de-duplicated). Omitted means none. */
+  tags?: string[];
+  /** An interactive question's config - required for an interactive type, absent otherwise. */
+  interaction?: InteractionConfig | null;
+  /** Omitted takes the type's default (`PARTIAL` for an interactive type). */
+  scoring?: ScoringMode | null;
 }
 
 /** Exactly one of `subjectId`/`subjectGroupId`; a subject-group quiz must be `NORMAL`. */
@@ -171,6 +215,8 @@ export interface CreateTakeHomeQuizRequest {
   opensAt: string;
   closesAt: string;
   revealResultsOnSubmit: boolean;
+  shuffleQuestions: boolean;
+  shuffleChoices: boolean;
   /** Other arms of `classId`'s level and branch to share a Normal quiz with (`getShareableClasses`); `classId` is always included. */
   classIds?: string[];
 }
@@ -184,6 +230,8 @@ export interface UpdateTakeHomeQuizRequest {
   opensAt: string;
   closesAt: string;
   revealResultsOnSubmit: boolean;
+  shuffleQuestions: boolean;
+  shuffleChoices: boolean;
   /** Omitted leaves the classes the quiz reaches unchanged. Once a submission exists, classes can only be added. */
   classIds?: string[];
 }
@@ -283,6 +331,79 @@ export function importTakeHomeQuizQuestions(quizId: string, file: File): Promise
   return apiUpload<{ questions: QuestionCommand[] }>(`${BASE}/${quizId}/questions/import`, file).then(
     (response) => response.questions,
   );
+}
+
+/** Mirrors backend takehomequiz.application.port.in.QuestionBankItemView - a bank question, answers included (staff/creator only). */
+export interface QuestionBankItemView {
+  id: string;
+  questionType: QuestionType;
+  prompt: string;
+  points: number;
+  options: { label: string; correct: boolean }[];
+  answerKeys: string[];
+  tags: string[];
+  levelId: string | null;
+  levelName: string;
+  subjectId: string | null;
+  subjectName: string;
+  /** A creator item's context, copied from its virtual class. */
+  subjectLabel: string | null;
+  createdBy: string;
+  createdByName: string;
+  createdAt: string;
+  /** Whether the caller may delete it. */
+  deletable: boolean;
+  interaction?: InteractionConfig | null;
+  scoring?: ScoringMode | null;
+}
+
+/** Every field optional - see `GET /api/v1/question-bank`. */
+export interface QuestionBankQuery {
+  levelId?: string | null;
+  subjectId?: string | null;
+  subjectLabel?: string | null;
+  questionType?: QuestionType | null;
+  tag?: string | null;
+  q?: string | null;
+  mine?: boolean;
+}
+
+/** The query string for a bank search - shared by the school and creator banks. */
+export function questionBankParams(query: QuestionBankQuery, page: number, size: number): string {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  for (const [key, value] of Object.entries(query)) {
+    if (value === null || value === undefined || value === "" || value === false) continue;
+    params.set(key, String(value));
+  }
+  return params.toString();
+}
+
+/** The school's question bank, newest first (interaction-quiz.md Phase 0B). */
+export function searchQuestionBank(query: QuestionBankQuery, page = 0, size = 20): Promise<Page<QuestionBankItemView>> {
+  return apiFetch<Page<QuestionBankItemView>>(`/api/v1/question-bank?${questionBankParams(query, page, size)}`);
+}
+
+export function deleteQuestionBankItem(itemId: string): Promise<void> {
+  return apiFetch<void>(`/api/v1/question-bank/${itemId}`, { method: "DELETE" });
+}
+
+/** Copies one editor question - saved or not - into the school's bank. It must be complete enough to publish (422 otherwise). */
+export function saveTakeHomeQuizQuestionToBank(quizId: string, question: QuestionCommand): Promise<QuestionBankItemView> {
+  return apiFetch<QuestionBankItemView>(`${BASE}/${quizId}/bank-items`, {
+    method: "POST",
+    body: JSON.stringify(question),
+  });
+}
+
+/**
+ * Copies bank items out as new, unsaved questions (every id `null`) in the given order - the
+ * editor appends them and saves them through {@link saveTakeHomeQuizQuestions}, the import shape.
+ */
+export function addTakeHomeQuizQuestionsFromBank(quizId: string, itemIds: string[]): Promise<QuestionCommand[]> {
+  return apiFetch<{ questions: QuestionCommand[] }>(`${BASE}/${quizId}/questions/from-bank`, {
+    method: "POST",
+    body: JSON.stringify({ itemIds }),
+  }).then((response) => response.questions);
 }
 
 export function fetchQuestionTemplate(format: QuestionTemplateFormat): Promise<Blob> {
@@ -396,6 +517,11 @@ export interface AnsweredQuestionView {
   textAnswer: string | null;
   awardedPoints: number | null;
   correct: boolean | null;
+  /** An interactive question's config (answer included), the student's response, and the per-part feedback frozen at submit. */
+  interaction?: InteractionConfig | null;
+  scoring?: ScoringMode | null;
+  response?: InteractionResponse | null;
+  parts?: PartFeedback[];
 }
 
 /** Mirrors backend ReviewTakeHomeQuizResultsUseCase.StudentAttemptDetailView. */
@@ -428,8 +554,18 @@ export interface QuizAnalytics {
   scores: QuizScoreSummary;
   /** Null for an untimed quiz. */
   timing: QuizTiming | null;
-  /** Hardest first (lowest correct rate), then by position. */
+  /** Hardest first (lowest average share of points), then by position. */
   questions: QuizQuestionStats[];
+  /** Topic mastery, one row per tag any question carries, weakest first; empty when nothing is tagged. */
+  tags: QuizTagStats[];
+}
+
+/** A tag's questions pooled: the share of their points earned in submitted attempts (null until someone submits). */
+export interface QuizTagStats {
+  tag: string;
+  questionCount: number;
+  points: number;
+  averagePercent: number | null;
 }
 
 export interface QuizParticipation {
@@ -479,6 +615,26 @@ export interface QuizQuestionStats {
   commonWrongAnswers: { answer: string; count: number }[];
   /** A wrong option was picked more often than every correct one - often a wrong key or an ambiguous question. */
   distractorFlag: boolean;
+  /** The average share of the question's points earned - equals `correctPercent` for an all-or-nothing question. */
+  averagePercent?: number | null;
+  /** An interactive question's scored parts (a zone, a pair, an item...), in the question's own order; empty otherwise. */
+  parts: QuizPartStats[];
+}
+
+/**
+ * One scored part of an interactive question, from each submitted answer's frozen feedback.
+ * `label`/`expectedLabel` are sanitized HTML, or null (a diagram zone has no name; a hotspot target
+ * has no expected answer). `topWrong` lists the answers the part was most often confused with.
+ */
+export interface QuizPartStats {
+  partId: string;
+  position: number;
+  label: string | null;
+  expectedLabel: string | null;
+  correctCount: number;
+  correctPercent: number | null;
+  unansweredCount: number;
+  topWrong: { ref: string; label: string; count: number }[];
 }
 
 export interface QuizOptionStats {

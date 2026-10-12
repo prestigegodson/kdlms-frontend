@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import type { QuestionType } from "@/api/takeHomeQuizzes";
+import type { InteractionConfig, InteractionResponse, PartFeedback, QuestionType } from "@/api/takeHomeQuizzes";
 import { RichContent } from "@/components/richText/RichContent";
 import { Check, X } from "lucide-react";
+import { pluginFor } from "@/features/takeHomeQuizzes/interactions/registry";
 
 export interface QuizReviewOption {
   id: string;
@@ -21,6 +22,10 @@ export interface QuizReviewQuestion {
   selectedOptionIds: string[];
   textAnswer: string | null;
   awardedPoints: number | null;
+  /** An interactive question's config (answer included), the response and its frozen per-part feedback. */
+  interaction?: InteractionConfig | null;
+  response?: InteractionResponse | null;
+  parts?: PartFeedback[];
 }
 
 interface QuizReviewProps {
@@ -40,62 +45,75 @@ export function QuizReview({ questions, renderImage, perspective = "staff" }: Qu
   const answerLabel = perspective === "self" ? "Your answer: " : "Student's answer: ";
   return (
     <div className="space-y-6">
-      {questions.map((question) => (
-        <div key={question.id} className="space-y-2 border-b border-slate-100 pb-4 last:border-0">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 font-medium text-slate-900">
-              <span className="block text-xs font-normal text-slate-500">Question {question.position}</span>
-              <RichContent html={question.prompt} renderImage={renderImage} />
+      {questions.map((question) => {
+        const plugin = question.interaction ? pluginFor(question.questionType) : undefined;
+        return (
+          <div key={question.id} className="space-y-2 border-b border-slate-100 pb-4 last:border-0">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 font-medium text-slate-900">
+                <span className="block text-xs font-normal text-slate-500">Question {question.position}</span>
+                <RichContent html={question.prompt} renderImage={renderImage} />
+              </div>
+              <span className="shrink-0 text-sm text-slate-500">
+                {question.awardedPoints ?? 0} / {question.points} pts
+              </span>
             </div>
-            <span className="shrink-0 text-sm text-slate-500">
-              {question.awardedPoints ?? 0} / {question.points} pts
-            </span>
+
+            {plugin && (
+              <plugin.Review
+                config={question.interaction}
+                response={question.response ?? null}
+                parts={question.parts ?? []}
+                renderImage={renderImage}
+                perspective={perspective}
+              />
+            )}
+
+            {!plugin && question.questionType !== "FILL_IN_THE_GAP" && (
+              <ul className="space-y-1 text-sm">
+                {question.options.map((option) => {
+                  const selected = question.selectedOptionIds.includes(option.id);
+                  return (
+                    <li
+                      key={option.id}
+                      className={`flex items-start gap-2 rounded-control border px-3 py-1.5 ${
+                        option.correct
+                          ? "border-green-300 bg-green-50"
+                          : selected
+                            ? "border-red-300 bg-red-50"
+                            : "border-slate-200"
+                      }`}
+                    >
+                      {option.correct ? (
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" aria-hidden="true" />
+                      ) : selected ? (
+                        <X className="mt-0.5 h-4 w-4 shrink-0 text-red-600" aria-hidden="true" />
+                      ) : (
+                        <span className="mt-0.5 h-4 w-4 shrink-0" />
+                      )}
+                      <RichContent html={option.label} renderImage={renderImage} className="min-w-0" />
+                      {selected && <span className="ml-auto text-xs text-slate-500">Selected</span>}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {question.questionType === "FILL_IN_THE_GAP" && (
+              <div className="space-y-1 text-sm">
+                <p>
+                  <span className="text-slate-500">{answerLabel}</span>
+                  {question.textAnswer ? question.textAnswer : <span className="text-slate-400">No answer</span>}
+                </p>
+                <p>
+                  <span className="text-slate-500">Accepted answer: </span>
+                  {question.acceptedAnswers.join(" / ")}
+                </p>
+              </div>
+            )}
           </div>
-
-          {question.questionType !== "FILL_IN_THE_GAP" && (
-            <ul className="space-y-1 text-sm">
-              {question.options.map((option) => {
-                const selected = question.selectedOptionIds.includes(option.id);
-                return (
-                  <li
-                    key={option.id}
-                    className={`flex items-start gap-2 rounded-control border px-3 py-1.5 ${
-                      option.correct
-                        ? "border-green-300 bg-green-50"
-                        : selected
-                          ? "border-red-300 bg-red-50"
-                          : "border-slate-200"
-                    }`}
-                  >
-                    {option.correct ? (
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" aria-hidden="true" />
-                    ) : selected ? (
-                      <X className="mt-0.5 h-4 w-4 shrink-0 text-red-600" aria-hidden="true" />
-                    ) : (
-                      <span className="mt-0.5 h-4 w-4 shrink-0" />
-                    )}
-                    <RichContent html={option.label} renderImage={renderImage} className="min-w-0" />
-                    {selected && <span className="ml-auto text-xs text-slate-500">Selected</span>}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-
-          {question.questionType === "FILL_IN_THE_GAP" && (
-            <div className="space-y-1 text-sm">
-              <p>
-                <span className="text-slate-500">{answerLabel}</span>
-                {question.textAnswer ? question.textAnswer : <span className="text-slate-400">No answer</span>}
-              </p>
-              <p>
-                <span className="text-slate-500">Accepted answer: </span>
-                {question.acceptedAnswers.join(" / ")}
-              </p>
-            </div>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

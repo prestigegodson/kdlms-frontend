@@ -111,6 +111,13 @@ export function SubscriptionPage({ redirect }: SubscriptionPageProps) {
               <Badge variant={state.summary.takeHomeQuiz ? "success" : "neutral"}>
                 {state.summary.takeHomeQuiz ? "CBT/Quizzes included" : "No CBT/Quizzes"}
               </Badge>
+              {state.summary.takeHomeQuiz && (
+                <Badge variant={state.summary.interactiveQuestions ? "success" : "neutral"}>
+                  {state.summary.interactiveQuestions
+                    ? "Interactive questions included"
+                    : "No interactive questions"}
+                </Badge>
+              )}
               <Badge variant={state.summary.onDemandLearning ? "success" : "neutral"}>
                 {state.summary.onDemandLearning ? "On-demand learning included" : "No on-demand learning"}
               </Badge>

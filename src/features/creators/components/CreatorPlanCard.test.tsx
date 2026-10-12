@@ -31,6 +31,7 @@ const FREE_PLAN: CreatorPlanView = {
   learningMedia: false,
   communication: true,
   guardianAccess: false,
+  interactiveQuestions: false,
   autoRenew: false,
   graceUntil: null,
 };

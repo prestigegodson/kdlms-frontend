@@ -62,6 +62,8 @@ export interface SubscriptionSummaryView {
   graceUntil: string | null;
   /** Whether the plan renews itself from a saved card (Phase C10) - the banner then stays quiet. */
   autoRenew: boolean;
+  /** Authoring the interactive quiz question types - an add-on on top of `takeHomeQuiz`. */
+  interactiveQuestions: boolean;
 }
 
 function adminBase(schoolId: string): string {

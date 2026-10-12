@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Spinner } from "@/components/ui/Spinner";
 import { StatTile } from "@/components/ui/StatTile";
 import { QuestionAnalysisTable } from "@/features/takeHomeQuizzes/components/analytics/QuestionAnalysisTable";
+import { TopicMasteryCard } from "@/features/takeHomeQuizzes/components/analytics/TopicMasteryCard";
 import { formatDuration } from "@/features/takeHomeQuizzes/components/analytics/formatDuration";
 
 interface QuizAnalyticsPanelProps {
@@ -90,6 +91,7 @@ export function QuizAnalyticsPanel({ load, participantNoun, reloadKey }: QuizAna
             <ScoreHistogram scores={scores} />
             {timing && <TimingPanel timing={timing} />}
           </div>
+          {(analytics.tags ?? []).length > 0 && <TopicMasteryCard tags={analytics.tags} />}
           <QuestionAnalysisTable questions={analytics.questions} />
         </>
       )}

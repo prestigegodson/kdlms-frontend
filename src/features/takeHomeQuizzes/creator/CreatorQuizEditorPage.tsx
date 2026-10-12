@@ -1,16 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ApiError } from "@/api/client";
 import {
+  addClassQuizQuestionsFromBank,
   type ClassQuizView,
   createClassQuiz,
   deleteClassQuiz,
+  deleteCreatorQuestionBankItem,
   fetchClassQuestionTemplate,
   getClassQuiz,
   getClassQuizValidation,
   importClassQuizQuestions,
   publishClassQuiz,
   saveClassQuizQuestions,
+  saveClassQuizQuestionToBank,
+  searchCreatorQuestionBank,
   updateClassQuiz,
 } from "@/api/classTakeHomeQuizzes";
 import type { PublishReadinessView } from "@/api/takeHomeQuizzes";
@@ -25,10 +29,12 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Textarea } from "@/components/ui/Textarea";
 import { UnsavedChangesBar } from "@/features/assessments/components/UnsavedChangesBar";
 import { PublishReadinessPanel } from "@/features/takeHomeQuizzes/components/PublishReadinessPanel";
+import type { QuestionBankSource } from "@/features/takeHomeQuizzes/components/QuestionBankModal";
 import { QuestionEditor } from "@/features/takeHomeQuizzes/components/QuestionEditor";
 import { QuestionTemplateDownload } from "@/features/takeHomeQuizzes/components/QuestionImportModal";
 import { QuizWindowFields } from "@/features/takeHomeQuizzes/components/QuizWindowFields";
-import { type EditableQuestion, toEditableQuestion } from "@/features/takeHomeQuizzes/editableQuestion";
+import { ShuffleFields } from "@/features/takeHomeQuizzes/components/ShuffleFields";
+import { type EditableQuestion, toEditableQuestion, toQuestionCommand } from "@/features/takeHomeQuizzes/editableQuestion";
 
 interface FormState {
   title: string;
@@ -38,6 +44,8 @@ interface FormState {
   opensAt: string;
   closesAt: string;
   revealResultsOnSubmit: boolean;
+  shuffleQuestions: boolean;
+  shuffleChoices: boolean;
   questions: EditableQuestion[];
 }
 
@@ -54,6 +62,8 @@ function blankForm(): FormState {
     opensAt: nowPlusHours(1),
     closesAt: nowPlusHours(24 * 7),
     revealResultsOnSubmit: false,
+    shuffleQuestions: false,
+    shuffleChoices: false,
     questions: [],
   };
 }
@@ -67,6 +77,8 @@ function fromView(view: ClassQuizView): FormState {
     opensAt: view.opensAt,
     closesAt: view.closesAt,
     revealResultsOnSubmit: view.revealResultsOnSubmit,
+    shuffleQuestions: view.shuffleQuestions,
+    shuffleChoices: view.shuffleChoices,
     questions: view.questions.map(toEditableQuestion),
   };
 }
@@ -97,6 +109,19 @@ export function CreatorQuizEditorPage() {
   const [readiness, setReadiness] = useState<PublishReadinessView | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmPublish, setConfirmPublish] = useState(false);
+
+  // Memoized: the bank modal re-searches whenever its `search` changes identity. A creator's bank
+  // is theirs alone, so there's no "only mine" filter.
+  const quizIdForBank = quiz?.id ?? null;
+  const bank = useMemo<QuestionBankSource | undefined>(() => {
+    if (!quizIdForBank) return undefined;
+    return {
+      search: searchCreatorQuestionBank,
+      add: (itemIds) => addClassQuizQuestionsFromBank(classId, quizIdForBank, itemIds),
+      save: (question) => saveClassQuizQuestionToBank(classId, quizIdForBank, question),
+      remove: deleteCreatorQuestionBankItem,
+    };
+  }, [classId, quizIdForBank]);
 
   useEffect(() => {
     if (isNew) return;
@@ -145,22 +170,15 @@ export function CreatorQuizEditorPage() {
         opensAt: form.opensAt,
         closesAt: form.closesAt,
         revealResultsOnSubmit: form.revealResultsOnSubmit,
+        shuffleQuestions: form.shuffleQuestions,
+        shuffleChoices: form.shuffleChoices,
       };
       let saved = isNew ? await createClassQuiz(classId, request) : await updateClassQuiz(classId, quiz!.id, request);
       if (form.questions.length > 0 || (quiz && quiz.questions.length > 0)) {
         saved = await saveClassQuizQuestions(
           classId,
           saved.id,
-          form.questions.map((question) => ({
-            id: question.id,
-            questionType: question.questionType,
-            prompt: question.prompt,
-            points: Number(question.points) || 0,
-            options: question.options.map((option) => ({ id: option.id, label: option.label, correct: option.correct })),
-            answerKeys: question.answerKeys
-              .filter((key) => key.expectedAnswer.trim() !== "")
-              .map((key) => ({ id: key.id, expectedAnswer: key.expectedAnswer })),
-          })),
+          form.questions.map(toQuestionCommand),
         );
       }
       applyQuiz(saved);
@@ -289,6 +307,13 @@ export function CreatorQuizEditorPage() {
             Off by default. When on, a learner who finishes early could share the answers with the rest of the
             class.
           </p>
+
+          <ShuffleFields
+            shuffleQuestions={form.shuffleQuestions}
+            shuffleChoices={form.shuffleChoices}
+            onChange={(value) => setForm({ ...form, ...value })}
+            disabled={locked}
+          />
         </div>
       )}
 
@@ -303,6 +328,7 @@ export function CreatorQuizEditorPage() {
               importFile: (file) => importClassQuizQuestions(classId, quiz?.id ?? "", file),
               fetchTemplate: (format) => fetchClassQuestionTemplate(classId, format),
             }}
+            bank={bank}
           />
           <PublishReadinessPanel readiness={readiness} quizType="NORMAL" />
         </div>
