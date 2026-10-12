@@ -16,11 +16,17 @@ import {
   MAX_POLYGON_POINTS,
   MIN_POLYGON_POINTS,
   MIN_SIZE,
+  clamp,
   contains,
   normalizeShape,
   percent,
   pointOn,
+  resizeByStep,
+  resizeRect,
+  scalePolygon,
+  shapeBounds,
   translateShape,
+  type BoxCorner,
   type NormalizedPoint,
   type Shape,
   type ShapeKind,
@@ -37,6 +43,9 @@ const BIG_NUDGE = 0.05;
 const CLOSE_DISTANCE = 0.03;
 
 type Tool = "SELECT" | ShapeKind;
+/** A box corner on a rectangle or a free shape's box; a compass point on a circle. */
+type ResizeHandle = BoxCorner | "n" | "e" | "s" | "w";
+type HandleTarget = { kind: "resize"; handle: ResizeHandle } | { kind: "vertex"; index: number };
 
 const TOOLS: Record<ShapeKind, { label: string; icon: typeof Square }> = {
   RECT: { label: "Rectangle", icon: Square },
@@ -47,7 +56,7 @@ const TOOLS: Record<ShapeKind, { label: string; icon: typeof Square }> = {
 type Drag =
   | { mode: "draw"; origin: NormalizedPoint; kind: "RECT" | "CIRCLE" }
   | { mode: "move"; id: string; origin: NormalizedPoint; original: Shape }
-  | { mode: "resize"; id: string }
+  | { mode: "resize"; id: string; handle: ResizeHandle; original: Shape }
   | { mode: "vertex"; id: string; index: number };
 
 export interface RegionEditorProps<R extends { id: string; shape: Shape }> {
@@ -70,9 +79,10 @@ export interface RegionEditorProps<R extends { id: string; shape: Shape }> {
 /**
  * Draws regions on an uploaded image (interaction-quiz.md §8) - shared by `DIAGRAM_LABEL` (zones)
  * and `HOTSPOT` (regions). Drag on the image to draw a rectangle or circle, or tap corner by corner
- * for a free shape; with the select tool, drag a region to move it and its handle (or corners) to
- * reshape it. With the keyboard, pick a region from the list, then the arrow keys move it (Shift for
- * bigger steps) and Delete removes it. Every coordinate is normalized, so nothing depends on how
+ * for a free shape; with the select tool, drag a region to move it, one of its four square handles
+ * to resize it (Shift keeps a rectangle's proportions), or a free shape's round corners to reshape
+ * it. With the keyboard, pick a region from the list, then the arrow keys move it, Alt + arrow keys
+ * resize it (Shift for bigger steps either way) and Delete removes it. Every coordinate is normalized, so nothing depends on how
  * large the image is drawn.
  */
 export function RegionEditor<R extends { id: string; shape: Shape }>({
@@ -139,13 +149,18 @@ export function RegionEditor<R extends { id: string; shape: Shape }>({
   }
 
   function onPointerDown(event: PointerEvent) {
-    if (disabled || !imageFileId) {
+    // A right-click, or a Ctrl-click on a Mac, opens the context menu rather than drawing.
+    if (disabled || !imageFileId || event.button !== 0) {
       return;
     }
     const point = pointer(event);
     if (!point) {
       return;
     }
+    // Keep the browser from starting a selection or drag of its own, which would cancel ours;
+    // that also skips the focus a click normally gives, so take it here for the arrow keys.
+    event.preventDefault();
+    stageRef.current?.focus({ preventScroll: true });
     if (tool === "RECT" || tool === "CIRCLE") {
       if (!full) {
         capture(event);
@@ -189,11 +204,14 @@ export function RegionEditor<R extends { id: string; shape: Shape }>({
         updateShape(drag.id, translateShape(drag.original, point.x - drag.origin.x, point.y - drag.origin.y));
         return;
       case "resize": {
-        const shape = regions.find((region) => region.id === drag.id)?.shape;
-        if (shape?.kind === "RECT") {
-          updateShape(drag.id, normalizeShape({ ...shape, w: point.x - shape.x, h: point.y - shape.y }));
-        } else if (shape?.kind === "CIRCLE") {
-          updateShape(drag.id, normalizeShape({ ...shape, r: radius({ x: shape.cx, y: shape.cy }, point, imageAspect) }));
+        const { original, handle } = drag;
+        if (original.kind === "CIRCLE") {
+          updateShape(drag.id, normalizeShape({ ...original, r: radius({ x: original.cx, y: original.cy }, point, imageAspect) }));
+        } else if (isBoxCorner(handle)) {
+          updateShape(
+            drag.id,
+            original.kind === "RECT" ? resizeRect(original, handle, point, event.shiftKey) : scalePolygon(original, handle, point),
+          );
         }
         return;
       }
@@ -249,6 +267,21 @@ export function RegionEditor<R extends { id: string; shape: Shape }>({
       return;
     }
     const step = event.shiftKey ? BIG_NUDGE : NUDGE;
+    if (event.altKey) {
+      // Right/Down grow, Left/Up shrink - as if dragging the bottom-right corner.
+      const sizes: Record<string, [number, number]> = {
+        ArrowLeft: [-step, 0],
+        ArrowRight: [step, 0],
+        ArrowUp: [0, -step],
+        ArrowDown: [0, step],
+      };
+      const size = sizes[event.key];
+      if (size) {
+        event.preventDefault();
+        updateShape(selected.id, resizeByStep(selected.shape, size[0], size[1]));
+      }
+      return;
+    }
     const moves: Record<string, [number, number]> = {
       ArrowLeft: [-step, 0],
       ArrowRight: [step, 0],
@@ -356,7 +389,7 @@ export function RegionEditor<R extends { id: string; shape: Shape }>({
             }`}
             tabIndex={disabled ? -1 : 0}
             role="group"
-            aria-label="Drawing area. Pick a region from the list, then use the arrow keys to move it and Delete to remove it."
+            aria-label="Drawing area. Pick a region from the list, then use the arrow keys to move it, Alt and the arrow keys to resize it, and Delete to remove it."
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
@@ -370,12 +403,25 @@ export function RegionEditor<R extends { id: string; shape: Shape }>({
             {selected && tool === "SELECT" && !disabled && (
               <Handles
                 shape={selected.shape}
-                onStart={(event, index) =>
-                  startHandleDrag(event, index === null ? { mode: "resize", id: selected.id } : { mode: "vertex", id: selected.id, index })
+                aspect={imageAspect}
+                onStart={(event, target) =>
+                  startHandleDrag(
+                    event,
+                    target.kind === "resize"
+                      ? { mode: "resize", id: selected.id, handle: target.handle, original: selected.shape }
+                      : { mode: "vertex", id: selected.id, index: target.index },
+                  )
                 }
               />
             )}
           </NormalizedImageStage>
+          {selected && tool === "SELECT" && !disabled && (
+            <p className="text-sm text-slate-600">
+              Drag a square handle to resize
+              {selected.shape.kind === "RECT" ? " (hold Shift to keep its proportions)" : ""}
+              {selected.shape.kind === "POLYGON" ? ", or a round corner to reshape" : ""}. Alt + arrow keys resize too.
+            </p>
+          )}
           {tool === "POLYGON" && !disabled && (
             <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
               <span>
@@ -467,32 +513,95 @@ function ToolButton({
   );
 }
 
+const CURSORS: Record<ResizeHandle, string> = {
+  nw: "cursor-nwse-resize",
+  se: "cursor-nwse-resize",
+  ne: "cursor-nesw-resize",
+  sw: "cursor-nesw-resize",
+  n: "cursor-ns-resize",
+  s: "cursor-ns-resize",
+  e: "cursor-ew-resize",
+  w: "cursor-ew-resize",
+};
+
+function isBoxCorner(handle: ResizeHandle): handle is BoxCorner {
+  return handle.length === 2;
+}
+
+function boxCorners(box: { x: number; y: number; w: number; h: number }): { at: NormalizedPoint; target: HandleTarget }[] {
+  return (
+    [
+      ["nw", box.x, box.y],
+      ["ne", box.x + box.w, box.y],
+      ["se", box.x + box.w, box.y + box.h],
+      ["sw", box.x, box.y + box.h],
+    ] as const
+  ).map(([handle, x, y]) => ({ at: { x, y }, target: { kind: "resize", handle } }));
+}
+
+/**
+ * The selected region's handles: four square resize handles - a rectangle's corners, a circle's
+ * top/right/bottom/left, a free shape's box corners - and, on a free shape, a round handle per
+ * corner to reshape it. Corners come last so they win where they overlap a box handle.
+ * A handle past the image's edge (a circle near it) is pinned to the edge so it stays grabbable.
+ */
 function Handles({
   shape,
+  aspect,
   onStart,
 }: {
   shape: Shape;
-  onStart(event: PointerEvent, index: number | null): void;
+  aspect: number;
+  onStart(event: PointerEvent, target: HandleTarget): void;
 }) {
-  const points: { at: NormalizedPoint; index: number | null }[] =
+  const ry = shape.kind === "CIRCLE" ? shape.r * (aspect > 0 ? aspect : 1) : 0;
+  const box = shape.kind === "POLYGON" ? shapeBounds(shape, aspect) : null;
+  const handles: { at: NormalizedPoint; target: HandleTarget }[] =
     shape.kind === "RECT"
-      ? [{ at: { x: shape.x + shape.w, y: shape.y + shape.h }, index: null }]
+      ? boxCorners(shape)
       : shape.kind === "CIRCLE"
-        ? [{ at: { x: shape.cx + shape.r, y: shape.cy }, index: null }]
-        : shape.points.map((at, index) => ({ at, index }));
+        ? (
+            [
+              ["n", shape.cx, shape.cy - ry],
+              ["e", shape.cx + shape.r, shape.cy],
+              ["s", shape.cx, shape.cy + ry],
+              ["w", shape.cx - shape.r, shape.cy],
+            ] as const
+          ).map(([handle, x, y]) => ({ at: { x, y }, target: { kind: "resize", handle } }))
+        : [
+            ...boxCorners(box!),
+            ...shape.points.map((at, index) => ({ at, target: { kind: "vertex", index } as HandleTarget })),
+          ];
   return (
     <>
-      {points.map(({ at, index }) => (
+      {box && (
         <span
-          key={index ?? "resize"}
           aria-hidden="true"
-          onPointerDown={(event) => onStart(event, index)}
-          className="absolute flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 cursor-move items-center justify-center"
-          style={{ left: percent(at.x), top: percent(at.y) }}
-        >
-          <span className="h-3.5 w-3.5 rounded-full border-2 border-white bg-brand-600 shadow" />
-        </span>
-      ))}
+          className="pointer-events-none absolute border border-dashed border-brand-500"
+          style={{ left: percent(box.x), top: percent(box.y), width: percent(box.w), height: percent(box.h) }}
+        />
+      )}
+      {handles.map(({ at, target }) => {
+        const key = target.kind === "resize" ? target.handle : `v${target.index}`;
+        return (
+          <span
+            key={key}
+            data-handle={key}
+            aria-hidden="true"
+            onPointerDown={(event) => onStart(event, target)}
+            className={`absolute flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center ${
+              target.kind === "resize" ? CURSORS[target.handle] : "cursor-move"
+            }`}
+            style={{ left: percent(clamp(at.x, 0, 1)), top: percent(clamp(at.y, 0, 1)) }}
+          >
+            <span
+              className={`border-2 border-white bg-brand-600 shadow ${
+                target.kind === "resize" ? "h-3 w-3 rounded-[2px]" : "h-3.5 w-3.5 rounded-full"
+              }`}
+            />
+          </span>
+        );
+      })}
     </>
   );
 }

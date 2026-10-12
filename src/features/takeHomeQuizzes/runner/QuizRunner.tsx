@@ -65,7 +65,7 @@ export interface QuizRunnerProps {
   transport: QuizTransport;
   /** Called once submit (or auto-submit on timer expiry) succeeds, with the server's own confirmation (`revealResults` tells the caller whether to show the score/review right away). */
   onSubmitted: (confirmation: SubmitConfirmationView) => void;
-  /** Called when submit fails outright (not a save failure, which is silently retried) - the caller renders its own error chrome. */
+  /** Called when submit fails outright, or the final save before it does (an autosave failure is silently retried) - the caller renders its own error chrome. */
   onError: (error: unknown) => void;
 }
 
@@ -100,7 +100,11 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
   );
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // The latest answers not yet confirmed saved - null once the server has them.
   const pendingAnswersRef = useRef<AnswersState | null>(null);
+  // The tail of the save chain: every save waits for the previous one, so an older full-state
+  // save can never land after a newer one, and submit can wait for the last one to finish.
+  const inFlightSaveRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     function handleOnline() {
@@ -118,9 +122,12 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
   }, []);
 
   const flushAnswers = useCallback(
-    (toSave: AnswersState) => {
+    (toSave: AnswersState): Promise<void> => {
       if (Object.keys(toSave).length === 0) {
-        return;
+        if (pendingAnswersRef.current === toSave) {
+          pendingAnswersRef.current = null;
+        }
+        return inFlightSaveRef.current;
       }
       setSaveStatus("saving");
       const commands: AnswerCommand[] = Object.entries(toSave).map(([questionId, answer]) => ({
@@ -132,17 +139,29 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
             ? { type: questionTypes.get(questionId)!, response: answer.interaction }
             : null,
       }));
-      saveAnswers(commands)
-        .then((updated) => {
-          setAttempt(updated);
-          clearBuffer(bufferKey);
-          setSaveStatus("saved");
-        })
-        .catch(() => {
-          // The buffer already holds this exact state - a failed save is silently retried
-          // on the next edit or flush; nothing typed is lost either way.
-          setSaveStatus(navigator.onLine ? "saved" : "offline");
-        });
+      const save = inFlightSaveRef.current
+        .catch(() => undefined)
+        .then(() => saveAnswers(commands))
+        .then(
+          (updated) => {
+            setAttempt(updated);
+            // Only a save of the latest state settles the buffer - a newer edit may already be
+            // waiting behind this one.
+            if (pendingAnswersRef.current === null || pendingAnswersRef.current === toSave) {
+              pendingAnswersRef.current = null;
+              clearBuffer(bufferKey);
+            }
+            setSaveStatus("saved");
+          },
+          (error: unknown) => {
+            // The buffer already holds this exact state - a failed save is silently retried
+            // on the next edit or flush; nothing typed is lost either way.
+            setSaveStatus(navigator.onLine ? "saved" : "offline");
+            throw error;
+          },
+        );
+      inFlightSaveRef.current = save;
+      return save;
     },
     [bufferKey, questionTypes, saveAnswers],
   );
@@ -153,7 +172,8 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
   useEffect(() => {
     const buffered = readBuffer(bufferKey);
     if (buffered) {
-      queueMicrotask(() => flushAnswers(buffered));
+      pendingAnswersRef.current = buffered;
+      queueMicrotask(() => void flushAnswers(buffered).catch(() => undefined));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount only
   }, []);
@@ -167,7 +187,7 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
       }
       saveTimeoutRef.current = setTimeout(() => {
         if (pendingAnswersRef.current) {
-          flushAnswers(pendingAnswersRef.current);
+          void flushAnswers(pendingAnswersRef.current).catch(() => undefined);
         }
       }, AUTOSAVE_DEBOUNCE_MS);
     },
@@ -182,13 +202,18 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
     });
   }
 
-  function handleBlurFlush() {
+  /** Saves any unsaved edits now; resolves once every save so far has reached the server. */
+  function flushPending(): Promise<void> {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
-    if (pendingAnswersRef.current) {
-      flushAnswers(pendingAnswersRef.current);
-    }
+    return pendingAnswersRef.current
+      ? flushAnswers(pendingAnswersRef.current)
+      : inFlightSaveRef.current;
+  }
+
+  function handleBlurFlush() {
+    void flushPending().catch(() => undefined);
   }
 
   const handleSubmit = useCallback(() => {
@@ -197,15 +222,17 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
     }
     setConfirmOpen(false);
     setSubmitting(true);
-    handleBlurFlush();
-    submit()
+    // Submit sends no answers - the server scores what it has stored - so the last edit must be
+    // saved first, or it is lost (e.g. the final item dropped just before Submit).
+    flushPending()
+      .then(() => submit())
       .then((confirmation) => {
         clearBuffer(bufferKey);
         onSubmitted(confirmation);
       })
       .catch((error: unknown) => onError(error))
       .finally(() => setSubmitting(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleBlurFlush reads refs only
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- flushPending reads refs only
   }, [bufferKey, submit, submitting, onSubmitted, onError]);
 
   const questions = attempt.questions;

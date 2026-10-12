@@ -1,5 +1,5 @@
 import type { KeyboardEvent, MouseEvent } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useAnnouncer } from "../shared/announcer";
 import { clampPoint, percent, pointOn, type NormalizedPoint } from "../shared/geometry";
@@ -37,7 +37,10 @@ function HotspotStage({ config, value, onChange, disabled, renderImage }: Hotspo
   const announce = useAnnouncer();
   const pins = (value?.pins ?? []).slice(0, config.maxPins);
   const [cursor, setCursor] = useState<NormalizedPoint>({ x: 0.5, y: 0.5 });
-  const [focused, setFocused] = useState(false);
+  // The cursor is for the keyboard only: a click focuses the stage too, and showing the cursor then
+  // leaves a second marker beside the pin just dropped.
+  const [showCursor, setShowCursor] = useState(false);
+  const pointerDown = useRef(false);
   const full = pins.length >= config.maxPins;
 
   function drop(point: NormalizedPoint) {
@@ -64,6 +67,7 @@ function HotspotStage({ config, value, onChange, disabled, renderImage }: Hotspo
   function onClick(event: MouseEvent<HTMLDivElement>) {
     const point = pointOn(event.currentTarget, event.clientX, event.clientY);
     if (point) {
+      setCursor(clampPoint(point));
       drop(point);
     }
   }
@@ -74,6 +78,7 @@ function HotspotStage({ config, value, onChange, disabled, renderImage }: Hotspo
     }
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
+      setShowCursor(true);
       drop(cursor);
       return;
     }
@@ -87,6 +92,7 @@ function HotspotStage({ config, value, onChange, disabled, renderImage }: Hotspo
     const move = moves[event.key];
     if (move) {
       event.preventDefault();
+      setShowCursor(true);
       const next = clampPoint({ x: cursor.x + move[0], y: cursor.y + move[1] });
       setCursor(next);
       announce(`Cursor ${Math.round(next.x * 100)}% across, ${Math.round(next.y * 100)}% down.`);
@@ -106,13 +112,23 @@ function HotspotStage({ config, value, onChange, disabled, renderImage }: Hotspo
         aria-disabled={disabled || undefined}
         onClick={onClick}
         onKeyDown={onKeyDown}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onPointerDown={() => {
+          pointerDown.current = true;
+          setShowCursor(false);
+        }}
+        onFocus={() => {
+          setShowCursor(!pointerDown.current);
+          pointerDown.current = false;
+        }}
+        onBlur={() => {
+          setShowCursor(false);
+          pointerDown.current = false;
+        }}
         className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 ${
           disabled ? "cursor-default" : full ? "cursor-not-allowed" : "cursor-crosshair"
         }`}
       >
-        {focused && !disabled && (
+        {showCursor && !disabled && (
           <span
             aria-hidden="true"
             data-testid="hotspot-cursor"
@@ -130,6 +146,7 @@ function HotspotStage({ config, value, onChange, disabled, renderImage }: Hotspo
               event.stopPropagation();
               remove(index);
             }}
+            onPointerDown={(event) => event.stopPropagation()}
             onKeyDown={(event) => event.stopPropagation()}
             className="absolute flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
             style={{ left: percent(pin.x), top: percent(pin.y) }}

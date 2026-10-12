@@ -87,7 +87,26 @@ describe("SequenceReview", () => {
 
     expect(screen.getByText("Your order")).toBeInTheDocument();
     expect(screen.getAllByLabelText("Next item wrong")).toHaveLength(2);
+    expect(screen.getByLabelText("Wrongly placed last")).toBeInTheDocument();
     expect(screen.getByText("1960")).toBeInTheDocument();
+  });
+
+  it("marks the last item right when it really comes last", () => {
+    render(
+      <SequenceReview
+        config={config}
+        response={{ order: ["a", "b", "c"] }}
+        parts={[
+          { partId: "a", correct: true, expectedRef: "b", givenRef: "b" },
+          { partId: "b", correct: true, expectedRef: "c", givenRef: "c" },
+        ]}
+        perspective="self"
+      />,
+    );
+
+    expect(screen.getAllByLabelText("Next item correct")).toHaveLength(2);
+    expect(screen.getByLabelText("Correctly placed last")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/wrong/i)).toBeNull();
   });
 
   it("says so when the question was left unanswered", () => {

@@ -52,6 +52,25 @@ describe("HotspotPlayer", () => {
     expect(pin.y).toBeCloseTo(0.6);
   });
 
+  it("shows the keyboard cursor only once the keyboard is used, not after a click", async () => {
+    const onChange = vi.fn();
+    render(<HotspotPlayer config={shown} value={null} onChange={onChange} disabled={false} />);
+    const user = userEvent.setup();
+    const stage = screen.getByRole("application");
+    stage.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 400, height: 200, right: 400, bottom: 200, x: 0, y: 0, toJSON() {} }) as DOMRect;
+
+    await user.pointer({ keys: "[MouseLeft]", target: stage, coords: { clientX: 220, clientY: 110 } });
+    expect(stage).toHaveFocus();
+    expect(onChange).toHaveBeenCalledWith({ pins: [{ x: 0.55, y: 0.55 }] });
+    expect(screen.queryByTestId("hotspot-cursor")).not.toBeInTheDocument();
+
+    await user.keyboard("{ArrowRight}");
+    const cursor = screen.getByTestId("hotspot-cursor");
+    expect(parseFloat(cursor.style.left)).toBeCloseTo(57);
+    expect(parseFloat(cursor.style.top)).toBeCloseTo(55);
+  });
+
   it("removes a pin when it is tapped and stops at the pin allowance", async () => {
     const onChange = vi.fn();
     const value = { pins: [{ x: 0.2, y: 0.2 }, { x: 0.7, y: 0.7 }] };

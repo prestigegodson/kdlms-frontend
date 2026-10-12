@@ -29,6 +29,7 @@ export function NormalizedImageStage({
   className = "",
   style,
   children,
+  onDragStart,
   ...props
 }: NormalizedImageStageProps) {
   return (
@@ -36,9 +37,14 @@ export function NormalizedImageStage({
       ref={ref}
       className={`relative w-full max-w-3xl select-none overflow-hidden rounded-control border border-slate-200 bg-slate-50 ${className}`}
       style={{ aspectRatio: aspect > 0 ? aspect : 1, ...style }}
+      onDragStart={(event) => {
+        // A browser drags an <img> natively, which cancels the stage's own pointer drag.
+        event.preventDefault();
+        onDragStart?.(event);
+      }}
       {...props}
     >
-      <div className="absolute inset-0 [&>img]:absolute [&>img]:inset-0 [&>img]:m-0 [&>img]:h-full [&>img]:max-h-none [&>img]:w-full [&>img]:max-w-none [&>img]:rounded-none [&>img]:border-0 [&>img]:object-fill">
+      <div className="absolute inset-0 [&>img]:pointer-events-none [&>img]:[-webkit-user-drag:none] [&>img]:absolute [&>img]:inset-0 [&>img]:m-0 [&>img]:h-full [&>img]:max-h-none [&>img]:w-full [&>img]:max-w-none [&>img]:rounded-none [&>img]:border-0 [&>img]:object-fill">
         {fileId && renderImage ? (
           renderImage(fileId, alt)
         ) : (

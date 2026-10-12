@@ -97,6 +97,32 @@ describe("RegionEditor", () => {
     }
   });
 
+  it("keeps the browser's own image drag from cancelling a single press-and-drag", () => {
+    let latest: Region[] = [];
+    render(<Harness initial={[]} onValue={(value) => (latest = value)} />);
+    const area = stage();
+
+    expect(fireEvent.pointerDown(area, { clientX: 50, clientY: 25, pointerId: 1, button: 0 })).toBe(false);
+    expect(fireEvent.dragStart(area)).toBe(false);
+    expect(area).toHaveFocus();
+    fireEvent.pointerMove(area, { clientX: 150, clientY: 75, pointerId: 1 });
+    fireEvent.pointerUp(area, { clientX: 150, clientY: 75, pointerId: 1 });
+
+    expect(latest).toHaveLength(1);
+  });
+
+  it("ignores a right-click on the image", () => {
+    let latest: Region[] = [];
+    render(<Harness initial={[]} onValue={(value) => (latest = value)} />);
+    const area = stage();
+
+    fireEvent.pointerDown(area, { clientX: 50, clientY: 25, pointerId: 1, button: 2 });
+    fireEvent.pointerMove(area, { clientX: 150, clientY: 75, pointerId: 1 });
+    fireEvent.pointerUp(area, { clientX: 150, clientY: 75, pointerId: 1 });
+
+    expect(latest).toHaveLength(0);
+  });
+
   it("ignores a click that draws next to nothing", () => {
     const onValue = vi.fn();
     render(<Harness initial={[]} onValue={onValue} />);
@@ -139,4 +165,90 @@ describe("RegionEditor", () => {
     expect(screen.queryByRole("button", { name: "Circle" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Free shape" })).not.toBeInTheDocument();
   });
+
+  describe("resize handles", () => {
+    function handles(): string[] {
+      return Array.from(document.querySelectorAll("[data-handle]")).map((el) => el.getAttribute("data-handle")!);
+    }
+
+    function dragHandle(name: string, clientX: number, clientY: number, shiftKey = false) {
+      const area = stage();
+      const handle = document.querySelector(`[data-handle="${name}"]`)!;
+      fireEvent.pointerDown(handle, { clientX: 0, clientY: 0, pointerId: 1, button: 0 });
+      fireEvent.pointerMove(area, { clientX, clientY, pointerId: 1, shiftKey });
+      fireEvent.pointerUp(area, { pointerId: 1 });
+    }
+
+    it("puts a square handle on each corner of a rectangle, the opposite corner held still", async () => {
+      let latest: Region[] = [];
+      render(<Harness initial={[{ id: "a", shape: { kind: "RECT", x: 0.2, y: 0.2, w: 0.4, h: 0.4 } }]} onValue={(v) => (latest = v)} />);
+      await userEvent.setup().click(screen.getByRole("button", { name: "Region 1" }));
+
+      expect(handles()).toEqual(["nw", "ne", "se", "sw"]);
+      dragHandle("nw", 50, 25);
+      const shape = latest[0].shape;
+      expect(shape).toMatchObject({ kind: "RECT", x: 0.1, y: 0.1 });
+      expect(shape.kind === "RECT" && shape.x + shape.w).toBeCloseTo(0.6);
+      expect(shape.kind === "RECT" && shape.y + shape.h).toBeCloseTo(0.6);
+    });
+
+    it("keeps a rectangle's proportions while Shift is held", async () => {
+      let latest: Region[] = [];
+      render(<Harness initial={[{ id: "a", shape: { kind: "RECT", x: 0.1, y: 0.1, w: 0.2, h: 0.1 } }]} onValue={(v) => (latest = v)} />);
+      await userEvent.setup().click(screen.getByRole("button", { name: "Region 1" }));
+
+      dragHandle("se", 300, 50, true);
+      const shape = latest[0].shape;
+      expect(shape.kind === "RECT" && shape.w / shape.h).toBeCloseTo(2);
+    });
+
+    it("resizes a circle from its top, right, bottom or left without moving its centre", async () => {
+      let latest: Region[] = [];
+      render(<Harness initial={[{ id: "a", shape: { kind: "CIRCLE", cx: 0.5, cy: 0.5, r: 0.1 } }]} onValue={(v) => (latest = v)} />);
+      await userEvent.setup().click(screen.getByRole("button", { name: "Region 1" }));
+
+      expect(handles()).toEqual(["n", "e", "s", "w"]);
+      // 0.2 of the image's height above the centre is 0.1 of its width, the image being twice as wide.
+      dragHandle("n", 250, 75);
+      expect(latest[0].shape).toEqual({ kind: "CIRCLE", cx: 0.5, cy: 0.5, r: expect.closeTo(0.1) });
+      dragHandle("w", 50, 125);
+      expect(latest[0].shape).toEqual({ kind: "CIRCLE", cx: 0.5, cy: 0.5, r: expect.closeTo(0.4) });
+    });
+
+    it("boxes a free shape with four handles that scale it, besides its own corners", async () => {
+      let latest: Region[] = [];
+      const triangle: Shape = {
+        kind: "POLYGON",
+        points: [
+          { x: 0.2, y: 0.2 },
+          { x: 0.4, y: 0.2 },
+          { x: 0.2, y: 0.4 },
+        ],
+      };
+      render(<Harness initial={[{ id: "a", shape: triangle }]} onValue={(v) => (latest = v)} />);
+      await userEvent.setup().click(screen.getByRole("button", { name: "Region 1" }));
+
+      expect(handles()).toEqual(["nw", "ne", "se", "sw", "v0", "v1", "v2"]);
+      dragHandle("se", 300, 150);
+      const points = latest[0].shape.kind === "POLYGON" ? latest[0].shape.points : [];
+      expect(points.map(({ x, y }) => [x, y])).toEqual([
+        [expect.closeTo(0.2), expect.closeTo(0.2)],
+        [expect.closeTo(0.6), expect.closeTo(0.2)],
+        [expect.closeTo(0.2), expect.closeTo(0.6)],
+      ]);
+    });
+
+    it("resizes the selected region with Alt and the arrow keys, and still moves it without", async () => {
+      let latest: Region[] = [];
+      render(<Harness initial={[{ id: "a", shape: { kind: "RECT", x: 0.1, y: 0.1, w: 0.2, h: 0.2 } }]} onValue={(v) => (latest = v)} />);
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("button", { name: "Region 1" }));
+
+      await user.keyboard("{Alt>}{ArrowRight}{/Alt}");
+      expect(latest[0].shape).toEqual({ kind: "RECT", x: 0.1, y: 0.1, w: expect.closeTo(0.21), h: 0.2 });
+      await user.keyboard("{ArrowRight}");
+      expect(latest[0].shape).toEqual({ kind: "RECT", x: expect.closeTo(0.11), y: 0.1, w: expect.closeTo(0.21), h: 0.2 });
+    });
+  });
 });
+

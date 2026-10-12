@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { contains, normalizeShape, shapeBounds, translateShape, type Shape } from "./geometry";
+import {
+  contains,
+  normalizeShape,
+  resizeByStep,
+  resizeRect,
+  scalePolygon,
+  shapeBounds,
+  translateShape,
+  type RectShape,
+  type Shape,
+} from "./geometry";
 
 const ell: Shape = {
   kind: "POLYGON",
@@ -54,6 +64,67 @@ describe("geometry", () => {
       y: 0.95,
       w: 1,
       h: 0.01,
+    });
+  });
+
+  describe("resizing", () => {
+    const rect: RectShape = { kind: "RECT", x: 0.2, y: 0.2, w: 0.4, h: 0.2 };
+
+    it("holds the opposite corner still whichever corner is dragged", () => {
+      const nw = resizeRect(rect, "nw", { x: 0.1, y: 0.15 }, false);
+      expect(nw).toMatchObject({ kind: "RECT", x: 0.1, y: 0.15 });
+      expect(nw.kind === "RECT" && nw.x + nw.w).toBeCloseTo(0.6);
+      expect(nw.kind === "RECT" && nw.y + nw.h).toBeCloseTo(0.4);
+
+      const ne = resizeRect(rect, "ne", { x: 0.8, y: 0.1 }, false);
+      expect(ne.kind === "RECT" && [ne.x, ne.y + ne.h]).toEqual([0.2, expect.closeTo(0.4)]);
+      expect(ne.kind === "RECT" && ne.w).toBeCloseTo(0.6);
+
+      const sw = resizeRect(rect, "sw", { x: 0.3, y: 0.5 }, false);
+      expect(sw.kind === "RECT" && [sw.x, sw.y, sw.x + sw.w]).toEqual([0.3, 0.2, expect.closeTo(0.6)]);
+    });
+
+    it("flips the box when a corner is dragged past the opposite one", () => {
+      const flipped = resizeRect(rect, "se", { x: 0.1, y: 0.1 }, false);
+      expect(flipped.kind === "RECT" && [flipped.x, flipped.y]).toEqual([0.1, 0.1]);
+      expect(flipped.kind === "RECT" && [flipped.w, flipped.h]).toEqual([expect.closeTo(0.1), expect.closeTo(0.1)]);
+    });
+
+    it("keeps the proportions when asked, and stays inside the image", () => {
+      const kept = resizeRect(rect, "se", { x: 1, y: 0.3 }, true);
+      expect(kept.kind === "RECT" && kept.w / kept.h).toBeCloseTo(2);
+      expect(kept.kind === "RECT" && kept.x + kept.w).toBeLessThanOrEqual(1 + 1e-9);
+
+      const tiny = resizeRect(rect, "se", { x: 0.2, y: 0.2 }, false);
+      expect(tiny.kind === "RECT" && [tiny.w, tiny.h]).toEqual([0.01, 0.01]);
+    });
+
+    it("scales a free shape in proportion about the opposite box corner", () => {
+      const scaled = scalePolygon(ell as Extract<Shape, { kind: "POLYGON" }>, "nw", { x: 0, y: 0.5 });
+      const box = shapeBounds(scaled, 1);
+      expect(box.x + box.w).toBeCloseTo(0.4);
+      expect(box.y + box.h).toBeCloseTo(0.9);
+      expect(box.w / box.h).toBeCloseTo(1);
+      expect(box.w).toBeCloseTo(0.4);
+
+      const capped = scalePolygon(ell as Extract<Shape, { kind: "POLYGON" }>, "se", { x: 1, y: 1 });
+      const cappedBox = shapeBounds(capped, 1);
+      expect(cappedBox.y + cappedBox.h).toBeCloseTo(1);
+      expect(cappedBox.w / cappedBox.h).toBeCloseTo(1);
+    });
+
+    it("grows and shrinks a step at a time from the keyboard", () => {
+      expect(resizeByStep(rect, 0.05, 0)).toEqual({ ...rect, w: expect.closeTo(0.45) });
+      expect(resizeByStep(rect, 0, -0.05)).toEqual({ ...rect, h: expect.closeTo(0.15) });
+      expect(resizeByStep({ kind: "CIRCLE", cx: 0.5, cy: 0.5, r: 0.1 }, -0.05, 0)).toEqual({
+        kind: "CIRCLE",
+        cx: 0.5,
+        cy: 0.5,
+        r: expect.closeTo(0.05),
+      });
+      const grown = shapeBounds(resizeByStep(ell, 0.03, 0), 1);
+      expect(grown.w).toBeCloseTo(0.33);
+      expect(grown.x + grown.w / 2).toBeCloseTo(0.25);
     });
   });
 });

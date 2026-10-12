@@ -13,7 +13,8 @@ interface SequenceReviewProps {
 
 /**
  * The student's order beside the correct one (with captions). Each of the student's items is marked
- * by whether the item they put after it really comes next - the pairs the score counts.
+ * by whether the item they put after it really comes next - the pairs the score counts - and their
+ * last item by whether it really comes last.
  */
 export function SequenceReview({ config, response, parts, renderImage, perspective }: SequenceReviewProps) {
   const byId = new Map(config.items.map((item) => [item.id, item]));
@@ -31,22 +32,28 @@ export function SequenceReview({ config, response, parts, renderImage, perspecti
           <ol className="space-y-1">
             {given.map((id, index) => {
               const last = index === given.length - 1;
-              const right = nextIsRight.get(id) === true;
+              // Only the correct order's last item has no pair of its own: it's right exactly when nothing follows it.
+              const right = nextIsRight.has(id) ? nextIsRight.get(id) === true : last;
               return (
                 <li
                   key={id}
                   className={`flex items-start gap-2 rounded-control border px-3 py-1.5 ${
-                    last ? "border-slate-200" : right ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50"
+                    right ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50"
                   }`}
                 >
                   <span className="w-5 shrink-0 text-slate-500">{index + 1}.</span>
                   <RichContent html={byId.get(id)?.html ?? ""} renderImage={renderImage} className="min-w-0 flex-1" />
-                  {!last &&
-                    (right ? (
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" aria-label="Next item correct" />
-                    ) : (
-                      <X className="mt-0.5 h-4 w-4 shrink-0 text-red-600" aria-label="Next item wrong" />
-                    ))}
+                  {right ? (
+                    <Check
+                      className="mt-0.5 h-4 w-4 shrink-0 text-green-600"
+                      aria-label={last ? "Correctly placed last" : "Next item correct"}
+                    />
+                  ) : (
+                    <X
+                      className="mt-0.5 h-4 w-4 shrink-0 text-red-600"
+                      aria-label={last ? "Wrongly placed last" : "Next item wrong"}
+                    />
+                  )}
                 </li>
               );
             })}

@@ -127,6 +127,60 @@ describe("TakeHomeQuizPublicPage", () => {
     expect(publicApi.submitTakeHomeQuiz).toHaveBeenCalledWith("abc123");
   });
 
+  it("waits for the last answer to save before submitting", async () => {
+    vi.mocked(publicApi.resolveTakeHomeQuiz).mockResolvedValue(interstitial);
+    vi.mocked(publicApi.startTakeHomeQuiz).mockResolvedValue(attempt);
+    let finishSave: (view: publicApi.QuizAttemptView) => void = () => undefined;
+    vi.mocked(publicApi.saveTakeHomeQuizAnswers).mockReturnValue(
+      new Promise((resolve) => {
+        finishSave = resolve;
+      }),
+    );
+    vi.mocked(publicApi.submitTakeHomeQuiz).mockResolvedValue({
+      alreadySubmitted: false,
+      revealResults: false,
+      serverTime: "2026-01-01T00:00:00Z",
+    });
+    const user = userEvent.setup();
+    renderAt("/take-home-quiz?token=abc123");
+
+    await user.click(await screen.findByRole("button", { name: "Start quiz" }));
+    await user.click(await screen.findByRole("radio", { name: "4" }));
+    await user.click(screen.getByRole("button", { name: "Submit quiz" }));
+    const dialog = await screen.findByRole("dialog", { name: "Submit quiz?" });
+    await user.click(within(dialog).getByRole("button", { name: "Submit quiz" }));
+
+    await waitFor(() =>
+      expect(publicApi.saveTakeHomeQuizAnswers).toHaveBeenLastCalledWith("abc123", [
+        expect.objectContaining({ questionId: "q1", selectedOptionIds: ["opt-b"] }),
+      ]),
+    );
+    expect(publicApi.submitTakeHomeQuiz).not.toHaveBeenCalled();
+
+    finishSave(attempt);
+
+    expect(await screen.findByText("Quiz submitted")).toBeInTheDocument();
+    expect(publicApi.submitTakeHomeQuiz).toHaveBeenCalledWith("abc123");
+  });
+
+  it("does not submit when the final save fails", async () => {
+    vi.mocked(publicApi.resolveTakeHomeQuiz).mockResolvedValue(interstitial);
+    vi.mocked(publicApi.startTakeHomeQuiz).mockResolvedValue(attempt);
+    vi.mocked(publicApi.saveTakeHomeQuizAnswers).mockRejectedValue(new Error("network down"));
+    const user = userEvent.setup();
+    renderAt("/take-home-quiz?token=abc123");
+
+    await user.click(await screen.findByRole("button", { name: "Start quiz" }));
+    await user.click(await screen.findByRole("radio", { name: "4" }));
+    await user.click(screen.getByRole("button", { name: "Submit quiz" }));
+    const dialog = await screen.findByRole("dialog", { name: "Submit quiz?" });
+    await user.click(within(dialog).getByRole("button", { name: "Submit quiz" }));
+
+    await waitFor(() => expect(screen.queryByText("2 + 2 = ?")).not.toBeInTheDocument());
+    expect(publicApi.saveTakeHomeQuizAnswers).toHaveBeenCalled();
+    expect(publicApi.submitTakeHomeQuiz).not.toHaveBeenCalled();
+  });
+
   it("warns about unanswered questions and lets the student jump back to one", async () => {
     vi.mocked(publicApi.resolveTakeHomeQuiz).mockResolvedValue(interstitial);
     vi.mocked(publicApi.startTakeHomeQuiz).mockResolvedValue(attempt);
