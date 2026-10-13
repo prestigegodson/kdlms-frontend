@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import {
   addTakeHomeQuizQuestionsFromBank,
@@ -40,6 +40,7 @@ import { QuestionEditor } from "@/features/takeHomeQuizzes/components/QuestionEd
 import { QuizPreviewModal } from "@/features/takeHomeQuizzes/components/QuizPreviewModal";
 import { QuestionTemplateDownload } from "@/features/takeHomeQuizzes/components/QuestionImportModal";
 import { QuizWindowFields } from "@/features/takeHomeQuizzes/components/QuizWindowFields";
+import { ShareQuizModal } from "@/features/takeHomeQuizzes/components/ShareQuizModal";
 import { StudentLinksPanel } from "@/features/takeHomeQuizzes/components/StudentLinksPanel";
 import { type EditableQuestion, toEditableQuestion, toQuestionCommand } from "@/features/takeHomeQuizzes/editableQuestion";
 import { TAKE_HOME_QUIZ_FIELD_HELP } from "@/features/takeHomeQuizzes/takeHomeQuizFieldHelp";
@@ -139,11 +140,18 @@ export function TakeHomeQuizEditorPage() {
   const [snapshot, setSnapshot] = useState(() => snapshotOf(blankForm()));
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
+  // Bumped on every save outcome so a repeated, identical error still scrolls back into view -
+  // Save lives in the sticky bar at the bottom, the feedback under the page header.
+  const [feedbackSeq, setFeedbackSeq] = useState(0);
+  const feedbackRef = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState(false);
   const [readiness, setReadiness] = useState<PublishReadinessView | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
   const [linksRefreshToken, setLinksRefreshToken] = useState(0);
 
   // Memoized: the bank modal re-searches whenever its `search` or `context` changes identity.
@@ -162,6 +170,12 @@ export function TakeHomeQuizEditorPage() {
       offerMine: true,
     };
   }, [quizIdForBank, bankSubjectId, bankSubjectName]);
+
+  useEffect(() => {
+    if (feedbackSeq === 0) return;
+    // jsdom (the test environment) has no scrollIntoView implementation at all - guard past it
+    feedbackRef.current?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+  }, [feedbackSeq]);
 
   useEffect(() => {
     if (isNew) return;
@@ -243,11 +257,13 @@ export function TakeHomeQuizEditorPage() {
     const next = quiz ? fromView(quiz) : blankForm();
     setForm(next);
     setSnapshot(snapshotOf(next));
+    setSaveNotice(null);
   }
 
   async function save() {
     setSaving(true);
     setSaveError(null);
+    setSaveNotice(null);
     try {
       const durationMinutes = form.timed && form.durationMinutes ? Number(form.durationMinutes) : null;
       let saved: TakeHomeQuizView;
@@ -293,6 +309,7 @@ export function TakeHomeQuizEditorPage() {
         );
       }
       applyQuiz(saved);
+      setSaveNotice("Quiz saved.");
       if (isNew) {
         const target = subjectGroupId ? `subjectGroupId=${subjectGroupId}` : `subjectId=${subjectId}`;
         navigate(`/school/take-home-quizzes/${saved.id}?classId=${classId}&${target}&termId=${termId}`, {
@@ -303,6 +320,7 @@ export function TakeHomeQuizEditorPage() {
       setSaveError(error instanceof ApiError ? error.message : "Failed to save this quiz");
     } finally {
       setSaving(false);
+      setFeedbackSeq((seq) => seq + 1);
     }
   }
 
@@ -358,6 +376,16 @@ export function TakeHomeQuizEditorPage() {
                   Results
                 </Button>
               )}
+              {quiz.actions.canShare && (
+                <Button
+                  variant="secondary"
+                  onClick={() => setSharing(true)}
+                  disabled={dirty}
+                  title={dirty ? "Save your changes first - the saved quiz is what gets shared." : undefined}
+                >
+                  Share to another class
+                </Button>
+              )}
               {quiz.actions.canPublish && (
                 <Button variant="accent" onClick={() => setPublishModalOpen(true)}>
                   Publish
@@ -373,8 +401,13 @@ export function TakeHomeQuizEditorPage() {
         }
       />
 
-      {loadError && <Alert variant="error">{loadError}</Alert>}
-      {saveError && <Alert variant="error">{saveError}</Alert>}
+      <div ref={feedbackRef} className="space-y-6 empty:hidden">
+        {loadError && <Alert variant="error">{loadError}</Alert>}
+        {saveError && <Alert variant="error">{saveError}</Alert>}
+        {/* Hidden again once there are fresh unsaved changes, so it never claims stale edits are saved. */}
+        {saveNotice && !dirty && <Alert variant="success">{saveNotice}</Alert>}
+        {shareNotice && <Alert variant="success">{shareNotice}</Alert>}
+      </div>
 
       {showForm && (
         <div className="max-w-2xl space-y-6">
@@ -566,6 +599,19 @@ export function TakeHomeQuizEditorPage() {
           variant="danger"
           onConfirm={handleDelete}
           onClose={() => setConfirmDelete(false)}
+        />
+      )}
+
+      {sharing && quiz && (
+        <ShareQuizModal
+          quiz={quiz}
+          onClose={() => setSharing(false)}
+          onShared={(result) =>
+            setShareNotice(
+              `Shared "${quiz.title}" with ${result.classes.map((sharedClass) => sharedClass.className).join(", ")}` +
+                ` and published it. ${result.guardiansNotified} guardian${result.guardiansNotified === 1 ? "" : "s"} emailed.`,
+            )
+          }
         />
       )}
 

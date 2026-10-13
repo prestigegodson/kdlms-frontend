@@ -106,7 +106,9 @@ export interface TakeHomeQuizQuestionView {
  * `canPublish` (Phase 20C) is true for a `DRAFT` or already-`PUBLISHED` quiz -
  * an idempotent republish tops up late joiners' links. `canPublishResults`/
  * `canUnpublishResults` (Phase 20F) mirror the backend's own `publishResults`/
- * `unpublishResults` transition guards the same way.
+ * `unpublishResults` transition guards the same way. `canShare` (V147) is whether the caller may
+ * send a published copy to another class - an admin or the home class's class teacher; always
+ * false for a creator's class quiz.
  */
 export interface TakeHomeQuizActionsView {
   canEditMetadata: boolean;
@@ -115,6 +117,7 @@ export interface TakeHomeQuizActionsView {
   canPublish: boolean;
   canPublishResults: boolean;
   canUnpublishResults: boolean;
+  canShare: boolean;
 }
 
 /** Mirrors backend takehomequiz.application.port.in.TakeHomeQuizView - the full staff detail. */
@@ -453,6 +456,50 @@ export function getShareableClasses(classId: string, target: SubjectTarget): Pro
   if (target.subjectId) params.set("subjectId", target.subjectId);
   if (target.subjectGroupId) params.set("subjectGroupId", target.subjectGroupId);
   return apiFetch<SharedClassView[]>(`${BASE}/shareable-classes?${params.toString()}`);
+}
+
+/** Mirrors backend takehomequiz.application.port.in.ShareTargetClassView - another class (level) a copy may be sent to. */
+export interface QuizShareTargetClassView {
+  levelId: string;
+  levelName: string;
+  classrooms: { classId: string; className: string; alreadyShared: boolean }[];
+}
+
+/** Mirrors backend takehomequiz.application.port.in.ShareTargetSubjectsView - only midterm-eligible subjects, and no groups, for a Midterm quiz. */
+export interface QuizShareTargetSubjectsView {
+  subjects: AuthorableSubjectView[];
+  subjectGroups: AuthorableSubjectGroupView[];
+}
+
+/** Mirrors backend takehomequiz.application.port.in.ShareResultView - the published copy, its classrooms, and what publishing it did. */
+export interface QuizShareResultView {
+  quizId: string;
+  classes: SharedClassView[];
+  tokensMinted: number;
+  guardiansNotified: number;
+}
+
+/** Mirrors backend TakeHomeQuizController.ShareTakeHomeQuizRequest - exactly one of `subjectId`/`subjectGroupId`. */
+export interface ShareTakeHomeQuizRequest {
+  levelId: string;
+  classIds: string[];
+  subjectId: string | null;
+  subjectGroupId: string | null;
+}
+
+/** The other classes of the quiz's branch a copy may be sent to, each with its classrooms. */
+export function getQuizShareTargets(quizId: string): Promise<QuizShareTargetClassView[]> {
+  return apiFetch<QuizShareTargetClassView[]>(`${BASE}/${quizId}/share-targets`);
+}
+
+/** The subjects and subject groups of `levelId` a copy may be filed under. */
+export function getQuizShareTargetSubjects(quizId: string, levelId: string): Promise<QuizShareTargetSubjectsView> {
+  return apiFetch<QuizShareTargetSubjectsView>(`${BASE}/${quizId}/share-targets/${levelId}/subjects`);
+}
+
+/** Copies the quiz into classrooms of another class and publishes the copy straight away. */
+export function shareTakeHomeQuiz(quizId: string, request: ShareTakeHomeQuizRequest): Promise<QuizShareResultView> {
+  return apiFetch<QuizShareResultView>(`${BASE}/${quizId}/share`, { method: "POST", body: JSON.stringify(request) });
 }
 
 export function publishTakeHomeQuiz(quizId: string): Promise<PublishOutcomeView> {
