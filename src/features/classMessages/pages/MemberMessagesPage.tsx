@@ -13,14 +13,14 @@ import {
   sendMemberMessage,
 } from "@/api/classMessages";
 import { getErrorMessage } from "@/api/client";
-import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Skeleton } from "@/components/ui/Skeleton";
 import { ClassConversationPanel } from "@/features/classMessages/components/ClassConversationPanel";
-import { ConversationList } from "@/features/classMessages/components/ConversationList";
+import { ChatLayout, ConversationSkeleton, ListSkeleton } from "@/features/classMessages/components/ChatLayout";
+import { ConversationPane } from "@/features/classMessages/components/ConversationPane";
 import { conversationKey } from "@/features/classMessages/conversationKey";
+import { useAuthStore } from "@/stores/authStore";
 import { useClassMessagesUnreadStore } from "@/stores/classMessagesUnreadStore";
 
 interface MemberMessagesPageProps {
@@ -34,6 +34,7 @@ interface MemberMessagesPageProps {
  */
 export function MemberMessagesPage({ audience }: MemberMessagesPageProps) {
   const refreshUnread = useClassMessagesUnreadStore((state) => state.refresh);
+  const userId = useAuthStore((state) => state.user?.id);
   const [searchParams, setSearchParams] = useSearchParams();
   const classId = searchParams.get("classId");
   const learnerId = searchParams.get("learnerId");
@@ -101,66 +102,71 @@ export function MemberMessagesPage({ audience }: MemberMessagesPageProps) {
   const title = (row: ClassConversationDigest) => row.className ?? "Class";
   const subtitle = (row: ClassConversationDigest) =>
     [audience === "GUARDIAN" ? row.learnerName : null, row.creatorName].filter(Boolean).join(" · ") || null;
+  const ownRole = audience === "GUARDIAN" ? "GUARDIAN" : "LEARNER";
+  const heading = audience === "GUARDIAN" ? "Class messages" : "Messages";
 
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title={audience === "GUARDIAN" ? "Class messages" : "Messages"}
-        description={
-          audience === "GUARDIAN"
-            ? "Private conversations with your children's online class tutors."
-            : "Private conversations with your tutors, one per class."
-        }
-      />
-      {error ? (
-        <ErrorState message={error} onRetry={loadInbox} />
-      ) : inbox === null ? (
-        <Skeleton className="h-40" />
-      ) : inbox.conversations.length === 0 ? (
+  if (error) {
+    return <ErrorState message={error} onRetry={loadInbox} />;
+  }
+
+  if (inbox !== null && inbox.conversations.length === 0) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title={heading} />
         <EmptyState
           icon={MessageSquare}
           title="No messages"
           description="Your tutors' classes with messaging show up here."
         />
-      ) : (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          <div className={selectedKey ? "max-lg:hidden" : ""}>
-            <ConversationList
-              rows={inbox.conversations}
-              selectedKey={selectedKey}
-              onSelect={(row) => setSearchParams({ classId: row.classId, learnerId: row.learnerId })}
-              title={title}
-              subtitle={subtitle}
-            />
-          </div>
-          <div>
-            {selectedKey && (
-              <Button variant="secondary" size="sm" className="mb-3 lg:hidden" onClick={() => setSearchParams({})}>
-                Back to messages
-              </Button>
-            )}
-            {conversation ? (
-              <ClassConversationPanel
-                conversation={conversation}
-                title={conversation.className ?? "Class"}
-                subtitle={
-                  [audience === "GUARDIAN" ? `About ${conversation.learnerName}` : null, conversation.creatorName]
-                    .filter(Boolean)
-                    .join(" · ") || undefined
-                }
-                onSend={send}
-                onEditMessage={edit}
-              />
-            ) : selectedKey ? (
-              <Skeleton className="h-40" />
-            ) : (
-              <p className="hidden rounded-card border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 lg:block">
-                Choose a class to open its conversation.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+      </div>
+    );
+  }
+
+  return (
+    <ChatLayout
+      open={selectedKey !== null}
+      placeholder={
+        audience === "GUARDIAN"
+          ? "Choose a class to talk privately with your child's tutor."
+          : "Choose a class to talk privately with its tutor."
+      }
+      list={
+        <ConversationPane
+          heading={heading}
+          rows={inbox?.conversations ?? null}
+          loading={<ListSkeleton />}
+          empty={null}
+          searchPlaceholder="Search classes or tutors"
+          selectedKey={selectedKey}
+          onSelect={(row) => setSearchParams({ classId: row.classId, learnerId: row.learnerId })}
+          title={title}
+          subtitle={subtitle}
+          lastIsOwn={(row) => row.lastAuthorRole === ownRole && audience === "LEARNER"}
+        />
+      }
+      conversation={
+        conversation ? (
+          <ClassConversationPanel
+            conversation={conversation}
+            title={conversation.className ?? "Class"}
+            subtitle={
+              [audience === "GUARDIAN" ? `About ${conversation.learnerName}` : null, conversation.creatorName]
+                .filter(Boolean)
+                .join(" · ") || undefined
+            }
+            isOwn={(message) => message.authorId === userId}
+            onSend={send}
+            onEditMessage={edit}
+            onBack={() => setSearchParams({})}
+            backLabel="Back to messages"
+            emptyHint={
+              conversation.creatorName ? `Start the conversation with ${conversation.creatorName}.` : undefined
+            }
+          />
+        ) : selectedKey ? (
+          <ConversationSkeleton />
+        ) : null
+      }
+    />
   );
 }

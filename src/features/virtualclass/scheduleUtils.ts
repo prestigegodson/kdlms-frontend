@@ -160,3 +160,48 @@ export function shortDate(date: string): string {
     year: "numeric",
   }).format(new Date(Date.UTC(year, month - 1, day)));
 }
+
+/** "YYYY-MM" of a "YYYY-MM-DD". */
+export function monthOf(date: string): string {
+  return date.slice(0, 7);
+}
+
+/** Month arithmetic on "YYYY-MM" strings. */
+export function addMonths(month: string, months: number): string {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return new Date(Date.UTC(year, monthNumber - 1 + months, 1)).toISOString().slice(0, 7);
+}
+
+/** "October 2026" for a "YYYY-MM". */
+export function monthLabel(month: string): string {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "UTC",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(Date.UTC(year, monthNumber - 1, 1)));
+}
+
+/**
+ * Every date a Sunday-first month grid shows for a "YYYY-MM": from the Sunday on or before the
+ * 1st to the Saturday on or after the last day - whole weeks, so 28, 35 or 42 dates.
+ */
+export function monthGrid(month: string): string[] {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const first = new Date(Date.UTC(year, monthNumber - 1, 1));
+  const last = new Date(Date.UTC(year, monthNumber, 0));
+  const start = addDays(first.toISOString().slice(0, 10), -first.getUTCDay());
+  const end = addDays(last.toISOString().slice(0, 10), 6 - last.getUTCDay());
+  const dates: string[] = [];
+  for (let date = start; date <= end; date = addDays(date, 1)) dates.push(date);
+  return dates;
+}
+
+/** { day: "05", monthYear: "Oct, 2026" } for a "YYYY-MM-DD" - the dashboard's date tile. */
+export function dayParts(date: string): { day: string; monthYear: string } {
+  const [year, month, day] = date.split("-").map(Number);
+  const monthName = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", month: "short" }).format(
+    new Date(Date.UTC(year, month - 1, day)),
+  );
+  return { day: String(day).padStart(2, "0"), monthYear: `${monthName}, ${year}` };
+}

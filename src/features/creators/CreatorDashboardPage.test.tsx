@@ -44,7 +44,8 @@ describe("CreatorDashboardPage", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("09:00–10:00 · Algebra")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Start" })).toBeInTheDocument();
+    expect(await screen.findByText("Algebra")).toBeInTheDocument();
+    expect(screen.getByText(/09:00 – 10:00/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start session" })).toBeInTheDocument();
   });
 });

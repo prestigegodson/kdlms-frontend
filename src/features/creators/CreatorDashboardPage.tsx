@@ -3,9 +3,8 @@ import { Link } from "react-router";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useAuthStore } from "@/stores/authStore";
-import { UpcomingSessionsPanel } from "@/features/virtualclass/components/UpcomingSessionsPanel";
-import { loadCreatorUpcoming } from "@/features/virtualclass/upcomingSessions";
 import { CreatorPlanCard } from "./components/CreatorPlanCard";
+import { CreatorUpcomingSessions } from "./components/CreatorUpcomingSessions";
 
 /**
  * The creator's landing page: their next sessions (Phase C7), their plan, and a way into their
@@ -17,10 +16,7 @@ export function CreatorDashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={user ? `Welcome, ${user.firstName}` : "Dashboard"} />
-      <UpcomingSessionsPanel
-        load={loadCreatorUpcoming}
-        joinLabel={(session) => (session.status === "LIVE" ? "Join" : "Start")}
-      />
+      <CreatorUpcomingSessions />
       <CreatorPlanCard />
       <EmptyState
         icon={CalendarDays}

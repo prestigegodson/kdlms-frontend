@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { ScheduleSlot } from "@/api/virtualClasses";
 import {
   addDays,
+  addMonths,
   dateInZone,
   mondayOf,
+  monthGrid,
+  monthLabel,
+  monthOf,
   scheduleProblems,
   scheduleSummary,
   type SlotDraft,
@@ -60,5 +64,35 @@ describe("date helpers", () => {
     expect(addDays("2026-10-30", 3)).toBe("2026-11-02");
     expect(mondayOf("2026-10-04")).toBe("2026-09-28");
     expect(mondayOf("2026-10-05")).toBe("2026-10-05");
+  });
+});
+
+describe("month helpers", () => {
+  it("steps across year boundaries and labels a month", () => {
+    expect(addMonths("2026-12", 1)).toBe("2027-01");
+    expect(addMonths("2026-01", -1)).toBe("2025-12");
+    expect(monthOf("2026-10-21")).toBe("2026-10");
+    expect(monthLabel("2026-10")).toBe("October 2026");
+  });
+
+  it("builds whole Sunday-first weeks around the month", () => {
+    const october = monthGrid("2026-10"); // 1 Oct 2026 is a Thursday, 31 Oct a Saturday
+    expect(october[0]).toBe("2026-09-27");
+    expect(october.at(-1)).toBe("2026-10-31");
+    expect(october).toHaveLength(35);
+  });
+
+  it("needs six weeks when the month starts late in the week", () => {
+    const august = monthGrid("2026-08"); // 1 Aug 2026 is a Saturday
+    expect(august[0]).toBe("2026-07-26");
+    expect(august.at(-1)).toBe("2026-09-05");
+    expect(august).toHaveLength(42);
+  });
+
+  it("fits a February starting on Sunday in four weeks", () => {
+    const february = monthGrid("2026-02"); // 1 Feb 2026 is a Sunday
+    expect(february[0]).toBe("2026-02-01");
+    expect(february.at(-1)).toBe("2026-02-28");
+    expect(february).toHaveLength(28);
   });
 });

@@ -32,6 +32,8 @@ interface SessionListProps {
   timezone: string;
   /** Show each session's class name - off on a single class's own page. */
   showClassName?: boolean;
+  /** Leave out the per-day headings - for a caller that already names the day. */
+  hideDateHeadings?: boolean;
   emptyMessage: string;
   onChanged: () => void;
 }
@@ -46,6 +48,7 @@ export function SessionList({
   occurrences,
   timezone,
   showClassName = false,
+  hideDateHeadings = false,
   emptyMessage,
   onChanged,
 }: SessionListProps) {
@@ -74,7 +77,9 @@ export function SessionList({
     <div className="space-y-5">
       {[...groups.entries()].map(([date, sessions]) => (
         <section key={date} aria-label={longDate(date)}>
-          <h3 className="mb-2 text-sm font-semibold text-slate-700">{longDate(date)}</h3>
+          {!hideDateHeadings && (
+            <h3 className="mb-2 text-sm font-semibold text-slate-700">{longDate(date)}</h3>
+          )}
           <ul className="divide-y divide-slate-100 rounded-card border border-slate-200 bg-white">
             {sessions.map((session) => {
               const badge = STATUS_BADGES[session.status];

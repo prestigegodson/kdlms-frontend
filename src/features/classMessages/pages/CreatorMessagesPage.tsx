@@ -1,6 +1,6 @@
-import { Megaphone, MessageSquare } from "lucide-react";
+import { Megaphone, MessageSquare, Presentation } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import {
   type ClassConversation,
   type ClassMessagesBoard,
@@ -16,13 +16,13 @@ import { can } from "@/auth/permissions";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { FormField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { AnnouncementSheet } from "@/features/classMessages/components/AnnouncementSheet";
 import { ClassConversationPanel } from "@/features/classMessages/components/ClassConversationPanel";
-import { ConversationList } from "@/features/classMessages/components/ConversationList";
+import { ChatLayout, ConversationSkeleton, ListSkeleton } from "@/features/classMessages/components/ChatLayout";
+import { ConversationPane } from "@/features/classMessages/components/ConversationPane";
 import { conversationKey } from "@/features/classMessages/conversationKey";
 import { useClassMessagesUnreadStore } from "@/stores/classMessagesUnreadStore";
 import { useCreatorPlanStore } from "@/stores/creatorPlanStore";
@@ -37,6 +37,7 @@ export function CreatorMessagesPage() {
   const plan = useCreatorPlanStore((state) => state.plan);
   const planStatus = useCreatorPlanStore((state) => state.status);
   const refreshUnread = useClassMessagesUnreadStore((state) => state.refresh);
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const classId = searchParams.get("classId");
   const learnerId = searchParams.get("learnerId");
@@ -168,98 +169,102 @@ export function CreatorMessagesPage() {
   }
 
   const selectedKey = classId && learnerId ? conversationKey({ classId, learnerId }) : null;
+  const canAnnounce = can.announceToClass("CREATOR") && !!board?.writable && board.rows.length > 0;
 
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Messages"
-        description="Private conversations with each learner, or their guardian, plus announcements to a whole class."
-        actions={
-          can.announceToClass("CREATOR") && board?.writable && board.rows.length > 0 ? (
-            <Button onClick={() => setAnnouncing(true)}>
-              <Megaphone className="h-4 w-4" aria-hidden="true" />
-              Announce to class
-            </Button>
-          ) : undefined
-        }
-      />
+  if (error) {
+    return <ErrorState message={error} onRetry={loadBoard} />;
+  }
 
-      {error ? (
-        <ErrorState message={error} onRetry={loadBoard} />
-      ) : classes === null ? (
-        <Skeleton className="h-40" />
-      ) : classes.length === 0 ? (
+  if (classes !== null && classes.length === 0) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Messages" />
         <EmptyState
           icon={MessageSquare}
           title="No classes yet"
           description="Create a class and enroll learners to start messaging them."
         />
-      ) : (
-        <>
-          <FormField label="Class" htmlFor="messages-class">
-            <Select
-              id="messages-class"
-              value={classId ?? ""}
-              onChange={(event) => setSearchParams({ classId: event.target.value })}
-            >
-              {classes.map((virtualClass) => (
-                <option key={virtualClass.id} value={virtualClass.id}>
-                  {virtualClass.name}
-                  {virtualClass.status === "ARCHIVED" ? " (archived)" : ""}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+      </div>
+    );
+  }
 
-          {board === null ? (
-            <Skeleton className="h-40" />
-          ) : board.rows.length === 0 ? (
-            <EmptyState
-              icon={MessageSquare}
-              title="No learners in this class"
-              description="Enroll learners in this class to message them."
+  return (
+    <>
+      <ChatLayout
+        open={selectedKey !== null}
+        placeholder="Choose a learner to open your conversation, or announce something to the whole class."
+        list={
+          <ConversationPane
+            heading="Messages"
+            action={
+              canAnnounce ? (
+                <Button size="sm" onClick={() => setAnnouncing(true)} aria-label="Announce to class">
+                  <Megaphone className="h-4 w-4" aria-hidden="true" />
+                  Announce
+                </Button>
+              ) : undefined
+            }
+            toolbar={
+              classes === null ? (
+                <Skeleton className="h-10" />
+              ) : (
+                <Select
+                  aria-label="Class"
+                  value={classId ?? ""}
+                  onChange={(event) => setSearchParams({ classId: event.target.value })}
+                >
+                  {classes.map((virtualClass) => (
+                    <option key={virtualClass.id} value={virtualClass.id}>
+                      {virtualClass.name}
+                      {virtualClass.status === "ARCHIVED" ? " (archived)" : ""}
+                    </option>
+                  ))}
+                </Select>
+              )
+            }
+            rows={board?.rows ?? null}
+            loading={<ListSkeleton />}
+            empty={
+              <div className="px-4 py-10 text-center text-sm text-slate-500">
+                <p className="font-medium text-slate-700">No learners in this class</p>
+                <p className="mt-1">Enroll learners in this class to message them.</p>
+              </div>
+            }
+            searchPlaceholder="Search learners"
+            selectedKey={selectedKey}
+            onSelect={(row) => setSearchParams({ classId: row.classId, learnerId: row.learnerId })}
+            title={(row) => row.learnerName ?? "Learner"}
+            lastIsOwn={(row) => row.lastAuthorRole === "CREATOR"}
+          />
+        }
+        conversation={
+          conversation && board ? (
+            <ClassConversationPanel
+              conversation={conversation}
+              title={conversation.learnerName ?? "Learner"}
+              subtitle={board.className}
+              isOwn={(message) => message.authorRole === "CREATOR"}
+              onSend={send}
+              onEditMessage={edit}
+              onBack={() => setSearchParams({ classId: board.classId })}
+              backLabel={`Back to ${board.className}`}
+              emptyHint={`Say hello to ${conversation.learnerName ?? "your learner"}.`}
+              menu={[
+                {
+                  label: "View class",
+                  icon: Presentation,
+                  onSelect: () => navigate(`/creator/classes/${board.classId}`),
+                },
+                ...(canAnnounce
+                  ? [{ label: "Announce to class", icon: Megaphone, onSelect: () => setAnnouncing(true) }]
+                  : []),
+              ]}
             />
-          ) : (
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-              <div className={selectedKey ? "max-lg:hidden" : ""}>
-                <ConversationList
-                  rows={board.rows}
-                  selectedKey={selectedKey}
-                  onSelect={(row) => setSearchParams({ classId: row.classId, learnerId: row.learnerId })}
-                  title={(row) => row.learnerName ?? "Learner"}
-                />
-              </div>
-              <div>
-                {selectedKey && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="mb-3 lg:hidden"
-                    onClick={() => setSearchParams({ classId: board.classId })}
-                  >
-                    Back to {board.className}
-                  </Button>
-                )}
-                {conversation ? (
-                  <ClassConversationPanel
-                    conversation={conversation}
-                    title={conversation.learnerName ?? "Learner"}
-                    subtitle={board.className}
-                    onSend={send}
-                    onEditMessage={edit}
-                  />
-                ) : selectedKey ? (
-                  <Skeleton className="h-40" />
-                ) : (
-                  <p className="hidden rounded-card border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 lg:block">
-                    Choose a learner to open your conversation.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-        </>
-      )}
+          ) : selectedKey ? (
+            <ConversationSkeleton />
+          ) : null
+        }
+      />
 
       {announcing && board && (
         <AnnouncementSheet
@@ -274,6 +279,6 @@ export function CreatorMessagesPage() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }
