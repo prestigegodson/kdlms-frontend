@@ -31,9 +31,12 @@ import { UnsavedChangesBar } from "@/features/assessments/components/UnsavedChan
 import { PublishReadinessPanel } from "@/features/takeHomeQuizzes/components/PublishReadinessPanel";
 import type { QuestionBankSource } from "@/features/takeHomeQuizzes/components/QuestionBankModal";
 import { QuestionEditor } from "@/features/takeHomeQuizzes/components/QuestionEditor";
+import { QuizPreviewModal } from "@/features/takeHomeQuizzes/components/QuizPreviewModal";
 import { QuestionTemplateDownload } from "@/features/takeHomeQuizzes/components/QuestionImportModal";
 import { QuizWindowFields } from "@/features/takeHomeQuizzes/components/QuizWindowFields";
 import { ShuffleFields } from "@/features/takeHomeQuizzes/components/ShuffleFields";
+import { NO_THEME, type ThemeChoice } from "@/features/takeHomeQuizzes/theme/themeChoice";
+import { ThemeSection } from "@/features/takeHomeQuizzes/theme/ThemeSection";
 import { type EditableQuestion, toEditableQuestion, toQuestionCommand } from "@/features/takeHomeQuizzes/editableQuestion";
 
 interface FormState {
@@ -46,6 +49,7 @@ interface FormState {
   revealResultsOnSubmit: boolean;
   shuffleQuestions: boolean;
   shuffleChoices: boolean;
+  theme: ThemeChoice;
   questions: EditableQuestion[];
 }
 
@@ -64,6 +68,7 @@ function blankForm(): FormState {
     revealResultsOnSubmit: false,
     shuffleQuestions: false,
     shuffleChoices: false,
+    theme: NO_THEME,
     questions: [],
   };
 }
@@ -79,6 +84,7 @@ function fromView(view: ClassQuizView): FormState {
     revealResultsOnSubmit: view.revealResultsOnSubmit,
     shuffleQuestions: view.shuffleQuestions,
     shuffleChoices: view.shuffleChoices,
+    theme: { themeId: view.themeId ?? null, themePreset: view.themePreset ?? null },
     questions: view.questions.map(toEditableQuestion),
   };
 }
@@ -108,6 +114,7 @@ export function CreatorQuizEditorPage() {
   const [saving, setSaving] = useState(false);
   const [readiness, setReadiness] = useState<PublishReadinessView | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [confirmPublish, setConfirmPublish] = useState(false);
 
   // Memoized: the bank modal re-searches whenever its `search` changes identity. A creator's bank
@@ -172,6 +179,7 @@ export function CreatorQuizEditorPage() {
         revealResultsOnSubmit: form.revealResultsOnSubmit,
         shuffleQuestions: form.shuffleQuestions,
         shuffleChoices: form.shuffleChoices,
+        ...form.theme,
       };
       let saved = isNew ? await createClassQuiz(classId, request) : await updateClassQuiz(classId, quiz!.id, request);
       if (form.questions.length > 0 || (quiz && quiz.questions.length > 0)) {
@@ -223,6 +231,11 @@ export function CreatorQuizEditorPage() {
         actions={
           quiz && (
             <div className="flex flex-wrap items-center gap-2">
+              {form.questions.length > 0 && (
+                <Button variant="secondary" onClick={() => setPreviewOpen(true)}>
+                  Preview
+                </Button>
+              )}
               {quiz.status !== "DRAFT" && (
                 <Button variant="secondary" onClick={() => navigate(`/creator/quizzes/${classId}/${quiz.id}/results`)}>
                   Results
@@ -315,6 +328,16 @@ export function CreatorQuizEditorPage() {
             onChange={(value) => setForm({ ...form, ...value })}
             disabled={locked}
           />
+
+          <ThemeSection
+            choice={form.theme}
+            resolved={quiz?.theme ?? null}
+            onChange={(theme) => setForm({ ...form, theme })}
+            disabled={readOnly}
+            libraryLabel="My themes"
+            offerMine={false}
+            quizTitle={form.title}
+          />
         </div>
       )}
 
@@ -344,6 +367,24 @@ export function CreatorQuizEditorPage() {
 
       {showForm && !readOnly && (
         <UnsavedChangesBar count={dirty ? 1 : 0} saving={saving} onSave={save} onDiscard={discard} saveVariant="primary" />
+      )}
+
+      {previewOpen && quiz && (
+        <QuizPreviewModal
+          title={form.title}
+          instructions={form.instructions}
+          timed={form.timed}
+          durationMinutes={form.durationMinutes ? Number(form.durationMinutes) : null}
+          shuffleQuestions={form.shuffleQuestions}
+          shuffleChoices={form.shuffleChoices}
+          questions={form.questions}
+          theme={quiz.theme ?? null}
+          themeUnsaved={
+            (form.theme.themeId ?? null) !== (quiz.themeId ?? null) ||
+            (form.theme.themePreset ?? null) !== (quiz.themePreset ?? null)
+          }
+          onClose={() => setPreviewOpen(false)}
+        />
       )}
 
       {confirmDelete && (

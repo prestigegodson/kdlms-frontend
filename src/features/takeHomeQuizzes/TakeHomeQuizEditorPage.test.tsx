@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as quizThemesApi from "@/api/quizThemes";
 import * as takeHomeQuizzesApi from "@/api/takeHomeQuizzes";
 import { TakeHomeQuizEditorPage } from "@/features/takeHomeQuizzes/TakeHomeQuizEditorPage";
 import { TAKE_HOME_QUIZ_FIELD_HELP } from "@/features/takeHomeQuizzes/takeHomeQuizFieldHelp";
@@ -24,6 +25,30 @@ vi.mock("@/api/takeHomeQuizzes", async () => {
     exportTakeHomeQuizLinks: vi.fn(),
   };
 });
+
+const OCEAN_STYLE: quizThemesApi.QuizThemeStyle = vi.hoisted(() => ({
+  backgroundKind: "GRADIENT" as const,
+  backgroundColor: "#0ea5e9",
+  backgroundColor2: "#1e3a8a",
+  gradientAngle: 160,
+  backgroundImageFileId: null,
+  backgroundImageFit: null,
+  headerImageFileId: null,
+  accentColor: "#0369a1",
+  font: "NUNITO" as const,
+  cardOpacity: 100,
+  cardRadius: "LARGE" as const,
+}));
+
+vi.mock("@/api/quizThemes", () => ({
+  listQuizThemes: vi.fn().mockResolvedValue({
+    presets: [{ key: "ocean", name: "Ocean", style: OCEAN_STYLE }],
+    themes: [],
+  }),
+  createQuizTheme: vi.fn(),
+  updateQuizTheme: vi.fn(),
+  deleteQuizTheme: vi.fn(),
+}));
 
 function renderAt(path: string) {
   resetAuthStore();
@@ -77,6 +102,9 @@ const SAVED_VIEW: takeHomeQuizzesApi.TakeHomeQuizView = {
   subjectGroupId: null,
   writable: true,
   classes: [{ classId: "class-1", className: "JSS 1A" }],
+  themeId: null,
+  themePreset: null,
+  theme: null,
 };
 
 const ARMS: takeHomeQuizzesApi.SharedClassView[] = [
@@ -257,6 +285,35 @@ describe("TakeHomeQuizEditorPage - sharing with other classes", () => {
 
 describe("TakeHomeQuizEditorPage - an existing quiz", () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it("applies a built-in theme from the gallery and sends it with the next save", async () => {
+    const user = userEvent.setup();
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuiz).mockResolvedValue(SAVED_VIEW);
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizValidation).mockResolvedValue({
+      canPublish: false,
+      blockers: [],
+      totalPoints: 0,
+      midtermMax: null,
+      rosterSize: 3,
+    });
+    vi.mocked(takeHomeQuizzesApi.updateTakeHomeQuiz).mockResolvedValue({
+      ...SAVED_VIEW,
+      themePreset: "ocean",
+      theme: OCEAN_STYLE,
+    });
+
+    renderAt("/school/take-home-quizzes/quiz-1?classId=class-1&subjectId=subject-1&termId=term-1");
+
+    await user.click(await screen.findByRole("button", { name: "Choose theme" }));
+    await user.click(await screen.findByRole("button", { name: "Use Ocean" }));
+    expect(await screen.findByText("Built-in theme")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(takeHomeQuizzesApi.updateTakeHomeQuiz).toHaveBeenCalledWith(
+      "quiz-1",
+      expect.objectContaining({ themeId: null, themePreset: "ocean" }),
+    );
+  });
 
   it("loads and shows the saved title, with the question editor available", async () => {
     vi.mocked(takeHomeQuizzesApi.getTakeHomeQuiz).mockResolvedValue(SAVED_VIEW);

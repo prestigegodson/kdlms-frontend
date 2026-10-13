@@ -384,3 +384,12 @@ h4 {
     background-color: #e2e8f0;
   }
 }
+
+/*
+ * A themed quiz (QuizThemeFrame) already gives its content a full-height page and a surface to sit
+ * on, so the player screens' own full-viewport wrappers (built to centre themselves on a bare page)
+ * collapse to their content inside it instead of pushing the surface past the viewport.
+ */
+[data-quiz-theme-surface] .min-h-dvh {
+  min-height: 0;
+}

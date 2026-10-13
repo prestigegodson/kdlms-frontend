@@ -37,11 +37,14 @@ import { PublishQuizModal } from "@/features/takeHomeQuizzes/components/PublishQ
 import { PublishReadinessPanel } from "@/features/takeHomeQuizzes/components/PublishReadinessPanel";
 import type { QuestionBankSource } from "@/features/takeHomeQuizzes/components/QuestionBankModal";
 import { QuestionEditor } from "@/features/takeHomeQuizzes/components/QuestionEditor";
+import { QuizPreviewModal } from "@/features/takeHomeQuizzes/components/QuizPreviewModal";
 import { QuestionTemplateDownload } from "@/features/takeHomeQuizzes/components/QuestionImportModal";
 import { QuizWindowFields } from "@/features/takeHomeQuizzes/components/QuizWindowFields";
 import { StudentLinksPanel } from "@/features/takeHomeQuizzes/components/StudentLinksPanel";
 import { type EditableQuestion, toEditableQuestion, toQuestionCommand } from "@/features/takeHomeQuizzes/editableQuestion";
 import { TAKE_HOME_QUIZ_FIELD_HELP } from "@/features/takeHomeQuizzes/takeHomeQuizFieldHelp";
+import { NO_THEME, type ThemeChoice } from "@/features/takeHomeQuizzes/theme/themeChoice";
+import { ThemeSection } from "@/features/takeHomeQuizzes/theme/ThemeSection";
 
 interface FormState {
   title: string;
@@ -56,6 +59,7 @@ interface FormState {
   shuffleChoices: boolean;
   /** The other arms of the home class's level a Normal quiz is shared with - never the home class itself. */
   sharedClassIds: string[];
+  theme: ThemeChoice;
   questions: EditableQuestion[];
 }
 
@@ -76,6 +80,7 @@ function blankForm(): FormState {
     shuffleQuestions: false,
     shuffleChoices: false,
     sharedClassIds: [],
+    theme: NO_THEME,
     questions: [],
   };
 }
@@ -95,6 +100,7 @@ function fromView(view: TakeHomeQuizView): FormState {
     sharedClassIds: (view.classes ?? [])
       .map((sharedClass) => sharedClass.classId)
       .filter((id) => id !== view.classId),
+    theme: { themeId: view.themeId ?? null, themePreset: view.themePreset ?? null },
     questions: view.questions.map(toEditableQuestion),
   };
 }
@@ -136,6 +142,7 @@ export function TakeHomeQuizEditorPage() {
   const [saving, setSaving] = useState(false);
   const [readiness, setReadiness] = useState<PublishReadinessView | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [linksRefreshToken, setLinksRefreshToken] = useState(0);
 
@@ -261,6 +268,7 @@ export function TakeHomeQuizEditorPage() {
           shuffleQuestions: form.shuffleQuestions,
           shuffleChoices: form.shuffleChoices,
           classIds: chosenClassIds(),
+          ...form.theme,
         });
       } else {
         saved = await updateTakeHomeQuiz(quiz!.id, {
@@ -275,6 +283,7 @@ export function TakeHomeQuizEditorPage() {
           shuffleQuestions: form.shuffleQuestions,
           shuffleChoices: form.shuffleChoices,
           classIds: chosenClassIds(),
+          ...form.theme,
         });
       }
       if (form.questions.length > 0 || (quiz && quiz.questions.length > 0)) {
@@ -339,6 +348,11 @@ export function TakeHomeQuizEditorPage() {
         actions={
           quiz && (
             <div className="flex flex-wrap items-center gap-2">
+              {form.questions.length > 0 && (
+                <Button variant="secondary" onClick={() => setPreviewOpen(true)}>
+                  Preview
+                </Button>
+              )}
               {quiz.status !== "DRAFT" && (
                 <Button variant="secondary" onClick={() => navigate(`/school/take-home-quizzes/${quiz.id}/results`)}>
                   Results
@@ -475,6 +489,16 @@ export function TakeHomeQuizEditorPage() {
             onChange={(value) => setForm({ ...form, ...value })}
             disabled={locked}
           />
+
+          <ThemeSection
+            choice={form.theme}
+            resolved={quiz?.theme ?? null}
+            onChange={(theme) => setForm({ ...form, theme })}
+            disabled={readOnly}
+            libraryLabel="School themes"
+            offerMine
+            quizTitle={form.title}
+          />
         </div>
       )}
 
@@ -513,6 +537,24 @@ export function TakeHomeQuizEditorPage() {
           onSave={save}
           onDiscard={discard}
           saveVariant="primary"
+        />
+      )}
+
+      {previewOpen && quiz && (
+        <QuizPreviewModal
+          title={form.title}
+          instructions={form.instructions}
+          timed={form.timed}
+          durationMinutes={form.durationMinutes ? Number(form.durationMinutes) : null}
+          shuffleQuestions={form.shuffleQuestions}
+          shuffleChoices={form.shuffleChoices}
+          questions={form.questions}
+          theme={quiz.theme ?? null}
+          themeUnsaved={
+            (form.theme.themeId ?? null) !== (quiz.themeId ?? null) ||
+            (form.theme.themePreset ?? null) !== (quiz.themePreset ?? null)
+          }
+          onClose={() => setPreviewOpen(false)}
         />
       )}
 

@@ -1,4 +1,5 @@
 import { apiFetch, apiFetchBlob } from "@/api/client";
+import type { QuizThemeStyle } from "@/api/quizThemes";
 import type {
   AnswerCommand,
   AttemptState,
@@ -50,6 +51,8 @@ export interface MyQuizInterstitialView {
   /** True only once the quiz's own `revealResultsOnSubmit` is on and the caller has already submitted - see `getMyQuizReview`. */
   revealResults: boolean;
   serverTime: string;
+  /** The quiz's look - null for the plain one. */
+  theme?: QuizThemeStyle | null;
 }
 
 /** The caller's own class's quizzes for the school's current term only - an empty page when no term is marked current. */

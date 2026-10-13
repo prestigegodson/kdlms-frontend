@@ -1,4 +1,5 @@
 import { ApiError, apiFetch, apiFetchBlob, apiUpload } from "@/api/client";
+import type { QuizThemeStyle } from "@/api/quizThemes";
 import type { Page } from "@/api/types";
 import type { SubjectTarget } from "@/features/academics/subjectTarget";
 
@@ -148,6 +149,11 @@ export interface TakeHomeQuizView {
   writable: boolean;
   /** Every class the quiz reaches, its home `classId` included. */
   classes: SharedClassView[];
+  /** A saved theme of the school's, or a built-in preset - never both; both null = the plain look. */
+  themeId: string | null;
+  themePreset: string | null;
+  /** What `themeId`/`themePreset` resolve to. */
+  theme: QuizThemeStyle | null;
 }
 
 /** Mirrors backend takehomequiz.application.port.in.PublishReadinessView. */
@@ -219,6 +225,8 @@ export interface CreateTakeHomeQuizRequest {
   shuffleChoices: boolean;
   /** Other arms of `classId`'s level and branch to share a Normal quiz with (`getShareableClasses`); `classId` is always included. */
   classIds?: string[];
+  themeId: string | null;
+  themePreset: string | null;
 }
 
 export interface UpdateTakeHomeQuizRequest {
@@ -234,6 +242,9 @@ export interface UpdateTakeHomeQuizRequest {
   shuffleChoices: boolean;
   /** Omitted leaves the classes the quiz reaches unchanged. Once a submission exists, classes can only be added. */
   classIds?: string[];
+  /** A full replace - both null for the plain look. Never frozen by a submission. */
+  themeId: string | null;
+  themePreset: string | null;
 }
 
 /** Mirrors backend takehomequiz.application.port.in.PublishOutcomeView.RowOutcome. */

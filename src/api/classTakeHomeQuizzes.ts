@@ -1,4 +1,5 @@
 import { apiFetch, apiFetchBlob, apiUpload } from "@/api/client";
+import type { QuizThemeStyle } from "@/api/quizThemes";
 import type { MyQuizInterstitialView, MyTakeHomeQuizSummaryView } from "@/api/myTakeHomeQuizzes";
 import type { Page } from "@/api/types";
 import type {
@@ -77,6 +78,11 @@ export interface ClassQuizView {
   questions: TakeHomeQuizQuestionView[];
   actions: TakeHomeQuizActionsView;
   updatedAt: string;
+  /** A saved theme of the creator's, or a built-in preset - never both; both null = the plain look. */
+  themeId: string | null;
+  themePreset: string | null;
+  /** What `themeId`/`themePreset` resolve to. */
+  theme: QuizThemeStyle | null;
 }
 
 /** Mirrors backend `CreatorTakeHomeQuizController.SaveClassQuizRequest`. */
@@ -90,6 +96,9 @@ export interface SaveClassQuizRequest {
   revealResultsOnSubmit: boolean;
   shuffleQuestions: boolean;
   shuffleChoices: boolean;
+  /** A full replace - both null for the plain look. */
+  themeId: string | null;
+  themePreset: string | null;
 }
 
 /** Mirrors backend `LearnerResultRowView` - `overLimit` means the plan's class size keeps them from taking it. */

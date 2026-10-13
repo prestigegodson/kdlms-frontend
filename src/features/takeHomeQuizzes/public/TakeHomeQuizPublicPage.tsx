@@ -12,6 +12,7 @@ import {
   type QuizInterstitialView,
 } from "@/api/publicTakeHomeQuiz";
 import { ApiError, GENERIC_ERROR_MESSAGE, getErrorMessage } from "@/api/client";
+import type { QuizThemeStyle } from "@/api/quizThemes";
 import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Spinner } from "@/components/ui/Spinner";
@@ -21,6 +22,8 @@ import { SubmitConfirmation } from "@/features/takeHomeQuizzes/public/components
 import { QuizRunner } from "@/features/takeHomeQuizzes/runner/QuizRunner";
 import { QUIZ_IMAGE_SIZE_CLASS } from "@/features/takeHomeQuizzes/runner/quizImageSizes";
 import type { QuizTransport } from "@/features/takeHomeQuizzes/runner/quizTransport";
+import { QuizThemeFrame } from "@/features/takeHomeQuizzes/theme/QuizThemeFrame";
+import type { ThemeImageSource } from "@/features/takeHomeQuizzes/theme/themeImages";
 
 type Status =
   | { kind: "loading" }
@@ -50,6 +53,8 @@ export function TakeHomeQuizPublicPage() {
 
   const [status, setStatus] = useState<Status>(() => (token ? { kind: "loading" } : { kind: "invalid" }));
   const [starting, setStarting] = useState(false);
+  // Resolved once with the interstitial and kept for the runner/submitted screens that follow it.
+  const [theme, setTheme] = useState<QuizThemeStyle | null>(null);
 
   useEffect(() => {
     // No token to resolve - `status` was already initialized to "invalid" above, matching
@@ -61,6 +66,7 @@ export function TakeHomeQuizPublicPage() {
     resolveTakeHomeQuiz(token)
       .then((data) => {
         if (cancelled) return;
+        setTheme(data.theme ?? null);
         if (data.attemptState === "SUBMITTED") {
           setStatus({ kind: "submitted", revealResults: data.revealResults });
         } else {
@@ -101,6 +107,11 @@ export function TakeHomeQuizPublicPage() {
     [token],
   );
 
+  const themeImages: ThemeImageSource = useMemo(
+    () => ({ kind: "url", urlFor: (fileId) => publicQuestionImageUrl(token, fileId) }),
+    [token],
+  );
+
   const loadReview = useCallback(() => getTakeHomeQuizReview(token), [token]);
   const renderReviewImage = useCallback(
     (fileId: string, alt: string) => <img src={publicQuestionImageUrl(token, fileId)} alt={alt} loading="lazy" />,
@@ -135,30 +146,29 @@ export function TakeHomeQuizPublicPage() {
     );
   }
 
-  if (status.kind === "submitted") {
-    if (status.revealResults) {
-      return (
-        <div className="mx-auto min-h-dvh max-w-2xl px-4 py-8">
-          <QuizResultReveal load={loadReview} renderImage={renderReviewImage} />
-        </div>
-      );
-    }
-    return <SubmitConfirmation />;
-  }
-
-  if (status.kind === "interstitial") {
-    return <QuizInterstitial data={status.data} starting={starting} onStart={handleStart} />;
-  }
-
   return (
-    <div className="mx-auto min-h-dvh max-w-2xl px-4 py-6 pb-28">
-      <QuizRunner
-        initialAttempt={status.attempt}
-        transport={transport}
-        onSubmitted={(confirmation) => setStatus({ kind: "submitted", revealResults: confirmation.revealResults })}
-        onError={(error) => setStatus(errorStatus(error))}
-      />
-    </div>
+    <QuizThemeFrame theme={theme} images={themeImages} variant="page">
+      {status.kind === "submitted" ? (
+        status.revealResults ? (
+          <div className="mx-auto min-h-dvh max-w-2xl px-4 py-8">
+            <QuizResultReveal load={loadReview} renderImage={renderReviewImage} />
+          </div>
+        ) : (
+          <SubmitConfirmation />
+        )
+      ) : status.kind === "interstitial" ? (
+        <QuizInterstitial data={status.data} starting={starting} onStart={handleStart} />
+      ) : (
+        <div className="mx-auto min-h-dvh max-w-2xl px-4 py-6 pb-28">
+          <QuizRunner
+            initialAttempt={status.attempt}
+            transport={transport}
+            onSubmitted={(confirmation) => setStatus({ kind: "submitted", revealResults: confirmation.revealResults })}
+            onError={(error) => setStatus(errorStatus(error))}
+          />
+        </div>
+      )}
+    </QuizThemeFrame>
   );
 }
 

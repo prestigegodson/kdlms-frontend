@@ -1,4 +1,5 @@
 import { apiFetch } from "@/api/client";
+import type { QuizThemeStyle } from "@/api/quizThemes";
 import type {
   InteractionConfig,
   InteractionResponse,
@@ -66,6 +67,8 @@ export interface QuizInterstitialView {
   /** True only once the quiz's own `revealResultsOnSubmit` is on and this caller has already submitted - see `getTakeHomeQuizReview`. */
   revealResults: boolean;
   serverTime: string;
+  /** The quiz's look - null for the plain one. */
+  theme?: QuizThemeStyle | null;
 }
 
 /** Mirrors backend `TakeTakeHomeQuizUseCase.QuizAttemptView` - returned by Start/resume/autosave. */
@@ -131,6 +134,8 @@ export interface QuizReviewView {
   score: number;
   totalPoints: number;
   questions: ReviewQuestionView[];
+  /** The quiz's look - null for the plain one. */
+  theme?: QuizThemeStyle | null;
 }
 
 function base(token: string): string {
