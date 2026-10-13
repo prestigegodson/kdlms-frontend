@@ -1,4 +1,4 @@
-import { Archive, BookOpen, CircleCheck, Eye, MessageSquare, Pencil, Trash2, Undo2, Upload } from "lucide-react";
+import { Archive, BookOpen, CircleCheck, Eye, MessageSquare, Pencil, Share2, Trash2, Undo2, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { ApiError } from "@/api/client";
@@ -39,6 +39,7 @@ import { useBranchScope } from "@/features/branches/useBranchScope";
 import { CommentsModal } from "@/features/learning/components/CommentsModal";
 import { CompletionsModal } from "@/features/learning/components/CompletionsModal";
 import { ResourceEditorModal } from "@/features/learning/components/ResourceEditorModal";
+import { ShareResourceModal } from "@/features/learning/components/ShareResourceModal";
 import {
   LEARNING_RESOURCE_STATUS_VARIANT,
   learningResourceAvailabilityBadge,
@@ -96,6 +97,8 @@ export function LearningResourcesPage() {
   const [page, setPage] = useState<Page<LearningResourceSummaryView> | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [sharing, setSharing] = useState<LearningResourceSummaryView | null>(null);
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
 
   const [editing, setEditing] = useState<{ resourceId: string | null } | null>(null);
   const [moderatingResourceId, setModeratingResourceId] = useState<string | null>(null);
@@ -206,6 +209,9 @@ export function LearningResourcesPage() {
     return [
       preview,
       { label: "Edit", icon: Pencil, onSelect: () => setEditing({ resourceId: resource.id }) },
+      ...(resource.shareable && resource.status !== "ARCHIVED"
+        ? [{ label: "Share to another class", icon: Share2, onSelect: () => setSharing(resource) }]
+        : []),
       { label: "Comments", icon: MessageSquare, onSelect: () => setModeratingResourceId(resource.id) },
       ...(canViewCompletions
         ? [
@@ -315,6 +321,7 @@ export function LearningResourcesPage() {
 
       {loadError && <Alert variant="error">{loadError}</Alert>}
       {actionError && <Alert variant="error">{actionError}</Alert>}
+      {shareNotice && <Alert variant="success">{shareNotice}</Alert>}
 
       {classId && termId && page === null && !loadError && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -414,6 +421,18 @@ export function LearningResourcesPage() {
 
       {moderatingResourceId && (
         <CommentsModal resourceId={moderatingResourceId} onClose={() => setModeratingResourceId(null)} />
+      )}
+
+      {sharing && (
+        <ShareResourceModal
+          resource={sharing}
+          onClose={() => setSharing(null)}
+          onShared={(result) =>
+            setShareNotice(
+              `Shared "${sharing.title}" with ${result.classes.map((sharedClass) => sharedClass.className).join(", ")}.`,
+            )
+          }
+        />
       )}
 
       {viewingCompletionsResourceId && (

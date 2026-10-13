@@ -1,4 +1,4 @@
-import { Archive, Pencil, Undo2, Upload } from "lucide-react";
+import { Archive, Pencil, Share2, Undo2, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { ApiError } from "@/api/client";
@@ -22,6 +22,7 @@ import { AuthenticatedRichImage } from "@/components/richText/AuthenticatedRichI
 import { ResourceCommentsModeration } from "@/features/learning/components/ResourceCommentsModeration";
 import { ResourceEditorModal } from "@/features/learning/components/ResourceEditorModal";
 import { ResourceViewer } from "@/features/learning/components/ResourceViewer";
+import { ShareResourceModal } from "@/features/learning/components/ShareResourceModal";
 import { LEARNING_RESOURCE_STATUS_VARIANT } from "@/features/learning/learningResourceStatus";
 import { useMediaStreamUrl } from "@/hooks/useMediaStreamUrl";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
@@ -65,6 +66,8 @@ export function LearningResourcePreviewPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [confirmingArchive, setConfirmingArchive] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
 
   // `resourceId` changing resets the stale resource/error during render rather than as a
   // synchronous setState in the effect below - the `StudentResourceDetailPage`/
@@ -136,6 +139,12 @@ export function LearningResourcePreviewPage() {
                 Edit
               </Button>
             )}
+            {resource.actions.canShare && (
+              <Button variant="secondary" onClick={() => setSharing(true)}>
+                <Share2 className="h-4 w-4" aria-hidden="true" />
+                Share to another class
+              </Button>
+            )}
             {resource.actions.canPublish && (
               <Button variant="accent" onClick={() => runAction(publishLearningResource)}>
                 <Upload className="h-4 w-4" aria-hidden="true" />
@@ -159,6 +168,7 @@ export function LearningResourcePreviewPage() {
       />
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
+      {shareNotice && <Alert variant="success">{shareNotice}</Alert>}
       {resource.description && <p className="text-sm text-slate-600">{resource.description}</p>}
 
       <ResourceViewer
@@ -186,6 +196,16 @@ export function LearningResourcePreviewPage() {
             setEditing(false);
             load();
           }}
+        />
+      )}
+
+      {sharing && (
+        <ShareResourceModal
+          resource={resource}
+          onClose={() => setSharing(false)}
+          onShared={(result) =>
+            setShareNotice(`Shared with ${result.classes.map((sharedClass) => sharedClass.className).join(", ")}.`)
+          }
         />
       )}
 

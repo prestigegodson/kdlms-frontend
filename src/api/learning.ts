@@ -33,6 +33,8 @@ export interface LearningResourceSummaryView {
   writable?: boolean;
   /** Every class a school resource reaches, its home class first. More than one means it's shared across arms of the level. */
   classes?: SharedClassView[];
+  /** True when the caller may send a copy to another class - they class-teach or administer its home class. */
+  shareable?: boolean;
   /** The subject's name - or, for a resource targeting a subject group (Phase 35M), the group's. */
   subjectName: string;
   /** Set when the resource targets a whole subject group rather than one subject (Phase 35M). */
@@ -53,6 +55,8 @@ export interface LearningResourceActionsView {
   canUnpublish: boolean;
   canArchive: boolean;
   canDelete: boolean;
+  /** May send a published copy to another class's classrooms (class teacher of the home classroom, or an admin). */
+  canShare?: boolean;
 }
 
 /** Mirrors backend learning.application.port.in.LearningResourceView - the full staff detail. */
@@ -281,6 +285,51 @@ export function getAuthorableSubjectGroups(classId: string): Promise<AuthorableS
 }
 
 /** The classes a resource authored in `classId` for `target` may be shared with - every arm of the level and branch, `classId` included. */
+/** Mirrors backend learning.application.port.in.ShareTargetClassView - another class (level) a copy may be sent to. */
+export interface ShareTargetClassView {
+  levelId: string;
+  levelName: string;
+  classrooms: { classId: string; className: string; alreadyShared: boolean }[];
+}
+
+/** Mirrors backend learning.application.port.in.ShareTargetSubjectsView. */
+export interface ShareTargetSubjectsView {
+  subjects: AuthorableSubjectView[];
+  subjectGroups: AuthorableSubjectGroupView[];
+}
+
+/** Mirrors backend learning.application.port.in.ShareResultView - the copy and the classrooms it reaches. */
+export interface ShareResultView {
+  resourceId: string;
+  classes: SharedClassView[];
+}
+
+/** Mirrors backend LearningResourceController.ShareLearningResourceRequest - exactly one of `subjectId`/`subjectGroupId`. */
+export interface ShareLearningResourceRequest {
+  levelId: string;
+  classIds: string[];
+  subjectId: string | null;
+  subjectGroupId: string | null;
+}
+
+/** The other classes of the resource's branch a copy may be sent to, each with its classrooms. */
+export function getShareTargets(resourceId: string): Promise<ShareTargetClassView[]> {
+  return apiFetch<ShareTargetClassView[]>(`${BASE}/${resourceId}/share-targets`);
+}
+
+/** The subjects and subject groups of `levelId` a copy may be filed under. */
+export function getShareTargetSubjects(resourceId: string, levelId: string): Promise<ShareTargetSubjectsView> {
+  return apiFetch<ShareTargetSubjectsView>(`${BASE}/${resourceId}/share-targets/${levelId}/subjects`);
+}
+
+/** Sends a published copy to classrooms of another class. */
+export function shareLearningResource(
+  resourceId: string,
+  request: ShareLearningResourceRequest,
+): Promise<ShareResultView> {
+  return apiFetch<ShareResultView>(`${BASE}/${resourceId}/share`, { method: "POST", body: JSON.stringify(request) });
+}
+
 export function getShareableClasses(classId: string, target: ResourceTarget): Promise<SharedClassView[]> {
   const params = new URLSearchParams({ classId });
   if (target.subjectId) params.set("subjectId", target.subjectId);
