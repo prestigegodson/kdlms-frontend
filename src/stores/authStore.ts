@@ -13,6 +13,7 @@ import { useLevelStore } from "@/stores/levelStore";
 import { useNewResourcesStore } from "@/stores/newResourcesStore";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import { usePendingFeePaymentsStore } from "@/stores/pendingFeePaymentsStore";
+import { useContactEnquiriesUnreadStore } from "@/stores/contactEnquiriesUnreadStore";
 import { usePendingLessonNotesStore } from "@/stores/pendingLessonNotesStore";
 import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
@@ -133,6 +134,7 @@ function resetSessionScopedStores(): void {
   useCreatorPlanStore.getState().reset();
   usePendingLessonNotesStore.getState().reset();
   usePendingFeePaymentsStore.getState().reset();
+  useContactEnquiriesUnreadStore.getState().reset();
   useBranchStore.getState().reset();
   useLevelStore.getState().reset();
   useOnboardingStore.getState().reset();

@@ -76,6 +76,8 @@ import { LearningResourcesPage } from "@/features/learning/LearningResourcesPage
 import { LessonNotesPage } from "@/features/lessonNotes/LessonNotesPage";
 import { HowToGuidesPage } from "@/features/onboarding/pages/HowToGuidesPage";
 import { CouponsPage } from "@/features/coupons/CouponsPage";
+import { EnquiriesPage } from "@/features/enquiries/EnquiriesPage";
+import { EnquiryDetailPage } from "@/features/enquiries/EnquiryDetailPage";
 import { PackagesPage } from "@/features/packages/PackagesPage";
 import { ReportSettingsPage } from "@/features/reporting/ReportSettingsPage";
 import { ReportsPage } from "@/features/reporting/ReportsPage";
@@ -194,6 +196,8 @@ export const routes: RouteObject[] = [
           { path: "ai", element: <AdminAiSettingsPage /> },
           { path: "payments", element: <PaymentTransactionsPage /> },
           { path: "coupons", element: <CouponsPage /> },
+          { path: "enquiries", element: <EnquiriesPage /> },
+          { path: "enquiries/:enquiryId", element: <EnquiryDetailPage /> },
           { path: "help", element: <HowToGuidesPage /> },
         ],
       },
