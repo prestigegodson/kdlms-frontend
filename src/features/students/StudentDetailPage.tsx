@@ -43,6 +43,7 @@ import { EditStudentMedicalModal } from "@/features/students/components/EditStud
 import { SetStudentPasswordModal } from "@/features/students/components/SetStudentPasswordModal";
 import { StudentMedicalPanel } from "@/features/students/components/StudentMedicalPanel";
 import { StudentPhotoPanel } from "@/features/students/components/StudentPhotoPanel";
+import { studentListHref } from "@/features/students/studentListReturn";
 import { UserPlus } from "lucide-react";
 import { Accordion } from "@/components/ui/Accordion";
 import { Alert } from "@/components/ui/Alert";
@@ -154,7 +155,7 @@ export function StudentDetailPage() {
     if (!studentId) return;
     await deleteStudent(studentId);
     setConfirmingDelete(false);
-    navigate("/school/students");
+    navigate(studentListHref());
   }
 
   async function handleReinstate() {
@@ -171,7 +172,7 @@ export function StudentDetailPage() {
   if (state.kind === "loading") {
     return (
       <div className="space-y-6">
-        <PageHeader title="Pupil" backTo="/school/students" backLabel="Back to pupils" />
+        <PageHeader title="Pupil" backTo={studentListHref()} backLabel="Back to pupils" />
         <div className="flex items-center gap-2 text-sm text-slate-500">
           <Spinner /> Loading…
         </div>
@@ -181,7 +182,7 @@ export function StudentDetailPage() {
   if (state.kind === "error") {
     return (
       <div className="space-y-6">
-        <PageHeader title="Pupil" backTo="/school/students" backLabel="Back to pupils" />
+        <PageHeader title="Pupil" backTo={studentListHref()} backLabel="Back to pupils" />
         <Alert variant="error">{state.message}</Alert>
       </div>
     );
@@ -194,7 +195,7 @@ export function StudentDetailPage() {
       <PageHeader
         title={student.fullName}
         description={student.admissionNumber}
-        backTo="/school/students"
+        backTo={studentListHref()}
         backLabel="Back to pupils"
         actions={
           <>

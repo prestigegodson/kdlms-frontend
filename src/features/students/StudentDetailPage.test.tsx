@@ -18,6 +18,7 @@ import type {
   StudentView,
 } from "@/api/students";
 import { StudentDetailPage } from "@/features/students/StudentDetailPage";
+import { rememberStudentListSearch } from "@/features/students/studentListReturn";
 import { resetAppBarStore, useAppBarStore } from "@/stores/appBarStore";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import { resetFeatureStore, useFeatureStore } from "@/stores/featureStore";
@@ -174,6 +175,7 @@ describe("StudentDetailPage", () => {
     vi.clearAllMocks();
     resetAppBarStore();
     resetFeatureStore();
+    sessionStorage.clear();
     vi.mocked(sessionsApi.listSessions).mockResolvedValue({
       content: [SESSION_VIEW],
       totalElements: 1,
@@ -244,6 +246,20 @@ describe("StudentDetailPage", () => {
     expect(screen.getByText("Chidi Obi")).toBeInTheDocument();
     expect(await screen.findByText("O+")).toBeInTheDocument();
     expect(screen.getByText("Peanuts")).toBeInTheDocument();
+  });
+
+  it("links back to the pupils list with its remembered filters", async () => {
+    vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+    vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+    vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+    rememberStudentListSearch("level=level-1&q=ada");
+
+    renderAsSchoolAdmin();
+
+    expect(await screen.findByRole("link", { name: "Back to pupils" })).toHaveAttribute(
+      "href",
+      "/school/students?level=level-1&q=ada",
+    );
   });
 
   it("navigates to the result history route when an enrollment row is tapped", async () => {

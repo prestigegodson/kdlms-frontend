@@ -6,6 +6,7 @@ import { ApiError } from "@/api/client";
 import type { LevelView } from "@/api/levels";
 import { listClassRoster, listMyClasses, type RosterStudentView, type TeacherClassView } from "@/api/me";
 import { listStudents, type StudentStatus, type StudentView } from "@/api/students";
+import { rememberStudentListSearch } from "@/features/students/studentListReturn";
 import type { Page } from "@/api/types";
 import { can } from "@/auth/permissions";
 import { ArrowLeftRight, GraduationCap, SlidersHorizontal, Users } from "lucide-react";
@@ -61,31 +62,47 @@ export function StudentsPage() {
 
 type HasGuardianFilter = "" | "true" | "false";
 
+/** `?branch=` -> useBranchFilter's seed: absent follows the default, "all" is every branch. */
+function initialBranchParam(param: string | null): string | null {
+  if (param === null) return null;
+  return param === "all" ? "" : param;
+}
+
 function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   const role = useAuthStore((state) => state.user?.role);
   const capabilities = useTeacherScopeStore((state) => state.capabilities);
   const canManage = can.manageStudents(role, capabilities);
   const canPromote = can.managePromotions(role, capabilities);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  // Every filter lives in the query string, so the pupil detail page's back
+  // link (studentListReturn) and the browser's own back/refresh restore them.
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const { ready: branchReady, branches, branchId, defaultBranchId, setBranchId } = useBranchFilter();
+  const { ready: branchReady, branches, branchId, defaultBranchId, setBranchId } = useBranchFilter(
+    initialBranchParam(searchParams.get("branch")),
+  );
   const levels = useLevelStore((storeState) => storeState.levels);
   // A Head of Level's registry, filters, and registration are their own levels only.
   const headedLevels = useHeadedLevels(levels);
   const fetchLevels = useLevelStore((storeState) => storeState.fetchIfNeeded);
   const [classes, setClasses] = useState<SchoolClassView[] | null>(null);
-  const [levelId, setLevelId] = useState("");
-  const [classId, setClassId] = useState("");
-  const [status, setStatus] = useState<StudentStatus | "">("");
-  // Seeded from the URL so NeedsAttentionCard's "no linked guardian" deep
-  // link (`?hasGuardian=false`) lands pre-filtered.
+  const [levelId, setLevelId] = useState(() => searchParams.get("level") ?? "");
+  const [classId, setClassId] = useState(() => searchParams.get("class") ?? "");
+  const [status, setStatus] = useState<StudentStatus | "">(() => {
+    const param = searchParams.get("status");
+    return param === "ACTIVE" || param === "GRADUATED" || param === "WITHDRAWN" ? param : "";
+  });
+  // Also seeded so NeedsAttentionCard's "no linked guardian" deep link
+  // (`?hasGuardian=false`) lands pre-filtered.
   const [hasGuardian, setHasGuardian] = useState<HasGuardianFilter>(() => {
     const param = searchParams.get("hasGuardian");
     return param === "true" || param === "false" ? param : "";
   });
-  const [query, setQuery] = useState("");
-  const [pageIndex, setPageIndex] = useState(0);
+  const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
+  const [pageIndex, setPageIndex] = useState(() => {
+    const page = Number(searchParams.get("page"));
+    return Number.isInteger(page) && page > 1 ? page - 1 : 0;
+  });
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [createOpen, setCreateOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -121,6 +138,21 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   }
 
   useEffect(fetchStudents, [branchReady, branchId, levelId, classId, status, hasGuardian, query, pageIndex]);
+
+  useEffect(() => {
+    if (!branchReady) return;
+    const params = new URLSearchParams();
+    // Absent = the main-branch default; "all" = deliberately every branch.
+    if (branchId !== defaultBranchId) params.set("branch", branchId || "all");
+    if (levelId) params.set("level", levelId);
+    if (classId) params.set("class", classId);
+    if (status) params.set("status", status);
+    if (hasGuardian) params.set("hasGuardian", hasGuardian);
+    if (query) params.set("q", query);
+    if (pageIndex > 0) params.set("page", String(pageIndex + 1));
+    setSearchParams(params, { replace: true });
+    rememberStudentListSearch(params.toString());
+  }, [branchReady, branchId, defaultBranchId, levelId, classId, status, hasGuardian, query, pageIndex, setSearchParams]);
 
   function load() {
     setState({ kind: "loading" });

@@ -13,6 +13,7 @@ import type { RosterStudentView, TeacherClassView } from "@/api/me";
 import * as studentsApi from "@/api/students";
 import type { StudentMedicalView, StudentView } from "@/api/students";
 import { StudentsPage } from "@/features/students/StudentsPage";
+import { studentListHref } from "@/features/students/studentListReturn";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import { resetLevelStore } from "@/stores/levelStore";
 
@@ -129,6 +130,7 @@ describe("StudentsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetLevelStore();
+    sessionStorage.clear();
     vi.mocked(branchesApi.listBranches).mockResolvedValue({
       content: [MAIN_BRANCH],
       totalElements: 1,
@@ -207,6 +209,20 @@ describe("StudentsPage", () => {
     );
     expect(screen.getByRole("button", { name: /Filters/ })).toHaveTextContent("1");
     expect(screen.getByLabelText("Guardian")).toHaveValue("false");
+  });
+
+  it("restores filters from the URL and remembers them for the detail page's back link", async () => {
+    mockStudents([]);
+
+    renderAsSchoolAdmin("/?level=level-1&class=class-1&status=GRADUATED&q=ada&page=2");
+    await screen.findByText(/No pupils found/);
+
+    expect(studentsApi.listStudents).toHaveBeenCalledWith(
+      expect.objectContaining({ levelId: "level-1", classId: "class-1", status: "GRADUATED", q: "ada" }),
+      1,
+      expect.any(Number),
+    );
+    expect(studentListHref()).toBe("/school/students?level=level-1&class=class-1&status=GRADUATED&q=ada&page=2");
   });
 
   it("filters by guardian linkage through the inline field", async () => {

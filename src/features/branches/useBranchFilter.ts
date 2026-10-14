@@ -22,12 +22,13 @@ export interface BranchFilterState {
  * `branchStore` via `components/BranchFilter.tsx`, which has no concept of "all". Still reuses
  * `useBranchScope`'s main-branch default and its `ready` gate rather than re-deriving either.
  */
-export function useBranchFilter(): BranchFilterState {
+export function useBranchFilter(initialBranchId: string | null = null): BranchFilterState {
   const { ready, branchId: scopedBranchId } = useBranchScope();
   const branches = useBranchStore((state) => state.branches);
   const defaultBranchId = scopedBranchId ?? "";
 
-  const [override, setOverride] = useState<string | null>(null);
+  // `initialBranchId` restores a pick from the URL; null follows the default.
+  const [override, setOverride] = useState<string | null>(initialBranchId);
 
   return {
     ready,
