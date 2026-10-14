@@ -38,7 +38,7 @@ interface CompletionsPanelProps {
  * three-state badge (`Completed` / `Opened` / `Not opened`) is derived here from `completed` and
  * `lastOpenedAt` alone, never re-fetched or re-derived server-side twice.
  */
-export function CompletionsPanel({ completions, personLabel = "Student" }: CompletionsPanelProps) {
+export function CompletionsPanel({ completions, personLabel = "Pupil" }: CompletionsPanelProps) {
   // A resource shared across several arms has one roster spanning them all - name each row's class then.
   const showsClass = new Set(completions.students.map((row) => row.className).filter(Boolean)).size > 1;
   return (

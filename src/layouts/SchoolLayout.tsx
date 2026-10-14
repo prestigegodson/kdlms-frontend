@@ -243,7 +243,7 @@ const NAV_ITEMS: NavItem[] = [
     },
   },
   {
-    label: "Students",
+    label: "Pupils",
     href: "/school/students",
     icon: GraduationCap,
     group: "People",

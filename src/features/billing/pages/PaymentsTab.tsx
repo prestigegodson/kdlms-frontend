@@ -216,7 +216,7 @@ export function PaymentsTab() {
             id="payments-search"
             value={q}
             onChange={setQ}
-            placeholder="Student, admission no. or payer"
+            placeholder="Pupil, admission no. or payer"
           />
         </FormField>
       </div>

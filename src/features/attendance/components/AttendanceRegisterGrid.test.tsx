@@ -55,7 +55,7 @@ describe("AttendanceRegisterGrid", () => {
 
     expect(screen.getByText("1 of 2 marked")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mark register" })).toBeDisabled();
-    expect(screen.getByText("Mark 1 more student to save")).toBeInTheDocument();
+    expect(screen.getByText("Mark 1 more pupil to save")).toBeInTheDocument();
   });
 
   it("offsets the save bar by the safe-area-aware tabbar token, not the bare one", async () => {

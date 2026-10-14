@@ -241,7 +241,7 @@ describe("HotspotAuthor", () => {
     expect(latest.regions[1].target).toBe(true);
     expect(latest.maxPins).toBe(2);
 
-    await user.selectOptions(screen.getByLabelText("Pins a student may place"), "5");
+    await user.selectOptions(screen.getByLabelText("Pins a pupil may place"), "5");
     expect(latest.maxPins).toBe(5);
   });
 });

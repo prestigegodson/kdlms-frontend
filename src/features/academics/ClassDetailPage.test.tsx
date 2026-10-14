@@ -139,7 +139,7 @@ function renderAsSchoolAdmin() {
   const router = createMemoryRouter(
     [
       { path: "/classes/:classId", element: <ClassDetailPage /> },
-      { path: "/school/students/:studentId", element: <div>Student detail page</div> },
+      { path: "/school/students/:studentId", element: <div>Pupil detail page</div> },
     ],
     { initialEntries: ["/classes/class-1"] },
   );
@@ -371,13 +371,13 @@ describe("ClassDetailPage - enrolled students roster", () => {
 
     expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
     expect(screen.getByText("Bola Eze")).toBeInTheDocument();
-    expect(screen.getByText("Enrolled students (2)")).toBeInTheDocument();
+    expect(screen.getByText("Enrolled pupils (2)")).toBeInTheDocument();
     expect(screen.getByText("1 boys · 1 girls")).toBeInTheDocument();
 
     const row = screen.getByText("Ada Obi").closest("tr")!;
     await user.click(row);
 
-    expect(await screen.findByText("Student detail page")).toBeInTheDocument();
+    expect(await screen.findByText("Pupil detail page")).toBeInTheDocument();
   });
 
   it("lets a TEACHER open the read-only medical modal instead of navigating", async () => {
@@ -393,16 +393,16 @@ describe("ClassDetailPage - enrolled students roster", () => {
 
     expect(await screen.findByText("Ada Obi — Medical & emergency")).toBeInTheDocument();
     expect(screen.queryByLabelText("Assign a class teacher")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Register student" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Register pupil" })).not.toBeInTheDocument();
   });
 
   it("filters the roster by name or admission number once search appears", async () => {
     const manyStudents: RosterStudentView[] = [
       ...Array.from({ length: 9 }, (_, index) => ({
         studentId: `student-${index + 10}`,
-        firstName: "Student",
+        firstName: "Pupil",
         lastName: `${index + 1}`,
-        fullName: `Student ${index + 1}`,
+        fullName: `Pupil ${index + 1}`,
         admissionNumber: `BFA/2026/00${index + 10}`,
         gender: (index % 2 === 0 ? "FEMALE" : "MALE") as "FEMALE" | "MALE",
       })),
@@ -413,12 +413,12 @@ describe("ClassDetailPage - enrolled students roster", () => {
 
     renderAsSchoolAdmin();
     await screen.findByText("Ada Obi");
-    expect(screen.getByText("Student 1")).toBeInTheDocument();
+    expect(screen.getByText("Pupil 1")).toBeInTheDocument();
 
     const search = screen.getByRole("searchbox", { name: "Search name or admission no." });
     await user.type(search, "Ada");
 
-    await waitFor(() => expect(screen.queryByText("Student 1")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("Pupil 1")).not.toBeInTheDocument());
     expect(screen.getByText("Ada Obi")).toBeInTheDocument();
   });
 
@@ -428,8 +428,8 @@ describe("ClassDetailPage - enrolled students roster", () => {
 
     renderAsSchoolAdmin();
 
-    expect(await screen.findByText("No students enrolled")).toBeInTheDocument();
-    const registerButton = screen.getByRole("button", { name: "Register student" });
+    expect(await screen.findByText("No pupils enrolled")).toBeInTheDocument();
+    const registerButton = screen.getByRole("button", { name: "Register pupil" });
 
     await user.click(registerButton);
 
@@ -494,7 +494,7 @@ describe("ClassDetailPage - upcoming birthdays", () => {
 
     renderAsTeacher();
 
-    await screen.findByText("Enrolled students (0)");
+    await screen.findByText("Enrolled pupils (0)");
     expect(screen.queryByText("Upcoming birthdays")).not.toBeInTheDocument();
     expect(birthdaysApi.listClassBirthdays).not.toHaveBeenCalled();
   });
@@ -557,7 +557,7 @@ describe("ClassDetailPage - provision portal logins", () => {
           success: true,
           notified: false,
           temporaryPassword: "Temp5678Pass",
-          message: "No active guardian contact - share this temporary password with the student directly.",
+          message: "No active guardian contact - share this temporary password with the pupil directly.",
         },
       ],
     });
@@ -620,7 +620,7 @@ describe("ClassDetailPage - provision portal logins", () => {
       status: "loaded",
     });
 
-    await screen.findByText("Enrolled students (2)");
+    await screen.findByText("Enrolled pupils (2)");
     expect(screen.queryByRole("button", { name: "Provision portal logins" })).not.toBeInTheDocument();
   });
 });

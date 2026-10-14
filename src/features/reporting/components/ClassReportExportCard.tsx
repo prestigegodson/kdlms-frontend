@@ -38,7 +38,7 @@ export function ClassReportExportCard({ classId, termId, scope }: ClassReportExp
           <div>
             <h2 className="text-sm font-semibold text-slate-900">Classroom reports</h2>
             <p className="text-sm text-slate-500">
-              Render every student&apos;s report for this classroom and download them as one ZIP file.
+              Render every pupil&apos;s report for this classroom and download them as one ZIP file.
             </p>
           </div>
 

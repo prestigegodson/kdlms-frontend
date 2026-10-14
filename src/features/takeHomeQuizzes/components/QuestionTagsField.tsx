@@ -5,6 +5,7 @@ import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { MAX_QUESTION_TAG_LENGTH, MAX_QUESTION_TAGS } from "@/features/takeHomeQuizzes/editableQuestion";
 import { TAKE_HOME_QUIZ_FIELD_HELP } from "@/features/takeHomeQuizzes/takeHomeQuizFieldHelp";
+import { useParticipantNoun } from "@/components/ParticipantNoun";
 
 interface QuestionTagsFieldProps {
   id: string;
@@ -18,6 +19,7 @@ interface QuestionTagsFieldProps {
  * stores it (backend `TakeHomeQuizQuestion`), so what the author sees is what gets saved.
  */
 export function QuestionTagsField({ id, tags, onChange, disabled = false }: QuestionTagsFieldProps) {
+  const { adapt } = useParticipantNoun();
   const [draft, setDraft] = useState("");
   const full = tags.length >= MAX_QUESTION_TAGS;
 
@@ -29,7 +31,7 @@ export function QuestionTagsField({ id, tags, onChange, disabled = false }: Ques
   }
 
   return (
-    <FormField label="Topic tags" htmlFor={id} description={TAKE_HOME_QUIZ_FIELD_HELP.tags}>
+    <FormField label="Topic tags" htmlFor={id} description={adapt(TAKE_HOME_QUIZ_FIELD_HELP.tags)}>
       <div className="flex flex-wrap items-center gap-2">
         {tags.map((tag) => (
           <Badge key={tag} className="gap-1">

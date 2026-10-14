@@ -58,7 +58,7 @@ export function StudentResultHistoryPage() {
     if (!studentId) return;
     getStudent(studentId)
       .then(setStudent)
-      .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load student"));
+      .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load pupil"));
     listStudentTerms(studentId)
       .then((allTerms) => {
         const sessionTerms = allTerms
@@ -148,6 +148,7 @@ export function StudentResultHistoryPage() {
         title={student?.fullName ?? "Result history"}
         description={sessionName ? `${sessionName}${className ? ` · ${className}` : ""}` : undefined}
         backTo={studentId ? `/school/students/${studentId}` : undefined}
+        backLabel="Back to pupil"
         actions={
           result && (
             <Button variant="accent" onClick={handleDownload} loading={downloading}>

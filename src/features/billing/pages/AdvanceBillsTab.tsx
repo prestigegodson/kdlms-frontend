@@ -194,7 +194,7 @@ export function AdvanceBillsTab() {
                   (planRow ? (
                     <>
                       <p className="text-sm text-slate-600">
-                        {planRow.activeStudents} student{planRow.activeStudents === 1 ? "" : "s"} at this class ·{" "}
+                        {planRow.activeStudents} pupil{planRow.activeStudents === 1 ? "" : "s"} at this class ·{" "}
                         {planRow.alreadyEnrolled} already promoted into {plan.sessionName}.
                       </p>
                       <FormField label="Bills at" htmlFor="advance-bills-billing-level" className="max-w-xs">
@@ -268,12 +268,12 @@ export function AdvanceBillsTab() {
                         <EmptyState
                           icon={Receipt}
                           title="Nothing to bill"
-                          description="Every student at this class is already promoted into this session, so there's nothing left to advance-bill."
+                          description="Every pupil at this class is already promoted into this session, so there's nothing left to advance-bill."
                         />
                       ) : (
                         <>
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <StatTile label="Students to bill" value={preview.billableStudents} />
+                            <StatTile label="Pupils to bill" value={preview.billableStudents} />
                             <StatTile
                               label="Expected total"
                               value={formatMoney(preview.expectedTotal, preview.currency)}
@@ -282,7 +282,7 @@ export function AdvanceBillsTab() {
                           <Table>
                             <TableHead>
                               <TableRow>
-                                <TableHeaderCell>Student</TableHeaderCell>
+                                <TableHeaderCell>Pupil</TableHeaderCell>
                                 <TableHeaderCell>Classroom</TableHeaderCell>
                                 <TableHeaderCell>Admission no.</TableHeaderCell>
                                 <TableHeaderCell numeric>Total</TableHeaderCell>
@@ -292,7 +292,7 @@ export function AdvanceBillsTab() {
                             <TableBody>
                               {preview.students.map((row) => (
                                 <TableRow key={row.studentId} onClick={() => editing.openPreview(row.studentId)}>
-                                  <TableCell label="Student">{row.studentName}</TableCell>
+                                  <TableCell label="Pupil">{row.studentName}</TableCell>
                                   <TableCell label="Classroom">{row.className}</TableCell>
                                   <TableCell label="Admission no.">{row.admissionNumber}</TableCell>
                                   <TableCell label="Total" numeric>
@@ -329,7 +329,7 @@ export function AdvanceBillsTab() {
             <>
               <p className="text-sm text-slate-500">
                 Publishing sends every bill for this branch and term - advance bills for unpromoted
-                students at every planned class, plus ordinary bills for anyone already enrolled.
+                pupils at every planned class, plus ordinary bills for anyone already enrolled.
               </p>
               <PublishBillsCard branchId={branchId} termId={termId} currency={preview?.currency} />
               <BillExportCard levelId={sourceLevelId} branchId={branchId} termId={termId} />

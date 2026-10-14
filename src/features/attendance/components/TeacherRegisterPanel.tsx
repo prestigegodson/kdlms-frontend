@@ -131,7 +131,7 @@ export function TeacherRegisterPanel({ initialClassId }: TeacherRegisterPanelPro
       {register && register.rows.length === 0 && (
         <EmptyState
           title="Nobody to register"
-          description="No students are enrolled in this class for this session."
+          description="No pupils are enrolled in this class for this session."
         />
       )}
       {register && register.rows.length > 0 && (

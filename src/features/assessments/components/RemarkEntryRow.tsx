@@ -26,7 +26,7 @@ interface RemarkEntryRowProps {
 export function RemarkEntryRow({ row, field, label, value, editable, dirty, onChange }: RemarkEntryRowProps) {
   return (
     <TableRow className={dirty ? "border-l-2 border-l-brand-500" : ""}>
-      <TableCell label="Student">
+      <TableCell label="Pupil">
         <span className="font-medium text-slate-900">{row.studentName}</span>
         <span className="block text-xs text-slate-500">{row.admissionNumber}</span>
       </TableCell>

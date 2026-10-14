@@ -108,7 +108,7 @@ describe("PublishBillsCard", () => {
 
     await user.click(await screen.findByRole("button", { name: "Publish bills" }));
 
-    expect(await screen.findByText(/12 students on this branch will get a bill/)).toBeInTheDocument();
+    expect(await screen.findByText(/12 pupils on this branch will get a bill/)).toBeInTheDocument();
     expect(screen.getByText(/₦60,000.00/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Publish" }));
@@ -124,7 +124,7 @@ describe("PublishBillsCard", () => {
 
     await user.click(await screen.findByRole("button", { name: "Publish bills" }));
 
-    expect(await screen.findByText(/Sports levy - Primary \(5 students affected\)/)).toBeInTheDocument();
+    expect(await screen.findByText(/Sports levy - Primary \(5 pupils affected\)/)).toBeInTheDocument();
     const confirmButton = screen.getByRole("button", { name: "Publish" });
     expect(confirmButton).toBeDisabled();
 
@@ -144,8 +144,8 @@ describe("PublishBillsCard", () => {
 
     await user.click(await screen.findByRole("button", { name: "Publish bills" }));
 
-    expect(await screen.findByText(/3 of these are advance bills for students not yet promoted/)).toBeInTheDocument();
-    expect(screen.getByText(/Junior Secondary - 1 student/)).toBeInTheDocument();
+    expect(await screen.findByText(/3 of these are advance bills for pupils not yet promoted/)).toBeInTheDocument();
+    expect(screen.getByText(/Junior Secondary - 1 pupil/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Publish" })).toBeEnabled();
   });
 
@@ -156,7 +156,7 @@ describe("PublishBillsCard", () => {
     render(<PublishBillsCard branchId="branch-1" termId="term-1" />);
 
     expect(await screen.findByText("Published")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Send bills to new students" }));
+    await user.click(screen.getByRole("button", { name: "Send bills to new pupils" }));
 
     expect(await screen.findByText("Queued 3 new bills.")).toBeInTheDocument();
     expect(billingApi.issueMissingBillDeliveries).toHaveBeenCalledWith("term-1", "branch-1");

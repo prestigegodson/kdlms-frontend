@@ -89,7 +89,7 @@ export function SubjectTeachersPanel({
             <TableHeaderCell>Subject</TableHeaderCell>
             <TableHeaderCell>Teacher</TableHeaderCell>
             {canManage && <TableHeaderCell>Actions</TableHeaderCell>}
-            {showRegistrationsColumn && <TableHeaderCell>Registered students</TableHeaderCell>}
+            {showRegistrationsColumn && <TableHeaderCell>Registered pupils</TableHeaderCell>}
           </TableRow>
         </TableHead>
         <TableBody>
@@ -133,7 +133,7 @@ export function SubjectTeachersPanel({
                   </TableCell>
                 )}
                 {showRegistrationsColumn && (
-                  <TableCell label="Registered students">
+                  <TableCell label="Registered pupils">
                     {subject.selective ? (
                       <button
                         type="button"
@@ -228,7 +228,7 @@ function SubjectRegistrationModal({ classId, subject, onClose }: SubjectRegistra
   }
 
   return (
-    <Modal open onClose={onClose} title={`Registered students — ${subject.name}`}>
+    <Modal open onClose={onClose} title={`Registered pupils — ${subject.name}`}>
       <div className="space-y-4">
         {error && <Alert variant="error">{error}</Alert>}
         {view === null && (
@@ -238,7 +238,7 @@ function SubjectRegistrationModal({ classId, subject, onClose }: SubjectRegistra
         )}
         {view !== null && view.students.length === 0 && (
           <EmptyState
-            title="No students on this classroom's current roster"
+            title="No pupils on this classroom's current roster"
             description="Nothing to register yet."
           />
         )}

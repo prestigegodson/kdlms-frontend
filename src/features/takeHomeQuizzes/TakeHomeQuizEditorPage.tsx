@@ -425,7 +425,7 @@ export function TakeHomeQuizEditorPage() {
           )}
           {questionsReadOnly && !readOnly && (
             <Alert variant="info">
-              Students have already submitted this quiz. Only the closing date (later only) and the
+              Pupils have already submitted this quiz. Only the closing date (later only) and the
               reveal setting below can still be changed.
             </Alert>
           )}
@@ -512,7 +512,7 @@ export function TakeHomeQuizEditorPage() {
               onChange={(event) => setForm({ ...form, revealResultsOnSubmit: event.target.checked })}
               disabled={readOnly}
             />
-            Show students their score and correct answers after they submit
+            Show pupils their score and correct answers after they submit
           </label>
           <p className="text-xs text-slate-500">{TAKE_HOME_QUIZ_FIELD_HELP.revealResultsOnSubmit}</p>
 

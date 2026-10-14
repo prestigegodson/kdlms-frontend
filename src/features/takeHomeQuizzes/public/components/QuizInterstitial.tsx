@@ -44,7 +44,7 @@ export function QuizInterstitial({ data, starting, onStart }: QuizInterstitialPr
 
         <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
           <div>
-            <dt className="text-slate-500">Student</dt>
+            <dt className="text-slate-500">Pupil</dt>
             <dd className="font-medium text-slate-900">{data.studentFirstName}</dd>
           </div>
           <div>

@@ -2,6 +2,7 @@ import { Check, X } from "lucide-react";
 import { RichContent } from "@/components/richText/RichContent";
 import type { PartFeedback, RenderImage } from "../types";
 import type { CategorizeConfig, CategorizeResponse } from "./types";
+import { useParticipantNoun } from "@/components/ParticipantNoun";
 
 interface CategorizeReviewProps {
   config: CategorizeConfig;
@@ -16,9 +17,10 @@ interface CategorizeReviewProps {
  * wrong one, where the student put it instead.
  */
 export function CategorizeReview({ config, parts, renderImage, perspective }: CategorizeReviewProps) {
+  const { Singular } = useParticipantNoun();
   const groups = new Map(config.groups.map((group) => [group.id, group.html]));
   const byItem = new Map(parts.map((part) => [part.partId, part]));
-  const placedLabel = perspective === "self" ? "You put it in" : "Student put it in";
+  const placedLabel = perspective === "self" ? "You put it in" : `${Singular} put it in`;
 
   return (
     <div className="space-y-3 text-sm">

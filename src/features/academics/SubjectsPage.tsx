@@ -834,10 +834,10 @@ function SubjectFormModal({ title, terms, initial, groups, onClose, onSubmit, on
         <FormField label="Enrollment" htmlFor="subject-selective">
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <Checkbox id="subject-selective" checked={selective} onChange={() => setSelective((value) => !value)} />
-            Selective - only registered students take it
+            Selective - only registered pupils take it
           </label>
           <p className="mt-1 text-xs text-slate-500">
-            Leave unchecked for a mandatory {terms.item} every student at this class takes. Once any score or rating has
+            Leave unchecked for a mandatory {terms.item} every pupil at this class takes. Once any score or rating has
             been recorded, this can no longer be changed.
           </p>
         </FormField>

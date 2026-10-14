@@ -159,7 +159,7 @@ export function SubscriptionPage({ redirect }: SubscriptionPageProps) {
             />
             <StatTile
               icon={GraduationCap}
-              label="Active students"
+              label="Active pupils"
               value={`${state.summary.activeStudentsUsed} / ${state.summary.activeStudentLimit}`}
             />
           </div>

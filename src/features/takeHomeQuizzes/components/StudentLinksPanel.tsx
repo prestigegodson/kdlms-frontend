@@ -125,7 +125,7 @@ export function StudentLinksPanel({ quizId, refreshToken }: StudentLinksPanelPro
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="font-display text-lg font-medium text-slate-900">Student links</h2>
+        <h2 className="font-display text-lg font-medium text-slate-900">Pupil links</h2>
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="secondary" size="sm" onClick={copyAll}>
             <Copy className="h-4 w-4" aria-hidden="true" /> Copy all
@@ -156,7 +156,7 @@ export function StudentLinksPanel({ quizId, refreshToken }: StudentLinksPanelPro
         <Alert variant="warning">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span>
-              {missingCount} student{missingCount === 1 ? "" : "s"} on the roster {missingCount === 1 ? "has" : "have"}{" "}
+              {missingCount} pupil{missingCount === 1 ? "" : "s"} on the roster {missingCount === 1 ? "has" : "have"}{" "}
               no link yet.
             </span>
             <Button type="button" variant="secondary" size="sm" loading={issuingMissing} onClick={issueMissing}>
@@ -169,7 +169,7 @@ export function StudentLinksPanel({ quizId, refreshToken }: StudentLinksPanelPro
       <Table>
         <TableHead>
           <TableRow>
-            <TableHeaderCell>Student</TableHeaderCell>
+            <TableHeaderCell>Pupil</TableHeaderCell>
             <TableHeaderCell>Admission No.</TableHeaderCell>
             <TableHeaderCell>Link</TableHeaderCell>
             <TableHeaderCell>Actions</TableHeaderCell>
@@ -178,13 +178,13 @@ export function StudentLinksPanel({ quizId, refreshToken }: StudentLinksPanelPro
         <TableBody>
           {links.map((link) => (
             <TableRow key={link.studentId}>
-              <TableCell label="Student">{link.fullName}</TableCell>
+              <TableCell label="Pupil">{link.fullName}</TableCell>
               <TableCell label="Admission No.">{link.admissionNumber}</TableCell>
               <TableCell label="Link">
                 {link.url ? (
                   <span className="text-slate-500">Issued</span>
                 ) : link.portalStudent ? (
-                  <span className="text-slate-400">Available in the student portal</span>
+                  <span className="text-slate-400">Available in the pupil portal</span>
                 ) : (
                   <span className="text-slate-400">No link yet</span>
                 )}
@@ -210,7 +210,7 @@ export function StudentLinksPanel({ quizId, refreshToken }: StudentLinksPanelPro
 
       {reissueTarget && (
         <ConfirmDialog
-          title="Reissue this student's link?"
+          title="Reissue this pupil's link?"
           message={`The current link for ${reissueTarget.fullName} will stop working, and a new one will be emailed to their guardians.`}
           confirmLabel="Reissue"
           onConfirm={handleReissue}
@@ -221,7 +221,7 @@ export function StudentLinksPanel({ quizId, refreshToken }: StudentLinksPanelPro
       {confirmingRevoke && (
         <ConfirmDialog
           title="Revoke superseded links?"
-          message={`${revokeCount} student${revokeCount === 1 ? "" : "s"} now sign${revokeCount === 1 ? "s" : ""} in to the student portal but still ${revokeCount === 1 ? "holds" : "hold"} a link for this quiz. Revoking leaves every other student untouched, and skips anyone with an attempt already in progress.`}
+          message={`${revokeCount} pupil${revokeCount === 1 ? "" : "s"} now sign${revokeCount === 1 ? "s" : ""} in to the pupil portal but still ${revokeCount === 1 ? "holds" : "hold"} a link for this quiz. Revoking leaves every other pupil untouched, and skips anyone with an attempt already in progress.`}
           confirmLabel="Revoke"
           onConfirm={revokeSuperseded}
           onClose={() => setConfirmingRevoke(false)}

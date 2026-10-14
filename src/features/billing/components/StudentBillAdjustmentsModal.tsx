@@ -237,7 +237,7 @@ export function StudentBillAdjustmentsModal({
       <div className="space-y-4">
         {view.advance && (
           <Alert variant="info" title="Advance bill">
-            This student isn't enrolled in {view.sessionName ?? "this session"} yet - they're being billed in
+            This pupil isn't enrolled in {view.sessionName ?? "this session"} yet - they're being billed in
             advance at {view.levelName}, the class their classroom is planned to bill at, not their current
             classroom's own class.
           </Alert>
@@ -250,7 +250,7 @@ export function StudentBillAdjustmentsModal({
         )}
         {!view.billable && (
           <Alert variant="info">
-            This student currently has no bill - no compulsory fee applies with a price or override set.
+            This pupil currently has no bill - no compulsory fee applies with a price or override set.
           </Alert>
         )}
         {error && <Alert variant="error">{error}</Alert>}

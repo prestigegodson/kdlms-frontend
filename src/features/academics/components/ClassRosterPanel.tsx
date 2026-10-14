@@ -44,12 +44,12 @@ export function ClassRosterPanel({ students, canManage, onRegister }: ClassRoste
     return (
       <EmptyState
         icon={GraduationCap}
-        title="No students enrolled"
+        title="No pupils enrolled"
         description="No one is enrolled in this class for the current session."
         action={
           canManage && onRegister ? (
             <Button type="button" variant="secondary" onClick={onRegister}>
-              Register student
+              Register pupil
             </Button>
           ) : undefined
         }
@@ -94,7 +94,7 @@ export function ClassRosterPanel({ students, canManage, onRegister }: ClassRoste
         </TableBody>
       </Table>
       {filtered.length === 0 && (
-        <p className="py-4 text-center text-sm text-slate-500">No students match "{query}".</p>
+        <p className="py-4 text-center text-sm text-slate-500">No pupils match "{query}".</p>
       )}
 
       {medicalStudent && (

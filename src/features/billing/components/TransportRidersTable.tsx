@@ -132,7 +132,7 @@ export function TransportRidersTable({ view, onSaved }: TransportRidersTableProp
       }
       setRowErrors(failedByEnrollment);
       setError(
-        `${riders.length - failed.length} of ${riders.length} rider${riders.length === 1 ? "" : "s"} saved; ${failed.length} failed - see the highlighted student${failed.length === 1 ? "" : "s"}.`,
+        `${riders.length - failed.length} of ${riders.length} rider${riders.length === 1 ? "" : "s"} saved; ${failed.length} failed - see the highlighted pupil${failed.length === 1 ? "" : "s"}.`,
       );
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to save riders");
@@ -154,7 +154,7 @@ export function TransportRidersTable({ view, onSaved }: TransportRidersTableProp
       <Table>
         <TableHead>
           <TableRow>
-            <TableHeaderCell>Student</TableHeaderCell>
+            <TableHeaderCell>Pupil</TableHeaderCell>
             <TableHeaderCell>Admission no.</TableHeaderCell>
             <TableHeaderCell>Route</TableHeaderCell>
             <TableHeaderCell>Direction</TableHeaderCell>
@@ -167,7 +167,7 @@ export function TransportRidersTable({ view, onSaved }: TransportRidersTableProp
             const rowError = rowErrors[student.enrollmentId];
             return (
               <TableRow key={student.enrollmentId}>
-                <TableCell label="Student">{student.studentName}</TableCell>
+                <TableCell label="Pupil">{student.studentName}</TableCell>
                 <TableCell label="Admission no.">{student.admissionNumber}</TableCell>
                 <TableCell label="Route">
                   <Select

@@ -3,6 +3,7 @@ import type { InteractionConfig, InteractionResponse, PartFeedback, QuestionType
 import { RichContent } from "@/components/richText/RichContent";
 import { Check, X } from "lucide-react";
 import { pluginFor } from "@/features/takeHomeQuizzes/interactions/registry";
+import { useParticipantNoun } from "@/components/ParticipantNoun";
 
 export interface QuizReviewOption {
   id: string;
@@ -42,7 +43,8 @@ interface QuizReviewProps {
  * `StudentAnswersModal`, which originally owned this rendering alone.
  */
 export function QuizReview({ questions, renderImage, perspective = "staff" }: QuizReviewProps) {
-  const answerLabel = perspective === "self" ? "Your answer: " : "Student's answer: ";
+  const { Singular } = useParticipantNoun();
+  const answerLabel = perspective === "self" ? "Your answer: " : `${Singular}'s answer: `;
   return (
     <div className="space-y-6">
       {questions.map((question) => {

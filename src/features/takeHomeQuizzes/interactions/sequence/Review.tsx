@@ -2,6 +2,7 @@ import { Check, X } from "lucide-react";
 import { RichContent } from "@/components/richText/RichContent";
 import type { PartFeedback, RenderImage } from "../types";
 import type { SequenceConfig, SequenceResponse } from "./types";
+import { useParticipantNoun } from "@/components/ParticipantNoun";
 
 interface SequenceReviewProps {
   config: SequenceConfig;
@@ -17,6 +18,7 @@ interface SequenceReviewProps {
  * last item by whether it really comes last.
  */
 export function SequenceReview({ config, response, parts, renderImage, perspective }: SequenceReviewProps) {
+  const { Singular } = useParticipantNoun();
   const byId = new Map(config.items.map((item) => [item.id, item]));
   const nextIsRight = new Map(parts.map((part) => [part.partId, part.correct]));
   const known = new Set(byId.keys());
@@ -25,7 +27,7 @@ export function SequenceReview({ config, response, parts, renderImage, perspecti
   return (
     <div className="grid gap-4 text-sm sm:grid-cols-2">
       <div>
-        <p className="mb-1 text-slate-500">{perspective === "self" ? "Your order" : "Student's order"}</p>
+        <p className="mb-1 text-slate-500">{perspective === "self" ? "Your order" : `${Singular}'s order`}</p>
         {given.length === 0 ? (
           <p className="text-slate-400">No answer</p>
         ) : (

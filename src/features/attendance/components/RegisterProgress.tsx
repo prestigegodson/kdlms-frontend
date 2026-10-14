@@ -1,7 +1,9 @@
+import { useParticipantNoun } from "@/components/ParticipantNoun";
+
 interface RegisterProgressProps {
   markedCount: number;
   totalCount: number;
-  /** Noun for the remaining-count line, e.g. "student" (default) or "class". */
+  /** Noun for the remaining-count line, e.g. "pupil" (the default, "learner" in a creator's portal) or "class". */
   itemLabel?: string;
   /**
    * Plural form of `itemLabel`, for when a naive `+"s"` would be wrong (e.g.
@@ -28,10 +30,13 @@ interface RegisterProgressProps {
 export function RegisterProgress({
   markedCount,
   totalCount,
-  itemLabel = "student",
-  itemLabelPlural = `${itemLabel}s`,
+  itemLabel,
+  itemLabelPlural,
   verbLabel = "marked",
 }: RegisterProgressProps) {
+  const participant = useParticipantNoun();
+  const singular = itemLabel ?? participant.singular;
+  const plural = itemLabelPlural ?? (itemLabel ? `${itemLabel}s` : participant.plural);
   const percent = totalCount === 0 ? 0 : Math.round((markedCount / totalCount) * 100);
   const remaining = totalCount - markedCount;
 
@@ -43,7 +48,7 @@ export function RegisterProgress({
         </span>
         {remaining > 0 && (
           <span>
-            {remaining} {remaining === 1 ? itemLabel : itemLabelPlural} still un{verbLabel}
+            {remaining} {remaining === 1 ? singular : plural} still un{verbLabel}
           </span>
         )}
       </div>

@@ -109,7 +109,7 @@ export function StudentDetailPage() {
       .catch((error: unknown) =>
         setState({
           kind: "error",
-          message: error instanceof ApiError ? error.message : "Failed to load student",
+          message: error instanceof ApiError ? error.message : "Failed to load pupil",
         }),
       );
   }
@@ -171,7 +171,7 @@ export function StudentDetailPage() {
   if (state.kind === "loading") {
     return (
       <div className="space-y-6">
-        <PageHeader title="Student" backTo="/school/students" />
+        <PageHeader title="Pupil" backTo="/school/students" backLabel="Back to pupils" />
         <div className="flex items-center gap-2 text-sm text-slate-500">
           <Spinner /> Loading…
         </div>
@@ -181,7 +181,7 @@ export function StudentDetailPage() {
   if (state.kind === "error") {
     return (
       <div className="space-y-6">
-        <PageHeader title="Student" backTo="/school/students" />
+        <PageHeader title="Pupil" backTo="/school/students" backLabel="Back to pupils" />
         <Alert variant="error">{state.message}</Alert>
       </div>
     );
@@ -195,6 +195,7 @@ export function StudentDetailPage() {
         title={student.fullName}
         description={student.admissionNumber}
         backTo="/school/students"
+        backLabel="Back to pupils"
         actions={
           <>
             <Badge
@@ -338,7 +339,7 @@ export function StudentDetailPage() {
       )}
       {confirmingGraduate && (
         <ConfirmDialog
-          title="Graduate this student?"
+          title="Graduate this pupil?"
           message={
             <>
               <strong>{student.fullName}</strong> will be marked graduated and their current
@@ -353,7 +354,7 @@ export function StudentDetailPage() {
       )}
       {confirmingWithdraw && (
         <ConfirmDialog
-          title="Withdraw this student?"
+          title="Withdraw this pupil?"
           message={
             <>
               <strong>{student.fullName}</strong> will be marked withdrawn and their current
@@ -368,7 +369,7 @@ export function StudentDetailPage() {
       )}
       {confirmingDelete && (
         <ConfirmDialog
-          title="Delete this student?"
+          title="Delete this pupil?"
           message={
             <>
               <strong>{student.fullName}</strong> ({student.admissionNumber}) will be permanently
@@ -376,7 +377,7 @@ export function StudentDetailPage() {
               guardian accounts are kept. This cannot be undone.
             </>
           }
-          confirmLabel="Delete student"
+          confirmLabel="Delete pupil"
           variant="danger"
           confirmationText={student.admissionNumber}
           onConfirm={confirmDelete}
@@ -422,14 +423,14 @@ function EditStudentModal({ student, onClose, onSaved }: EditStudentModalProps) 
       });
       onSaved();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to save student");
+      setError(err instanceof ApiError ? err.message : "Failed to save pupil");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal open onClose={onClose} title="Edit student">
+    <Modal open onClose={onClose} title="Edit pupil">
       <form className="space-y-4" onSubmit={handleSubmit}>
         {error && <Alert variant="error">{error}</Alert>}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -476,7 +477,7 @@ function EditStudentModal({ student, onClose, onSaved }: EditStudentModalProps) 
         <FormField
           label="Admission number"
           htmlFor="edit-admission-number"
-          description="Changing this doesn't change the student's portal login ID."
+          description="Changing this doesn't change the pupil's portal login ID."
         >
           <Input
             id="edit-admission-number"
@@ -613,7 +614,7 @@ function EnrollmentHistoryCard({
         {history !== null && history.length === 0 && (
           <EmptyState
             title="No enrollment history"
-            description="This student has never been enrolled in a classroom."
+            description="This pupil has never been enrolled in a classroom."
           />
         )}
         {history !== null && history.length > 0 && (
@@ -703,7 +704,7 @@ function TransferClassModal({ student, onClose, onSaved }: TransferClassModalPro
       await transferStudentClass(student.id, classId);
       onSaved();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to transfer student");
+      setError(err instanceof ApiError ? err.message : "Failed to transfer pupil");
     } finally {
       setSubmitting(false);
     }
@@ -883,7 +884,7 @@ function PortalAccessCard({ studentId, studentFirstName, onActionError }: Portal
           <div className="space-y-3">
             <EmptyState
               title="No portal login"
-              description="This student has no student-portal login yet."
+              description="This pupil has no pupil-portal login yet."
             />
             <Button type="button" variant="secondary" disabled={busy} onClick={() => setSettingPassword("provision")}>
               Provision login
@@ -912,7 +913,7 @@ function PortalAccessCard({ studentId, studentFirstName, onActionError }: Portal
               </div>
             </dl>
             {passwordSet && (
-              <Alert variant="success">Password set. Share it with the student - they won't be asked to change it.</Alert>
+              <Alert variant="success">Password set. Share it with the pupil - they won't be asked to change it.</Alert>
             )}
             {login.temporaryPassword && (
               <CredentialsReveal email={login.loginId} temporaryPassword={login.temporaryPassword} />
@@ -944,7 +945,7 @@ function PortalAccessCard({ studentId, studentFirstName, onActionError }: Portal
 
       {confirmingRevoke && (
         <ConfirmDialog
-          title="Revoke this student's portal login?"
+          title="Revoke this pupil's portal login?"
           message="Their login id is released for reuse and they will no longer be able to sign in. This can't be undone from here - provisioning again generates a new login id."
           confirmLabel="Revoke"
           variant="danger"
@@ -1020,7 +1021,7 @@ function SubjectsCard({ student, canManage, onActionError }: SubjectsCardProps) 
         {noEnrollment && (
           <EmptyState
             title="No current enrollment"
-            description="This student has no active classroom enrollment to show subjects for."
+            description="This pupil has no active classroom enrollment to show subjects for."
           />
         )}
         {subjects !== null && (
@@ -1245,7 +1246,7 @@ function GuardiansCard({ studentId, canManage, onActionError }: GuardiansCardPro
           title="Unlink this guardian?"
           message={
             <>
-              <strong>{unlinking.guardianName}</strong> will no longer be linked to this student.
+              <strong>{unlinking.guardianName}</strong> will no longer be linked to this pupil.
               Their account is unaffected.
             </>
           }

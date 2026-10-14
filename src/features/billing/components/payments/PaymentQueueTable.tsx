@@ -31,7 +31,7 @@ export function PaymentQueueTable({ items, showBranch, onOpen }: PaymentQueueTab
       <TableHead>
         <TableRow>
           <TableHeaderCell>Paid on</TableHeaderCell>
-          <TableHeaderCell>Student</TableHeaderCell>
+          <TableHeaderCell>Pupil</TableHeaderCell>
           {showBranch && <TableHeaderCell>Branch</TableHeaderCell>}
           <TableHeaderCell>Payer</TableHeaderCell>
           <TableHeaderCell>Method</TableHeaderCell>
@@ -51,7 +51,7 @@ export function PaymentQueueTable({ items, showBranch, onOpen }: PaymentQueueTab
                 className={index > 0 ? "border-t-0" : ""}
               >
                 <TableCell label="Paid on">{formatLongDate(item.paymentDate)}</TableCell>
-                <TableCell label="Student">
+                <TableCell label="Pupil">
                   <span className="block break-words font-medium text-slate-900">
                     {allocation.studentName}
                   </span>

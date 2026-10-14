@@ -106,7 +106,7 @@ export function PublishResultsModal({ quizId, quizType, onClose, onPublished }: 
             )}
 
             <p className="text-sm text-slate-700">
-              {preflight.submittedCount} of {preflight.rosterSize} student
+              {preflight.submittedCount} of {preflight.rosterSize} pupil
               {preflight.rosterSize === 1 ? "" : "s"} submitted.
               {preflight.willWriteBack && preflight.midtermMax !== null && (
                 <> Scores will be written to the midterm quiz score, out of {preflight.midtermMax}.</>
@@ -117,10 +117,10 @@ export function PublishResultsModal({ quizId, quizType, onClose, onPublished }: 
               <div className="space-y-2">
                 <p className="text-sm text-slate-700">
                   {quizType === "MIDTERM"
-                    ? `These ${preflight.nonSubmitters.length} student${
+                    ? `These ${preflight.nonSubmitters.length} pupil${
                         preflight.nonSubmitters.length === 1 ? "" : "s"
                       } will be scored 0, and that 0 will be written to their midterm quiz score:`
-                    : `These ${preflight.nonSubmitters.length} student${
+                    : `These ${preflight.nonSubmitters.length} pupil${
                         preflight.nonSubmitters.length === 1 ? "" : "s"
                       } will be recorded as non-submitters. Nothing is written to the gradebook:`}
                 </p>
@@ -134,8 +134,8 @@ export function PublishResultsModal({ quizId, quizType, onClose, onPublished }: 
                 <label className="flex items-center gap-2 text-sm text-slate-700">
                   <Checkbox checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
                   {quizType === "MIDTERM"
-                    ? "I understand these students will be scored 0."
-                    : "I understand these students will be recorded as non-submitters."}
+                    ? "I understand these pupils will be scored 0."
+                    : "I understand these pupils will be recorded as non-submitters."}
                 </label>
               </div>
             )}

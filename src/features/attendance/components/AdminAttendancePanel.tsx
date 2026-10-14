@@ -170,8 +170,8 @@ function DayRegisterTab({ classOptions, initialClassId }: { classOptions: ClassO
 
       {register && register.rows.length === 0 && (
         <EmptyState
-          title="No students enrolled"
-          description="No students are enrolled in this classroom for this session."
+          title="No pupils enrolled"
+          description="No pupils are enrolled in this classroom for this session."
         />
       )}
       {register && register.rows.length > 0 && register.rows.every((row) => !row.status) && (
@@ -231,7 +231,7 @@ function TermSummaryTab({ classOptions, initialClassId }: { classOptions: ClassO
       )}
 
       {selectedStudentId && (
-        <Modal open onClose={() => setSelectedStudentId(null)} title="Student attendance">
+        <Modal open onClose={() => setSelectedStudentId(null)} title="Pupil attendance">
           <StudentAttendanceCard studentId={selectedStudentId} />
         </Modal>
       )}

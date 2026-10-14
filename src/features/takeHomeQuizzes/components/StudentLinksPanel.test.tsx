@@ -85,7 +85,7 @@ describe("StudentLinksPanel", () => {
     });
     render(<StudentLinksPanel quizId="quiz-1" refreshToken={0} />);
 
-    expect(await screen.findByText("1 student on the roster has no link yet.")).toBeInTheDocument();
+    expect(await screen.findByText("1 pupil on the roster has no link yet.")).toBeInTheDocument();
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Issue links" }));
 
@@ -129,7 +129,7 @@ describe("StudentLinksPanel", () => {
     vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizLinks).mockResolvedValue([ISSUED_LINK, PORTAL_LINK]);
     render(<StudentLinksPanel quizId="quiz-1" refreshToken={0} />);
 
-    expect(await screen.findByText("Available in the student portal")).toBeInTheDocument();
+    expect(await screen.findByText("Available in the pupil portal")).toBeInTheDocument();
     expect(screen.queryByText(/no link yet/i)).not.toBeInTheDocument();
   });
 

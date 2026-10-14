@@ -80,11 +80,11 @@ export function AgeDistributionCard({ hideWhenEmpty = false }: AgeDistributionCa
         <div className="px-6 pb-6 pt-3">
           <EmptyState
             icon={ChartNoAxesColumn}
-            title="No students yet"
-            description="Register students to see how your school's ages break down."
+            title="No pupils yet"
+            description="Register pupils to see how your school's ages break down."
             action={
               <Link to="/school/students" className="text-sm font-medium text-brand-700">
-                Go to students
+                Go to pupils
               </Link>
             }
           />
@@ -96,10 +96,10 @@ export function AgeDistributionCard({ hideWhenEmpty = false }: AgeDistributionCa
           <EmptyState
             icon={CalendarDays}
             title="No dates of birth on file"
-            description={`None of your ${distribution.totalStudents} active student${distribution.totalStudents === 1 ? "" : "s"} has a date of birth recorded, so there's no age breakdown to show.`}
+            description={`None of your ${distribution.totalStudents} active pupil${distribution.totalStudents === 1 ? "" : "s"} has a date of birth recorded, so there's no age breakdown to show.`}
             action={
               <Link to="/school/students" className="text-sm font-medium text-brand-700">
-                Go to students
+                Go to pupils
               </Link>
             }
           />
@@ -136,8 +136,8 @@ export function AgeDistributionCard({ hideWhenEmpty = false }: AgeDistributionCa
           {distribution.unknownAge > 0 && (
             <p className="mt-4 text-xs text-slate-500">
               {distribution.unknownAge === 1
-                ? "1 student has no date of birth on file."
-                : `${distribution.unknownAge} students have no date of birth on file.`}
+                ? "1 pupil has no date of birth on file."
+                : `${distribution.unknownAge} pupils have no date of birth on file.`}
             </p>
           )}
         </div>

@@ -5,6 +5,7 @@ import { RegionBadge } from "../shared/RegionBadge";
 import { ShapeOverlay } from "../shared/ShapeOverlay";
 import type { PartFeedback, RenderImage } from "../types";
 import type { DiagramLabelConfig, DiagramLabelResponse } from "./types";
+import { useParticipantNoun } from "@/components/ParticipantNoun";
 
 interface DiagramLabelReviewProps {
   config: DiagramLabelConfig;
@@ -19,9 +20,10 @@ interface DiagramLabelReviewProps {
  * and - for a wrong or empty one - the label that was right.
  */
 export function DiagramLabelReview({ config, parts, renderImage, perspective }: DiagramLabelReviewProps) {
+  const { Singular } = useParticipantNoun();
   const labels = new Map(config.labels.map((label) => [label.id, label.html]));
   const byZone = new Map(parts.map((part) => [part.partId, part]));
-  const givenLabel = perspective === "self" ? "You put" : "Student put";
+  const givenLabel = perspective === "self" ? "You put" : `${Singular} put`;
 
   return (
     <div className="space-y-3 text-sm">

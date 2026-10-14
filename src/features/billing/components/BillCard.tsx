@@ -101,7 +101,7 @@ export function BillCard({ bill }: BillCardProps) {
         <div>
           <h3 className="mb-2 text-sm font-medium text-slate-700">School bus fares</h3>
           <p className="mb-2 text-xs text-slate-400">
-            Published route prices for the whole school. This student&apos;s own school-bus fare, if assigned, is
+            Published route prices for the whole school. This pupil&apos;s own school-bus fare, if assigned, is
             already included in the charges above.
           </p>
           <Table>

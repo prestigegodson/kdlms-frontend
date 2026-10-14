@@ -86,7 +86,7 @@ export function GuardianFormModal({ guardian, onClose, onSaved }: GuardianFormMo
           ) : (
             <Alert variant="success">
               {created.guardian.fullName} can now sign in with {created.guardian.email}. An invitation email has been
-              sent to them. Link them to a student from that student's profile, or come back here later.
+              sent to them. Link them to a pupil from that pupil's profile, or come back here later.
             </Alert>
           )}
           {!attached && created.temporaryPassword && (
@@ -141,7 +141,7 @@ export function GuardianFormModal({ guardian, onClose, onSaved }: GuardianFormMo
         </div>
         {!isEdit && (
           <p className="text-xs text-slate-500">
-            Link this guardian to a student afterward from the student's profile page.
+            Link this guardian to a pupil afterward from the pupil's profile page.
           </p>
         )}
         {isEdit && (

@@ -79,7 +79,7 @@ export function GuardiansPage() {
     <div className="space-y-6">
       <PageHeader
         title="Guardians"
-        description="Parents and guardians with a portal login, and the students they're linked to."
+        description="Parents and guardians with a portal login, and the pupils they're linked to."
         actions={canManage && <Button onClick={() => setCreateOpen(true)}>Add guardian</Button>}
       />
 

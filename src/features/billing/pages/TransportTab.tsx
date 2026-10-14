@@ -245,7 +245,7 @@ export function TransportTab() {
         ) : !ridersView ? (
           <Skeleton className="h-10 w-full" />
         ) : ridersView.students.length === 0 ? (
-          <EmptyState title="No students" description="This classroom has no active roster for this session." />
+          <EmptyState title="No pupils" description="This classroom has no active roster for this session." />
         ) : ridersView.routes.length === 0 ? (
           <EmptyState title="No routes yet" description="Add a route above before assigning riders." />
         ) : (

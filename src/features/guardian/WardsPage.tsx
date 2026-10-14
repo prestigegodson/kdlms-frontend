@@ -171,7 +171,7 @@ export function WardsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My Wards" description="Students linked to your account." />
+      <PageHeader title="My Wards" description="Pupils linked to your account." />
 
       {can.viewOnlineClasses(role, onlineClasses) && (
         <UpcomingSessionsPanel load={loadGuardianUpcoming} joinLabel={() => "Watch"} hideWhenEmpty />

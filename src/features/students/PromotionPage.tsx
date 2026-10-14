@@ -61,8 +61,8 @@ export function PromotionPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Promote, place or graduate students"
-        description="Move a whole classroom into a new session, search for and place individual students, or graduate an exit classroom."
+        title="Promote, place or graduate pupils"
+        description="Move a whole classroom into a new session, search for and place individual pupils, or graduate an exit classroom."
         backTo="/school/students"
       />
 
@@ -79,7 +79,7 @@ export function PromotionPage() {
           onClick={() => setMode("place")}
           className={`rounded-control px-3 py-1.5 text-sm font-medium ${mode === "place" ? "bg-brand-50 text-brand-800" : "text-slate-500 hover:bg-slate-100"}`}
         >
-          Place students
+          Place pupils
         </button>
         <button
           type="button"
@@ -240,7 +240,7 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
       )}
       {sourceClassId && roster !== null && roster.length === 0 && (
         <EmptyState
-          title="No active students in this classroom"
+          title="No active pupils in this classroom"
           description="Choose a different source classroom."
         />
       )}
@@ -262,7 +262,7 @@ function PromoteClassPanel({ classes, sessions }: { classes: SchoolClassView[]; 
           >
             {submitting
               ? "Promoting…"
-              : `Promote ${selected.size} student${selected.size === 1 ? "" : "s"}`}
+              : `Promote ${selected.size} pupil${selected.size === 1 ? "" : "s"}`}
           </Button>
         </div>
       )}
@@ -331,7 +331,7 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
     <div className="space-y-6">
       <StickySubHeader collapsible>
         <div className={PICKER_GRID_CLASS}>
-          <FormField label="Search students" htmlFor="place-search">
+          <FormField label="Search pupils" htmlFor="place-search">
             <SearchInput
               id="place-search"
               value={query}
@@ -368,7 +368,7 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
       {error && <Alert variant="error">{error}</Alert>}
 
       {!query && (
-        <EmptyState title="Search for students to place" description="Search by name or admission number to find candidates." />
+        <EmptyState title="Search for pupils to place" description="Search by name or admission number to find candidates." />
       )}
       {query && candidates === null && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -376,7 +376,7 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
         </div>
       )}
       {query && candidates !== null && candidates.length === 0 && (
-        <EmptyState title="No matching students" description="Try a different name or admission number." />
+        <EmptyState title="No matching pupils" description="Try a different name or admission number." />
       )}
       {query && candidates !== null && candidates.length > 0 && (
         <StudentPicker
@@ -395,7 +395,7 @@ function PlaceStudentsPanel({ classes, sessions }: { classes: SchoolClassView[];
             disabled={submitting || selected.size === 0 || !targetClassId || !sessionId}
             onClick={handlePlace}
           >
-            {submitting ? "Placing…" : `Place ${selected.size} student${selected.size === 1 ? "" : "s"}`}
+            {submitting ? "Placing…" : `Place ${selected.size} pupil${selected.size === 1 ? "" : "s"}`}
           </Button>
         </div>
       )}
@@ -484,7 +484,7 @@ function GraduateClassPanel({ classes }: { classes: SchoolClassView[] }) {
         </div>
       )}
       {classId && roster !== null && roster.length === 0 && (
-        <EmptyState title="No active students in this classroom" description="Choose a different classroom." />
+        <EmptyState title="No active pupils in this classroom" description="Choose a different classroom." />
       )}
       {classId && roster !== null && roster.length > 0 && (
         <StudentPicker
@@ -499,7 +499,7 @@ function GraduateClassPanel({ classes }: { classes: SchoolClassView[] }) {
       {classId && roster !== null && roster.length > 0 && (
         <div className="flex justify-end">
           <Button variant="danger" disabled={selected.size === 0} onClick={() => setConfirming(true)}>
-            {`Graduate ${selected.size} student${selected.size === 1 ? "" : "s"}`}
+            {`Graduate ${selected.size} pupil${selected.size === 1 ? "" : "s"}`}
           </Button>
         </div>
       )}
@@ -513,11 +513,11 @@ function GraduateClassPanel({ classes }: { classes: SchoolClassView[] }) {
 
       {confirming && (
         <ConfirmDialog
-          title={`Graduate ${selected.size} student${selected.size === 1 ? "" : "s"}?`}
+          title={`Graduate ${selected.size} pupil${selected.size === 1 ? "" : "s"}?`}
           message={
             <>
               <strong>
-                {selected.size} student{selected.size === 1 ? "" : "s"}
+                {selected.size} pupil{selected.size === 1 ? "" : "s"}
               </strong>{" "}
               in <strong>{className}</strong> will be marked graduated and their current enrollments closed. This
               can't be undone.

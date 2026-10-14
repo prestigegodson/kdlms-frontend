@@ -33,7 +33,7 @@ export const SHELL_TOURS: TourDefinition[] = [
         mobileTarget: "tabbar",
         roles: ["SCHOOL_ADMIN", "BRANCH_ADMIN"],
         title: "Everything in one menu",
-        body: "Academics holds sessions, classes, subjects, scores and reports. People holds staff, students and guardians. Administration holds your school's settings, fees and subscription.",
+        body: "Academics holds sessions, classes, subjects, scores and reports. People holds staff, pupils and guardians. Administration holds your school's settings, fees and subscription.",
       },
       {
         target: "sidebar",
@@ -47,7 +47,7 @@ export const SHELL_TOURS: TourDefinition[] = [
         mobileTarget: "tabbar",
         roles: ["INVENTORY_MANAGER"],
         title: "Your store",
-        body: "Inventory is where you track stock, issue items and raise purchase requests. Students gives you a read-only view of the branch's registry.",
+        body: "Inventory is where you track stock, issue items and raise purchase requests. Pupils gives you a read-only view of the branch's registry.",
       },
       {
         target: "more",
@@ -113,7 +113,7 @@ export const SHELL_TOURS: TourDefinition[] = [
     steps: [
       {
         title: "Welcome",
-        body: "This is your student portal. Let's take a quick look around.",
+        body: "This is your pupil portal. Let's take a quick look around.",
       },
       {
         target: "sidebar",

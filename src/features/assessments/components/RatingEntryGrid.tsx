@@ -118,7 +118,7 @@ export function RatingEntryGrid({ sheet, onSaved }: RatingEntryGridProps) {
       <Table>
         <TableHead>
           <TableRow>
-            <TableHeaderCell>Student</TableHeaderCell>
+            <TableHeaderCell>Pupil</TableHeaderCell>
             {showMidterm && <TableHeaderCell>Midterm rating</TableHeaderCell>}
             {showMidterm && <TableHeaderCell>Midterm observation</TableHeaderCell>}
             {showExam && <TableHeaderCell>End-of-term rating</TableHeaderCell>}
@@ -137,7 +137,7 @@ export function RatingEntryGrid({ sheet, onSaved }: RatingEntryGridProps) {
 
             return (
               <TableRow key={row.enrollmentId} className={isDirty ? "border-l-2 border-l-brand-500" : ""}>
-                <TableCell label="Student">
+                <TableCell label="Pupil">
                   <span className="font-medium text-slate-900">{row.studentName}</span>
                   <span className="block text-xs text-slate-500">{row.admissionNumber}</span>
                 </TableCell>

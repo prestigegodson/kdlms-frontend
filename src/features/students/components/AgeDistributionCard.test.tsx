@@ -24,7 +24,7 @@ function renderCard(props: Parameters<typeof AgeDistributionCard>[0] = {}) {
   const router = createMemoryRouter(
     [
       { path: "/", element: <AgeDistributionCard {...props} /> },
-      { path: "/school/students", element: <div>Students page</div> },
+      { path: "/school/students", element: <div>Pupils page</div> },
     ],
     { initialEntries: ["/"] },
   );
@@ -64,7 +64,7 @@ describe("AgeDistributionCard", () => {
 
     renderCard();
 
-    expect(await screen.findByText("3 students have no date of birth on file.")).toBeInTheDocument();
+    expect(await screen.findByText("3 pupils have no date of birth on file.")).toBeInTheDocument();
   });
 
   it("uses the singular form for exactly one unknown-age student", async () => {
@@ -72,7 +72,7 @@ describe("AgeDistributionCard", () => {
 
     renderCard();
 
-    expect(await screen.findByText("1 student has no date of birth on file.")).toBeInTheDocument();
+    expect(await screen.findByText("1 pupil has no date of birth on file.")).toBeInTheDocument();
   });
 
   it("omits the unknown-age footer when unknownAge is zero", async () => {
@@ -93,11 +93,11 @@ describe("AgeDistributionCard", () => {
 
     renderCard();
 
-    expect(await screen.findByText("No students yet")).toBeInTheDocument();
+    expect(await screen.findByText("No pupils yet")).toBeInTheDocument();
     expect(
-      screen.getByText("Register students to see how your school's ages break down."),
+      screen.getByText("Register pupils to see how your school's ages break down."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Go to students").closest("a")).toHaveAttribute("href", "/school/students");
+    expect(screen.getByText("Go to pupils").closest("a")).toHaveAttribute("href", "/school/students");
   });
 
   it("shows a distinct empty state when students exist but none has a date of birth on file", async () => {
@@ -112,11 +112,11 @@ describe("AgeDistributionCard", () => {
     expect(await screen.findByText("No dates of birth on file")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "None of your 5 active students has a date of birth recorded, so there's no age breakdown to show.",
+        "None of your 5 active pupils has a date of birth recorded, so there's no age breakdown to show.",
       ),
     ).toBeInTheDocument();
     // The regular per-band unknown-age footer is redundant with the description above and must not also render.
-    expect(screen.queryByText("5 students have no date of birth on file.")).not.toBeInTheDocument();
+    expect(screen.queryByText("5 pupils have no date of birth on file.")).not.toBeInTheDocument();
   });
 
   it("renders nothing when there are no active students and hideWhenEmpty is set", async () => {

@@ -157,7 +157,7 @@ export function ResourceEditorModal({
   canAuthorMedia,
   save,
   loadGallery,
-  audienceLabel = "Students",
+  audienceLabel = "Pupils",
   onClose,
   onSaved,
 }: ResourceEditorModalProps) {

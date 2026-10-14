@@ -69,14 +69,14 @@ describe("TemplateDesignerPage", () => {
   it("offers the Student photo block on a NUMERIC template", async () => {
     renderPage();
     expect(await screen.findByDisplayValue("Standard result sheet")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Student photo/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Pupil photo/ })).toBeInTheDocument();
   });
 
   it("offers the Student photo block on a QUALITATIVE template too", async () => {
     vi.mocked(templatesApi.getResultTemplate).mockResolvedValue(QUALITATIVE_TEMPLATE);
     renderPage();
     expect(await screen.findByDisplayValue("Standard result sheet")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Student photo/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Pupil photo/ })).toBeInTheDocument();
   });
 
   it("offers the School logo block on a NUMERIC template", async () => {

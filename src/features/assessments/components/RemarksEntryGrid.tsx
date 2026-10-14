@@ -187,7 +187,7 @@ export function RemarksEntryGrid({ sheet, field, onSaved }: RemarksEntryGridProp
       <Table>
         <TableHead>
           <TableRow>
-            <TableHeaderCell>Student</TableHeaderCell>
+            <TableHeaderCell>Pupil</TableHeaderCell>
             {activeCategory
               ? activeCategory.traits.map((trait) => <TableHeaderCell key={trait.id}>{trait.name}</TableHeaderCell>)
               : (

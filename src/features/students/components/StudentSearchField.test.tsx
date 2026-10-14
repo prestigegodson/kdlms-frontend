@@ -131,7 +131,7 @@ describe("StudentSearchField", () => {
     await user.type(screen.getByRole("combobox"), "zzz");
     await vi.advanceTimersByTimeAsync(300);
 
-    expect(await screen.findByText("No matching students.")).toBeInTheDocument();
+    expect(await screen.findByText("No matching pupils.")).toBeInTheDocument();
   });
 
   it("surfaces a rejected search inline", async () => {
@@ -166,7 +166,7 @@ describe("StudentSearchField", () => {
     expect(screen.getByText("KDL/2024/0031")).toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Clear student" }));
+    await user.click(screen.getByRole("button", { name: "Clear pupil" }));
     expect(onChange).toHaveBeenCalledWith(null);
   });
 });

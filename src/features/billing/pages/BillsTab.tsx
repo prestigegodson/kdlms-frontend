@@ -116,7 +116,7 @@ export function BillsTab() {
           {summary ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <StatTile
-                label="Billable students"
+                label="Billable pupils"
                 value={summary.byLevel.reduce((sum, level) => sum + level.billableStudentCount, 0)}
               />
               <StatTile
@@ -140,12 +140,12 @@ export function BillsTab() {
                 <Skeleton className="h-10 w-full" />
               </div>
             ) : roster.length === 0 ? (
-              <EmptyState icon={Receipt} title="No students at this class in this branch" />
+              <EmptyState icon={Receipt} title="No pupils at this class in this branch" />
             ) : (
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableHeaderCell>Student</TableHeaderCell>
+                    <TableHeaderCell>Pupil</TableHeaderCell>
                     <TableHeaderCell>Classroom</TableHeaderCell>
                     <TableHeaderCell>Admission no.</TableHeaderCell>
                     <TableHeaderCell>Status</TableHeaderCell>
@@ -163,7 +163,7 @@ export function BillsTab() {
                         editing.openPreview(row.studentId, { name: row.studentName, admissionNumber: row.admissionNumber })
                       }
                     >
-                      <TableCell label="Student">{row.studentName}</TableCell>
+                      <TableCell label="Pupil">{row.studentName}</TableCell>
                       <TableCell label="Classroom">{row.className}</TableCell>
                       <TableCell label="Admission no.">{row.admissionNumber}</TableCell>
                       <TableCell label="Status">

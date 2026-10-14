@@ -144,7 +144,7 @@ export function FeeFormModal({ fee, nextPosition, onClose, onSaved }: FeeFormMod
           <FormField
             label="Kind"
             htmlFor="fee-kind"
-            description="A school-bus fee is priced per route and direction, and assigned per student on the Transport tab - not here. Only one is allowed per school."
+            description="A school-bus fee is priced per route and direction, and assigned per pupil on the Transport tab - not here. Only one is allowed per school."
           >
             <Select
               id="fee-kind"
@@ -180,7 +180,7 @@ export function FeeFormModal({ fee, nextPosition, onClose, onSaved }: FeeFormMod
         <FormField
           label="Applies"
           htmlFor="fee-applicability"
-          description="TERMLY charges in the term(s) you pick, every session. FIRST_TERM_ONLY charges once - in the student's own admission term, not necessarily term 1."
+          description="TERMLY charges in the term(s) you pick, every session. FIRST_TERM_ONLY charges once - in the pupil's own admission term, not necessarily term 1."
         >
           <Select
             id="fee-applicability"
@@ -190,7 +190,7 @@ export function FeeFormModal({ fee, nextPosition, onClose, onSaved }: FeeFormMod
           >
             <option value="TERMLY">Every session, in specific terms</option>
             {!isTransport && (
-              <option value="FIRST_TERM_ONLY">Once - the student's own admission term</option>
+              <option value="FIRST_TERM_ONLY">Once - the pupil's own admission term</option>
             )}
           </Select>
         </FormField>

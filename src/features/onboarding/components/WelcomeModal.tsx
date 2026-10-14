@@ -12,7 +12,7 @@ import { useOnboardingStore } from "@/stores/onboardingStore";
 const BLURB: Record<Role, string> = {
   SYSTEM_ADMIN: "Run the platform: onboard schools, set up packages and design result templates.",
   SCHOOL_ADMIN: "Set up your school's calendar, classes and staff, then follow every result, bill and message in one place.",
-  BRANCH_ADMIN: "Run your branch day to day, from classes and students to results and fees.",
+  BRANCH_ADMIN: "Run your branch day to day, from classes and pupils to results and fees.",
   TEACHER: "Record scores and attendance, write remarks and keep in touch with guardians, all for the classes you teach.",
   INVENTORY_MANAGER: "Keep your branch's store stocked: issue items and raise purchase requests.",
   GUARDIAN: "Follow your children's results, bills and messages from school, all in one place.",

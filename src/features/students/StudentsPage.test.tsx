@@ -99,7 +99,7 @@ function renderAsSchoolAdmin(initialEntry = "/") {
   const router = createMemoryRouter(
     [
       { path: "/", element: <StudentsPage /> },
-      { path: "/school/students/:studentId", element: <div>Student detail page</div> },
+      { path: "/school/students/:studentId", element: <div>Pupil detail page</div> },
     ],
     { initialEntries: [initialEntry] },
   );
@@ -168,7 +168,7 @@ describe("StudentsPage", () => {
 
     await user.click(row);
 
-    expect(await screen.findByText("Student detail page")).toBeInTheDocument();
+    expect(await screen.findByText("Pupil detail page")).toBeInTheDocument();
   });
 
   it("filters through the mobile Filters sheet and reflects the active count on its trigger", async () => {
@@ -198,7 +198,7 @@ describe("StudentsPage", () => {
     mockStudents([]);
 
     renderAsSchoolAdmin("/?hasGuardian=false");
-    await screen.findByText(/No students found/);
+    await screen.findByText(/No pupils found/);
 
     expect(studentsApi.listStudents).toHaveBeenCalledWith(
       expect.objectContaining({ hasGuardian: false }),
@@ -231,9 +231,9 @@ describe("StudentsPage", () => {
     const user = userEvent.setup();
 
     renderAsSchoolAdmin();
-    await screen.findByText(/No students found/);
+    await screen.findByText(/No pupils found/);
 
-    await user.click(screen.getByRole("button", { name: "Register student" }));
+    await user.click(screen.getByRole("button", { name: "Register pupil" }));
     const dialog = await screen.findByRole("dialog");
 
     // Classroom stays disabled, with nothing preselected, until a Class is picked.
@@ -246,7 +246,7 @@ describe("StudentsPage", () => {
 
     await user.type(within(dialog).getByLabelText("First name"), "Ada");
     await user.type(within(dialog).getByLabelText("Last name"), "Obi");
-    await user.click(within(dialog).getByRole("button", { name: "Register student" }));
+    await user.click(within(dialog).getByRole("button", { name: "Register pupil" }));
 
     expect(studentsApi.registerStudent).toHaveBeenCalledWith(
       expect.objectContaining({ branchId: "branch-1", classId: "class-1", firstName: "Ada", lastName: "Obi" }),
@@ -294,7 +294,7 @@ describe("StudentsPage", () => {
     renderAsTeacher();
 
     expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Register student" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Register pupil" })).not.toBeInTheDocument();
   });
 
   it("opens a read-only medical panel for a roster student", async () => {

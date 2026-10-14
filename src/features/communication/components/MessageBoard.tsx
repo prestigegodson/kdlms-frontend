@@ -27,7 +27,7 @@ export function MessageBoard({ board, onOpenThread, onComposeFor }: MessageBoard
     <Table>
       <TableHead>
         <TableRow>
-          <TableHeaderCell>Student</TableHeaderCell>
+          <TableHeaderCell>Pupil</TableHeaderCell>
           <TableHeaderCell>Category</TableHeaderCell>
           <TableHeaderCell>Last activity</TableHeaderCell>
           <TableHeaderCell>Replies</TableHeaderCell>
@@ -37,7 +37,7 @@ export function MessageBoard({ board, onOpenThread, onComposeFor }: MessageBoard
       <TableBody>
         {board.rows.map((row) => (
           <TableRow key={row.studentId}>
-            <TableCell label="Student">
+            <TableCell label="Pupil">
               <div className="flex items-center gap-2">
                 {row.unread && (
                   <span className="h-2 w-2 shrink-0 rounded-full bg-brand-500" aria-label="Unread" />

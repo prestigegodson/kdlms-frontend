@@ -132,7 +132,7 @@ export function TeacherMessageBoard() {
     <div className="space-y-6">
       <PageHeader
         title="Messages"
-        description="Log a note about a student today, or catch up on replies."
+        description="Log a note about a pupil today, or catch up on replies."
         actions={
           tab === "board" &&
           board &&
@@ -194,7 +194,7 @@ export function TeacherMessageBoard() {
           {board && board.rows.length === 0 && (
             <EmptyState
               title="Nobody to log for"
-              description="No students are enrolled in this class for this session."
+              description="No pupils are enrolled in this class for this session."
             />
           )}
           {board && board.rows.length > 0 && (

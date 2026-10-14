@@ -81,14 +81,14 @@ export function RegisterStudentModal({
       });
       onSaved();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to register student");
+      setError(err instanceof ApiError ? err.message : "Failed to register pupil");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal open onClose={onClose} title="Register student" size="lg">
+    <Modal open onClose={onClose} title="Register pupil" size="lg">
       <form className="space-y-4" onSubmit={handleSubmit}>
         {error && <Alert variant="error">{error}</Alert>}
         {fixedClass ? (
@@ -216,7 +216,7 @@ export function RegisterStudentModal({
             Cancel
           </Button>
           <Button type="submit" disabled={submitting || !classId}>
-            {submitting ? "Registering…" : "Register student"}
+            {submitting ? "Registering…" : "Register pupil"}
           </Button>
         </div>
       </form>

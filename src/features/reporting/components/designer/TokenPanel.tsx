@@ -17,7 +17,7 @@ function groupByPrefix(tokens: typeof REPORT_TOKENS): Array<[string, typeof REPO
 
 const GROUP_LABELS: Record<string, string> = {
   school: "School",
-  student: "Student",
+  student: "Pupil",
   class: "Class / level",
   level: "Class / level",
   session: "Session / term",

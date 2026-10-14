@@ -78,5 +78,5 @@ export function StudentLayout() {
     if (onDemandLearning) fetchNewResources();
   }, [onDemandLearning, fetchNewResources]);
 
-  return <PortalShell portalName="Student" navItems={NAV_ITEMS} />;
+  return <PortalShell portalName="Pupil" navItems={NAV_ITEMS} />;
 }

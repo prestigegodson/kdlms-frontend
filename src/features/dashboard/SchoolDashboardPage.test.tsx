@@ -30,7 +30,7 @@ function renderPage() {
   const router = createMemoryRouter(
     [
       { path: "/", element: <SchoolDashboardPage /> },
-      { path: "/school/students", element: <div>Students page</div> },
+      { path: "/school/students", element: <div>Pupils page</div> },
       { path: "/school/academics/classes", element: <div>Classes page</div> },
       { path: "/school/attendance", element: <div>Attendance page</div> },
       { path: "/school/academics/classes/:classId", element: <div>Class detail page</div> },
@@ -80,7 +80,7 @@ describe("SchoolDashboardPage", () => {
     expect(screen.getByText("This term’s results published")).toBeInTheDocument();
 
     // Each admin stat tile is a tap target into its source screen (mobile-plan.md Phase D).
-    expect(screen.getByText("Active students").closest("a")).toHaveAttribute("href", "/school/students");
+    expect(screen.getByText("Active pupils").closest("a")).toHaveAttribute("href", "/school/students");
     expect(screen.getByText("Active classes").closest("a")).toHaveAttribute(
       "href",
       "/school/academics/classes",
@@ -171,14 +171,14 @@ describe("SchoolDashboardPage", () => {
 
     expect(await screen.findByText("Needs attention")).toBeInTheDocument();
     expect(screen.getByText("1 class with no class teacher")).toBeInTheDocument();
-    expect(screen.getByText("4 students with no linked guardian")).toBeInTheDocument();
-    expect(screen.getByText("4 students with no linked guardian").closest("a")).toHaveAttribute(
+    expect(screen.getByText("4 pupils with no linked guardian")).toBeInTheDocument();
+    expect(screen.getByText("4 pupils with no linked guardian").closest("a")).toHaveAttribute(
       "href",
       "/school/students?hasGuardian=false",
     );
 
-    await user.click(screen.getByText("4 students with no linked guardian"));
-    expect(await screen.findByText("Students page")).toBeInTheDocument();
+    await user.click(screen.getByText("4 pupils with no linked guardian"));
+    expect(await screen.findByText("Pupils page")).toBeInTheDocument();
   });
 
   it("shows the needs-attention card's all-clear state when there are no setup gaps", async () => {
@@ -196,7 +196,7 @@ describe("SchoolDashboardPage", () => {
 
     renderPage();
 
-    await screen.findByText("Active students");
+    await screen.findByText("Active pupils");
     expect(screen.getByText("Needs attention")).toBeInTheDocument();
     expect(screen.getByText("All clear")).toBeInTheDocument();
   });
@@ -415,7 +415,7 @@ describe("SchoolDashboardPage", () => {
 
     renderPage();
 
-    await screen.findByText("Active students");
+    await screen.findByText("Active pupils");
     expect(screen.getByText("Upcoming birthdays")).toBeInTheDocument();
     expect(await screen.findByText("No upcoming birthdays")).toBeInTheDocument();
   });

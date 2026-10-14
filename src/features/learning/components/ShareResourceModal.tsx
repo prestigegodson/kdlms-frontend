@@ -22,7 +22,7 @@ export function ShareResourceModal({ resource, onClose, onShared }: ShareResourc
       loadTargets={getShareTargets}
       loadSubjects={getShareTargetSubjects}
       share={shareLearningResource}
-      footnote="Students in the selected classrooms will see the copy straight away. Their teachers manage it from then on, and your later edits won't carry over."
+      footnote="Pupils in the selected classrooms will see the copy straight away. Their teachers manage it from then on, and your later edits won't carry over."
       onClose={onClose}
       onShared={onShared}
     />

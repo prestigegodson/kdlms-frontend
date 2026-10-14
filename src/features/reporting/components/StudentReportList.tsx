@@ -46,14 +46,14 @@ export function StudentReportList({ students, termId, scope = "TERM", onPreview 
       <Table>
         <TableHead>
           <TableRow>
-            <TableHeaderCell>Student</TableHeaderCell>
+            <TableHeaderCell>Pupil</TableHeaderCell>
             <TableHeaderCell>Actions</TableHeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {students.map((student) => (
             <TableRow key={student.studentId}>
-              <TableCell label="Student" className="font-medium text-slate-900">
+              <TableCell label="Pupil" className="font-medium text-slate-900">
                 {student.studentName}
                 <span className="block text-xs font-normal text-slate-500">{student.admissionNumber}</span>
               </TableCell>

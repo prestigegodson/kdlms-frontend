@@ -2,6 +2,7 @@ import { Check, X } from "lucide-react";
 import { RichContent } from "@/components/richText/RichContent";
 import type { PartFeedback, RenderImage } from "../types";
 import type { MatchingConfig, MatchingResponse } from "./types";
+import { useParticipantNoun } from "@/components/ParticipantNoun";
 
 interface MatchingReviewProps {
   config: MatchingConfig;
@@ -13,9 +14,10 @@ interface MatchingReviewProps {
 
 /** Each prompt with the student's answer and, when it differs, the correct one - marked from the frozen feedback. */
 export function MatchingReview({ config, parts, renderImage, perspective }: MatchingReviewProps) {
+  const { Singular } = useParticipantNoun();
   const rights = new Map(config.rights.map((right) => [right.id, right.html]));
   const byLeft = new Map(parts.map((part) => [part.partId, part]));
-  const answerLabel = perspective === "self" ? "Your answer" : "Student's answer";
+  const answerLabel = perspective === "self" ? "Your answer" : `${Singular}'s answer`;
 
   return (
     <ul className="space-y-1 text-sm">

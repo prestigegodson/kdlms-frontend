@@ -198,7 +198,7 @@ export function BranchesPage() {
           title="Deactivate this branch?"
           message={
             <>
-              <strong>{deactivating.name}</strong> will be deactivated. Staff and students there keep their
+              <strong>{deactivating.name}</strong> will be deactivated. Staff and pupils there keep their
               records but the branch stops appearing for new registrations until it's reactivated.
             </>
           }

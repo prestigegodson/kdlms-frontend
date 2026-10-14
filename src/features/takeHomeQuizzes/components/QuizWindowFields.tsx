@@ -4,6 +4,7 @@ import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { TAKE_HOME_QUIZ_FIELD_HELP } from "@/features/takeHomeQuizzes/takeHomeQuizFieldHelp";
 import { splitInstant, toInstant } from "@/utils/date";
+import { useParticipantNoun } from "@/components/ParticipantNoun";
 
 interface QuizWindowFieldsProps {
   opensAt: string;
@@ -40,6 +41,7 @@ export function QuizWindowFields({
   disabled = false,
   opensAtDisabled = false,
 }: QuizWindowFieldsProps) {
+  const { adapt } = useParticipantNoun();
   const opens = splitInstant(opensAt);
   const closes = splitInstant(closesAt);
 
@@ -56,7 +58,7 @@ export function QuizWindowFields({
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormField label="Opens" htmlFor="quiz-opens-date" description={TAKE_HOME_QUIZ_FIELD_HELP.opensAt}>
+        <FormField label="Opens" htmlFor="quiz-opens-date" description={adapt(TAKE_HOME_QUIZ_FIELD_HELP.opensAt)}>
           <div className="flex gap-2">
             <DateInput
               id="quiz-opens-date"
@@ -74,7 +76,7 @@ export function QuizWindowFields({
           </div>
         </FormField>
 
-        <FormField label="Closes" htmlFor="quiz-closes-date" description={TAKE_HOME_QUIZ_FIELD_HELP.closesAt}>
+        <FormField label="Closes" htmlFor="quiz-closes-date" description={adapt(TAKE_HOME_QUIZ_FIELD_HELP.closesAt)}>
           <div className="flex gap-2">
             <DateInput
               id="quiz-closes-date"
@@ -105,7 +107,7 @@ export function QuizWindowFields({
         <FormField
           label="Duration (minutes)"
           htmlFor="quiz-duration"
-          description={TAKE_HOME_QUIZ_FIELD_HELP.durationMinutes}
+          description={adapt(TAKE_HOME_QUIZ_FIELD_HELP.durationMinutes)}
           className="max-w-xs"
         >
           <Input

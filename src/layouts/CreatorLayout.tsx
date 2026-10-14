@@ -13,6 +13,7 @@ import {
 import { useEffect } from "react";
 import { can } from "@/auth/permissions";
 import { VerifyEmailBanner } from "@/features/creators/components/VerifyEmailBanner";
+import { ParticipantNounProvider } from "@/components/ParticipantNoun";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useClassMessagesUnreadStore } from "@/stores/classMessagesUnreadStore";
 import { NAV_GATE_MAX_AGE_MS, useRevalidateOnResume } from "@/hooks/useRevalidateOnResume";
@@ -113,5 +114,9 @@ export function CreatorLayout() {
     useCreatorPlanStore.getState().revalidate(NAV_GATE_MAX_AGE_MS);
   });
 
-  return <PortalShell portalName="Creator" navItems={NAV_ITEMS} banner={<VerifyEmailBanner />} />;
+  return (
+    <ParticipantNounProvider noun="learner">
+      <PortalShell portalName="Creator" navItems={NAV_ITEMS} banner={<VerifyEmailBanner />} />
+    </ParticipantNounProvider>
+  );
 }

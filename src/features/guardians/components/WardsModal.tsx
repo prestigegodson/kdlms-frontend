@@ -33,7 +33,7 @@ export function WardsModal({ guardian, onClose }: WardsModalProps) {
         </div>
       )}
       {wards !== null && wards.length === 0 && (
-        <EmptyState title="No wards linked" description="Link a student from their profile page." />
+        <EmptyState title="No wards linked" description="Link a pupil from their profile page." />
       )}
       {wards !== null && wards.length > 0 && (
         <ul className="divide-y divide-slate-100">

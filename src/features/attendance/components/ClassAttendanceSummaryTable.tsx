@@ -22,7 +22,7 @@ export function ClassAttendanceSummaryTable({
     <Table>
       <TableHead>
         <TableRow>
-          <TableHeaderCell>Student</TableHeaderCell>
+          <TableHeaderCell>Pupil</TableHeaderCell>
           <TableHeaderCell numeric>Present</TableHeaderCell>
           <TableHeaderCell numeric>Absent</TableHeaderCell>
           <TableHeaderCell numeric>Late</TableHeaderCell>
@@ -34,7 +34,7 @@ export function ClassAttendanceSummaryTable({
       <TableBody>
         {summary.rows.map((row) => (
           <TableRow key={row.studentId}>
-            <TableCell label="Student">
+            <TableCell label="Pupil">
               {onSelectStudent ? (
                 <button
                   type="button"

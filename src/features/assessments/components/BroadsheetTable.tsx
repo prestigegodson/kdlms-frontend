@@ -49,7 +49,7 @@ export function BroadsheetTable({ broadsheet, scope = "TERM" }: BroadsheetTableP
                 scope="col"
                 className="sticky left-0 z-10 bg-slate-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 after:absolute after:inset-y-0 after:-right-2 after:w-2 after:bg-gradient-to-r after:from-slate-900/10 after:to-transparent"
               >
-                Student
+                Pupil
               </th>
               {broadsheet.subjects.map((subject) => (
                 <th

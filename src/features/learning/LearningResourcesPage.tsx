@@ -263,7 +263,7 @@ export function LearningResourcesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Learning resources"
-        description="Publish PDFs, rich-text notes, audio, video, and YouTube videos for your students."
+        description="Publish PDFs, rich-text notes, audio, video, and YouTube videos for your pupils."
         actions={
           canAuthor &&
           classId &&
@@ -448,7 +448,7 @@ export function LearningResourcesPage() {
           message={
             confirming.kind === "archive" ? (
               <>
-                <strong>{confirming.resource.title}</strong> will be archived and hidden from students. This can't be
+                <strong>{confirming.resource.title}</strong> will be archived and hidden from pupils. This can't be
                 undone.
               </>
             ) : (

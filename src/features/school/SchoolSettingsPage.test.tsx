@@ -139,7 +139,7 @@ describe("SchoolSettingsPage", () => {
     const user = userEvent.setup();
     render(<SchoolSettingsPage />);
 
-    const checkbox = await screen.findByRole("checkbox", { name: "Allow students to change password" });
+    const checkbox = await screen.findByRole("checkbox", { name: "Allow pupils to change password" });
     expect(checkbox).toBeChecked();
 
     await user.click(checkbox);

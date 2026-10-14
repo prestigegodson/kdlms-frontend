@@ -258,7 +258,7 @@ export function ClassDetailPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatTile
-          label="Students"
+          label="Pupils"
           value={roster ? roster.length : <Skeleton className="h-8 w-12" />}
           icon={Users}
           hint={roster ? `${boys} boys · ${girls} girls` : undefined}
@@ -334,12 +334,12 @@ export function ClassDetailPage() {
       </Accordion>
 
       <Accordion
-        title={`Enrolled students${roster ? ` (${roster.length})` : ""}`}
+        title={`Enrolled pupils${roster ? ` (${roster.length})` : ""}`}
         defaultOpen
         actions={
           canManage && roster && roster.length > 0 ? (
             <Button variant="secondary" onClick={() => setRegisterOpen(true)}>
-              Register student
+              Register pupil
             </Button>
           ) : undefined
         }

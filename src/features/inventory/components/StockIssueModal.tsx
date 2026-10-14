@@ -97,7 +97,7 @@ export function StockIssueModal({ level, branchId, onClose, onSaved }: StockIssu
                     selected ? "bg-brand-50 text-brand-800" : "text-slate-600 hover:text-slate-800"
                   }`}
                 >
-                  {option === "student" ? "Student" : "General usage"}
+                  {option === "student" ? "Pupil" : "General usage"}
                 </button>
               );
             })}

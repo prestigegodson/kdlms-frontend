@@ -265,8 +265,8 @@ export interface ReportLayout {
 export const BLOCK_LABELS: Record<ReportBlockName, string> = {
   SCHOOL_HEADER: "School header",
   SCHOOL_LOGO: "School logo",
-  STUDENT_BIO: "Student bio",
-  STUDENT_PHOTO: "Student photo",
+  STUDENT_BIO: "Pupil bio",
+  STUDENT_PHOTO: "Pupil photo",
   SCORE_TABLE: "Score table",
   RATING_TABLE: "Rating table",
   ATTENDANCE_SUMMARY: "Attendance summary",
@@ -293,7 +293,7 @@ export const BLOCK_LABELS: Record<ReportBlockName, string> = {
 export const CONDITION_FLAG_LABELS: Record<ReportConditionFlag, string> = {
   HAS_CLASS_TEACHER_REMARK: "Class teacher's remark",
   HAS_PRINCIPAL_REMARK: "Principal's remark",
-  HAS_STUDENT_PHOTO: "Student photo",
+  HAS_STUDENT_PHOTO: "Pupil photo",
   HAS_SCHOOL_LOGO: "School logo",
   HAS_CLASS_TEACHER_SIGNATURE: "Class teacher signature",
   HAS_PRINCIPAL_SIGNATURE: "Principal signature",

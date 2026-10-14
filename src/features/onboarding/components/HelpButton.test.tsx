@@ -43,11 +43,11 @@ describe("HelpButton", () => {
     await userEvent.click(screen.getByRole("button", { name: "Help and guides" }));
 
     expect(screen.getByText("Welcome tour")).toBeInTheDocument();
-    expect(screen.getByText("Students")).toBeInTheDocument();
+    expect(screen.getByText("Pupils")).toBeInTheDocument();
     expect(screen.getByText("Done")).toBeInTheDocument();
     expect(screen.queryByText("Your dashboard")).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Replay Students" }));
+    await userEvent.click(screen.getByRole("button", { name: "Replay Pupils" }));
 
     expect(useOnboardingStore.getState().active).toEqual({ key: "school.students", startIndex: 0, manual: true });
   });

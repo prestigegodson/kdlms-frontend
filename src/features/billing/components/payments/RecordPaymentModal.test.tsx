@@ -182,7 +182,7 @@ describe("RecordPaymentModal", () => {
     const onRecorded = renderModal();
 
     await screen.findByLabelText("Amount for Ada Obi");
-    await user.type(screen.getByLabelText("Add a student"), "Ben");
+    await user.type(screen.getByLabelText("Add a pupil"), "Ben");
     await user.click(await screen.findByRole("option", { name: /Ben Obi/ }));
     const benAmount = await screen.findByLabelText("Amount for Ben Obi");
     expect(screen.getByText("No bill this term - enter the amount received")).toBeInTheDocument();

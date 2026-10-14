@@ -450,12 +450,12 @@ describe("TakeHomeQuizEditorPage - an existing quiz", () => {
     renderAt("/school/take-home-quizzes/quiz-1?classId=class-1&subjectId=subject-1&termId=term-1");
 
     expect(
-      await screen.findByText(/Students have already submitted this quiz/),
+      await screen.findByText(/Pupils have already submitted this quiz/),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Title")).toBeDisabled();
     expect(screen.getByLabelText("Instructions")).toBeDisabled();
     const revealCheckbox = screen.getByRole("checkbox", {
-      name: "Show students their score and correct answers after they submit",
+      name: "Show pupils their score and correct answers after they submit",
     });
     expect(revealCheckbox).not.toBeDisabled();
     expect(screen.getByLabelText("Closes time")).not.toBeDisabled();

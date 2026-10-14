@@ -126,7 +126,7 @@ export function ReportsPage() {
 
       {classId && termId && students === null && !loadError && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading students…
+          <Spinner /> Loading pupils…
         </div>
       )}
       {students && students.length === 0 && (

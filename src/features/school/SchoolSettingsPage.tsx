@@ -157,11 +157,11 @@ export function SchoolSettingsPage() {
                 })
               }
             />
-            Allow students to change password
+            Allow pupils to change password
           </label>
           <p className="text-sm text-slate-500">
-            On by default. When turned off, students can't change their own password from the student
-            portal - a teacher or admin sets it for them. A student given a temporary password must still
+            On by default. When turned off, pupils can't change their own password from the pupil
+            portal - a teacher or admin sets it for them. A pupil given a temporary password must still
             replace it the first time they sign in.
           </p>
 

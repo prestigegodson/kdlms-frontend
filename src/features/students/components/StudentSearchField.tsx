@@ -138,7 +138,7 @@ export function StudentSearchField({ value, onChange, branchId, id, disabled, di
           type="button"
           onClick={() => onChange(null)}
           disabled={isDisabled}
-          aria-label="Clear student"
+          aria-label="Clear pupil"
           className="shrink-0 rounded-control p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:pointer-events-none disabled:opacity-50"
         >
           <X className="h-4 w-4" aria-hidden="true" />
@@ -178,12 +178,12 @@ export function StudentSearchField({ value, onChange, branchId, id, disabled, di
           <Spinner /> Searching…
         </div>
       ) : results.length === 0 ? (
-        <p className="mt-1 text-sm text-slate-500">No matching students.</p>
+        <p className="mt-1 text-sm text-slate-500">No matching pupils.</p>
       ) : (
         <ul
           id={listboxId}
           role="listbox"
-          aria-label="Matching students"
+          aria-label="Matching pupils"
           className="mt-2 max-h-48 divide-y divide-slate-100 overflow-y-auto rounded-panel border border-slate-200"
         >
           {results.map((student, index) => (

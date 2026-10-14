@@ -8,7 +8,7 @@ function renderCard(props: Parameters<typeof NeedsAttentionCard>[0]) {
     [
       { path: "/", element: <NeedsAttentionCard {...props} /> },
       { path: "/school/academics/classes/:classId", element: <div>Class detail page</div> },
-      { path: "/school/students", element: <div>Students page</div> },
+      { path: "/school/students", element: <div>Pupils page</div> },
     ],
     { initialEntries: ["/"] },
   );
@@ -23,7 +23,7 @@ describe("NeedsAttentionCard", () => {
 
     expect(screen.getByText("All clear")).toBeInTheDocument();
     expect(
-      screen.getByText("Every class has a class teacher and every student has a linked guardian."),
+      screen.getByText("Every class has a class teacher and every pupil has a linked guardian."),
     ).toBeInTheDocument();
     expect(screen.queryByText(/class teacher$/)).not.toBeInTheDocument();
     expect(screen.queryByText(/linked guardian$/)).not.toBeInTheDocument();
@@ -55,7 +55,7 @@ describe("NeedsAttentionCard", () => {
     });
 
     expect(screen.getByText("1 class with no class teacher")).toBeInTheDocument();
-    expect(screen.getByText("1 student with no linked guardian")).toBeInTheDocument();
+    expect(screen.getByText("1 pupil with no linked guardian")).toBeInTheDocument();
   });
 
   it("deep-links the guardian gap to the student registry filtered to students with no guardian", () => {
@@ -63,7 +63,7 @@ describe("NeedsAttentionCard", () => {
       setupGaps: { classesWithoutClassTeacher: [], studentsWithoutGuardian: 4 },
     });
 
-    expect(screen.getByText("4 students with no linked guardian").closest("a")).toHaveAttribute(
+    expect(screen.getByText("4 pupils with no linked guardian").closest("a")).toHaveAttribute(
       "href",
       "/school/students?hasGuardian=false",
     );

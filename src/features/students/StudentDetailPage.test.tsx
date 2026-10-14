@@ -162,7 +162,7 @@ function renderAsSchoolAdmin() {
     [
       { path: "/school/students/:studentId", element: <StudentDetailPage /> },
       { path: "/school/students/:studentId/results/:sessionId", element: <div>Result history page</div> },
-      { path: "/school/students", element: <div>Student registry page</div> },
+      { path: "/school/students", element: <div>Pupil registry page</div> },
     ],
     { initialEntries: ["/school/students/student-1"] },
   );
@@ -189,7 +189,7 @@ describe("StudentDetailPage", () => {
     vi.mocked(studentsApi.getStudentSubjects).mockResolvedValue(EMPTY_SUBJECTS_VIEW);
     vi.mocked(studentsApi.getStudentDeletionEligibility).mockResolvedValue({
       deletable: false,
-      blockers: ["the student has attendance recorded"],
+      blockers: ["the pupil has attendance recorded"],
     });
   });
 
@@ -216,14 +216,14 @@ describe("StudentDetailPage", () => {
     renderAsSchoolAdmin();
     await user.click(await screen.findByRole("button", { name: "Delete" }));
     const dialog = await screen.findByRole("dialog");
-    const confirm = within(dialog).getByRole("button", { name: "Delete student" });
+    const confirm = within(dialog).getByRole("button", { name: "Delete pupil" });
     expect(confirm).toBeDisabled();
 
     await user.type(within(dialog).getByLabelText(/to confirm/), "BFA/2026/0001");
     await user.click(confirm);
 
     expect(studentsApi.deleteStudent).toHaveBeenCalledWith("student-1");
-    expect(await screen.findByText("Student registry page")).toBeInTheDocument();
+    expect(await screen.findByText("Pupil registry page")).toBeInTheDocument();
   });
 
   it("shows bio, enrollment history, linked guardians, and medical info", async () => {
@@ -235,6 +235,10 @@ describe("StudentDetailPage", () => {
     renderAsSchoolAdmin();
 
     expect(await screen.findByRole("heading", { name: "Ada Obi" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to pupils" })).toHaveAttribute(
+      "href",
+      "/school/students",
+    );
     expect(screen.getByText("Main Branch")).toBeInTheDocument();
     expect(await screen.findByText("2026/2027")).toBeInTheDocument();
     expect(screen.getByText("Chidi Obi")).toBeInTheDocument();
@@ -444,7 +448,7 @@ describe("StudentDetailPage", () => {
     renderAsSchoolAdmin();
 
     await waitFor(() => {
-      expect(useAppBarStore.getState()).toMatchObject({ title: "Student", backTo: "/school/students" });
+      expect(useAppBarStore.getState()).toMatchObject({ title: "Pupil", backTo: "/school/students" });
     });
   });
 

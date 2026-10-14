@@ -115,7 +115,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
       .catch((error: unknown) =>
         setState({
           kind: "error",
-          message: error instanceof ApiError ? error.message : "Failed to load students",
+          message: error instanceof ApiError ? error.message : "Failed to load pupils",
         }),
       );
   }
@@ -160,17 +160,17 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Students"
-        description="Every student registered at your school."
+        title="Pupils"
+        description="Every pupil registered at your school."
         actions={
           <>
             {canPromote && (
               <Button variant="secondary" onClick={() => navigate("/school/students/promotion")}>
                 <ArrowLeftRight className="h-4 w-4" aria-hidden="true" />
-                Promote / place students
+                Promote / place pupils
               </Button>
             )}
-            {canManage && <Button onClick={() => setCreateOpen(true)}>Register student</Button>}
+            {canManage && <Button onClick={() => setCreateOpen(true)}>Register pupil</Button>}
           </>
         }
       />
@@ -264,15 +264,15 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
 
       {state.kind === "loading" && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading students…
+          <Spinner /> Loading pupils…
         </div>
       )}
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {state.kind === "loaded" && state.page.content.length === 0 && (
         <EmptyState
           icon={GraduationCap}
-          title="No students found"
-          description="Register a student, or adjust your search and filters."
+          title="No pupils found"
+          description="Register a pupil, or adjust your search and filters."
         />
       )}
       {state.kind === "loaded" && state.page.content.length > 0 && (
@@ -283,6 +283,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
                 <TableRow>
                   <TableHeaderCell>Name</TableHeaderCell>
                   <TableHeaderCell>Admission no.</TableHeaderCell>
+                  <TableHeaderCell>Gender</TableHeaderCell>
                   <TableHeaderCell>Age</TableHeaderCell>
                   <TableHeaderCell>Classroom</TableHeaderCell>
                   <TableHeaderCell>Status</TableHeaderCell>
@@ -300,6 +301,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
                       {student.fullName}
                     </TableCell>
                     <TableCell label="Admission no.">{student.admissionNumber}</TableCell>
+                    <TableCell label="Gender">{student.gender === "FEMALE" ? "Female" : "Male"}</TableCell>
                     <TableCell label="Age">{formatAge(student.dateOfBirth)}</TableCell>
                     <TableCell label="Classroom">{student.currentClassName ?? "—"}</TableCell>
                     <TableCell label="Status">
@@ -479,7 +481,7 @@ function TeacherRoster() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Students" description="The current roster for a classroom you teach." />
+      <PageHeader title="Pupils" description="The current roster for a classroom you teach." />
 
       {myClasses !== null && myClasses.length === 0 && (
         <EmptyState
@@ -515,7 +517,7 @@ function TeacherRoster() {
       )}
       {classId && state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {classId && state.kind === "loaded" && state.roster.length === 0 && (
-        <EmptyState icon={GraduationCap} title="No students yet" description="No one is enrolled in this classroom this session." />
+        <EmptyState icon={GraduationCap} title="No pupils yet" description="No one is enrolled in this classroom this session." />
       )}
       {classId && state.kind === "loaded" && state.roster.length > 0 && (
         <Card className="p-0">

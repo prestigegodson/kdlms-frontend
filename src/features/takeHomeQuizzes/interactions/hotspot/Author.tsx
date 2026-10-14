@@ -6,6 +6,7 @@ import { plainText } from "../shared/labels";
 import { RegionEditor } from "../shared/RegionEditor";
 import { hotspotRegionFor, pinRange } from "./defaults";
 import { MAX_HOTSPOT_REGIONS, type HotspotConfig, type HotspotRegion } from "./types";
+import { useParticipantNoun } from "@/components/ParticipantNoun";
 
 interface HotspotAuthorProps {
   value: HotspotConfig;
@@ -20,6 +21,7 @@ interface HotspotAuthorProps {
  * Students see only the image.
  */
 export function HotspotAuthor({ value, onChange, disabled, idPrefix }: HotspotAuthorProps) {
+  const { singular } = useParticipantNoun();
   const range = pinRange(value.regions);
 
   /** Regions changed - keep the pin allowance inside the range their targets allow. */
@@ -70,7 +72,7 @@ export function HotspotAuthor({ value, onChange, disabled, idPrefix }: HotspotAu
         />
       </FormField>
 
-      <FormField label="Pins a student may place" htmlFor={`${idPrefix}-max-pins`}>
+      <FormField label={`Pins a ${singular} may place`} htmlFor={`${idPrefix}-max-pins`}>
         <Select
           id={`${idPrefix}-max-pins`}
           value={value.maxPins}

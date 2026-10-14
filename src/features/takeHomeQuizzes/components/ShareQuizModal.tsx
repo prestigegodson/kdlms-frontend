@@ -33,7 +33,7 @@ export function ShareQuizModal({ quiz, onClose, onShared }: ShareQuizModalProps)
       footnote={
         <>
           The copy is published straight away with the same questions, settings and open/close dates, and guardians
-          of students without a portal login are emailed their links.{" "}
+          of pupils without a portal login are emailed their links.{" "}
           {midterm && "A midterm quiz is shared with one classroom at a time. "}
           That class&apos;s teachers manage it from then on, and your later edits won&apos;t carry over.
         </>

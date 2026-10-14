@@ -53,7 +53,7 @@ export function BillingPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Fees & Bills" description="Define fees, bill students, and review payments." />
+      <PageHeader title="Fees & Bills" description="Define fees, bill pupils, and review payments." />
 
       <Tabs
         ariaLabel="Billing views"

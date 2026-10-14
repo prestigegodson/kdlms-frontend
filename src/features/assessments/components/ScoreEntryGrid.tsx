@@ -140,7 +140,7 @@ export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
       <Table>
         <TableHead>
           <TableRow>
-            <TableHeaderCell>Student</TableHeaderCell>
+            <TableHeaderCell>Pupil</TableHeaderCell>
             {showMidterm && <TableHeaderCell numeric>Midterm quiz (/{quizMax})</TableHeaderCell>}
             {showMidterm && <TableHeaderCell numeric>Midterm %</TableHeaderCell>}
             {showExam && <TableHeaderCell numeric>Exam (/{examMax})</TableHeaderCell>}
@@ -167,7 +167,7 @@ export function ScoreEntryGrid({ sheet, onSaved }: ScoreEntryGridProps) {
 
             return (
               <TableRow key={row.enrollmentId} className={isDirty ? "border-l-2 border-l-brand-500" : ""}>
-                <TableCell label="Student">
+                <TableCell label="Pupil">
                   <span className="font-medium text-slate-900">{row.studentName}</span>
                   <span className="block text-xs text-slate-500">{row.admissionNumber}</span>
                 </TableCell>

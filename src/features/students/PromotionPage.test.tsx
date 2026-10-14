@@ -135,7 +135,7 @@ describe("PromotionPage", () => {
 
     await waitFor(() => {
       expect(useAppBarStore.getState()).toMatchObject({
-        title: "Promote, place or graduate students",
+        title: "Promote, place or graduate pupils",
         backTo: "/school/students",
       });
     });
@@ -161,7 +161,7 @@ describe("PromotionPage", () => {
     await user.selectOptions(screen.getByLabelText("Target session"), "session-2");
     await user.selectOptions(screen.getByLabelText("Target classroom"), "class-2");
 
-    await user.click(screen.getByRole("button", { name: /Promote 1 student/ }));
+    await user.click(screen.getByRole("button", { name: /Promote 1 pupil/ }));
 
     expect(studentsApi.promoteStudents).toHaveBeenCalledWith({
       sourceClassId: "class-1",
@@ -181,14 +181,14 @@ describe("PromotionPage", () => {
 
     renderPage();
 
-    await user.click(screen.getByRole("button", { name: "Place students" }));
+    await user.click(screen.getByRole("button", { name: "Place pupils" }));
     await user.type(screen.getByPlaceholderText("Name or admission no."), "Ada");
     await screen.findByText("Ada Obi");
     await user.click(screen.getByLabelText("Select Ada Obi"));
 
     await user.selectOptions(screen.getByLabelText("Target session"), "session-2");
     await user.selectOptions(screen.getByLabelText("Target classroom"), "class-2");
-    await user.click(screen.getByRole("button", { name: /Place 1 student/ }));
+    await user.click(screen.getByRole("button", { name: /Place 1 pupil/ }));
 
     expect(studentsApi.placeStudents).toHaveBeenCalledWith({
       targetClassId: "class-2",
@@ -217,7 +217,7 @@ describe("PromotionPage", () => {
     await screen.findByText("Ada Obi");
     await user.click(screen.getByLabelText("Select Bola Ade"));
 
-    await user.click(screen.getByRole("button", { name: /Graduate 1 student/ }));
+    await user.click(screen.getByRole("button", { name: /Graduate 1 pupil/ }));
     const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByRole("button", { name: "Graduate" }));
 

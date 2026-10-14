@@ -214,7 +214,7 @@ export function LearningResourcePreviewPage() {
           title="Archive this resource?"
           message={
             <>
-              <strong>{resource.title}</strong> will be archived and hidden from students. This can't be undone.
+              <strong>{resource.title}</strong> will be archived and hidden from pupils. This can't be undone.
             </>
           }
           confirmLabel="Archive"

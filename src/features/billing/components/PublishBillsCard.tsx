@@ -134,7 +134,7 @@ export function PublishBillsCard({ branchId, termId, currency = "NGN" }: Publish
       const result = await issueMissingBillDeliveries(termId, branchId);
       setIssueMissingMessage(
         result.queued === 0
-          ? "Every billable student already has a bill queued."
+          ? "Every billable pupil already has a bill queued."
           : `Queued ${result.queued} new ${result.queued === 1 ? "bill" : "bills"}.`,
       );
       refresh();
@@ -204,7 +204,7 @@ export function PublishBillsCard({ branchId, termId, currency = "NGN" }: Publish
                   Unpublish
                 </Button>
                 <Button variant="secondary" onClick={issueMissing} loading={issuingMissing}>
-                  Send bills to new students
+                  Send bills to new pupils
                 </Button>
               </>
             )}
@@ -223,12 +223,12 @@ export function PublishBillsCard({ branchId, termId, currency = "NGN" }: Publish
           {preflight && (
             <>
               <p className="text-sm text-slate-600">
-                {preflight.billableStudents} {preflight.billableStudents === 1 ? "student" : "students"} on this
+                {preflight.billableStudents} {preflight.billableStudents === 1 ? "pupil" : "pupils"} on this
                 branch will get a bill, totalling {formatMoney(preflight.expectedTotal, currency)}.
                 {preflight.studentsWithoutBill > 0 && (
                   <>
                     {" "}
-                    {preflight.studentsWithoutBill} {preflight.studentsWithoutBill === 1 ? "student has" : "students have"}
+                    {preflight.studentsWithoutBill} {preflight.studentsWithoutBill === 1 ? "pupil has" : "pupils have"}
                     {" "}no compulsory fees and will not receive a bill.
                   </>
                 )}
@@ -236,7 +236,7 @@ export function PublishBillsCard({ branchId, termId, currency = "NGN" }: Publish
                   <>
                     {" "}
                     {preflight.advanceStudents} {preflight.advanceStudents === 1 ? "of these is an" : "of these are"}
-                    {" "}advance bill{preflight.advanceStudents === 1 ? "" : "s"} for student{preflight.advanceStudents === 1 ? "" : "s"}
+                    {" "}advance bill{preflight.advanceStudents === 1 ? "" : "s"} for pupil{preflight.advanceStudents === 1 ? "" : "s"}
                     {" "}not yet promoted into this session.
                   </>
                 )}
@@ -247,7 +247,7 @@ export function PublishBillsCard({ branchId, termId, currency = "NGN" }: Publish
                     {preflight.unpricedCompulsoryFees.map((gap) => (
                       <li key={`${gap.feeId}-${gap.levelId}`}>
                         {gap.feeName} - {gap.levelName} ({gap.affectedStudents}{" "}
-                        {gap.affectedStudents === 1 ? "student" : "students"} affected)
+                        {gap.affectedStudents === 1 ? "pupil" : "pupils"} affected)
                       </li>
                     ))}
                   </ul>
@@ -259,20 +259,20 @@ export function PublishBillsCard({ branchId, termId, currency = "NGN" }: Publish
                     checked={gapsAcknowledged}
                     onChange={(event) => setGapsAcknowledged(event.target.checked)}
                   />
-                  Publish anyway - the affected students will simply not be billed for these fees.
+                  Publish anyway - the affected pupils will simply not be billed for these fees.
                 </label>
               )}
               {preflight.unpricedSelectedFees.length > 0 && (
-                <Alert variant="warning" title="Some students are opted into an optional fee with no price set">
+                <Alert variant="warning" title="Some pupils are opted into an optional fee with no price set">
                   <p className="mb-1">
-                    A missing optional price never blocks publishing - these students will simply not be charged
+                    A missing optional price never blocks publishing - these pupils will simply not be charged
                     for it until it's priced or their opt-in is removed.
                   </p>
                   <ul className="list-inside list-disc space-y-1">
                     {preflight.unpricedSelectedFees.map((gap) => (
                       <li key={`${gap.feeId}-${gap.levelId}`}>
                         {gap.feeName} - {gap.levelName} ({gap.affectedStudents}{" "}
-                        {gap.affectedStudents === 1 ? "student" : "students"} affected)
+                        {gap.affectedStudents === 1 ? "pupil" : "pupils"} affected)
                       </li>
                     ))}
                   </ul>
@@ -288,23 +288,23 @@ export function PublishBillsCard({ branchId, termId, currency = "NGN" }: Publish
                     {preflight.unpricedTransportRoutes.map((gap) => (
                       <li key={`${gap.routeId}-${gap.direction}`}>
                         {gap.routeName} - {gap.direction === "ONE_WAY" ? "One way" : "Two ways"} (
-                        {gap.affectedStudents} {gap.affectedStudents === 1 ? "student" : "students"} affected)
+                        {gap.affectedStudents} {gap.affectedStudents === 1 ? "pupil" : "pupils"} affected)
                       </li>
                     ))}
                   </ul>
                 </Alert>
               )}
               {preflight.unplannedLevels.length > 0 && (
-                <Alert variant="info" title="Some classes have unpromoted students but no advance-bill plan">
+                <Alert variant="info" title="Some classes have unpromoted pupils but no advance-bill plan">
                   <p className="mb-1">
-                    This never blocks publishing - these students simply won't get a bill until their class
+                    This never blocks publishing - these pupils simply won't get a bill until their class
                     is mapped on the Advance bills tab.
                   </p>
                   <ul className="list-inside list-disc space-y-1">
                     {preflight.unplannedLevels.map((unplanned) => (
                       <li key={unplanned.levelId}>
                         {unplanned.levelName} - {unplanned.activeStudents}{" "}
-                        {unplanned.activeStudents === 1 ? "student" : "students"}
+                        {unplanned.activeStudents === 1 ? "pupil" : "pupils"}
                       </li>
                     ))}
                   </ul>

@@ -143,7 +143,7 @@ export function ReportSettingsPage() {
               </label>
               <p className="mt-1 text-sm text-slate-500">
                 Off by default. When on, every NUMERIC result report, the broadsheet, and the on-screen
-                result views print each subject's class-wide average alongside a student's own score.
+                result views print each subject's class-wide average alongside a pupil's own score.
               </p>
             </div>
 
@@ -194,7 +194,7 @@ export function ReportSettingsPage() {
           size="xl"
         >
           <p className="mb-3 text-xs text-slate-500">
-            A sample student and scores, rendered with your school's own branding by the same server-side pipeline a
+            A sample pupil and scores, rendered with your school's own branding by the same server-side pipeline a
             real report uses.
           </p>
           {previewError && <Alert variant="error">{previewError}</Alert>}

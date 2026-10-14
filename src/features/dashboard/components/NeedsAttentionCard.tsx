@@ -40,7 +40,7 @@ export function NeedsAttentionCard({ setupGaps }: NeedsAttentionCardProps) {
           </span>
           <h3 className="text-sm font-semibold text-slate-900">All clear</h3>
           <p className="mt-1 text-sm text-slate-500">
-            Every class has a class teacher and every student has a linked guardian.
+            Every class has a class teacher and every pupil has a linked guardian.
           </p>
         </div>
       )}
@@ -79,7 +79,7 @@ export function NeedsAttentionCard({ setupGaps }: NeedsAttentionCardProps) {
                 className="flex min-h-11 items-center justify-between gap-2 rounded-control px-2 -mx-2 text-sm text-slate-700 hover:bg-slate-50"
               >
                 <span>
-                  {studentsWithoutGuardian} student{studentsWithoutGuardian === 1 ? "" : "s"} with no linked guardian
+                  {studentsWithoutGuardian} pupil{studentsWithoutGuardian === 1 ? "" : "s"} with no linked guardian
                 </span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
               </Link>

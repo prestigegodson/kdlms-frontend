@@ -70,7 +70,7 @@ describe("StockIssueModal", () => {
     render(<StockIssueModal level={UNIFORM_LEVEL} branchId="branch-1" onClose={vi.fn()} onSaved={vi.fn()} />);
 
     expect(screen.getByText("7 piece on hand.")).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "Student" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "Pupil" })).toHaveAttribute("aria-checked", "true");
   });
 
   it("disables submit until a recipient is named", async () => {

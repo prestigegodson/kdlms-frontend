@@ -22,6 +22,7 @@ import { QUIZ_IMAGE_SIZE_CLASS } from "@/features/takeHomeQuizzes/runner/quizIma
 import { QuizThemeFrame } from "@/features/takeHomeQuizzes/theme/QuizThemeFrame";
 import { STAFF_THEME_IMAGES } from "@/features/takeHomeQuizzes/theme/staffThemeImages";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
+import { useParticipantNoun } from "@/components/ParticipantNoun";
 
 export interface QuizPreviewModalProps {
   title: string;
@@ -89,6 +90,7 @@ export function QuizPreviewModal({
   themeUnsaved = false,
   onClose,
 }: QuizPreviewModalProps) {
+  const { singular, plural } = useParticipantNoun();
   const [stage, setStage] = useState<Stage>({ kind: "intro" });
   const bufferKeyRef = useRef<string | null>(null);
 
@@ -134,7 +136,7 @@ export function QuizPreviewModal({
         <Alert variant="info">
           <span className="flex items-center gap-2">
             <Eye className="h-4 w-4 shrink-0" aria-hidden="true" />
-            This is a preview of what students see. Answers aren&apos;t saved and nothing is recorded.
+            This is a preview of what {plural} see. Answers aren&apos;t saved and nothing is recorded.
           </span>
         </Alert>
         {themeUnsaved && <p className="text-sm text-slate-500">Save the quiz to preview your new theme.</p>}
@@ -187,7 +189,7 @@ export function QuizPreviewModal({
           {stage.kind === "done" && (
             <div className="space-y-4">
               <Alert variant={stage.result.score === stage.result.totalPoints ? "success" : "info"}>
-                A student with these answers would score {formatPoints(stage.result.score)} of{" "}
+                A {singular} with these answers would score {formatPoints(stage.result.score)} of{" "}
                 {formatPoints(stage.result.totalPoints)} points.
               </Alert>
               <QuizReview questions={stage.result.questions} renderImage={renderReviewImage} perspective="self" />

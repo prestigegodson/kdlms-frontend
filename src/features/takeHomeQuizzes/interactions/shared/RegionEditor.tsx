@@ -34,6 +34,7 @@ import {
 import { NormalizedImageStage } from "./NormalizedImageStage";
 import { RegionBadge } from "./RegionBadge";
 import { ShapeOverlay } from "./ShapeOverlay";
+import { useParticipantNoun } from "@/components/ParticipantNoun";
 
 /** Above this an author is warned - students often take quizzes on mobile data. */
 export const LIGHT_IMAGE_BYTES = 300 * 1024;
@@ -98,6 +99,7 @@ export function RegionEditor<R extends { id: string; shape: Shape }>({
   renderRegionPanel,
   disabled,
 }: RegionEditorProps<R>) {
+  const { Plural } = useParticipantNoun();
   const stageRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [tool, setTool] = useState<Tool>(allowedKinds[0] ?? "SELECT");
@@ -373,7 +375,7 @@ export function RegionEditor<R extends { id: string; shape: Shape }>({
       </div>
       {heavyImage !== null && (
         <Alert variant="warning">
-          This image is {Math.round(heavyImage / 1024)} KB. Students on mobile data will wait for it - under 300 KB is best.
+          This image is {Math.round(heavyImage / 1024)} KB. {Plural} on mobile data will wait for it - under 300 KB is best.
         </Alert>
       )}
       {imageFileId ? (

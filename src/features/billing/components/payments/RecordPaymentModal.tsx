@@ -68,7 +68,7 @@ interface RecordPaymentModalProps {
 type StepKey = "children" | "optional" | "details" | "proof";
 
 const STEP_TITLES: Record<StepKey, string> = {
-  children: "Students & amounts",
+  children: "Pupils & amounts",
   optional: "Optional fees",
   details: "Payment details",
   proof: "Proof & confirm",
@@ -293,7 +293,7 @@ function RecordFlow({ target, onCancel, onBusyChange, onRecorded }: RecordFlowPr
                 </FormField>
               )}
               <FormField
-                label="Add a student"
+                label="Add a pupil"
                 htmlFor={`${id}-student`}
                 className={selectsBranch ? "" : "sm:col-span-2"}
               >
@@ -304,7 +304,7 @@ function RecordFlow({ target, onCancel, onBusyChange, onRecorded }: RecordFlowPr
                   branchId={searchBranchId}
                   disabled={atLimit || submitting !== null}
                   disabledHint={
-                    atLimit ? `At most ${MAX_PAYMENT_CHILDREN} students` : "Select a branch first."
+                    atLimit ? `At most ${MAX_PAYMENT_CHILDREN} pupils` : "Select a branch first."
                   }
                 />
               </FormField>
@@ -316,14 +316,14 @@ function RecordFlow({ target, onCancel, onBusyChange, onRecorded }: RecordFlowPr
             )}
             {addError && <Alert variant="error">{addError}</Alert>}
             {options.length === 0 ? (
-              <p className="text-sm text-slate-500">Search for each student this payment covers.</p>
+              <p className="text-sm text-slate-500">Search for each pupil this payment covers.</p>
             ) : (
               <>
                 <ChildrenAmountsStep
                   options={options}
                   drafts={drafts}
                   currency={currency}
-                  intro="Untick a student to leave them off, and enter how much of the payment was for each."
+                  intro="Untick a pupil to leave them off, and enter how much of the payment was for each."
                   noBillHint="No bill this term - enter the amount received"
                   onToggle={(option) => setDrafts((current) => toggleChild(current, option))}
                   onAmountChange={(studentId, amountText) =>
@@ -398,7 +398,7 @@ function RecordFlow({ target, onCancel, onBusyChange, onRecorded }: RecordFlowPr
               <div>
                 <h3 className="text-sm font-medium text-slate-900">If you record & confirm now</h3>
                 <p className="text-xs text-slate-500">
-                  Each student's receipt is issued straight away as a part payment or paid in full.
+                  Each pupil's receipt is issued straight away as a part payment or paid in full.
                 </p>
               </div>
               {selected.map((option) => {

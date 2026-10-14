@@ -7,6 +7,7 @@ import { ShapeOverlay } from "../shared/ShapeOverlay";
 import type { PartFeedback, RenderImage } from "../types";
 import { normalizeHotspotPins } from "./score";
 import type { HotspotConfig, HotspotResponse } from "./types";
+import { useParticipantNoun } from "@/components/ParticipantNoun";
 
 interface HotspotReviewProps {
   config: HotspotConfig;
@@ -23,13 +24,14 @@ interface HotspotReviewProps {
  * are worked out here for display only; the score was frozen at submit.
  */
 export function HotspotReview({ config, response, parts, renderImage, perspective }: HotspotReviewProps) {
+  const { singular } = useParticipantNoun();
   const byTarget = new Map(parts.map((part) => [part.partId, part]));
   const targets = config.regions.filter((region) => region.target);
   const pins = normalizeHotspotPins(config, response);
   const onTarget = (pin: (typeof pins)[number]) =>
     targets.some((target) => contains(target.shape, pin, config.imageAspect));
   const strays = pins.map((pin, index) => ({ pin, index })).filter(({ pin }) => !onTarget(pin));
-  const who = perspective === "self" ? "Your" : "The student's";
+  const who = perspective === "self" ? "Your" : `The ${singular}'s`;
 
   return (
     <div className="space-y-3 text-sm">

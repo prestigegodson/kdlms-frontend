@@ -102,7 +102,7 @@ export function AdminMessageOverview() {
 
       {loadError && <Alert variant="error">{loadError}</Alert>}
 
-      {board && board.rows.length === 0 && <EmptyState title="No students enrolled" />}
+      {board && board.rows.length === 0 && <EmptyState title="No pupils enrolled" />}
       {board && board.rows.length > 0 && <MessageBoard board={board} onOpenThread={setOpenThreadId} />}
 
       {openThreadId && <ReadOnlyThreadModal threadId={openThreadId} onClose={() => setOpenThreadId(null)} />}

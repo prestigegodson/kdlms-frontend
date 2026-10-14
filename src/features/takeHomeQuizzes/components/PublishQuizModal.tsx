@@ -74,7 +74,7 @@ export function PublishQuizModal({ open, onClose, quizId, rosterSize, closesAt, 
         ) : (
           <>
             <p className="text-sm text-slate-700">
-              This will mint a link for each of the <span className="font-medium">{rosterSize}</span> student
+              This will mint a link for each of the <span className="font-medium">{rosterSize}</span> pupil
               {rosterSize === 1 ? "" : "s"} on this class's roster and email their guardians. The quiz closes{" "}
               <span className="font-medium">{closesAtDisplay}</span>.
             </p>

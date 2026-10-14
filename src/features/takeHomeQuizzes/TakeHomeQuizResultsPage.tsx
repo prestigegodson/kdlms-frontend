@@ -141,12 +141,12 @@ export function TakeHomeQuizResultsPage() {
           <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
             <Badge variant={quizStatusVariant(quiz.status, null)}>{quizStatusLabel(quiz.status, null)}</Badge>
             <span>
-              {results.submittedCount} of {results.rosterSize} students submitted
+              {results.submittedCount} of {results.rosterSize} pupils submitted
             </span>
           </div>
 
           {results.rows.length === 0 ? (
-            <EmptyState title="No students on this class's roster yet" />
+            <EmptyState title="No pupils on this class's roster yet" />
           ) : (
             <ResultsTable
               rows={results.rows}
@@ -215,7 +215,7 @@ export function TakeHomeQuizResultsPage() {
             <div className="space-y-2">
               <p>Guardians will no longer be able to see this quiz's results.</p>
               <p>
-                Any score already written to a student's midterm quiz score is <span className="font-medium">not</span>{" "}
+                Any score already written to a pupil's midterm quiz score is <span className="font-medium">not</span>{" "}
                 reverted - it stays until a later save on the score sheet, or a republish, overwrites it.
               </p>
             </div>

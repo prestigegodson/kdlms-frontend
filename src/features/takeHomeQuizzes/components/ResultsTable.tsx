@@ -47,7 +47,7 @@ export function ResultsTable({
   onAdjust,
   onClearAdjustment,
   onReset,
-  participantLabel = "Student",
+  participantLabel = "Pupil",
 }: ResultsTableProps) {
   // A quiz shared across arms spans several classes - only then is each row's class worth showing.
   const spansClasses = new Set(rows.map((row) => row.className).filter(Boolean)).size > 1;

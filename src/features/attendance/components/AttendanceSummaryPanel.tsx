@@ -26,7 +26,7 @@ export function AttendanceSummaryPanel({ summary }: AttendanceSummaryPanelProps)
     return (
       <EmptyState
         title="No attendance recorded"
-        description="Nobody has marked this student's register this term yet."
+        description="Nobody has marked this pupil's register this term yet."
       />
     );
   }

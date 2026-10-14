@@ -124,7 +124,7 @@ export function AttendanceRegisterGrid({ register, onSaved }: AttendanceRegister
       <Table>
         <TableHead>
           <TableRow>
-            <TableHeaderCell>Student</TableHeaderCell>
+            <TableHeaderCell>Pupil</TableHeaderCell>
             <TableHeaderCell>Status</TableHeaderCell>
             <TableHeaderCell>Recorded by</TableHeaderCell>
           </TableRow>
@@ -134,7 +134,7 @@ export function AttendanceRegisterGrid({ register, onSaved }: AttendanceRegister
             const status = drafts[row.studentId];
             return (
               <TableRow key={row.studentId} className={`border-l-2 ${statusRailClass(status)}`}>
-                <TableCell label="Student">
+                <TableCell label="Pupil">
                   <span className="font-medium text-slate-900">{row.studentName}</span>
                   <span className="block text-xs text-slate-500">{row.admissionNumber}</span>
                 </TableCell>
@@ -216,7 +216,7 @@ function RegisterSaveBar({
       <p className="text-sm text-slate-600">
         {complete
           ? `${dirtyCount} unsaved change${dirtyCount === 1 ? "" : "s"}`
-          : `Mark ${remaining} more student${remaining === 1 ? "" : "s"} to save`}
+          : `Mark ${remaining} more pupil${remaining === 1 ? "" : "s"} to save`}
       </p>
       <div className="flex gap-2">
         <Button type="button" variant="ghost" disabled={saving} onClick={onDiscard}>

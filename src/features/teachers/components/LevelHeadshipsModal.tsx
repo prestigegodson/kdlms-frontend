@@ -81,7 +81,7 @@ export function LevelHeadshipsModal({ teacher, onClose, onSaved }: LevelHeadship
     >
       <div className="space-y-4">
         <p className="text-sm text-slate-600">
-          A head of level manages the classes, students, results, and timetables of the levels you
+          A head of level manages the classes, pupils, results, and timetables of the levels you
           pick, in their own branch. They keep their teaching access and don't get billing,
           inventory, or school settings.
         </p>

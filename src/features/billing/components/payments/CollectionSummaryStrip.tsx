@@ -46,7 +46,7 @@ export function CollectionSummaryStrip({ summary, error }: CollectionSummaryStri
         <StatTile
           label="Billed"
           value={money(totals.billed)}
-          hint={`${totals.billableStudents} billable students`}
+          hint={`${totals.billableStudents} billable pupils`}
         />
         <StatTile label="Confirmed" value={money(totals.confirmed)} />
         <StatTile

@@ -1,6 +1,7 @@
 import { BookOpen, ClipboardCheck, MessageSquare, NotebookPen, Presentation } from "lucide-react";
 import { useEffect } from "react";
 import { can } from "@/auth/permissions";
+import { ParticipantNounProvider } from "@/components/ParticipantNoun";
 import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useClassMessagesUnreadStore } from "@/stores/classMessagesUnreadStore";
 
@@ -57,5 +58,9 @@ export function LearnerLayout() {
     fetchUnread("LEARNER");
   }, [fetchUnread]);
 
-  return <PortalShell portalName="Learner" navItems={NAV_ITEMS} />;
+  return (
+    <ParticipantNounProvider noun="learner">
+      <PortalShell portalName="Learner" navItems={NAV_ITEMS} />
+    </ParticipantNounProvider>
+  );
 }

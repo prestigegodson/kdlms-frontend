@@ -89,7 +89,7 @@ export function ProvisionClassLoginsModal({
                         <span className="block text-xs text-slate-600">
                           Temporary password:{" "}
                           <code className="rounded bg-white px-1 py-0.5">{row.temporaryPassword}</code> - shown
-                          only now, share it with the student directly.
+                          only now, share it with the pupil directly.
                         </span>
                       )}
                     </span>
@@ -106,9 +106,9 @@ export function ProvisionClassLoginsModal({
         ) : (
           <>
             <p className="text-sm text-slate-700">
-              This provisions a portal login for every active student on this classroom's current-term
+              This provisions a portal login for every active pupil on this classroom's current-term
               roster who doesn't already have one, and emails each one's guardians their sign-in
-              details. A student with no active guardian has their temporary password shown here
+              details. A pupil with no active guardian has their temporary password shown here
               instead - share it with them directly.
             </p>
             <div className="flex justify-end gap-2 pt-2">
