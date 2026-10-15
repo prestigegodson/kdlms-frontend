@@ -27,7 +27,14 @@ export interface StudentView {
   currentLevelName?: string;
   currentSessionId?: string;
   address?: string;
+  /** The pupil's portal login - "ACTIVE" only once they've signed in at least once. */
+  loginStatus: StudentLoginStatus;
+  /** Last portal sign-in; absent if never, or no login. */
+  lastLoginAt?: string;
 }
+
+/** Mirrors backend student.domain.StudentLoginStatus. PENDING = provisioned but never signed in. */
+export type StudentLoginStatus = "NONE" | "PENDING" | "ACTIVE" | "DISABLED";
 
 export interface RegisterStudentRequest {
   /** Required for a SCHOOL_ADMIN caller; ignored (the caller's own branch is used) for a BRANCH_ADMIN caller. */
@@ -418,6 +425,8 @@ export interface StudentLoginView {
   active: boolean;
   mustChangePassword: boolean;
   temporaryPassword?: string;
+  status: StudentLoginStatus;
+  lastLoginAt?: string;
 }
 
 /** Mirrors backend ManageStudentLoginsUseCase.StudentLoginRow - one row of a bulk class provisioning result. */

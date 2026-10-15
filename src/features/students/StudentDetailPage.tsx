@@ -41,6 +41,7 @@ import { can } from "@/auth/permissions";
 import { StudentAttendanceCard } from "@/features/attendance/components/StudentAttendanceCard";
 import { EditStudentMedicalModal } from "@/features/students/components/EditStudentMedicalModal";
 import { SetStudentPasswordModal } from "@/features/students/components/SetStudentPasswordModal";
+import { StudentLoginStatusBadge } from "@/features/students/components/StudentLoginStatusBadge";
 import { StudentMedicalPanel } from "@/features/students/components/StudentMedicalPanel";
 import { StudentPhotoPanel } from "@/features/students/components/StudentPhotoPanel";
 import { studentListHref } from "@/features/students/studentListReturn";
@@ -73,7 +74,7 @@ import {
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
-import { formatAge, formatLongDate, todayIso } from "@/utils/date";
+import { formatAge, formatInstant, formatLongDate, todayIso } from "@/utils/date";
 
 type LoadState =
   | { kind: "loading" }
@@ -904,13 +905,15 @@ function PortalAccessCard({ studentId, studentFirstName, onActionError }: Portal
               <div>
                 <dt className="text-slate-500">Status</dt>
                 <dd>
-                  <Badge variant={login.active ? "success" : "neutral"}>
-                    {login.active ? "Active" : "Disabled"}
-                  </Badge>
+                  <StudentLoginStatusBadge status={login.status} />
                   {login.mustChangePassword && (
                     <span className="ml-2 text-xs text-slate-500">Password change required</span>
                   )}
                 </dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">Last sign-in</dt>
+                <dd className="text-slate-900">{login.lastLoginAt ? formatInstant(login.lastLoginAt) : "Never"}</dd>
               </div>
             </dl>
             {passwordSet && (

@@ -47,6 +47,7 @@ const STUDENT_VIEW: StudentView = {
   gender: "FEMALE",
   admissionDate: "2025-09-01",
   status: "ACTIVE",
+  loginStatus: "NONE",
 };
 
 const TERM_1: StudentTermView = {

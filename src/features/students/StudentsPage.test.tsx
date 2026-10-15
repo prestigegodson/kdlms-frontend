@@ -15,6 +15,7 @@ import type { StudentMedicalView, StudentView } from "@/api/students";
 import { StudentsPage } from "@/features/students/StudentsPage";
 import { studentListHref } from "@/features/students/studentListReturn";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetFeatureStore, useFeatureStore } from "@/stores/featureStore";
 import { resetLevelStore } from "@/stores/levelStore";
 
 vi.mock("@/api/students", async () => {
@@ -76,6 +77,7 @@ const STUDENT_VIEW: StudentView = {
   gender: "FEMALE",
   admissionDate: "2026-09-01",
   status: "ACTIVE",
+  loginStatus: "NONE",
   currentClassId: "class-1",
   currentClassName: "Primary 1",
 };
@@ -130,6 +132,7 @@ describe("StudentsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetLevelStore();
+    resetFeatureStore();
     sessionStorage.clear();
     vi.mocked(branchesApi.listBranches).mockResolvedValue({
       content: [MAIN_BRANCH],
@@ -156,6 +159,26 @@ describe("StudentsPage", () => {
     expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
     expect(screen.getByText("BFA/2026/0001")).toBeInTheDocument();
     expect(screen.getByText("ACTIVE")).toBeInTheDocument();
+  });
+
+  it("shows each pupil's portal login status when the school has student logins", async () => {
+    mockStudents([{ ...STUDENT_VIEW, loginStatus: "PENDING" }]);
+    useFeatureStore.setState({ studentLogins: true, status: "loaded" });
+
+    renderAsSchoolAdmin();
+
+    expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
+    expect(screen.getByText("Portal login")).toBeInTheDocument();
+    expect(screen.getByText("Not signed in yet")).toBeInTheDocument();
+  });
+
+  it("hides the portal login column without the student logins feature", async () => {
+    mockStudents([STUDENT_VIEW]);
+
+    renderAsSchoolAdmin();
+
+    expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
+    expect(screen.queryByText("Portal login")).not.toBeInTheDocument();
   });
 
   it("navigates to the student detail route when a row is tapped", async () => {
@@ -303,6 +326,7 @@ describe("StudentsPage", () => {
       fullName: "Ada Obi",
       admissionNumber: "BFA/2026/0001",
       gender: "FEMALE",
+      loginStatus: "NONE",
     };
     vi.mocked(meApi.listMyClasses).mockResolvedValue([myClass]);
     vi.mocked(meApi.listClassRoster).mockResolvedValue([rosterStudent]);
@@ -311,6 +335,37 @@ describe("StudentsPage", () => {
 
     expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Register pupil" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Portal login")).not.toBeInTheDocument();
+  });
+
+  it("shows each roster pupil's portal login status to a TEACHER when the school has student logins", async () => {
+    const myClass: TeacherClassView = {
+      classId: "class-1",
+      branchId: "branch-1",
+      levelId: "level-1",
+      className: "Primary 1",
+      isClassTeacher: false,
+      isAssistantTeacher: false,
+      subjectIds: [],
+    };
+    const rosterStudent: RosterStudentView = {
+      studentId: "student-1",
+      firstName: "Ada",
+      lastName: "Obi",
+      fullName: "Ada Obi",
+      admissionNumber: "BFA/2026/0001",
+      gender: "FEMALE",
+      loginStatus: "ACTIVE",
+    };
+    vi.mocked(meApi.listMyClasses).mockResolvedValue([myClass]);
+    vi.mocked(meApi.listClassRoster).mockResolvedValue([rosterStudent]);
+    useFeatureStore.setState({ studentLogins: true, status: "loaded" });
+
+    renderAsTeacher();
+
+    expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
+    expect(screen.getByText("Portal login")).toBeInTheDocument();
+    expect(screen.getByText("Active")).toBeInTheDocument();
   });
 
   it("opens a read-only medical panel for a roster student", async () => {
@@ -330,6 +385,7 @@ describe("StudentsPage", () => {
       fullName: "Ada Obi",
       admissionNumber: "BFA/2026/0001",
       gender: "FEMALE",
+      loginStatus: "NONE",
     };
     const medical: StudentMedicalView = {
       studentId: "student-1",

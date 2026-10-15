@@ -14,6 +14,7 @@ import { useBranchFilter } from "@/features/branches/useBranchFilter";
 import { LevelSelect } from "@/features/academics/components/LevelSelect";
 import { useHeadedLevels, useIsLevelHead } from "@/features/levelHeads/useLevelHead";
 import { RegisterStudentModal } from "@/features/students/components/RegisterStudentModal";
+import { StudentLoginStatusBadge } from "@/features/students/components/StudentLoginStatusBadge";
 import { StudentMedicalModal } from "@/features/students/components/StudentMedicalModal";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
@@ -30,6 +31,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { useAuthStore } from "@/stores/authStore";
+import { useFeatureStore } from "@/stores/featureStore";
 import { useLevelStore } from "@/stores/levelStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 import { formatAge } from "@/utils/date";
@@ -72,6 +74,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   const role = useAuthStore((state) => state.user?.role);
   const capabilities = useTeacherScopeStore((state) => state.capabilities);
   const canManage = can.manageStudents(role, capabilities);
+  const studentLoginsEntitled = useFeatureStore((state) => state.studentLogins);
   const canPromote = can.managePromotions(role, capabilities);
   const navigate = useNavigate();
   // Every filter lives in the query string, so the pupil detail page's back
@@ -319,6 +322,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
                   <TableHeaderCell>Age</TableHeaderCell>
                   <TableHeaderCell>Classroom</TableHeaderCell>
                   <TableHeaderCell>Status</TableHeaderCell>
+                  {studentLoginsEntitled && <TableHeaderCell>Portal login</TableHeaderCell>}
                   <TableHeaderCell></TableHeaderCell>
                 </TableRow>
               </TableHead>
@@ -349,6 +353,11 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
                         {student.status}
                       </Badge>
                     </TableCell>
+                    {studentLoginsEntitled && (
+                      <TableCell label="Portal login">
+                        <StudentLoginStatusBadge status={student.loginStatus} />
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -487,6 +496,7 @@ function TeacherRoster() {
   const [classId, setClassId] = useState("");
   const [state, setState] = useState<TeacherRosterState>({ kind: "loading" });
   const [medicalStudent, setMedicalStudent] = useState<RosterStudentView | null>(null);
+  const studentLoginsEntitled = useFeatureStore((featureState) => featureState.studentLogins);
 
   useEffect(() => {
     listMyClasses()
@@ -559,6 +569,7 @@ function TeacherRoster() {
                 <TableHeaderCell>Name</TableHeaderCell>
                 <TableHeaderCell>Admission no.</TableHeaderCell>
                 <TableHeaderCell>Gender</TableHeaderCell>
+                {studentLoginsEntitled && <TableHeaderCell>Portal login</TableHeaderCell>}
                 <TableHeaderCell></TableHeaderCell>
               </TableRow>
             </TableHead>
@@ -570,6 +581,11 @@ function TeacherRoster() {
                   </TableCell>
                   <TableCell label="Admission no.">{student.admissionNumber}</TableCell>
                   <TableCell label="Gender">{student.gender === "FEMALE" ? "Female" : "Male"}</TableCell>
+                  {studentLoginsEntitled && (
+                    <TableCell label="Portal login">
+                      <StudentLoginStatusBadge status={student.loginStatus} />
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

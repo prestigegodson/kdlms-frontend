@@ -47,6 +47,7 @@ const BEN: StudentView = {
   gender: "MALE",
   admissionDate: "2020-09-01",
   status: "ACTIVE",
+  loginStatus: "NONE",
 };
 
 const BILL = {

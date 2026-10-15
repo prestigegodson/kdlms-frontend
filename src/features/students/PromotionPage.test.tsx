@@ -72,6 +72,7 @@ const STUDENT_VIEW: StudentView = {
   gender: "FEMALE",
   admissionDate: "2026-09-01",
   status: "ACTIVE",
+  loginStatus: "NONE",
   currentClassId: "class-1",
   currentClassName: "Primary 1",
 };
@@ -87,6 +88,7 @@ const OTHER_STUDENT_VIEW: StudentView = {
   gender: "MALE",
   admissionDate: "2026-09-01",
   status: "ACTIVE",
+  loginStatus: "NONE",
   currentClassId: "class-1",
   currentClassName: "Primary 1",
 };

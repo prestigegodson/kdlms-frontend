@@ -22,6 +22,7 @@ import { rememberStudentListSearch } from "@/features/students/studentListReturn
 import { resetAppBarStore, useAppBarStore } from "@/stores/appBarStore";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import { resetFeatureStore, useFeatureStore } from "@/stores/featureStore";
+import { formatInstant } from "@/utils/date";
 
 vi.mock("@/api/students", async () => {
   const actual = await vi.importActual<typeof import("@/api/students")>("@/api/students");
@@ -79,6 +80,7 @@ const STUDENT_VIEW: StudentView = {
   gender: "FEMALE",
   admissionDate: "2026-09-01",
   status: "ACTIVE",
+  loginStatus: "NONE",
   currentClassId: "class-1",
   currentClassName: "Primary 1",
   currentLevelId: "level-primary",
@@ -540,6 +542,7 @@ describe("StudentDetailPage", () => {
         studentId: "student-1",
         studentName: "Ada Obi",
         active: false,
+        status: "NONE",
         mustChangePassword: false,
       });
       vi.mocked(studentsApi.provisionStudentCredentials).mockResolvedValue({
@@ -547,6 +550,7 @@ describe("StudentDetailPage", () => {
         studentName: "Ada Obi",
         loginId: "ada-bfa20260001",
         active: true,
+        status: "PENDING",
         mustChangePassword: false,
       });
       useFeatureStore.setState({ studentLogins: true, status: "loaded" });
@@ -568,6 +572,46 @@ describe("StudentDetailPage", () => {
       expect(screen.queryByRole("button", { name: /show credentials/i })).not.toBeInTheDocument();
     });
 
+    it("shows a login as not signed in yet until the pupil first signs in", async () => {
+      vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+      vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+      vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+      vi.mocked(studentsApi.getStudentCredentials).mockResolvedValueOnce({
+        studentId: "student-1",
+        studentName: "Ada Obi",
+        loginId: "ada-bfa20260001",
+        active: true,
+        status: "PENDING",
+        mustChangePassword: false,
+      });
+      useFeatureStore.setState({ studentLogins: true, status: "loaded" });
+
+      renderAsSchoolAdmin();
+      await screen.findByText("ada-bfa20260001");
+      expect(screen.getByText("Not signed in yet")).toBeInTheDocument();
+      expect(screen.getByText("Never")).toBeInTheDocument();
+    });
+
+    it("shows a login as active with its last sign-in once the pupil has signed in", async () => {
+      vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+      vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+      vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+      useFeatureStore.setState({ studentLogins: true, status: "loaded" });
+      vi.mocked(studentsApi.getStudentCredentials).mockResolvedValueOnce({
+        studentId: "student-1",
+        studentName: "Ada Obi",
+        loginId: "ada-bfa20260001",
+        active: true,
+        status: "ACTIVE",
+        lastLoginAt: "2026-03-10T14:00:00Z",
+        mustChangePassword: false,
+      });
+      renderAsSchoolAdmin();
+      await screen.findByText("ada-bfa20260001");
+      expect(screen.getByText("Active")).toBeInTheDocument();
+      expect(screen.getByText(formatInstant("2026-03-10T14:00:00Z"))).toBeInTheDocument();
+    });
+
     it("refuses a short or mismatched typed password without calling the API", async () => {
       vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
       vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
@@ -577,6 +621,7 @@ describe("StudentDetailPage", () => {
         studentName: "Ada Obi",
         loginId: "ada-bfa20260001",
         active: true,
+        status: "PENDING",
         mustChangePassword: false,
       });
       useFeatureStore.setState({ studentLogins: true, status: "loaded" });
@@ -611,6 +656,7 @@ describe("StudentDetailPage", () => {
         studentName: "Ada Obi",
         loginId: "ada-bfa20260001",
         active: true,
+        status: "PENDING",
         mustChangePassword: true,
       });
       vi.mocked(studentsApi.resetStudentCredentials).mockResolvedValue({
@@ -618,6 +664,7 @@ describe("StudentDetailPage", () => {
         studentName: "Ada Obi",
         loginId: "ada-bfa20260001",
         active: true,
+        status: "PENDING",
         mustChangePassword: false,
       });
       useFeatureStore.setState({ studentLogins: true, status: "loaded" });
@@ -646,6 +693,7 @@ describe("StudentDetailPage", () => {
         studentId: "student-1",
         studentName: "Ada Obi",
         active: false,
+        status: "NONE",
         mustChangePassword: false,
       });
       vi.mocked(studentsApi.provisionStudentCredentials).mockResolvedValue({
@@ -653,6 +701,7 @@ describe("StudentDetailPage", () => {
         studentName: "Ada Obi",
         loginId: "ada-bfa20260001",
         active: true,
+        status: "PENDING",
         mustChangePassword: true,
         temporaryPassword: "Temp1234Pass",
       });
@@ -684,12 +733,14 @@ describe("StudentDetailPage", () => {
           studentName: "Ada Obi",
           loginId: "ada-bfa20260001",
           active: true,
+          status: "PENDING",
           mustChangePassword: true,
         })
         .mockResolvedValueOnce({
           studentId: "student-1",
           studentName: "Ada Obi",
           active: false,
+          status: "NONE",
           mustChangePassword: false,
         });
       vi.mocked(studentsApi.revokeStudentCredentials).mockResolvedValue(undefined);

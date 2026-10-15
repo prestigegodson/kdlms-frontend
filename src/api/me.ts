@@ -1,5 +1,5 @@
 import { apiFetch } from "@/api/client";
-import type { StudentMedicalView } from "@/api/students";
+import type { StudentLoginStatus, StudentMedicalView } from "@/api/students";
 import type { SubjectView } from "@/api/subjects";
 
 /**
@@ -85,6 +85,8 @@ export interface RosterStudentView {
   fullName: string;
   admissionNumber: string;
   gender: "MALE" | "FEMALE";
+  /** The pupil's portal login - "ACTIVE" only once they've signed in at least once. */
+  loginStatus: StudentLoginStatus;
 }
 
 /**

@@ -22,6 +22,7 @@ const GRACE: StudentView = {
   gender: "FEMALE",
   admissionDate: "2020-09-01",
   status: "ACTIVE",
+  loginStatus: "NONE",
   currentClassName: "Primary 3 Gold",
 };
 

@@ -111,6 +111,7 @@ const STUDENT_ADA: RosterStudentView = {
   fullName: "Ada Obi",
   admissionNumber: "BFA/2026/0001",
   gender: "FEMALE",
+  loginStatus: "NONE",
 };
 
 const STUDENT_BOLA: RosterStudentView = {
@@ -120,6 +121,7 @@ const STUDENT_BOLA: RosterStudentView = {
   fullName: "Bola Eze",
   admissionNumber: "BFA/2026/0002",
   gender: "MALE",
+  loginStatus: "NONE",
 };
 
 function renderAsSchoolAdmin() {
@@ -405,6 +407,7 @@ describe("ClassDetailPage - enrolled students roster", () => {
         fullName: `Pupil ${index + 1}`,
         admissionNumber: `BFA/2026/00${index + 10}`,
         gender: (index % 2 === 0 ? "FEMALE" : "MALE") as "FEMALE" | "MALE",
+        loginStatus: "NONE" as const,
       })),
       STUDENT_ADA,
     ];
