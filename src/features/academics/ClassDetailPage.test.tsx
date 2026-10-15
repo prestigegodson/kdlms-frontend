@@ -20,6 +20,7 @@ import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import { resetFeatureStore, useFeatureStore } from "@/stores/featureStore";
 import { resetLevelStore } from "@/stores/levelStore";
 import { resetTeacherScopeStore, useTeacherScopeStore } from "@/stores/teacherScopeStore";
+import { formatInstant } from "@/utils/date";
 
 vi.mock("@/api/classes", async () => {
   const actual = await vi.importActual<typeof import("@/api/classes")>("@/api/classes");
@@ -438,6 +439,35 @@ describe("ClassDetailPage - enrolled students roster", () => {
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/Little Star 1/)).toBeInTheDocument();
+  });
+  it("shows each pupil's portal login status and last login when the school has student logins", async () => {
+    useFeatureStore.setState({ studentLogins: true, status: "loaded" });
+    vi.mocked(classesApi.listClassStudents).mockResolvedValue([
+      { ...STUDENT_ADA, loginStatus: "ACTIVE", lastLoginAt: "2026-10-01T08:30:00Z" },
+      { ...STUDENT_BOLA, loginStatus: "PENDING" },
+    ]);
+
+    renderAsSchoolAdmin();
+
+    const adaRow = (await screen.findByText("Ada Obi")).closest("tr")!;
+    expect(screen.getByRole("columnheader", { name: "Portal login" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Last login" })).toBeInTheDocument();
+    expect(within(adaRow).getByText("Active")).toBeInTheDocument();
+    expect(within(adaRow).getByText(formatInstant("2026-10-01T08:30:00Z"))).toBeInTheDocument();
+    const bolaRow = screen.getByText("Bola Eze").closest("tr")!;
+    expect(within(bolaRow).getByText("Not signed in yet")).toBeInTheDocument();
+    expect(within(bolaRow).getByText("Never")).toBeInTheDocument();
+  });
+
+  it("hides the login columns when the school isn't entitled to student logins", async () => {
+    useFeatureStore.setState({ studentLogins: false, status: "loaded" });
+    vi.mocked(classesApi.listClassStudents).mockResolvedValue([STUDENT_ADA]);
+
+    renderAsSchoolAdmin();
+
+    await screen.findByText("Ada Obi");
+    expect(screen.queryByRole("columnheader", { name: "Portal login" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Last login" })).not.toBeInTheDocument();
   });
 });
 

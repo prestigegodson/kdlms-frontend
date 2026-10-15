@@ -345,9 +345,14 @@ export function ClassDetailPage() {
         }
       >
         {roster === null ? (
-          <TableSkeleton columns={4} />
+          <TableSkeleton columns={studentLoginsEntitled ? 6 : 4} />
         ) : (
-          <ClassRosterPanel students={roster} canManage={canManage} onRegister={() => setRegisterOpen(true)} />
+          <ClassRosterPanel
+            students={roster}
+            canManage={canManage}
+            showLogins={studentLoginsEntitled}
+            onRegister={() => setRegisterOpen(true)}
+          />
         )}
       </Accordion>
 
@@ -406,9 +411,7 @@ export function ClassDetailPage() {
         open={provisionLoginsOpen}
         onClose={() => setProvisionLoginsOpen(false)}
         classId={schoolClass.id}
-        onProvisioned={() => {
-          /* no roster reload needed - login status isn't shown on this page's roster */
-        }}
+        onProvisioned={fetchRoster}
       />
     </div>
   );

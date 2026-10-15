@@ -1,16 +1,20 @@
 import { useMemo, useState } from "react";
 import type { RosterStudentView } from "@/api/classes";
 import { GraduationCap } from "lucide-react";
+import { StudentLoginStatusBadge } from "@/features/students/components/StudentLoginStatusBadge";
 import { StudentMedicalModal } from "@/features/students/components/StudentMedicalModal";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
+import { formatInstant } from "@/utils/date";
 
 interface ClassRosterPanelProps {
   students: RosterStudentView[];
   /** Admins get a tap-through to the full student record; a TEACHER gets the read-only medical modal instead - see StudentsPage's TeacherRoster. */
   canManage: boolean;
+  /** Adds the Portal login and Last login columns - only when the school's package includes student logins. */
+  showLogins?: boolean;
   onRegister?: () => void;
 }
 
@@ -25,7 +29,7 @@ function initialsOf(student: RosterStudentView): string {
  * admin and teacher views of {@code ClassDetailPage}. Presentational only:
  * the page owns the fetch and passes the current session's roster down.
  */
-export function ClassRosterPanel({ students, canManage, onRegister }: ClassRosterPanelProps) {
+export function ClassRosterPanel({ students, canManage, showLogins = false, onRegister }: ClassRosterPanelProps) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -68,6 +72,8 @@ export function ClassRosterPanel({ students, canManage, onRegister }: ClassRoste
             <TableHeaderCell>Name</TableHeaderCell>
             <TableHeaderCell>Admission no.</TableHeaderCell>
             <TableHeaderCell>Gender</TableHeaderCell>
+            {showLogins && <TableHeaderCell>Portal login</TableHeaderCell>}
+            {showLogins && <TableHeaderCell>Last login</TableHeaderCell>}
             <TableHeaderCell></TableHeaderCell>
           </TableRow>
         </TableHead>
@@ -80,6 +86,7 @@ export function ClassRosterPanel({ students, canManage, onRegister }: ClassRoste
                 </TableCell>
                 <TableCell label="Admission no.">{student.admissionNumber}</TableCell>
                 <TableCell label="Gender">{student.gender === "FEMALE" ? "Female" : "Male"}</TableCell>
+                {showLogins && <RosterLoginCells student={student} />}
               </TableRow>
             ) : (
               <TableRow key={student.studentId} onClick={() => setMedicalStudent(student)}>
@@ -88,6 +95,7 @@ export function ClassRosterPanel({ students, canManage, onRegister }: ClassRoste
                 </TableCell>
                 <TableCell label="Admission no.">{student.admissionNumber}</TableCell>
                 <TableCell label="Gender">{student.gender === "FEMALE" ? "Female" : "Male"}</TableCell>
+                {showLogins && <RosterLoginCells student={student} />}
               </TableRow>
             ),
           )}
@@ -112,5 +120,23 @@ function RosterName({ student }: { student: RosterStudentView }) {
       </span>
       {student.fullName}
     </span>
+  );
+}
+
+/** The Portal login badge and Last login cells - "Never" for a login that has never signed in, "—" for no login at all. */
+function RosterLoginCells({ student }: { student: RosterStudentView }) {
+  return (
+    <>
+      <TableCell label="Portal login">
+        <StudentLoginStatusBadge status={student.loginStatus} />
+      </TableCell>
+      <TableCell label="Last login">
+        {student.loginStatus === "NONE"
+          ? "—"
+          : student.lastLoginAt
+            ? formatInstant(student.lastLoginAt)
+            : "Never"}
+      </TableCell>
+    </>
   );
 }

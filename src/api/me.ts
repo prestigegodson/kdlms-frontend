@@ -76,7 +76,7 @@ export function getMyCapabilities(): Promise<TeacherCapabilities> {
   return apiFetch<TeacherCapabilities>(`${BASE}/capabilities`);
 }
 
-/** Mirrors backend student.application.port.in.RosterStudentView - name, admission number, gender only. */
+/** Mirrors backend student.application.port.in.RosterStudentView - name, admission number, gender, and portal-login status. */
 export interface RosterStudentView {
   studentId: string;
   firstName: string;
@@ -87,6 +87,8 @@ export interface RosterStudentView {
   gender: "MALE" | "FEMALE";
   /** The pupil's portal login - "ACTIVE" only once they've signed in at least once. */
   loginStatus: StudentLoginStatus;
+  /** Last portal sign-in; absent if never, or no login. */
+  lastLoginAt?: string;
 }
 
 /**
