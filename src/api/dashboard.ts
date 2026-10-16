@@ -100,11 +100,69 @@ export interface DashboardTeacherClassRow {
   classId: string;
   className: string;
   registerMarkedToday: boolean;
+  midtermResultsPublished: boolean;
+  termResultsPublished: boolean;
 }
 
-/** Mirrors backend dashboard.application.port.in.SchoolDashboardView.TeacherSection - TEACHER only. */
+/** Mirrors backend dashboard.application.port.in.SchoolDashboardView.EntryProgress. */
+export interface DashboardEntryProgress {
+  recorded: number;
+  total: number;
+}
+
+/**
+ * Mirrors backend dashboard.application.port.in.SchoolDashboardView.SubjectClassRow - one
+ * subject-teaching assignment. `midterm`/`exam` are omitted when no term is current, or the
+ * subject isn't graded or isn't assessed in that period.
+ */
+export interface DashboardSubjectClassRow {
+  classId: string;
+  className: string;
+  levelName?: string;
+  subjectId: string;
+  subjectName: string;
+  studentCount: number;
+  midterm?: DashboardEntryProgress;
+  exam?: DashboardEntryProgress;
+  midtermResultsPublished: boolean;
+  termResultsPublished: boolean;
+}
+
+/** Mirrors backend dashboard.application.port.in.SchoolDashboardView.SubjectRef. */
+export interface DashboardSubjectRef {
+  subjectId: string;
+  subjectName: string;
+  levelName: string;
+}
+
+/** Mirrors backend dashboard.application.port.in.SchoolDashboardView.LessonNoteTodo. */
+export interface DashboardLessonNoteTodo {
+  draft: number;
+  submitted: number;
+  rejected: number;
+  currentWeek?: number;
+  missingThisWeek: DashboardSubjectRef[];
+}
+
+/** Mirrors backend dashboard.application.port.in.SchoolDashboardView.QuizTodo. */
+export interface DashboardQuizTodo {
+  draft: number;
+  open: number;
+  closedAwaitingResults: number;
+  openSubmissions: number;
+}
+
+/**
+ * Mirrors backend dashboard.application.port.in.SchoolDashboardView.TeacherSection - TEACHER only.
+ * `classes` are the classes they class-teach (register marking); `subjectClasses` one row per
+ * subject they subject-teach. `lessonNotes`/`quizzes` are omitted when the school's plan lacks
+ * the feature, no term is current, or there's nothing of theirs to count.
+ */
 export interface SchoolDashboardTeacherSection {
   classes: DashboardTeacherClassRow[];
+  subjectClasses: DashboardSubjectClassRow[];
+  lessonNotes?: DashboardLessonNoteTodo;
+  quizzes?: DashboardQuizTodo;
 }
 
 /**

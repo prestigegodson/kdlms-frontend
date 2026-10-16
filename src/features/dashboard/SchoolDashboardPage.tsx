@@ -5,6 +5,7 @@ import { ApiError } from "@/api/client";
 import { getSchoolDashboard, type SchoolDashboardView } from "@/api/dashboard";
 import { can, isLevelHead } from "@/auth/permissions";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -14,7 +15,10 @@ import { StatTileSkeleton } from "@/components/ui/StatTileSkeleton";
 import { AttendanceTodayCard } from "@/features/attendance/components/AttendanceTodayCard";
 import { RegisterProgress } from "@/features/attendance/components/RegisterProgress";
 import { InventoryDashboardSection } from "@/features/dashboard/components/InventoryDashboardSection";
+import { LessonNotesThisWeekCard } from "@/features/dashboard/components/LessonNotesThisWeekCard";
 import { NeedsAttentionCard } from "@/features/dashboard/components/NeedsAttentionCard";
+import { SubjectClassesCard } from "@/features/dashboard/components/SubjectClassesCard";
+import { TeacherTodoTiles } from "@/features/dashboard/components/TeacherTodoTiles";
 import { TermProgressCard } from "@/features/dashboard/components/TermProgressCard";
 import { AgeDistributionCard } from "@/features/students/components/AgeDistributionCard";
 import { UpcomingBirthdaysCard } from "@/features/students/components/UpcomingBirthdaysCard";
@@ -224,9 +228,9 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
 }
 
 function TeacherDashboard({ teacher }: { teacher: NonNullable<SchoolDashboardView["teacher"]> }) {
-  const navigate = useNavigate();
+  const { subjectClasses } = teacher;
 
-  if (teacher.classes.length === 0) {
+  if (teacher.classes.length === 0 && subjectClasses.length === 0) {
     return (
       <EmptyState
         icon={Library}
@@ -238,29 +242,62 @@ function TeacherDashboard({ teacher }: { teacher: NonNullable<SchoolDashboardVie
 
   return (
     <>
+      <TeacherTodoTiles teacher={teacher} />
+      {subjectClasses.length > 0 && <SubjectClassesCard rows={subjectClasses} />}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {teacher.classes.length > 0 && <YourClassesCard rows={teacher.classes} />}
+        {teacher.lessonNotes && <LessonNotesThisWeekCard lessonNotes={teacher.lessonNotes} />}
+      </div>
       <UpcomingBirthdaysCard />
-      <Card className="p-0">
-        <h2 className="p-6 pb-0 text-sm font-semibold text-slate-900">Your classes</h2>
-        <ul className="mt-4 divide-y divide-slate-100 pb-2">
-          {teacher.classes.map((row) => (
-            <li key={row.classId}>
-              <button
-                type="button"
-                className="flex min-h-14 w-full items-center justify-between gap-3 px-6 py-3 text-left hover:bg-slate-50"
-                onClick={() => navigate(`/school/academics/classes/${row.classId}`)}
-              >
-                <span className="text-sm font-medium text-slate-900">{row.className}</span>
-                <span className="flex shrink-0 items-center gap-2">
-                  <Badge variant={row.registerMarkedToday ? "success" : "warning"}>
-                    {row.registerMarkedToday ? "Register marked today" : "Register not marked yet"}
-                  </Badge>
-                  <ChevronRight className="h-4 w-4 text-slate-400" aria-hidden="true" />
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </Card>
     </>
+  );
+}
+
+/** Rows of "Your classes" shown before "View more" - and the increment revealed per click. */
+const CLASSES_PAGE_SIZE = 10;
+
+function YourClassesCard({ rows }: { rows: NonNullable<SchoolDashboardView["teacher"]>["classes"] }) {
+  const navigate = useNavigate();
+  const [visibleCount, setVisibleCount] = useState(CLASSES_PAGE_SIZE);
+  const shown = rows.slice(0, visibleCount);
+  const remaining = rows.length - shown.length;
+
+  return (
+    <Card className="p-0 sm:p-0">
+      <h2 className="p-4 pb-0 text-sm font-semibold text-slate-900 sm:p-6 sm:pb-0">Your classes</h2>
+      <ul className="mt-3 divide-y divide-slate-100 pb-2">
+        {shown.map((row) => (
+          <li key={row.classId}>
+            <button
+              type="button"
+              className="flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50 sm:px-6"
+              onClick={() => navigate(`/school/academics/classrooms/${row.classId}`)}
+            >
+              <span className="text-sm font-medium text-slate-900">{row.className}</span>
+              <span className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                {row.termResultsPublished && <Badge variant="success">Results published</Badge>}
+                <Badge variant={row.registerMarkedToday ? "success" : "warning"}>
+                  {row.registerMarkedToday ? "Register marked today" : "Register not marked yet"}
+                </Badge>
+                <ChevronRight className="h-4 w-4 text-slate-400" aria-hidden="true" />
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {rows.length > CLASSES_PAGE_SIZE && (
+        <div className="flex justify-center border-t border-slate-100 px-4 py-2 sm:px-6">
+          {remaining > 0 ? (
+            <Button variant="ghost" size="sm" onClick={() => setVisibleCount((count) => count + CLASSES_PAGE_SIZE)}>
+              View more ({remaining})
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setVisibleCount(CLASSES_PAGE_SIZE)}>
+              Show less
+            </Button>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }

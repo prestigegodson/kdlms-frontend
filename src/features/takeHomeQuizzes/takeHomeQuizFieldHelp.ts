@@ -6,7 +6,7 @@ export const TAKE_HOME_QUIZ_FIELD_HELP = {
   title: "What pupils and guardians see as the quiz's name.",
   instructions: "Anything pupils should know before starting - what to bring, how long they have, tips.",
   quizType:
-    "MIDTERM writes the result straight into this subject's midterm quiz score once results are published; NORMAL is assessment-only.",
+    "MIDTERM writes the result straight into this subject's midterm quiz score once results are published - for a quiz shared with other classes, each class's own score; NORMAL is assessment-only.",
   opensAt: "When the link starts accepting answers. Shown in your own timezone.",
   closesAt: "When the link stops accepting answers - can only be extended, never brought forward, once a pupil has started.",
   timed: "Turn this on to give each pupil a countdown once they press Start, rather than the full window until closesAt.",

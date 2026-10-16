@@ -28,6 +28,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ClassroomArmsField } from "@/features/academics/components/ClassroomArmsField";
 import { targetKeyOf } from "@/features/academics/subjectTarget";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
@@ -201,8 +202,8 @@ export function TakeHomeQuizEditorPage() {
   // A subject-group quiz is always Normal - a midterm score belongs to exactly one subject.
   const isGroupQuiz = isNew ? subjectGroupId !== "" : quiz?.subjectGroupId != null;
 
-  // The other arms of the level a Normal quiz may be shared with, loaded for whoever may change it.
-  // A quiz shared with other classes is always Normal - a midterm score belongs to one class.
+  // The other arms of the level the quiz may be shared with, loaded for whoever may change it. A
+  // shared Midterm quiz writes each arm's own midterm score.
   const homeClassId = quiz?.classId ?? classId;
   const targetSubjectId = quiz ? quiz.subjectId : subjectGroupId ? null : subjectId || null;
   const targetGroupId = quiz ? quiz.subjectGroupId : subjectGroupId || null;
@@ -212,7 +213,6 @@ export function TakeHomeQuizEditorPage() {
       : null;
   const [loadedArms, setLoadedArms] = useState<{ key: string; classes: SharedClassView[] } | null>(null);
   const shareableClasses = shareKey && loadedArms?.key === shareKey ? loadedArms.classes : [];
-  const isShared = form.sharedClassIds.length > 0;
   useEffect(() => {
     if (!shareKey) return;
     let cancelled = false;
@@ -231,17 +231,9 @@ export function TakeHomeQuizEditorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shareKey]);
 
-  function toggleSharedClass(sharedClassId: string) {
-    const next = form.sharedClassIds.includes(sharedClassId)
-      ? form.sharedClassIds.filter((id) => id !== sharedClassId)
-      : [...form.sharedClassIds, sharedClassId];
-    setForm({ ...form, sharedClassIds: next });
-  }
-
   /** Every class the quiz should reach, the home class first - `undefined` (leave unchanged) when the arms couldn't be listed. */
   function chosenClassIds(): string[] | undefined {
     if (shareableClasses.length === 0) return undefined;
-    if (form.quizType !== "NORMAL") return [homeClassId];
     const offered = new Set(shareableClasses.map((sharedClass) => sharedClass.classId));
     return [homeClassId, ...form.sharedClassIds.filter((id) => id !== homeClassId && offered.has(id))];
   }
@@ -458,39 +450,23 @@ export function TakeHomeQuizEditorPage() {
             >
               <option value="NORMAL">Normal</option>
               {!isGroupQuiz && (
-                <option value="MIDTERM" disabled={isShared}>
-                  Midterm{isShared ? " (not for a quiz shared with other classes)" : ""}
-                </option>
+                <option value="MIDTERM">Midterm</option>
               )}
             </Select>
           </FormField>
 
-          {shareableClasses.length > 1 && form.quizType === "NORMAL" && (
-            <FormField label="Classes" htmlFor={`quiz-class-${homeClassId}`}>
-              <div className="flex flex-wrap gap-x-4 gap-y-2">
-                {shareableClasses.map((sharedClass) => {
-                  const isHome = sharedClass.classId === homeClassId;
-                  const checked = isHome || form.sharedClassIds.includes(sharedClass.classId);
-                  // Once students have submitted, a class can be added but not removed.
-                  const keptBySubmissions =
-                    questionsReadOnly && (quiz?.classes ?? []).some((c) => c.classId === sharedClass.classId);
-                  return (
-                    <label key={sharedClass.classId} className="flex items-center gap-2 text-sm text-slate-700">
-                      <Checkbox
-                        id={`quiz-class-${sharedClass.classId}`}
-                        checked={checked}
-                        disabled={isHome || readOnly || keptBySubmissions}
-                        onChange={() => toggleSharedClass(sharedClass.classId)}
-                      />
-                      {sharedClass.className}
-                    </label>
-                  );
-                })}
-              </div>
-              <p className="mt-1 text-xs text-slate-500">
-                One quiz for every class you tick - edits, publishing and results are shared.
-              </p>
-            </FormField>
+          {shareableClasses.length > 1 && (
+            <ClassroomArmsField
+              idPrefix="quiz-class"
+              classes={shareableClasses}
+              homeClassId={homeClassId}
+              selected={new Set(form.sharedClassIds)}
+              onChange={(next) => setForm({ ...form, sharedClassIds: [...next] })}
+              // Once students have submitted, a class can be added but not removed.
+              isLocked={(id) => questionsReadOnly && (quiz?.classes ?? []).some((c) => c.classId === id)}
+              disabled={readOnly}
+              hint="One quiz for every classroom you tick - edits, publishing and results are shared."
+            />
           )}
 
           <QuizWindowFields
@@ -621,6 +597,7 @@ export function TakeHomeQuizEditorPage() {
           onClose={() => setPublishModalOpen(false)}
           quizId={quiz.id}
           rosterSize={readiness?.rosterSize ?? 0}
+          portalRosterSize={readiness?.portalRosterSize ?? 0}
           closesAt={quiz.closesAt}
           onPublished={handlePublished}
         />

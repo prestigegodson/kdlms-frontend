@@ -18,6 +18,55 @@
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      Unsupported-browser fallback. The bundle targets Vite 8's default baseline
+      (roughly Chrome 111+, Safari 16.4+, Firefox 114+) and Tailwind 4 needs the
+      same, so an older tablet would otherwise get a silent blank page. Plain
+      ES5 and inline styles on purpose: it must run where the app can't.
+    -->
+    <script>
+      (function () {
+        function showUnsupported() {
+          var root = document.getElementById("root");
+          if (!root || root.childNodes.length) return;
+          root.innerHTML =
+            '<div style="max-width:420px;margin:15vh auto 0;padding:24px;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1f2937;text-align:center;line-height:1.5">' +
+            '<h1 style="font-size:20px;margin:0 0 12px">Please update your browser</h1>' +
+            '<p style="margin:0 0 12px">Your browser is too old to run KDLMS. Please update Chrome or Safari, or your device\'s software, then reload this page.</p>' +
+            '<p style="margin:0;font-size:14px;color:#6b7280">Check your browser version at <a href="https://www.whatismybrowser.com/" style="color:#3B4FD9">whatismybrowser.com</a>.</p>' +
+            "</div>";
+        }
+        var supported = false;
+        try {
+          supported =
+            !!window.CSS &&
+            CSS.supports("color", "oklch(0 0 0)") &&
+            CSS.supports("selector(:has(a))") &&
+            typeof Array.prototype.at === "function" &&
+            typeof window.structuredClone === "function";
+        } catch (e) {
+          supported = false;
+        }
+        if (!supported) {
+          showUnsupported();
+          return;
+        }
+        // Safety net: the load event fires after the module script has run, so
+        // a root React never attached to (createRoot tags it with a
+        // __reactContainer$ key) means the bundle failed. Not "root is empty":
+        // the app legitimately renders null while the session hydrates.
+        window.addEventListener("load", function () {
+          setTimeout(function () {
+            var root = document.getElementById("root");
+            if (!root) return;
+            for (var key in root) {
+              if (key.indexOf("__reactContainer$") === 0) return;
+            }
+            showUnsupported();
+          }, 4000);
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

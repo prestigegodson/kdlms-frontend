@@ -61,7 +61,7 @@ export function StudentLinksPanel({ quizId, refreshToken }: StudentLinksPanelPro
   function copyAll() {
     if (!links) return;
     const text = links
-      .filter((link) => link.url)
+      .filter((link) => link.url && !link.portalStudent)
       .map((link) => `${link.fullName}: ${link.url}`)
       .join("\n");
     navigator.clipboard?.writeText(text);
@@ -181,22 +181,25 @@ export function StudentLinksPanel({ quizId, refreshToken }: StudentLinksPanelPro
               <TableCell label="Pupil">{link.fullName}</TableCell>
               <TableCell label="Admission No.">{link.admissionNumber}</TableCell>
               <TableCell label="Link">
-                {link.url ? (
+                {link.portalStudent ? (
+                  // A portal pupil is never handed a link - a leftover one only awaits the revoke sweep.
+                  <span className="text-slate-400">
+                    Available in the pupil portal{link.url ? " (old link pending revoke)" : ""}
+                  </span>
+                ) : link.url ? (
                   <span className="text-slate-500">Issued</span>
-                ) : link.portalStudent ? (
-                  <span className="text-slate-400">Available in the pupil portal</span>
                 ) : (
                   <span className="text-slate-400">No link yet</span>
                 )}
               </TableCell>
               <TableCell label="Actions">
                 <div className="flex gap-2">
-                  {link.url && (
+                  {link.url && !link.portalStudent && (
                     <Button type="button" variant="ghost" size="sm" onClick={() => copy(link.studentId, link.url!)}>
                       {copiedStudentId === link.studentId ? "Copied!" : "Copy"}
                     </Button>
                   )}
-                  {link.url && (
+                  {link.url && !link.portalStudent && (
                     <Button type="button" variant="ghost" size="sm" onClick={() => setReissueTarget(link)}>
                       Reissue
                     </Button>

@@ -45,16 +45,16 @@ beforeEach(() => {
 });
 
 describe("ShareResourceModal", () => {
-  it("skips the classroom checklist when the class has a single classroom", async () => {
+  it("pre-ticks the open classrooms when there is only one class to share with", async () => {
     vi.mocked(learningApi.getShareTargets).mockResolvedValue([PRIMARY_THREE]);
 
     render(<ShareResourceModal resource={RESOURCE} onClose={vi.fn()} onShared={vi.fn()} />);
 
-    expect(await screen.findByTestId("single-classroom")).toHaveTextContent("Will be shared with Primary 3 Gold.");
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(await screen.findByRole("checkbox", { name: "Primary 3 Gold" })).toBeChecked();
+    expect(screen.queryByRole("combobox", { name: "Class" })).not.toBeInTheDocument();
   });
 
-  it("pre-ticks open classrooms, disables already-shared ones, and needs a subject before sharing", async () => {
+  it("lists every class's classrooms, keeps picks to one class, and needs a subject before sharing", async () => {
     const user = userEvent.setup();
     const onShared = vi.fn();
     const onClose = vi.fn();
@@ -66,19 +66,30 @@ describe("ShareResourceModal", () => {
 
     render(<ShareResourceModal resource={RESOURCE} onClose={onClose} onShared={onShared} />);
 
-    await user.selectOptions(await screen.findByLabelText("Class"), "level-p2");
-    const gold = screen.getByRole("checkbox", { name: "Primary 2 Gold" });
+    const gold = await screen.findByRole("checkbox", { name: "Primary 2 Gold" });
     const blue = screen.getByRole("checkbox", { name: /Primary 2 Blue/ });
     const red = screen.getByRole("checkbox", { name: "Primary 2 Red" });
-    expect(gold).toBeChecked();
-    expect(red).toBeChecked();
+    const primaryThree = screen.getByRole("checkbox", { name: "Primary 3 Gold" });
+    expect(screen.getByRole("group", { name: "Primary 2" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Primary 3" })).toBeInTheDocument();
+    expect(gold).not.toBeChecked();
+    expect(red).not.toBeChecked();
+    expect(primaryThree).not.toBeChecked();
     expect(blue).toBeDisabled();
     expect(screen.getByText(/Already shared/)).toBeInTheDocument();
 
     const share = screen.getByRole("button", { name: "Share" });
     expect(share).toBeDisabled();
 
+    // Picks belong to one class: ticking another class's classroom starts over there.
     await user.click(red);
+    await user.click(primaryThree);
+    expect(primaryThree).toBeChecked();
+    expect(red).not.toBeChecked();
+
+    await user.click(gold);
+    expect(gold).toBeChecked();
+    expect(primaryThree).not.toBeChecked();
     await waitFor(() => expect(learningApi.getShareTargetSubjects).toHaveBeenCalledWith("resource-1", "level-p2"));
     await pickSubject(user, "Mathematics");
     expect(share).toBeEnabled();

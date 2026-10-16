@@ -16,7 +16,6 @@ import {
 } from "@/api/learning";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Checkbox } from "@/components/ui/Checkbox";
 import { DateInput } from "@/components/ui/DateInput";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
@@ -25,6 +24,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { RichTextField } from "@/components/richText/RichTextField";
 import { type GalleryLoader, GalleryPickerModal } from "@/features/learning/components/GalleryPickerModal";
+import { ClassroomArmsField } from "@/features/academics/components/ClassroomArmsField";
 import { SubjectTargetSelect } from "@/features/academics/components/SubjectTargetSelect";
 import { parseTargetKey, targetKeyOf } from "@/features/academics/subjectTarget";
 import { formatDuration } from "@/utils/duration";
@@ -221,18 +221,6 @@ export function ResourceEditorModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shareKey]);
 
-  function toggleSharedClass(sharedClassId: string) {
-    setSharedClassIds((current) => {
-      const next = new Set(current);
-      if (next.has(sharedClassId)) {
-        next.delete(sharedClassId);
-      } else {
-        next.add(sharedClassId);
-      }
-      return next;
-    });
-  }
-
   /** The chosen arms still offered for the current target, the home class always among them. */
   function chosenClassIds(): string[] {
     const offered = new Set(shareableClasses.map((sharedClass) => sharedClass.classId));
@@ -391,30 +379,14 @@ export function ResourceEditorModal({
           )}
 
           {shareableClasses.length > 1 && (
-            <FormField label="Classes" htmlFor={`resource-class-${homeClassId}`}>
-              <div className="flex flex-wrap gap-x-4 gap-y-2">
-                {shareableClasses.map((sharedClass) => {
-                  const isHome = sharedClass.classId === homeClassId;
-                  return (
-                    <label
-                      key={sharedClass.classId}
-                      className="flex items-center gap-2 text-sm text-slate-700"
-                    >
-                      <Checkbox
-                        id={`resource-class-${sharedClass.classId}`}
-                        checked={isHome || sharedClassIds.has(sharedClass.classId)}
-                        disabled={isHome}
-                        onChange={() => toggleSharedClass(sharedClass.classId)}
-                      />
-                      {sharedClass.className}
-                    </label>
-                  );
-                })}
-              </div>
-              <p className="mt-1 text-xs text-slate-500">
-                One resource for every class you tick - edits, publishing and comments are shared.
-              </p>
-            </FormField>
+            <ClassroomArmsField
+              idPrefix="resource-class"
+              classes={shareableClasses}
+              homeClassId={homeClassId}
+              selected={sharedClassIds}
+              onChange={setSharedClassIds}
+              hint="One resource for every classroom you tick - edits, publishing and comments are shared."
+            />
           )}
 
           {!isEdit && (

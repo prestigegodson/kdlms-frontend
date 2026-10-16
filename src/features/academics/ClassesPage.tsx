@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import type { BranchView } from "@/api/branches";
 import {
   activateClass,
@@ -27,6 +28,7 @@ import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
+import { rememberClassListSearch } from "@/features/academics/classListReturn";
 import { LevelSelect } from "@/features/academics/components/LevelSelect";
 import { useBranchFilter } from "@/features/branches/useBranchFilter";
 import { useHeadedLevels, useIsLevelHead } from "@/features/levelHeads/useLevelHead";
@@ -58,18 +60,29 @@ export function ClassesPage() {
   return <AdminClasses role={role} />;
 }
 
+/** `?branch=` -> useBranchFilter's seed: absent follows the default, "all" is every branch. */
+function initialBranchParam(param: string | null): string | null {
+  if (param === null) return null;
+  return param === "all" ? "" : param;
+}
+
 function AdminClasses({ role }: { role: Role | undefined }) {
   const capabilities = useTeacherScopeStore((state) => state.capabilities);
   const canManage = can.manageAcademics(role, capabilities);
   // Every role but SCHOOL_ADMIN is branch-confined server-side (a Head of Level is a TEACHER).
   const isBranchScoped = role !== "SCHOOL_ADMIN";
 
-  const { ready: branchReady, branches, branchId, defaultBranchId, setBranchId } = useBranchFilter();
+  // Both filters live in the query string, so the classroom detail page's back
+  // link (classListReturn) and the browser's own back/refresh restore them.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { ready: branchReady, branches, branchId, defaultBranchId, setBranchId } = useBranchFilter(
+    initialBranchParam(searchParams.get("branch")),
+  );
   const levels = useLevelStore((storeState) => storeState.levels);
   // Create/move targets - a Head of Level may only place a class at a level they head.
   const headedLevels = useHeadedLevels(levels);
   const fetchLevels = useLevelStore((storeState) => storeState.fetchIfNeeded);
-  const [levelId, setLevelId] = useState("");
+  const [levelId, setLevelId] = useState(() => searchParams.get("level") ?? "");
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<SchoolClassView | null>(null);
@@ -97,6 +110,16 @@ function AdminClasses({ role }: { role: Role | undefined }) {
   }
 
   useEffect(fetchClasses, [branchReady, branchId, levelId]);
+
+  useEffect(() => {
+    if (!branchReady) return;
+    const params = new URLSearchParams();
+    // Absent = the main-branch default; "all" = deliberately every branch.
+    if (branchId !== defaultBranchId) params.set("branch", branchId || "all");
+    if (levelId) params.set("level", levelId);
+    setSearchParams(params, { replace: true });
+    rememberClassListSearch(params.toString());
+  }, [branchReady, branchId, defaultBranchId, levelId, setSearchParams]);
 
   function load() {
     setState({ kind: "loading" });

@@ -22,6 +22,7 @@ import { listSubjects, type SubjectView } from "@/api/subjects";
 import { listTeachers } from "@/api/users";
 import { can } from "@/auth/permissions";
 import { BookOpen, UserCheck, Users } from "lucide-react";
+import { classListHref } from "@/features/academics/classListReturn";
 import { ClassRosterPanel } from "@/features/academics/components/ClassRosterPanel";
 import { SubjectTeachersPanel } from "@/features/academics/components/SubjectTeachersPanel";
 import { ProvisionClassLoginsModal } from "@/features/students/components/ProvisionClassLoginsModal";
@@ -207,7 +208,7 @@ export function ClassDetailPage() {
   if (state.kind === "loading") {
     return (
       <div className="space-y-6">
-        <PageHeader title="Classroom details" backTo="/school/academics/classrooms" />
+        <PageHeader title="Classroom details" backTo={classListHref()} backLabel="Back to classrooms" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
@@ -220,7 +221,7 @@ export function ClassDetailPage() {
   if (state.kind === "error") {
     return (
       <div className="space-y-6">
-        <PageHeader title="Classroom details" backTo="/school/academics/classrooms" />
+        <PageHeader title="Classroom details" backTo={classListHref()} backLabel="Back to classrooms" />
         <Alert variant="error">{state.message}</Alert>
       </div>
     );
@@ -246,7 +247,8 @@ export function ClassDetailPage() {
       <PageHeader
         title={schoolClass.name}
         description={description}
-        backTo="/school/academics/classrooms"
+        backTo={classListHref()}
+        backLabel="Back to classrooms"
         actions={
           <Badge variant={schoolClass.status === "ACTIVE" ? "success" : "neutral"}>
             {schoolClass.status}

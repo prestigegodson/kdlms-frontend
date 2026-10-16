@@ -26,6 +26,10 @@ vi.mock("@/api/birthdays", async () => {
   return { ...actual, listUpcomingBirthdays: vi.fn() };
 });
 
+function classRow(registerMarkedToday: boolean) {
+  return { registerMarkedToday, midtermResultsPublished: false, termResultsPublished: false };
+}
+
 function renderPage() {
   const router = createMemoryRouter(
     [
@@ -33,7 +37,8 @@ function renderPage() {
       { path: "/school/students", element: <div>Pupils page</div> },
       { path: "/school/academics/classes", element: <div>Classes page</div> },
       { path: "/school/attendance", element: <div>Attendance page</div> },
-      { path: "/school/academics/classes/:classId", element: <div>Class detail page</div> },
+      { path: "/school/academics/classrooms/:classId", element: <div>Class detail page</div> },
+      { path: "/school/assessments", element: <div>Assessments page</div> },
       { path: "/school/inventory", element: <div>Inventory page</div> },
     ],
     { initialEntries: ["/"] },
@@ -319,9 +324,10 @@ describe("SchoolDashboardPage", () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
       teacher: {
         classes: [
-          { classId: "c1", className: "Primary 3", registerMarkedToday: true },
-          { classId: "c2", className: "Primary 4", registerMarkedToday: false },
+          { classId: "c1", className: "Primary 3", ...classRow(true) },
+          { classId: "c2", className: "Primary 4", ...classRow(false) },
         ],
+        subjectClasses: [],
       },
     });
 
@@ -335,7 +341,7 @@ describe("SchoolDashboardPage", () => {
 
   it("navigates to a class's detail route when its whole row is tapped, not just the class name", async () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
-      teacher: { classes: [{ classId: "c1", className: "Primary 3", registerMarkedToday: true }] },
+      teacher: { classes: [{ classId: "c1", className: "Primary 3", ...classRow(true) }], subjectClasses: [] },
     });
     const user = userEvent.setup();
 
@@ -347,8 +353,169 @@ describe("SchoolDashboardPage", () => {
     expect(await screen.findByText("Class detail page")).toBeInTheDocument();
   });
 
+  it("shows a subject-only teacher their subject classes with score-entry progress instead of the empty state", async () => {
+    vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
+      teacher: {
+        classes: [],
+        subjectClasses: [
+          {
+            classId: "c1",
+            className: "JSS 1A",
+            levelName: "JSS 1",
+            subjectId: "s1",
+            subjectName: "Mathematics",
+            studentCount: 3,
+            midterm: { recorded: 3, total: 3 },
+            exam: { recorded: 1, total: 3 },
+            midtermResultsPublished: true,
+            termResultsPublished: false,
+          },
+        ],
+        lessonNotes: {
+          draft: 1,
+          submitted: 2,
+          rejected: 1,
+          currentWeek: 4,
+          missingThisWeek: [{ subjectId: "s1", subjectName: "Mathematics", levelName: "JSS 1" }],
+        },
+        quizzes: { draft: 0, open: 1, closedAwaitingResults: 2, openSubmissions: 5 },
+      },
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    expect(await screen.findByText("Your subjects")).toBeInTheDocument();
+    expect(screen.queryByText("No classes assigned yet")).not.toBeInTheDocument();
+    expect(screen.getByText("JSS 1A · JSS 1 · 3 students")).toBeInTheDocument();
+    expect(screen.getByText("1/3")).toBeInTheDocument();
+    expect(screen.getByText("Midterm published")).toBeInTheDocument();
+    expect(screen.getByText("Exam scores entered")).toBeInTheDocument();
+    expect(screen.getByText("33%")).toBeInTheDocument();
+    expect(screen.getByText("Lesson notes to fix")).toBeInTheDocument();
+    expect(screen.getByText("1 draft · 2 awaiting review")).toBeInTheDocument();
+    expect(screen.getByText("Quizzes to publish")).toBeInTheDocument();
+    expect(screen.getByText("Lesson notes for week 4")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: /JSS 1A · JSS 1/ }));
+    expect(await screen.findByText("Assessments page")).toBeInTheDocument();
+  });
+
+  it("hides the lesson-note and quiz tiles when the server leaves those sections out", async () => {
+    vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
+      teacher: {
+        classes: [],
+        subjectClasses: [
+          {
+            classId: "c1",
+            className: "JSS 1A",
+            subjectId: "s1",
+            subjectName: "Mathematics",
+            studentCount: 0,
+            midtermResultsPublished: false,
+            termResultsPublished: false,
+          },
+        ],
+      },
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("Your subjects")).toBeInTheDocument();
+    expect(screen.getByText("Subject classes")).toBeInTheDocument();
+    expect(screen.queryByText("Exam scores entered")).not.toBeInTheDocument();
+    expect(screen.queryByText("Lesson notes to fix")).not.toBeInTheDocument();
+    expect(screen.queryByText("Quizzes to publish")).not.toBeInTheDocument();
+  });
+
+  it("caps the teacher's classes at 10 rows, revealing the rest with View more", async () => {
+    vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
+      teacher: {
+        classes: Array.from({ length: 12 }, (_, i) => ({
+          classId: `c${i + 1}`,
+          className: `Class ${i + 1}`,
+          ...classRow(true),
+        })),
+        subjectClasses: [],
+      },
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    expect(await screen.findByText("Class 10")).toBeInTheDocument();
+    expect(screen.queryByText("Class 11")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "View more (2)" }));
+    expect(screen.getByText("Class 12")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Show less" }));
+    expect(screen.queryByText("Class 11")).not.toBeInTheDocument();
+  });
+
+  it("caps the teacher's subjects at 10 rows, revealing the rest with View more", async () => {
+    vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
+      teacher: {
+        classes: [],
+        subjectClasses: Array.from({ length: 12 }, (_, i) => ({
+          classId: "c1",
+          className: "JSS 1A",
+          subjectId: `s${i + 1}`,
+          subjectName: `Subject ${i + 1}`,
+          studentCount: 0,
+          midtermResultsPublished: false,
+          termResultsPublished: false,
+        })),
+      },
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    expect(await screen.findByText("Subject 10")).toBeInTheDocument();
+    expect(screen.queryByText("Subject 11")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "View more (2)" }));
+    expect(screen.getByText("Subject 12")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Show less" }));
+    expect(screen.queryByText("Subject 11")).not.toBeInTheDocument();
+  });
+
+  it("caps this week's missing lesson notes at 10 rows, revealing the rest with View more", async () => {
+    vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
+      teacher: {
+        classes: [{ classId: "c1", className: "Primary 3", ...classRow(true) }],
+        subjectClasses: [],
+        lessonNotes: {
+          draft: 0,
+          submitted: 0,
+          rejected: 0,
+          currentWeek: 2,
+          missingThisWeek: Array.from({ length: 11 }, (_, i) => ({
+            subjectId: `s${i + 1}`,
+            subjectName: `Subject ${i + 1}`,
+            levelName: "JSS 1",
+          })),
+        },
+      },
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    expect(await screen.findByText("Subject 10")).toBeInTheDocument();
+    expect(screen.queryByText("Subject 11")).not.toBeInTheDocument();
+    // Only the lesson-notes card overflows; the single class shows no button.
+    expect(screen.getAllByRole("button", { name: /View more/ })).toHaveLength(1);
+
+    await user.click(screen.getByRole("button", { name: "View more (1)" }));
+    expect(screen.getByText("Subject 11")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show less" })).toBeInTheDocument();
+  });
+
   it("shows an empty state for a teacher with no assigned classes", async () => {
-    vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({ teacher: { classes: [] } });
+    vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({ teacher: { classes: [], subjectClasses: [] } });
 
     renderPage();
 
@@ -422,7 +589,7 @@ describe("SchoolDashboardPage", () => {
 
   it("shows the upcoming-birthdays card on the teacher dashboard without a link to student detail", async () => {
     vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
-      teacher: { classes: [{ classId: "c1", className: "Primary 3", registerMarkedToday: true }] },
+      teacher: { classes: [{ classId: "c1", className: "Primary 3", ...classRow(true) }], subjectClasses: [] },
     });
     vi.mocked(birthdaysApi.listUpcomingBirthdays).mockResolvedValue([
       {

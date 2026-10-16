@@ -206,6 +206,17 @@ describe("ClassDetailPage - class teacher assignment", () => {
     expect(await screen.findByText("Classroom details")).toBeInTheDocument();
   });
 
+  it("links back to the classrooms list with its remembered filters", async () => {
+    sessionStorage.setItem("kdlms.classList.search", "branch=all&level=level-1");
+    vi.mocked(classesApi.getClass).mockResolvedValue(BASE_CLASS);
+
+    renderAsSchoolAdmin();
+
+    const back = await screen.findByRole("link", { name: /back to classrooms/i });
+    expect(back).toHaveAttribute("href", "/school/academics/classrooms?branch=all&level=level-1");
+    sessionStorage.removeItem("kdlms.classList.search");
+  });
+
   it("shows the assign dropdown when the class has no teacher yet", async () => {
     vi.mocked(classesApi.getClass).mockResolvedValue(BASE_CLASS);
 

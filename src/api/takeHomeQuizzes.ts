@@ -166,6 +166,8 @@ export interface PublishReadinessView {
   totalPoints: number;
   midtermMax: number | null;
   rosterSize: number;
+  /** Roster students with a portal login - they take the quiz signed in, with no link or guardian email. */
+  portalRosterSize: number;
 }
 
 /** Mirrors backend takehomequiz.application.port.in.AuthorableSubjectView. */
@@ -550,6 +552,12 @@ export interface StudentResultRowView {
   resetCount: number;
   /** The class the student took it in - a quiz shared across arms spans several. */
   className?: string | null;
+  /**
+   * Whether the caller may adjust or reset this student's attempt - everyone who may change the quiz,
+   * plus the teacher of the student's own class on a quiz shared across arms. Absent (a creator's
+   * class quiz) means yes.
+   */
+  manageable?: boolean;
 }
 
 /** Mirrors backend ReviewTakeHomeQuizResultsUseCase.TakeHomeQuizResultsView. */

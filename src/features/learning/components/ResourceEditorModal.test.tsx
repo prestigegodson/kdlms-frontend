@@ -130,7 +130,8 @@ describe("ResourceEditorModal", () => {
     renderModal(false);
     const user = userEvent.setup();
 
-    const home = await screen.findByLabelText("JSS 1A");
+    await user.click(await screen.findByRole("button", { name: /Share with other classrooms|Change classrooms/ }));
+    const home = screen.getByLabelText(/^JSS 1A/);
     expect(home).toBeChecked();
     expect(home).toBeDisabled();
     expect(learningApi.getShareableClasses).toHaveBeenCalledWith("class-1", {
@@ -162,7 +163,8 @@ describe("ResourceEditorModal", () => {
     renderModalWithWindow(null, null, [ARMS[0], ARMS[1]]);
     const user = userEvent.setup();
 
-    const armB = await screen.findByLabelText("JSS 1B");
+    await user.click(await screen.findByRole("button", { name: /Share with other classrooms|Change classrooms/ }));
+    const armB = screen.getByLabelText("JSS 1B");
     expect(armB).toBeChecked();
     expect(screen.getByLabelText("JSS 1C")).not.toBeChecked();
     await user.click(armB);

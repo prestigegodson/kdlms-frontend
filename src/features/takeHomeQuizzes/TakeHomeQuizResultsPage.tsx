@@ -151,8 +151,8 @@ export function TakeHomeQuizResultsPage() {
             <ResultsTable
               rows={results.rows}
               totalPoints={results.totalPoints}
-              canAdjust={canAdjust && quiz.writable}
-              canReset={canReset && quiz.writable}
+              canAdjust={canAdjust}
+              canReset={canReset}
               onViewAnswers={setAnswersTarget}
               onAdjust={setAdjustTarget}
               onClearAdjustment={handleClearAdjustment}

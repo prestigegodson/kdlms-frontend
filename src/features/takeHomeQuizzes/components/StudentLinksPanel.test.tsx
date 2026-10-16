@@ -133,6 +133,21 @@ describe("StudentLinksPanel", () => {
     expect(screen.queryByText(/no link yet/i)).not.toBeInTheDocument();
   });
 
+  it("never offers a portal student's leftover link for copying or reissue", async () => {
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizLinks).mockResolvedValue([ISSUED_LINK, SUPERSEDED_LINK]);
+    render(<StudentLinksPanel quizId="quiz-1" refreshToken={0} />);
+
+    expect(await screen.findByText("Available in the pupil portal (old link pending revoke)")).toBeInTheDocument();
+    // Only the anonymous pupil's row carries Copy/Reissue.
+    expect(screen.getAllByRole("button", { name: "Copy" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Reissue" })).toHaveLength(1);
+
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, "writeText");
+    await user.click(screen.getByRole("button", { name: "Copy all" }));
+    expect(writeText).toHaveBeenCalledWith(`Ada Okoye: ${ISSUED_LINK.url}`);
+  });
+
   it("revokes superseded links after confirmation and reports the outcome", async () => {
     vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizLinks).mockResolvedValue([ISSUED_LINK, SUPERSEDED_LINK]);
     vi.mocked(takeHomeQuizzesApi.revokeSupersededTakeHomeQuizLinks).mockResolvedValue({

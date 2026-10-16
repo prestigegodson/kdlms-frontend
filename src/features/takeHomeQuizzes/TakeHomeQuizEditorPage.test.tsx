@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -149,6 +149,7 @@ describe("TakeHomeQuizEditorPage - a new quiz", () => {
       totalPoints: 0,
       midtermMax: null,
       rosterSize: 3,
+      portalRosterSize: 0,
     });
     renderAt("/school/take-home-quizzes/new?classId=class-1&subjectId=subject-1&termId=term-1");
     const user = userEvent.setup();
@@ -171,6 +172,7 @@ describe("TakeHomeQuizEditorPage - a new quiz", () => {
       totalPoints: 0,
       midtermMax: null,
       rosterSize: 3,
+      portalRosterSize: 0,
     });
     renderAt("/school/take-home-quizzes/new?classId=class-1&subjectId=subject-1&termId=term-1");
     const user = userEvent.setup();
@@ -195,6 +197,7 @@ describe("TakeHomeQuizEditorPage - a new quiz", () => {
       totalPoints: 0,
       midtermMax: null,
       rosterSize: 3,
+      portalRosterSize: 0,
     });
     renderAt("/school/take-home-quizzes/new?classId=class-1&subjectGroupId=group-1&termId=term-1");
     const user = userEvent.setup();
@@ -229,15 +232,17 @@ describe("TakeHomeQuizEditorPage - sharing with other classes", () => {
       totalPoints: 0,
       midtermMax: null,
       rosterSize: 6,
+      portalRosterSize: 0,
     });
     renderAt("/school/take-home-quizzes/new?classId=class-1&subjectId=subject-1&termId=term-1");
     const user = userEvent.setup();
 
-    const home = await screen.findByLabelText("JSS 1A");
+    await user.click(await screen.findByRole("button", { name: /Share with other classrooms|Change classrooms/ }));
+    const home = screen.getByLabelText(/^JSS 1A/);
     expect(home).toBeChecked();
     expect(home).toBeDisabled();
     await user.click(screen.getByLabelText("JSS 1B"));
-    expect(screen.getByRole("option", { name: /Midterm/ })).toBeDisabled();
+    expect(screen.getByRole("option", { name: "Midterm" })).toBeEnabled();
 
     await user.type(screen.getByLabelText("Title"), "Shared quiz");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
@@ -248,14 +253,28 @@ describe("TakeHomeQuizEditorPage - sharing with other classes", () => {
     );
   });
 
-  it("hides the class picker for a Midterm quiz", async () => {
+  it("shares a new Midterm quiz with the ticked arms", async () => {
+    vi.mocked(takeHomeQuizzesApi.createTakeHomeQuiz).mockResolvedValue({
+      ...SAVED_VIEW,
+      quizType: "MIDTERM",
+      classes: ARMS,
+    });
     renderAt("/school/take-home-quizzes/new?classId=class-1&subjectId=subject-1&termId=term-1");
     const user = userEvent.setup();
 
-    expect(await screen.findByLabelText("JSS 1B")).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: /Share with other classrooms|Change classrooms/ }));
+    await user.click(screen.getByLabelText("JSS 1B"));
     await user.selectOptions(screen.getByLabelText("Quiz type"), "MIDTERM");
+    expect(screen.getByLabelText("JSS 1B")).toBeChecked();
 
-    expect(screen.queryByLabelText("JSS 1B")).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText("Title"), "Shared midterm");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(takeHomeQuizzesApi.createTakeHomeQuiz).toHaveBeenCalledWith(
+        expect.objectContaining({ quizType: "MIDTERM", classIds: ["class-1", "class-2"] }),
+      ),
+    );
   });
 
   it("shows another arm's teacher a read-only notice and no class picker", async () => {
@@ -279,6 +298,7 @@ describe("TakeHomeQuizEditorPage - sharing with other classes", () => {
       totalPoints: 0,
       midtermMax: null,
       rosterSize: 6,
+      portalRosterSize: 0,
     });
 
     renderAt("/school/take-home-quizzes/quiz-1?classId=class-2&subjectId=subject-1&termId=term-1");
@@ -301,6 +321,7 @@ describe("TakeHomeQuizEditorPage - an existing quiz", () => {
       totalPoints: 0,
       midtermMax: null,
       rosterSize: 3,
+      portalRosterSize: 0,
     });
     vi.mocked(takeHomeQuizzesApi.updateTakeHomeQuiz).mockResolvedValue({
       ...SAVED_VIEW,
@@ -332,6 +353,7 @@ describe("TakeHomeQuizEditorPage - an existing quiz", () => {
       totalPoints: 0,
       midtermMax: null,
       rosterSize: 3,
+      portalRosterSize: 0,
     });
     vi.mocked(takeHomeQuizzesApi.updateTakeHomeQuiz).mockResolvedValue({ ...SAVED_VIEW, title: "Week 4 quiz" });
 
@@ -360,6 +382,7 @@ describe("TakeHomeQuizEditorPage - an existing quiz", () => {
       totalPoints: 0,
       midtermMax: null,
       rosterSize: 3,
+      portalRosterSize: 0,
     });
     vi.mocked(takeHomeQuizzesApi.updateTakeHomeQuiz).mockRejectedValue(new Error("boom"));
 
@@ -381,6 +404,7 @@ describe("TakeHomeQuizEditorPage - an existing quiz", () => {
       totalPoints: 0,
       midtermMax: null,
       rosterSize: 3,
+      portalRosterSize: 0,
     });
 
     renderAt("/school/take-home-quizzes/quiz-1?classId=class-1&subjectId=subject-1&termId=term-1");
@@ -411,6 +435,7 @@ describe("TakeHomeQuizEditorPage - an existing quiz", () => {
       totalPoints: 4,
       midtermMax: null,
       rosterSize: 3,
+      portalRosterSize: 0,
     });
     // Status !== DRAFT renders StudentLinksPanel, which fetches on mount.
     vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizLinks).mockResolvedValue([]);
@@ -444,6 +469,7 @@ describe("TakeHomeQuizEditorPage - an existing quiz", () => {
       totalPoints: 4,
       midtermMax: null,
       rosterSize: 3,
+      portalRosterSize: 0,
     });
     vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizLinks).mockResolvedValue([]);
 
@@ -469,6 +495,7 @@ describe("TakeHomeQuizEditorPage - an existing quiz", () => {
       totalPoints: 0,
       midtermMax: null,
       rosterSize: 3,
+      portalRosterSize: 0,
     });
 
     renderAt("/school/take-home-quizzes/quiz-1?classId=class-1&subjectId=subject-1&termId=term-1");
@@ -487,6 +514,7 @@ describe("TakeHomeQuizEditorPage - sharing a copy with another class", () => {
       totalPoints: 1,
       midtermMax: null,
       rosterSize: 3,
+      portalRosterSize: 0,
     });
   });
 
@@ -549,7 +577,7 @@ describe("TakeHomeQuizEditorPage - sharing a copy with another class", () => {
     ).toBeInTheDocument();
   });
 
-  it("lets a Midterm quiz go to one classroom only", async () => {
+  it("lets a Midterm quiz go to several classrooms, under a subject that takes a midterm score", async () => {
     const user = userEvent.setup();
     vi.mocked(takeHomeQuizzesApi.getTakeHomeQuiz).mockResolvedValue({
       ...SAVED_VIEW,
@@ -571,12 +599,9 @@ describe("TakeHomeQuizEditorPage - sharing a copy with another class", () => {
     renderAt("/school/take-home-quizzes/quiz-1?classId=class-1&subjectId=subject-1&termId=term-1");
 
     await user.click(await screen.findByRole("button", { name: "Share to another class" }));
-    const roomA = await screen.findByRole("radio", { name: "JSS 2A" });
-    const roomB = screen.getByRole("radio", { name: "JSS 2B" });
-    expect(roomA).not.toBeChecked();
-    await user.click(roomA);
-    await user.click(roomB);
-    expect(roomA).not.toBeChecked();
+    const roomA = await screen.findByRole("checkbox", { name: "JSS 2A" });
+    const roomB = screen.getByRole("checkbox", { name: "JSS 2B" });
+    expect(roomA).toBeChecked();
     expect(roomB).toBeChecked();
     expect(await screen.findByText("No subject in this class can take a midterm score.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Share" })).toBeDisabled();

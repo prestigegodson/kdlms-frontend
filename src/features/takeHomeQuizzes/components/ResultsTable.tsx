@@ -6,7 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } fro
 interface ResultsTableProps {
   rows: StudentResultRowView[];
   totalPoints: number;
+  /** The caller's role allows adjusting a score - each row's own `manageable` still has to allow it. */
   canAdjust: boolean;
+  /** The caller's role allows resetting an attempt - each row's own `manageable` still has to allow it. */
   canReset: boolean;
   onViewAnswers: (row: StudentResultRowView) => void;
   onAdjust: (row: StudentResultRowView) => void;
@@ -108,12 +110,12 @@ export function ResultsTable({
                     View answers
                   </Button>
                 )}
-                {canAdjust && row.attemptState === "SUBMITTED" && (
+                {canAdjust && row.manageable !== false && row.attemptState === "SUBMITTED" && (
                   <Button type="button" variant="ghost" size="sm" onClick={() => onAdjust(row)}>
                     Adjust
                   </Button>
                 )}
-                {canAdjust && row.adjustedScore !== null && (
+                {canAdjust && row.manageable !== false && row.adjustedScore !== null && (
                   <Button
                     type="button"
                     variant="ghost"
@@ -123,7 +125,7 @@ export function ResultsTable({
                     Clear adjustment
                   </Button>
                 )}
-                {canReset && row.attemptState !== "NOT_STARTED" && (
+                {canReset && row.manageable !== false && row.attemptState !== "NOT_STARTED" && (
                   <Button type="button" variant="ghost" size="sm" onClick={() => onReset(row)}>
                     Reset
                   </Button>

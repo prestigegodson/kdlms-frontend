@@ -34,6 +34,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
+import { useClassOptions } from "@/features/assessments/useClassOptions";
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
 import { useBranchScope } from "@/features/branches/useBranchScope";
 import { CommentsModal } from "@/features/learning/components/CommentsModal";
@@ -162,9 +163,7 @@ export function LearningResourcesPage() {
 
   const classes = isTeacher ? teacherClasses : adminClasses;
   const classesLoaded = classes !== null;
-  const classOptions = isTeacher
-    ? (teacherClasses ?? []).map((c) => ({ id: c.classId, name: c.className }))
-    : (adminClasses ?? []).map((c) => ({ id: c.id, name: c.name }));
+  const classOptions = useClassOptions(isTeacher, teacherClasses, adminClasses);
   const showsBranchFilter = can.selectBranch(role);
 
   async function runAction(resourceId: string, action: (id: string) => Promise<unknown>) {

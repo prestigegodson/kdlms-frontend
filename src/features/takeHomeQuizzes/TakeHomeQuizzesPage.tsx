@@ -26,6 +26,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } fro
 import { SubjectTargetSelect } from "@/features/academics/components/SubjectTargetSelect";
 import { parseTargetKey } from "@/features/academics/subjectTarget";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
+import { useClassOptions } from "@/features/assessments/useClassOptions";
 import { quizStatusLabel, quizStatusVariant } from "@/features/takeHomeQuizzes/takeHomeQuizStatus";
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
 import { useBranchScope } from "@/features/branches/useBranchScope";
@@ -126,9 +127,7 @@ export function TakeHomeQuizzesPage() {
 
   const classes = isTeacher ? teacherClasses : adminClasses;
   const classesLoaded = classes !== null;
-  const classOptions = isTeacher
-    ? (teacherClasses ?? []).map((c) => ({ id: c.classId, name: c.className }))
-    : (adminClasses ?? []).map((c) => ({ id: c.id, name: c.name }));
+  const classOptions = useClassOptions(isTeacher, teacherClasses, adminClasses);
   const showsBranchFilter = can.selectBranch(role);
 
   function newQuizHref(): string {

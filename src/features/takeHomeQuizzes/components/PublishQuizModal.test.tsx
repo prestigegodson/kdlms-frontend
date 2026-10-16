@@ -22,6 +22,7 @@ describe("PublishQuizModal", () => {
         onClose={vi.fn()}
         quizId="quiz-1"
         rosterSize={30}
+        portalRosterSize={0}
         closesAt="2026-03-08T00:00:00Z"
         onPublished={vi.fn()}
       />,
@@ -46,6 +47,7 @@ describe("PublishQuizModal", () => {
         onClose={vi.fn()}
         quizId="quiz-1"
         rosterSize={2}
+        portalRosterSize={0}
         closesAt="2026-03-08T00:00:00Z"
         onPublished={onPublished}
       />,
@@ -59,5 +61,50 @@ describe("PublishQuizModal", () => {
     expect(screen.getByText(/No active guardian contact/)).toBeInTheDocument();
     expect(takeHomeQuizzesApi.publishTakeHomeQuiz).toHaveBeenCalledWith("quiz-1");
     expect(onPublished).toHaveBeenCalled();
+  });
+
+  it("says nobody gets a link when every pupil has a portal login", async () => {
+    vi.mocked(takeHomeQuizzesApi.publishTakeHomeQuiz).mockResolvedValue({
+      tokensMinted: 0,
+      guardiansNotified: 0,
+      perStudent: [],
+    });
+    render(
+      <PublishQuizModal
+        open
+        onClose={vi.fn()}
+        quizId="quiz-1"
+        rosterSize={4}
+        portalRosterSize={4}
+        closesAt="2026-03-08T00:00:00Z"
+        onPublished={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/have portal logins/)).toBeInTheDocument();
+    expect(screen.getByText(/No links will be created and no guardian emails sent/)).toBeInTheDocument();
+    expect(screen.queryByText(/mint a link/)).not.toBeInTheDocument();
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "Publish" }));
+
+    expect(await screen.findByText("Published. Pupils will find it in their portal.")).toBeInTheDocument();
+  });
+
+  it("splits the roster when only some pupils have portal logins", () => {
+    render(
+      <PublishQuizModal
+        open
+        onClose={vi.fn()}
+        quizId="quiz-1"
+        rosterSize={5}
+        portalRosterSize={2}
+        closesAt="2026-03-08T00:00:00Z"
+        onPublished={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/with a portal login will find this quiz in their portal/)).toBeInTheDocument();
+    expect(screen.getByText(/A link will be created for each of the other/)).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
   });
 });
