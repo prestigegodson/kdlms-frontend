@@ -232,6 +232,11 @@ export function TakeHomeQuizzesPage() {
                           {quiz.writable ? `Shared · ${quiz.classes.length} classes` : `Shared from ${quiz.className}`}
                         </Badge>
                       )}
+                      {(quiz.chosenStudentCount ?? 0) > 0 && (
+                        <Badge variant="brand">
+                          {quiz.chosenStudentCount} selected student{quiz.chosenStudentCount === 1 ? "" : "s"}
+                        </Badge>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell label="Status">

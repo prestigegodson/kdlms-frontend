@@ -15,6 +15,7 @@ vi.mock("@/api/takeHomeQuizzes", async () => {
     ...actual,
     createTakeHomeQuiz: vi.fn(),
     getShareableClasses: vi.fn().mockResolvedValue([]),
+    getEligibleStudents: vi.fn().mockResolvedValue([]),
     getTakeHomeQuiz: vi.fn(),
     getTakeHomeQuizValidation: vi.fn(),
     saveTakeHomeQuizQuestions: vi.fn(),
@@ -113,6 +114,7 @@ const SAVED_VIEW: takeHomeQuizzesApi.TakeHomeQuizView = {
   themeId: null,
   themePreset: null,
   theme: null,
+  students: [],
 };
 
 const ARMS: takeHomeQuizzesApi.SharedClassView[] = [
@@ -216,6 +218,77 @@ describe("TakeHomeQuizEditorPage - a new quiz", () => {
     expect(takeHomeQuizzesApi.createTakeHomeQuiz).toHaveBeenCalledWith(
       expect.objectContaining({ classId: "class-1", subjectId: null, subjectGroupId: "group-1", quizType: "NORMAL" }),
     );
+  });
+});
+
+const ELIGIBLE: takeHomeQuizzesApi.EligibleStudentView[] = [
+  { studentId: "student-1", fullName: "Ada Okoye", admissionNumber: "KDL001", classId: "class-1", className: "JSS 1A", portalLogin: true },
+  { studentId: "student-2", fullName: "Bola Ade", admissionNumber: "KDL002", classId: "class-1", className: "JSS 1A", portalLogin: false },
+];
+
+describe("TakeHomeQuizEditorPage - choosing students", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(takeHomeQuizzesApi.getShareableClasses).mockResolvedValue([ARMS[0]]);
+    vi.mocked(takeHomeQuizzesApi.getEligibleStudents).mockResolvedValue(ELIGIBLE);
+  });
+
+  it("sends every student by default", async () => {
+    vi.mocked(takeHomeQuizzesApi.createTakeHomeQuiz).mockResolvedValue(SAVED_VIEW);
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuiz).mockResolvedValue(SAVED_VIEW);
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizValidation).mockResolvedValue({
+      canPublish: false, blockers: [], totalPoints: 0, midtermMax: null, rosterSize: 2, portalRosterSize: 1,
+    });
+    renderAt("/school/take-home-quizzes/new?classId=class-1&subjectId=subject-1&termId=term-1");
+    const user = userEvent.setup();
+
+    expect(await screen.findByLabelText("All students in these classrooms")).toBeChecked();
+    await user.type(screen.getByLabelText("Title"), "Week 3 quiz");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByText("Questions")).toBeInTheDocument();
+    expect(takeHomeQuizzesApi.getEligibleStudents).not.toHaveBeenCalled();
+    expect(takeHomeQuizzesApi.createTakeHomeQuiz).toHaveBeenCalledWith(expect.objectContaining({ studentIds: [] }));
+  });
+
+  it("creates a quiz for just the ticked students", async () => {
+    const chosenView = { ...SAVED_VIEW, students: [ELIGIBLE[1]] };
+    vi.mocked(takeHomeQuizzesApi.createTakeHomeQuiz).mockResolvedValue(chosenView);
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuiz).mockResolvedValue(chosenView);
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizValidation).mockResolvedValue({
+      canPublish: false, blockers: [], totalPoints: 0, midtermMax: null, rosterSize: 1, portalRosterSize: 0,
+    });
+    renderAt("/school/take-home-quizzes/new?classId=class-1&subjectId=subject-1&termId=term-1");
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByLabelText("Selected students"));
+    await user.click(await screen.findByLabelText(/Bola Ade/));
+    expect(takeHomeQuizzesApi.getEligibleStudents).toHaveBeenCalledWith(
+      "class-1",
+      { subjectId: "subject-1", subjectGroupId: null },
+      "term-1",
+      ["class-1"],
+    );
+    await user.type(screen.getByLabelText("Title"), "Retake");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByText("Questions")).toBeInTheDocument();
+    expect(takeHomeQuizzesApi.createTakeHomeQuiz).toHaveBeenCalledWith(
+      expect.objectContaining({ studentIds: ["student-2"] }),
+    );
+  });
+
+  it("refuses to save Selected students with nobody ticked", async () => {
+    renderAt("/school/take-home-quizzes/new?classId=class-1&subjectId=subject-1&termId=term-1");
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByLabelText("Selected students"));
+    await screen.findByLabelText(/Bola Ade/);
+    await user.type(screen.getByLabelText("Title"), "Retake");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByText(/Choose at least one student/)).toBeInTheDocument();
+    expect(takeHomeQuizzesApi.createTakeHomeQuiz).not.toHaveBeenCalled();
   });
 });
 

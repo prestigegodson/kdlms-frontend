@@ -13,6 +13,8 @@ interface PublishQuizModalProps {
   rosterSize: number;
   /** Roster students with a portal login - publishing mints them no link and emails nobody about them. */
   portalRosterSize: number;
+  /** The quiz goes only to chosen students - `rosterSize` counts just them. */
+  selectedAudience?: boolean;
   closesAt: string;
   onPublished: () => void;
 }
@@ -33,6 +35,7 @@ export function PublishQuizModal({
   quizId,
   rosterSize,
   portalRosterSize,
+  selectedAudience = false,
   closesAt,
   onPublished,
 }: PublishQuizModalProps) {
@@ -62,6 +65,7 @@ export function PublishQuizModal({
 
   const closesAtDisplay = new Date(closesAt).toLocaleString();
   const linkCount = Math.max(0, rosterSize - portalRosterSize);
+  const roster = selectedAudience ? "you selected" : "on this class's roster";
   const closesSentence = (
     <>
       The quiz closes <span className="font-medium">{closesAtDisplay}</span>.
@@ -98,17 +102,23 @@ export function PublishQuizModal({
             {portalRosterSize === 0 ? (
               <p className="text-sm text-slate-700">
                 This will mint a link for each of the <span className="font-medium">{rosterSize}</span> pupil
-                {rosterSize === 1 ? "" : "s"} on this class's roster and email their guardians. {closesSentence}
+                {rosterSize === 1 ? "" : "s"} {roster} and email their guardians. {closesSentence}
               </p>
             ) : linkCount === 0 ? (
               <p className="text-sm text-slate-700">
                 {rosterSize === 1 ? "The" : "All"} <span className="font-medium">{rosterSize}</span> pupil
-                {rosterSize === 1 ? "" : "s"} on this class's roster {rosterSize === 1 ? "has a" : "have"} portal
+                {rosterSize === 1 ? "" : "s"} {roster} {rosterSize === 1 ? "has a" : "have"} portal
                 login{rosterSize === 1 ? "" : "s"}, so {rosterSize === 1 ? "they'll" : "they'll each"} find this quiz
                 in their portal. No links will be created and no guardian emails sent. {closesSentence}
               </p>
             ) : (
               <p className="text-sm text-slate-700">
+                {selectedAudience && (
+                  <>
+                    Only the <span className="font-medium">{rosterSize}</span> pupil{rosterSize === 1 ? "" : "s"} you
+                    selected will get this quiz.{" "}
+                  </>
+                )}
                 <span className="font-medium">{portalRosterSize}</span> pupil{portalRosterSize === 1 ? "" : "s"} with
                 a portal login will find this quiz in their portal. A link will be created for each of the other{" "}
                 <span className="font-medium">{linkCount}</span> and emailed to their guardians. {closesSentence}

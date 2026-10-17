@@ -7,7 +7,9 @@ import {
   createTakeHomeQuiz,
   deleteQuestionBankItem,
   deleteTakeHomeQuiz,
+  type EligibleStudentView,
   fetchQuestionTemplate,
+  getEligibleStudents,
   getShareableClasses,
   getTakeHomeQuiz,
   getTakeHomeQuizValidation,
@@ -42,6 +44,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { UnsavedChangesBar } from "@/features/assessments/components/UnsavedChangesBar";
 import { PublishQuizModal } from "@/features/takeHomeQuizzes/components/PublishQuizModal";
 import { PublishReadinessPanel } from "@/features/takeHomeQuizzes/components/PublishReadinessPanel";
+import { type QuizAudience, QuizAudienceField } from "@/features/takeHomeQuizzes/components/QuizAudienceField";
 import type { QuestionBankSource } from "@/features/takeHomeQuizzes/components/QuestionBankModal";
 import { QuestionEditor } from "@/features/takeHomeQuizzes/components/QuestionEditor";
 import { QuizPreviewModal } from "@/features/takeHomeQuizzes/components/QuizPreviewModal";
@@ -67,6 +70,9 @@ interface FormState {
   shuffleChoices: boolean;
   /** The other arms of the home class's level a Normal quiz is shared with - never the home class itself. */
   sharedClassIds: string[];
+  /** Every student of the quiz's classrooms, or only `studentIds`. */
+  audience: QuizAudience;
+  studentIds: string[];
   theme: ThemeChoice;
   questions: EditableQuestion[];
 }
@@ -88,6 +94,8 @@ function blankForm(): FormState {
     shuffleQuestions: false,
     shuffleChoices: false,
     sharedClassIds: [],
+    audience: "ALL",
+    studentIds: [],
     theme: NO_THEME,
     questions: [],
   };
@@ -108,6 +116,8 @@ function fromView(view: TakeHomeQuizView): FormState {
     sharedClassIds: (view.classes ?? [])
       .map((sharedClass) => sharedClass.classId)
       .filter((id) => id !== view.classId),
+    audience: (view.students ?? []).length > 0 ? "SELECTED" : "ALL",
+    studentIds: (view.students ?? []).map((student) => student.studentId),
     theme: { themeId: view.themeId ?? null, themePreset: view.themePreset ?? null },
     questions: view.questions.map(toEditableQuestion),
   };
@@ -248,6 +258,49 @@ export function TakeHomeQuizEditorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shareKey]);
 
+  // The students of the classrooms the quiz reaches, loaded only once the author picks "Selected students".
+  const quizTermId = quiz?.termId ?? termId;
+  const reachedClassIds = [homeClassId, ...form.sharedClassIds.filter((id) => id !== homeClassId)];
+  const studentsKey =
+    shareKey && quizTermId && form.audience === "SELECTED" ? `${shareKey}|${quizTermId}|${reachedClassIds.join(",")}` : null;
+  const [loadedStudents, setLoadedStudents] = useState<{ key: string; students: EligibleStudentView[] | null } | null>(
+    null,
+  );
+  const eligibleStudents = studentsKey && loadedStudents?.key === studentsKey ? loadedStudents.students : null;
+  useEffect(() => {
+    if (!studentsKey) return;
+    let cancelled = false;
+    getEligibleStudents(homeClassId, { subjectId: targetSubjectId, subjectGroupId: targetGroupId }, quizTermId, reachedClassIds)
+      .then((students) => {
+        if (!cancelled) setLoadedStudents({ key: studentsKey, students });
+      })
+      .catch(() => {
+        // The chosen students still save as they are; the server checks every one is in the quiz's classrooms.
+        if (!cancelled) setLoadedStudents({ key: studentsKey, students: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+    // Every input is encoded in `studentsKey`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentsKey]);
+
+  /**
+   * The chosen students to save - `[]` for every student; `undefined` (leave unchanged) when the caller
+   * can't change the quiz. Students of a classroom since unticked drop out of the selection.
+   */
+  function chosenStudentIds(): string[] | undefined {
+    if (!shareKey) return undefined;
+    if (form.audience === "ALL") return [];
+    const offered = eligibleStudents ? new Set(eligibleStudents.map((student) => student.studentId)) : null;
+    const locked = new Set((quiz?.students ?? []).map((student) => student.studentId));
+    const chosen = form.studentIds.filter((id) => !offered || offered.has(id) || locked.has(id));
+    if (chosen.length === 0) {
+      throw new ApiError(422, "Choose at least one student, or send the quiz to all students.");
+    }
+    return chosen;
+  }
+
   /** Every class the quiz should reach, the home class first - `undefined` (leave unchanged) when the arms couldn't be listed. */
   function chosenClassIds(): string[] | undefined {
     if (shareableClasses.length === 0) return undefined;
@@ -320,6 +373,7 @@ export function TakeHomeQuizEditorPage() {
           shuffleQuestions: form.shuffleQuestions,
           shuffleChoices: form.shuffleChoices,
           classIds: chosenClassIds(),
+          studentIds: chosenStudentIds(),
           ...form.theme,
         });
       } else {
@@ -335,6 +389,7 @@ export function TakeHomeQuizEditorPage() {
           shuffleQuestions: form.shuffleQuestions,
           shuffleChoices: form.shuffleChoices,
           classIds: chosenClassIds(),
+          studentIds: chosenStudentIds(),
           ...form.theme,
         });
       }
@@ -523,6 +578,19 @@ export function TakeHomeQuizEditorPage() {
             />
           )}
 
+          {(shareKey || (quiz?.students ?? []).length > 0) && (
+            <QuizAudienceField
+              audience={form.audience}
+              selected={new Set(form.studentIds)}
+              onChange={(audience, next) => setForm({ ...form, audience, studentIds: [...next] })}
+              students={eligibleStudents ?? (shareKey ? null : (quiz?.students ?? []))}
+              // Once students have submitted, a chosen student can be added but not removed.
+              isLocked={(id) => questionsReadOnly && (quiz?.students ?? []).some((s) => s.studentId === id)}
+              narrowingLocked={questionsReadOnly && (quiz?.students ?? []).length === 0}
+              disabled={readOnly || !shareKey}
+            />
+          )}
+
           <QuizWindowFields
             opensAt={form.opensAt}
             onOpensAtChange={(value) => setForm({ ...form, opensAt: value })}
@@ -661,6 +729,7 @@ export function TakeHomeQuizEditorPage() {
           quizId={quiz.id}
           rosterSize={readiness?.rosterSize ?? 0}
           portalRosterSize={readiness?.portalRosterSize ?? 0}
+          selectedAudience={(quiz.students ?? []).length > 0}
           closesAt={quiz.closesAt}
           onPublished={handlePublished}
         />

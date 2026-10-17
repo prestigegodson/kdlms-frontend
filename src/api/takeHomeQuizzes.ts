@@ -43,6 +43,17 @@ export interface SharedClassView {
   className: string;
 }
 
+/** Mirrors backend takehomequiz.application.port.in.EligibleStudentView - one student a school quiz may be narrowed to. */
+export interface EligibleStudentView {
+  studentId: string;
+  fullName: string;
+  admissionNumber: string | null;
+  classId: string;
+  className: string;
+  /** Takes the quiz signed in to the student portal - no link or guardian email. */
+  portalLogin: boolean;
+}
+
 /** Mirrors backend takehomequiz.application.port.in.TakeHomeQuizSummaryView - one row of the paginated list. */
 export interface TakeHomeQuizSummaryView {
   id: string;
@@ -64,6 +75,8 @@ export interface TakeHomeQuizSummaryView {
   classes: SharedClassView[];
   /** False when the caller only reads it - e.g. a teacher of another arm the quiz is shared with. */
   writable: boolean;
+  /** How many chosen students a selective-audience quiz names - 0 when it reaches its whole classes. */
+  chosenStudentCount: number;
 }
 
 /** Mirrors backend takehomequiz.application.port.in.TakeHomeQuizView.OptionView. */
@@ -160,6 +173,8 @@ export interface TakeHomeQuizView {
   themePreset: string | null;
   /** What `themeId`/`themePreset` resolve to. */
   theme: QuizThemeStyle | null;
+  /** The chosen students of a selective-audience quiz - empty when it reaches every student of `classes`. */
+  students: EligibleStudentView[];
 }
 
 /** Mirrors backend takehomequiz.application.port.in.PublishReadinessView. */
@@ -235,6 +250,8 @@ export interface CreateTakeHomeQuizRequest {
   classIds?: string[];
   themeId: string | null;
   themePreset: string | null;
+  /** Chosen students of those classes (`getEligibleStudents`); omitted or empty reaches every student. */
+  studentIds?: string[];
 }
 
 export interface UpdateTakeHomeQuizRequest {
@@ -253,6 +270,8 @@ export interface UpdateTakeHomeQuizRequest {
   /** A full replace - both null for the plain look. Never frozen by a submission. */
   themeId: string | null;
   themePreset: string | null;
+  /** Omitted leaves the audience unchanged; empty reaches every student again. Once a submission exists, students can only be added. */
+  studentIds?: string[];
 }
 
 /** Mirrors backend takehomequiz.application.port.in.PublishOutcomeView.RowOutcome. */
@@ -506,6 +525,20 @@ export function getShareableClasses(classId: string, target: SubjectTarget): Pro
   if (target.subjectId) params.set("subjectId", target.subjectId);
   if (target.subjectGroupId) params.set("subjectGroupId", target.subjectGroupId);
   return apiFetch<SharedClassView[]>(`${BASE}/shareable-classes?${params.toString()}`);
+}
+
+/** The students of `classId` and the chosen arms `classIds` a quiz may be narrowed to, class by class. */
+export function getEligibleStudents(
+  classId: string,
+  target: SubjectTarget,
+  termId: string,
+  classIds: string[],
+): Promise<EligibleStudentView[]> {
+  const params = new URLSearchParams({ classId, termId });
+  if (target.subjectId) params.set("subjectId", target.subjectId);
+  if (target.subjectGroupId) params.set("subjectGroupId", target.subjectGroupId);
+  classIds.filter((id) => id !== classId).forEach((id) => params.append("classIds", id));
+  return apiFetch<EligibleStudentView[]>(`${BASE}/eligible-students?${params.toString()}`);
 }
 
 /** Mirrors backend takehomequiz.application.port.in.ShareTargetClassView - another class (level) a copy may be sent to. */
