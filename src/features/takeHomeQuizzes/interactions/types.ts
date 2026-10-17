@@ -38,7 +38,17 @@ export interface InteractionPlugin<C, P, R> {
    * Lazy-loaded (`React.lazy`) - it pulls in the TipTap editor, which the taking pages, the anonymous
    * token page included, must never download. Render it inside a `Suspense`.
    */
-  Author: ComponentType<{ value: C; onChange(config: C): void; disabled: boolean; idPrefix: string }>;
+  /**
+   * `answerOnly` (an answer-key correction once a quiz has submissions) leaves only the controls
+   * that set the answer enabled - everything a student sees stays as it is.
+   */
+  Author: ComponentType<{
+    value: C;
+    onChange(config: C): void;
+    disabled: boolean;
+    answerOnly?: boolean;
+    idPrefix: string;
+  }>;
   Player: FC<{
     config: P;
     value: R | null;

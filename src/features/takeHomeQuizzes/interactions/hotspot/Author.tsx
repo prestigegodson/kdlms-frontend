@@ -12,20 +12,26 @@ interface HotspotAuthorProps {
   value: HotspotConfig;
   onChange(config: HotspotConfig): void;
   disabled: boolean;
+  answerOnly?: boolean;
   idPrefix: string;
 }
 
 /**
  * Authors a hotspot question: the image, the target regions students should tap, any other named
  * regions review can point out ("you tapped the Atlantic"), and how many pins a student may drop.
- * Students see only the image.
+ * Students see only the image. `answerOnly` leaves the regions - all of them answer - and keeps the
+ * image and the pin allowance students were given.
  */
-export function HotspotAuthor({ value, onChange, disabled, idPrefix }: HotspotAuthorProps) {
+export function HotspotAuthor({ value, onChange, disabled, answerOnly = false, idPrefix }: HotspotAuthorProps) {
   const { singular } = useParticipantNoun();
   const range = pinRange(value.regions);
 
-  /** Regions changed - keep the pin allowance inside the range their targets allow. */
+  /** Regions changed - keep the pin allowance inside the range their targets allow, unless it's fixed. */
   function setRegions(regions: HotspotRegion[]) {
+    if (answerOnly) {
+      onChange({ ...value, regions });
+      return;
+    }
     const { min, max } = pinRange(regions);
     onChange({ ...value, regions, maxPins: Math.min(max, Math.max(min, value.maxPins)) });
   }
@@ -48,6 +54,7 @@ export function HotspotAuthor({ value, onChange, disabled, idPrefix }: HotspotAu
           maxRegions={MAX_HOTSPOT_REGIONS}
           regionName={(index) => `Region ${index + 1}`}
           disabled={disabled}
+          imageLocked={answerOnly}
           renderRegionPanel={(region, index) => (
             <div className="mt-1 grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center">
               <label htmlFor={`${idPrefix}-target-${region.id}`} className="flex items-center gap-2 text-sm text-slate-700">
@@ -77,7 +84,7 @@ export function HotspotAuthor({ value, onChange, disabled, idPrefix }: HotspotAu
           id={`${idPrefix}-max-pins`}
           value={value.maxPins}
           onChange={(event) => onChange({ ...value, maxPins: Number(event.target.value) })}
-          disabled={disabled}
+          disabled={disabled || answerOnly}
         >
           {Array.from({ length: range.max - range.min + 1 }, (_, i) => range.min + i).map((count) => (
             <option key={count} value={count}>

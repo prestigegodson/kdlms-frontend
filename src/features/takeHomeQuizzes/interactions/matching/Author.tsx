@@ -12,15 +12,18 @@ interface MatchingAuthorProps {
   value: MatchingConfig;
   onChange(config: MatchingConfig): void;
   disabled: boolean;
+  answerOnly?: boolean;
   idPrefix: string;
 }
 
 /**
  * Authors a matching question: the answers (an answer no prompt uses is a distractor), then each
- * prompt with the answer it matches. Students see the answers shuffled.
+ * prompt with the answer it matches. Students see the answers shuffled. `answerOnly` leaves only
+ * which answer each prompt matches.
  */
-export function MatchingAuthor({ value, onChange, disabled, idPrefix }: MatchingAuthorProps) {
+export function MatchingAuthor({ value, onChange, disabled, answerOnly = false, idPrefix }: MatchingAuthorProps) {
   const { lefts, rights } = value;
+  const layoutDisabled = disabled || answerOnly;
 
   function updateLeft(index: number, patch: Partial<MatchingLeft>) {
     onChange({ ...value, lefts: lefts.map((left, i) => (i === index ? { ...left, ...patch } : left)) });
@@ -55,11 +58,11 @@ export function MatchingAuthor({ value, onChange, disabled, idPrefix }: Matching
                   }
                   singleLine
                   allowImages
-                  disabled={disabled}
+                  disabled={layoutDisabled}
                   ariaLabel={`Answer ${letter(index)}`}
                 />
               </div>
-              {!disabled && (
+              {!layoutDisabled && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -73,7 +76,7 @@ export function MatchingAuthor({ value, onChange, disabled, idPrefix }: Matching
             </li>
           ))}
         </ul>
-        {!disabled && rights.length < MAX_MATCHING_RIGHTS && (
+        {!layoutDisabled && rights.length < MAX_MATCHING_RIGHTS && (
           <Button
             type="button"
             variant="secondary"
@@ -95,7 +98,7 @@ export function MatchingAuthor({ value, onChange, disabled, idPrefix }: Matching
                 onChange={(html) => updateLeft(index, { html })}
                 singleLine
                 allowImages
-                disabled={disabled}
+                disabled={layoutDisabled}
                 ariaLabel={`Prompt ${index + 1}`}
               />
               <Select
@@ -111,7 +114,7 @@ export function MatchingAuthor({ value, onChange, disabled, idPrefix }: Matching
                   </option>
                 ))}
               </Select>
-              {!disabled && (
+              {!layoutDisabled && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -125,7 +128,7 @@ export function MatchingAuthor({ value, onChange, disabled, idPrefix }: Matching
             </li>
           ))}
         </ul>
-        {!disabled && lefts.length < MAX_MATCHING_LEFTS && rights.length < MAX_MATCHING_RIGHTS && (
+        {!layoutDisabled && lefts.length < MAX_MATCHING_LEFTS && rights.length < MAX_MATCHING_RIGHTS && (
           <Button type="button" variant="secondary" size="sm" className="mt-2" onClick={addPair}>
             <Plus className="h-4 w-4" aria-hidden="true" /> Add a prompt and its answer
           </Button>
@@ -137,7 +140,7 @@ export function MatchingAuthor({ value, onChange, disabled, idPrefix }: Matching
           id={`${idPrefix}-reuse`}
           checked={value.reuseRights}
           onChange={(event) => onChange({ ...value, reuseRights: event.target.checked })}
-          disabled={disabled}
+          disabled={layoutDisabled}
         />
         One answer can match more than one prompt
       </label>

@@ -75,6 +75,8 @@ export interface RegionEditorProps<R extends { id: string; shape: Shape }> {
   /** The type's own controls for one region - accepted labels, the target switch... */
   renderRegionPanel(region: R, index: number): ReactNode;
   disabled: boolean;
+  /** Keeps the image as it is while the regions stay editable - an answer-key correction of a hotspot. */
+  imageLocked?: boolean;
 }
 
 /**
@@ -98,6 +100,7 @@ export function RegionEditor<R extends { id: string; shape: Shape }>({
   regionName,
   renderRegionPanel,
   disabled,
+  imageLocked = false,
 }: RegionEditorProps<R>) {
   const { Plural } = useParticipantNoun();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -345,7 +348,7 @@ export function RegionEditor<R extends { id: string; shape: Shape }>({
           aria-label="Image file"
           onChange={onFileSelected}
         />
-        {!disabled && (
+        {!disabled && !imageLocked && (
           <Button type="button" variant="secondary" size="sm" onClick={() => inputRef.current?.click()} disabled={uploading}>
             {uploading ? <Spinner /> : <ImagePlus className="h-4 w-4" aria-hidden="true" />}
             {imageFileId ? "Replace image" : "Upload image"}

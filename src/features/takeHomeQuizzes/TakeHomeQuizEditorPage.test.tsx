@@ -18,6 +18,8 @@ vi.mock("@/api/takeHomeQuizzes", async () => {
     getTakeHomeQuiz: vi.fn(),
     getTakeHomeQuizValidation: vi.fn(),
     saveTakeHomeQuizQuestions: vi.fn(),
+    previewTakeHomeQuizAnswerKeyCorrection: vi.fn(),
+    correctTakeHomeQuizAnswerKey: vi.fn(),
     updateTakeHomeQuiz: vi.fn(),
     publishTakeHomeQuiz: vi.fn(),
     getTakeHomeQuizLinks: vi.fn(),
@@ -102,6 +104,7 @@ const SAVED_VIEW: takeHomeQuizzesApi.TakeHomeQuizView = {
     canPublishResults: false,
     canUnpublishResults: false,
     canShare: false,
+    canCorrectAnswers: false,
   },
   updatedAt: "2026-03-01T00:00:00Z",
   subjectGroupId: null,
@@ -290,6 +293,7 @@ describe("TakeHomeQuizEditorPage - sharing with other classes", () => {
         canPublishResults: false,
         canUnpublishResults: false,
         canShare: false,
+        canCorrectAnswers: false,
       },
     });
     vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizValidation).mockResolvedValue({
@@ -427,6 +431,7 @@ describe("TakeHomeQuizEditorPage - an existing quiz", () => {
         canPublishResults: false,
         canUnpublishResults: true,
         canShare: false,
+        canCorrectAnswers: false,
       },
     });
     vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizValidation).mockResolvedValue({
@@ -461,6 +466,7 @@ describe("TakeHomeQuizEditorPage - an existing quiz", () => {
         canPublishResults: true,
         canUnpublishResults: false,
         canShare: false,
+        canCorrectAnswers: false,
       },
     });
     vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizValidation).mockResolvedValue({
@@ -502,6 +508,128 @@ describe("TakeHomeQuizEditorPage - an existing quiz", () => {
 
     expect(await screen.findByDisplayValue("Week 3 quiz")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Publish" })).toBeInTheDocument();
+  });
+});
+
+describe("TakeHomeQuizEditorPage - correcting the answer key once pupils have submitted", () => {
+  const SUBMITTED_VIEW: takeHomeQuizzesApi.TakeHomeQuizView = {
+    ...SAVED_VIEW,
+    status: "PUBLISHED",
+    totalPoints: 2,
+    questions: [
+      {
+        id: "q-1",
+        position: 1,
+        questionType: "SINGLE_CHOICE",
+        prompt: "<p>2 + 2 = ?</p>",
+        points: 2,
+        options: [
+          { id: "o-1", position: 1, label: "<p>3</p>", correct: true },
+          { id: "o-2", position: 2, label: "<p>4</p>", correct: false },
+        ],
+        answerKeys: [],
+        tags: [],
+      },
+    ],
+    actions: {
+      ...SAVED_VIEW.actions,
+      canEditQuestions: false,
+      canDelete: false,
+      canPublishResults: true,
+      canCorrectAnswers: true,
+    },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuiz).mockResolvedValue(SUBMITTED_VIEW);
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizValidation).mockResolvedValue({
+      canPublish: true,
+      blockers: [],
+      totalPoints: 2,
+      midtermMax: null,
+      rosterSize: 3,
+      portalRosterSize: 0,
+    });
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizLinks).mockResolvedValue([]);
+    vi.mocked(takeHomeQuizzesApi.updateTakeHomeQuiz).mockResolvedValue(SUBMITTED_VIEW);
+  });
+
+  it("leaves only the answer and points editable, then re-scores after confirming the previewed impact", async () => {
+    const user = userEvent.setup();
+    const correction = {
+      changedQuestions: 1,
+      submittedAttempts: 3,
+      scoresChanged: 2,
+      overridesKept: 1,
+      overridesAboveNewTotal: 0,
+      previousTotalPoints: 2,
+      newTotalPoints: 2,
+      midtermMaxExceeded: false,
+      gradebookResync: false,
+    };
+    vi.mocked(takeHomeQuizzesApi.previewTakeHomeQuizAnswerKeyCorrection).mockResolvedValue(correction);
+    vi.mocked(takeHomeQuizzesApi.correctTakeHomeQuizAnswerKey).mockResolvedValue({
+      ...correction,
+      quiz: {
+        ...SUBMITTED_VIEW,
+        questions: [
+          {
+            ...SUBMITTED_VIEW.questions[0],
+            options: [
+              { id: "o-1", position: 1, label: "<p>3</p>", correct: false },
+              { id: "o-2", position: 2, label: "<p>4</p>", correct: true },
+            ],
+          },
+        ],
+      },
+    });
+
+    renderAt("/school/take-home-quizzes/quiz-1?classId=class-1&subjectId=subject-1&termId=term-1");
+
+    const secondCorrect = await screen.findByRole("radio", { name: "Option 2 is correct" });
+    expect(secondCorrect).not.toBeDisabled();
+    expect(screen.getByLabelText("Points")).not.toBeDisabled();
+    expect(screen.getByLabelText("Question type")).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Add question" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add option" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Remove question 1" })).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Timed" })).not.toBeDisabled();
+
+    await user.click(secondCorrect);
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByText("The score changes for 2 pupils.")).toBeInTheDocument();
+    expect(screen.getByText(/1 manually adjusted score will be kept/)).toBeInTheDocument();
+    const [, previewed] = vi.mocked(takeHomeQuizzesApi.previewTakeHomeQuizAnswerKeyCorrection).mock.calls[0];
+    expect(previewed[0].options.map((option) => option.correct)).toEqual([false, true]);
+    expect(takeHomeQuizzesApi.updateTakeHomeQuiz).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Correct and re-score" }));
+
+    await waitFor(() => expect(takeHomeQuizzesApi.correctTakeHomeQuizAnswerKey).toHaveBeenCalledTimes(1));
+    expect(takeHomeQuizzesApi.updateTakeHomeQuiz).toHaveBeenCalledTimes(1);
+    expect(takeHomeQuizzesApi.saveTakeHomeQuizQuestions).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText("Answer key corrected - 3 attempts re-scored, the score changed for 2 pupils."),
+    ).toBeInTheDocument();
+  });
+
+  it("saves a timer change without touching the locked questions", async () => {
+    const user = userEvent.setup();
+    renderAt("/school/take-home-quizzes/quiz-1?classId=class-1&subjectId=subject-1&termId=term-1");
+
+    await user.click(await screen.findByRole("checkbox", { name: "Timed" }));
+    await user.type(screen.getByLabelText("Duration (minutes)"), "20");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(takeHomeQuizzesApi.updateTakeHomeQuiz).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(takeHomeQuizzesApi.updateTakeHomeQuiz).mock.calls[0][1]).toMatchObject({
+      timed: true,
+      durationMinutes: 20,
+    });
+    expect(takeHomeQuizzesApi.saveTakeHomeQuizQuestions).not.toHaveBeenCalled();
+    expect(takeHomeQuizzesApi.previewTakeHomeQuizAnswerKeyCorrection).not.toHaveBeenCalled();
   });
 });
 

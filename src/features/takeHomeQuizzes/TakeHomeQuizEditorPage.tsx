@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import {
   addTakeHomeQuizQuestionsFromBank,
+  type AnswerCorrectionView,
+  correctTakeHomeQuizAnswerKey,
   createTakeHomeQuiz,
   deleteQuestionBankItem,
   deleteTakeHomeQuiz,
@@ -10,6 +12,7 @@ import {
   getTakeHomeQuiz,
   getTakeHomeQuizValidation,
   importTakeHomeQuizQuestions,
+  previewTakeHomeQuizAnswerKeyCorrection,
   type PublishReadinessView,
   type QuizType,
   saveTakeHomeQuizQuestions,
@@ -23,6 +26,9 @@ import { ApiError } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { useParticipantNoun } from "@/components/ParticipantNoun";
+import { describeAnswerCorrection } from "@/features/takeHomeQuizzes/answerCorrection";
+import { AnswerCorrectionDialog } from "@/features/takeHomeQuizzes/components/AnswerCorrectionDialog";
 import { ShuffleFields } from "@/features/takeHomeQuizzes/components/ShuffleFields";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FormField } from "@/components/ui/FormField";
@@ -123,7 +129,10 @@ function snapshotOf(form: FormState): string {
  * Save is one combined action across two backend endpoints (metadata,
  * then the question set) - `ManageTakeHomeQuizzesUseCase.update`/`create`
  * followed by `saveQuestions` - since the teacher experiences this as one
- * "Save" rather than two independent forms.
+ * "Save" rather than two independent forms. Once a submission has locked the
+ * questions, a changed answer key goes through the answer-key correction
+ * instead - previewed, confirmed, then saved with the metadata, re-scoring
+ * every submitted attempt.
  */
 export function TakeHomeQuizEditorPage() {
   const { quizId } = useParams<{ quizId: string }>();
@@ -154,6 +163,8 @@ export function TakeHomeQuizEditorPage() {
   const [sharing, setSharing] = useState(false);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
   const [linksRefreshToken, setLinksRefreshToken] = useState(0);
+  const [correctionPreview, setCorrectionPreview] = useState<AnswerCorrectionView<TakeHomeQuizView> | null>(null);
+  const nouns = useParticipantNoun();
 
   // Memoized: the bank modal re-searches whenever its `search` or `context` changes identity.
   const quizIdForBank = quiz?.id ?? null;
@@ -194,11 +205,17 @@ export function TakeHomeQuizEditorPage() {
   const showForm = !loadError && (isNew || quiz !== null);
   const readOnly = quiz ? !quiz.actions.canEditMetadata : false;
   const questionsReadOnly = quiz ? !quiz.actions.canEditQuestions : false;
-  // Once a submission exists, only `closesAt` (extend-only) and `revealResultsOnSubmit` stay
-  // editable - everything else metadata-shaped locks alongside the question set. `readOnly` (the
-  // quiz is archived) locks every field including those two.
+  // Once a submission exists, the questions' answers and points can still be corrected.
+  const correctingAnswers = quiz?.actions.canCorrectAnswers ?? false;
+  // Once a submission exists, only `closesAt` (extend-only), `revealResultsOnSubmit` and the timer
+  // stay editable - everything else metadata-shaped locks alongside the question set. `readOnly`
+  // (the quiz is archived) locks every field including those.
   const locked = readOnly || questionsReadOnly;
   const dirty = snapshotOf(form) !== snapshot;
+  const questionsDirty = useMemo(
+    () => JSON.stringify(form.questions) !== JSON.stringify((JSON.parse(snapshot) as FormState).questions),
+    [form.questions, snapshot],
+  );
   // A subject-group quiz is always Normal - a midterm score belongs to exactly one subject.
   const isGroupQuiz = isNew ? subjectGroupId !== "" : quiz?.subjectGroupId != null;
 
@@ -252,7 +269,34 @@ export function TakeHomeQuizEditorPage() {
     setSaveNotice(null);
   }
 
+  /** Saves, first previewing an answer-key correction - which `saveWithCorrection` then applies - when there is one. */
   async function save() {
+    if (quiz && correctingAnswers && questionsDirty) {
+      setSaving(true);
+      setSaveError(null);
+      setSaveNotice(null);
+      try {
+        setCorrectionPreview(
+          await previewTakeHomeQuizAnswerKeyCorrection(quiz.id, form.questions.map(toQuestionCommand)),
+        );
+      } catch (error) {
+        setSaveError(error instanceof ApiError ? error.message : "Failed to check this correction");
+        setFeedbackSeq((seq) => seq + 1);
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+    await saveAll(false);
+  }
+
+  /** The confirmed correction: errors stay in the dialog, which closes only on success. */
+  async function saveWithCorrection() {
+    await saveAll(true);
+    setCorrectionPreview(null);
+  }
+
+  async function saveAll(correcting: boolean) {
     setSaving(true);
     setSaveError(null);
     setSaveNotice(null);
@@ -294,14 +338,19 @@ export function TakeHomeQuizEditorPage() {
           ...form.theme,
         });
       }
-      if (form.questions.length > 0 || (quiz && quiz.questions.length > 0)) {
+      let notice = "Quiz saved.";
+      if (correcting) {
+        const correction = await correctTakeHomeQuizAnswerKey(saved.id, form.questions.map(toQuestionCommand));
+        saved = correction.quiz ?? saved;
+        notice = describeAnswerCorrection(correction, nouns);
+      } else if (!questionsReadOnly && (form.questions.length > 0 || (quiz && quiz.questions.length > 0))) {
         saved = await saveTakeHomeQuizQuestions(
           saved.id,
           form.questions.map(toQuestionCommand),
         );
       }
       applyQuiz(saved);
-      setSaveNotice("Quiz saved.");
+      setSaveNotice(notice);
       if (isNew) {
         const target = subjectGroupId ? `subjectGroupId=${subjectGroupId}` : `subjectId=${subjectId}`;
         navigate(`/school/take-home-quizzes/${saved.id}?classId=${classId}&${target}&termId=${termId}`, {
@@ -309,6 +358,8 @@ export function TakeHomeQuizEditorPage() {
         });
       }
     } catch (error) {
+      // A failed correction is shown in its dialog, which stays open.
+      if (correcting) throw error;
       setSaveError(error instanceof ApiError ? error.message : "Failed to save this quiz");
     } finally {
       setSaving(false);
@@ -417,8 +468,11 @@ export function TakeHomeQuizEditorPage() {
           )}
           {questionsReadOnly && !readOnly && (
             <Alert variant="info">
-              Pupils have already submitted this quiz. Only the closing date (later only) and the
-              reveal setting below can still be changed.
+              Pupils have already submitted this quiz. The closing date (later only), the timer and the
+              reveal setting below can still be changed - a new timer applies to pupils who haven&apos;t
+              started yet.
+              {correctingAnswers &&
+                " Each question's correct answer and points can be corrected too; saving re-scores every submitted attempt."}
             </Alert>
           )}
 
@@ -517,7 +571,8 @@ export function TakeHomeQuizEditorPage() {
           <QuestionEditor
             questions={form.questions}
             onChange={(questions) => setForm({ ...form, questions })}
-            disabled={questionsReadOnly}
+            disabled={questionsReadOnly && !correctingAnswers}
+            answerKeyOnly={correctingAnswers}
             importer={{
               importFile: (file) => importTakeHomeQuizQuestions(quiz?.id ?? "", file),
               fetchTemplate: fetchQuestionTemplate,
@@ -564,6 +619,14 @@ export function TakeHomeQuizEditorPage() {
             (form.theme.themePreset ?? null) !== (quiz.themePreset ?? null)
           }
           onClose={() => setPreviewOpen(false)}
+        />
+      )}
+
+      {correctionPreview && (
+        <AnswerCorrectionDialog
+          preview={correctionPreview}
+          onConfirm={saveWithCorrection}
+          onClose={() => setCorrectionPreview(null)}
         />
       )}
 

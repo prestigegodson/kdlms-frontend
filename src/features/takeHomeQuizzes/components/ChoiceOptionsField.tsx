@@ -12,6 +12,8 @@ interface ChoiceOptionsFieldProps {
   /** A stable per-question identifier so SINGLE_CHOICE's native radio group stays mutually exclusive - the question's own `key`, not derived from its (mutable) option list. */
   groupName: string;
   disabled?: boolean;
+  /** Only which options are correct may change - an answer-key correction once a quiz has submissions. */
+  answerOnly?: boolean;
 }
 
 /**
@@ -29,7 +31,9 @@ export function ChoiceOptionsField({
   onChange,
   groupName,
   disabled = false,
+  answerOnly = false,
 }: ChoiceOptionsFieldProps) {
+  const layoutDisabled = disabled || answerOnly;
   const inputType = questionType === "SINGLE_CHOICE" ? "radio" : "checkbox";
 
   function updateAt(index: number, patch: Partial<EditableOption>) {
@@ -73,11 +77,11 @@ export function ChoiceOptionsField({
                 onChange={(label) => updateAt(index, { label })}
                 singleLine
                 allowImages
-                disabled={disabled}
+                disabled={layoutDisabled}
                 ariaLabel={`Option ${index + 1} label`}
               />
             </div>
-            {!disabled && (
+            {!layoutDisabled && (
               <Button
                 type="button"
                 variant="ghost"
@@ -91,7 +95,7 @@ export function ChoiceOptionsField({
             )}
           </div>
         ))}
-        {!disabled && (
+        {!layoutDisabled && (
           <Button type="button" variant="secondary" size="sm" onClick={addOption}>
             <Plus className="h-4 w-4" aria-hidden="true" /> Add option
           </Button>

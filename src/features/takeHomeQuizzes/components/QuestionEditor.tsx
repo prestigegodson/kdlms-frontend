@@ -29,6 +29,11 @@ interface QuestionEditorProps {
   questions: EditableQuestion[];
   onChange: (questions: EditableQuestion[]) => void;
   disabled?: boolean;
+  /**
+   * Answer-key correction mode, once a quiz has submissions: only which answer is right and each
+   * question's points stay editable - nothing a student sees, and no question added, removed or moved.
+   */
+  answerKeyOnly?: boolean;
   /** Offers "Import from file" (a csv/xlsx/xls bulk upload) when given - see `QuestionImportModal`. */
   importer?: QuestionImporter;
   /**
@@ -51,7 +56,16 @@ type BankSaveStatus = { kind: "saving" } | { kind: "saved" } | { kind: "error"; 
  * `TemplateDesignerPage` canvas is this app's one drag-and-drop precedent,
  * reserved for a genuinely spatial layout tool.
  */
-export function QuestionEditor({ questions, onChange, disabled = false, importer, bank }: QuestionEditorProps) {
+export function QuestionEditor({
+  questions,
+  onChange,
+  disabled = false,
+  answerKeyOnly = false,
+  importer,
+  bank,
+}: QuestionEditorProps) {
+  // What a student sees - the question set, prompts, options, tags - stays locked while correcting.
+  const structureDisabled = disabled || answerKeyOnly;
   const [importOpen, setImportOpen] = useState(false);
   const [bankOpen, setBankOpen] = useState(false);
   const [bankStatus, setBankStatus] = useState<Record<string, BankSaveStatus>>({});
@@ -148,7 +162,7 @@ export function QuestionEditor({ questions, onChange, disabled = false, importer
                   <span className="hidden sm:inline">Save to bank</span>
                 </Button>
               )}
-              {!disabled && (
+              {!structureDisabled && (
                 <div className="flex gap-1">
                   <Button
                     type="button"
@@ -191,7 +205,7 @@ export function QuestionEditor({ questions, onChange, disabled = false, importer
                 id={`question-type-${question.key}`}
                 value={question.questionType}
                 onChange={(event) => changeType(index, event.target.value as QuestionType)}
-                disabled={disabled}
+                disabled={structureDisabled}
               >
                 {(Object.keys(QUESTION_TYPE_LABELS) as QuestionType[])
                   .filter(
@@ -224,7 +238,7 @@ export function QuestionEditor({ questions, onChange, disabled = false, importer
               value={question.prompt}
               onChange={(prompt) => updateAt(index, { prompt })}
               allowImages
-              disabled={disabled}
+              disabled={structureDisabled}
               ariaLabel={`Question ${index + 1} prompt`}
             />
           </FormField>
@@ -234,6 +248,7 @@ export function QuestionEditor({ questions, onChange, disabled = false, importer
               question={question}
               index={index}
               disabled={disabled}
+              answerOnly={answerKeyOnly}
               onChange={(patch) => updateAt(index, patch)}
               onTry={() => setTryingKey(question.key)}
             />
@@ -250,6 +265,7 @@ export function QuestionEditor({ questions, onChange, disabled = false, importer
               onChange={(options) => updateAt(index, { options })}
               groupName={question.key}
               disabled={disabled}
+              answerOnly={answerKeyOnly}
             />
           )}
 
@@ -257,12 +273,12 @@ export function QuestionEditor({ questions, onChange, disabled = false, importer
             id={`question-tags-${question.key}`}
             tags={question.tags}
             onChange={(tags) => updateAt(index, { tags })}
-            disabled={disabled}
+            disabled={structureDisabled}
           />
         </Card>
       ))}
 
-      {!disabled && (
+      {!structureDisabled && (
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="secondary" onClick={() => onChange([...questions, blankQuestion()])}>
             <Plus className="h-4 w-4" aria-hidden="true" /> Add question
@@ -309,12 +325,14 @@ function InteractionFields({
   question,
   index,
   disabled,
+  answerOnly,
   onChange,
   onTry,
 }: {
   question: EditableQuestion;
   index: number;
   disabled: boolean;
+  answerOnly: boolean;
   onChange: (patch: Partial<EditableQuestion>) => void;
   onTry: () => void;
 }) {
@@ -328,6 +346,7 @@ function InteractionFields({
           value={question.interaction}
           onChange={(interaction) => onChange({ interaction })}
           disabled={disabled}
+          answerOnly={answerOnly}
           idPrefix={`question-${question.key}`}
         />
       </Suspense>
@@ -337,7 +356,7 @@ function InteractionFields({
             id={`question-scoring-${question.key}`}
             value={question.scoring ?? "PARTIAL"}
             onChange={(event) => onChange({ scoring: event.target.value as ScoringMode })}
-            disabled={disabled}
+            disabled={disabled || answerOnly}
           >
             <option value="PARTIAL">Partial credit for each part right</option>
             <option value="ALL_OR_NOTHING">All or nothing</option>

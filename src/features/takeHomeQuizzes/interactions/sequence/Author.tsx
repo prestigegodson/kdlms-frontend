@@ -17,15 +17,18 @@ interface SequenceAuthorProps {
   value: SequenceConfig;
   onChange(config: SequenceConfig): void;
   disabled: boolean;
+  answerOnly?: boolean;
   idPrefix: string;
 }
 
 /**
  * Authors a sequence: the items in their correct order (students always see them shuffled), each
- * with an optional caption - a date, say - that only shows in review.
+ * with an optional caption - a date, say - that only shows in review. `answerOnly` leaves only the
+ * reordering, which is the answer.
  */
-export function SequenceAuthor({ value, onChange, disabled, idPrefix }: SequenceAuthorProps) {
+export function SequenceAuthor({ value, onChange, disabled, answerOnly = false, idPrefix }: SequenceAuthorProps) {
   const items = value.items;
+  const layoutDisabled = disabled || answerOnly;
 
   function setItems(next: SequenceItem[]) {
     onChange({ ...value, items: next });
@@ -48,7 +51,7 @@ export function SequenceAuthor({ value, onChange, disabled, idPrefix }: Sequence
           id={`${idPrefix}-presentation`}
           value={value.presentation}
           onChange={(event) => onChange({ ...value, presentation: event.target.value as SequencePresentation })}
-          disabled={disabled}
+          disabled={layoutDisabled}
         >
           <option value="LIST">A list</option>
           <option value="TIMELINE">A timeline</option>
@@ -70,7 +73,7 @@ export function SequenceAuthor({ value, onChange, disabled, idPrefix }: Sequence
                   onChange={(html) => updateAt(index, { html })}
                   singleLine
                   allowImages
-                  disabled={disabled}
+                  disabled={layoutDisabled}
                   ariaLabel={`Item ${index + 1}`}
                 />
                 <Input
@@ -79,7 +82,7 @@ export function SequenceAuthor({ value, onChange, disabled, idPrefix }: Sequence
                   maxLength={MAX_SEQUENCE_CAPTION_LENGTH}
                   placeholder="Caption (optional)"
                   aria-label={`Item ${index + 1} caption, shown only in review`}
-                  disabled={disabled}
+                  disabled={layoutDisabled}
                 />
               </div>
               {!disabled && (
@@ -104,22 +107,24 @@ export function SequenceAuthor({ value, onChange, disabled, idPrefix }: Sequence
                   >
                     <ChevronDown className="h-4 w-4" aria-hidden="true" />
                   </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`Remove item ${index + 1}`}
-                    onClick={() => setItems(items.filter((_, i) => i !== index))}
-                  >
-                    <X className="h-4 w-4" aria-hidden="true" />
-                  </Button>
+                  {!answerOnly && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Remove item ${index + 1}`}
+                      onClick={() => setItems(items.filter((_, i) => i !== index))}
+                    >
+                      <X className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  )}
                 </div>
               )}
             </li>
           ))}
         </ol>
       </FormField>
-      {!disabled && items.length < MAX_SEQUENCE_ITEMS && (
+      {!layoutDisabled && items.length < MAX_SEQUENCE_ITEMS && (
         <Button type="button" variant="secondary" size="sm" onClick={() => setItems([...items, blankSequenceItem()])}>
           <Plus className="h-4 w-4" aria-hidden="true" /> Add item
         </Button>

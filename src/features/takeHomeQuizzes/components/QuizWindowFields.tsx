@@ -16,7 +16,10 @@ interface QuizWindowFieldsProps {
   durationMinutes: string;
   onDurationMinutesChange: (value: string) => void;
   disabled?: boolean;
-  /** `opensAt`/`durationMinutes` are frozen once a submission exists - see `TakeHomeQuiz.updateMetadata`'s per-field checks on the backend. */
+  /**
+   * `opensAt` is frozen once a submission exists - see `TakeHomeQuiz.updateMetadata`'s per-field
+   * checks on the backend. The timer isn't: a change reaches only attempts started afterwards.
+   */
   opensAtDisabled?: boolean;
 }
 
@@ -99,7 +102,7 @@ export function QuizWindowFields({
         <Checkbox
           checked={timed}
           onChange={(event) => onTimedChange(event.target.checked)}
-          disabled={disabled || opensAtDisabled}
+          disabled={disabled}
         />
         Timed
       </label>
@@ -116,7 +119,7 @@ export function QuizWindowFields({
             min={1}
             value={durationMinutes}
             onChange={(event) => onDurationMinutesChange(event.target.value)}
-            disabled={disabled || opensAtDisabled}
+            disabled={disabled}
           />
         </FormField>
       )}

@@ -108,7 +108,9 @@ export interface TakeHomeQuizQuestionView {
  * `canUnpublishResults` (Phase 20F) mirror the backend's own `publishResults`/
  * `unpublishResults` transition guards the same way. `canShare` (V147) is whether the caller may
  * send a published copy to another class - an admin or the home class's class teacher; always
- * false for a creator's class quiz.
+ * false for a creator's class quiz. `canCorrectAnswers` is whether the answer key may still be
+ * corrected once a submission has locked the questions - a writable, non-draft, non-archived quiz
+ * with a submission.
  */
 export interface TakeHomeQuizActionsView {
   canEditMetadata: boolean;
@@ -118,6 +120,7 @@ export interface TakeHomeQuizActionsView {
   canPublishResults: boolean;
   canUnpublishResults: boolean;
   canShare: boolean;
+  canCorrectAnswers: boolean;
 }
 
 /** Mirrors backend takehomequiz.application.port.in.TakeHomeQuizView - the full staff detail. */
@@ -324,6 +327,51 @@ export function saveTakeHomeQuizQuestions(
   questions: QuestionCommand[],
 ): Promise<TakeHomeQuizView> {
   return apiFetch<TakeHomeQuizView>(`${BASE}/${quizId}/questions`, {
+    method: "PUT",
+    body: JSON.stringify({ questions }),
+  });
+}
+
+/**
+ * Mirrors backend takehomequiz.application.port.in.AnswerCorrectionView - what correcting the answer
+ * key of a quiz with submissions did (or, from a preview, would do). `quiz` is the corrected quiz,
+ * absent on a preview; `writeBack` is present only when the gradebook was rewritten.
+ */
+export interface AnswerCorrectionView<Q> {
+  changedQuestions: number;
+  submittedAttempts: number;
+  scoresChanged: number;
+  overridesKept: number;
+  overridesAboveNewTotal: number;
+  previousTotalPoints: number;
+  newTotalPoints: number;
+  midtermMax?: number | null;
+  midtermMaxExceeded: boolean;
+  gradebookResync: boolean;
+  writeBack?: WriteBackOutcomeView | null;
+  quiz?: Q | null;
+}
+
+/**
+ * What correcting the answer key to `questions` would do - the current question set with only
+ * correct options, expected answers, interactive answers and points changed. Saves nothing.
+ */
+export function previewTakeHomeQuizAnswerKeyCorrection(
+  quizId: string,
+  questions: QuestionCommand[],
+): Promise<AnswerCorrectionView<TakeHomeQuizView>> {
+  return apiFetch<AnswerCorrectionView<TakeHomeQuizView>>(`${BASE}/${quizId}/answer-key/preview`, {
+    method: "POST",
+    body: JSON.stringify({ questions }),
+  });
+}
+
+/** Corrects the answer key of a quiz with submissions and re-scores every submitted attempt. */
+export function correctTakeHomeQuizAnswerKey(
+  quizId: string,
+  questions: QuestionCommand[],
+): Promise<AnswerCorrectionView<TakeHomeQuizView>> {
+  return apiFetch<AnswerCorrectionView<TakeHomeQuizView>>(`${BASE}/${quizId}/answer-key`, {
     method: "PUT",
     body: JSON.stringify({ questions }),
   });

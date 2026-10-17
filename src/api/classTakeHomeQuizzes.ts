@@ -10,6 +10,7 @@ import type {
 } from "@/api/publicTakeHomeQuiz";
 import type {
   AdjustScoreRequest,
+  AnswerCorrectionView,
   AnsweredQuestionView,
   PublishReadinessView,
   QuizAnalytics,
@@ -234,6 +235,30 @@ export function saveClassQuizQuestions(
   questions: QuestionCommand[],
 ): Promise<ClassQuizView> {
   return apiFetch<ClassQuizView>(`${creatorBase(classId)}/${quizId}/questions`, {
+    method: "PUT",
+    body: JSON.stringify({ questions }),
+  });
+}
+
+/** The class twin of `previewTakeHomeQuizAnswerKeyCorrection` - saves nothing. */
+export function previewClassQuizAnswerKeyCorrection(
+  classId: string,
+  quizId: string,
+  questions: QuestionCommand[],
+): Promise<AnswerCorrectionView<ClassQuizView>> {
+  return apiFetch<AnswerCorrectionView<ClassQuizView>>(`${creatorBase(classId)}/${quizId}/answer-key/preview`, {
+    method: "POST",
+    body: JSON.stringify({ questions }),
+  });
+}
+
+/** The class twin of `correctTakeHomeQuizAnswerKey` - a class quiz never writes a gradebook. */
+export function correctClassQuizAnswerKey(
+  classId: string,
+  quizId: string,
+  questions: QuestionCommand[],
+): Promise<AnswerCorrectionView<ClassQuizView>> {
+  return apiFetch<AnswerCorrectionView<ClassQuizView>>(`${creatorBase(classId)}/${quizId}/answer-key`, {
     method: "PUT",
     body: JSON.stringify({ questions }),
   });

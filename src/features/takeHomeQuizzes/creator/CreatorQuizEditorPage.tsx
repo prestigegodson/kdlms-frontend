@@ -4,6 +4,7 @@ import { ApiError } from "@/api/client";
 import {
   addClassQuizQuestionsFromBank,
   type ClassQuizView,
+  correctClassQuizAnswerKey,
   createClassQuiz,
   deleteClassQuiz,
   deleteCreatorQuestionBankItem,
@@ -11,13 +12,15 @@ import {
   getClassQuiz,
   getClassQuizValidation,
   importClassQuizQuestions,
+  previewClassQuizAnswerKeyCorrection,
   publishClassQuiz,
   saveClassQuizQuestions,
   saveClassQuizQuestionToBank,
   searchCreatorQuestionBank,
   updateClassQuiz,
 } from "@/api/classTakeHomeQuizzes";
-import type { PublishReadinessView } from "@/api/takeHomeQuizzes";
+import type { AnswerCorrectionView, PublishReadinessView } from "@/api/takeHomeQuizzes";
+import { useParticipantNoun } from "@/components/ParticipantNoun";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -28,6 +31,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { Textarea } from "@/components/ui/Textarea";
 import { UnsavedChangesBar } from "@/features/assessments/components/UnsavedChangesBar";
+import { describeAnswerCorrection } from "@/features/takeHomeQuizzes/answerCorrection";
+import { AnswerCorrectionDialog } from "@/features/takeHomeQuizzes/components/AnswerCorrectionDialog";
 import { PublishReadinessPanel } from "@/features/takeHomeQuizzes/components/PublishReadinessPanel";
 import type { QuestionBankSource } from "@/features/takeHomeQuizzes/components/QuestionBankModal";
 import { QuestionEditor } from "@/features/takeHomeQuizzes/components/QuestionEditor";
@@ -98,7 +103,8 @@ function snapshotOf(form: FormState): string {
  * `quizId` is `"new"` for a quiz not yet created. The school editor's own form, minus what a class
  * quiz doesn't have: no subject/term, no quiz type (always normal), and no student links - learners
  * take it in their portal. Save is one action across the metadata and question-set endpoints, as in
- * `TakeHomeQuizEditorPage`; Publish is a plain confirmation, since nothing is minted or emailed.
+ * `TakeHomeQuizEditorPage` - including its previewed answer-key correction once learners have
+ * submitted; Publish is a plain confirmation, since nothing is minted or emailed.
  */
 export function CreatorQuizEditorPage() {
   const { classId = "", quizId } = useParams<{ classId: string; quizId: string }>();
@@ -111,7 +117,10 @@ export function CreatorQuizEditorPage() {
   const [snapshot, setSnapshot] = useState(() => snapshotOf(blankForm()));
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [correctionPreview, setCorrectionPreview] = useState<AnswerCorrectionView<ClassQuizView> | null>(null);
+  const nouns = useParticipantNoun();
   const [readiness, setReadiness] = useState<PublishReadinessView | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -148,9 +157,15 @@ export function CreatorQuizEditorPage() {
   const showForm = !loadError && (isNew || quiz !== null);
   const readOnly = quiz ? !quiz.actions.canEditMetadata : false;
   const questionsReadOnly = quiz ? !quiz.actions.canEditQuestions : false;
-  // Once a learner has submitted, only `closesAt` (extend-only) and the reveal setting stay editable.
+  // Once a learner has submitted, the questions' answers and points can still be corrected.
+  const correctingAnswers = quiz?.actions.canCorrectAnswers ?? false;
+  // Once a learner has submitted, only `closesAt` (extend-only), the timer and the reveal setting stay editable.
   const locked = readOnly || questionsReadOnly;
   const dirty = snapshotOf(form) !== snapshot;
+  const questionsDirty = useMemo(
+    () => JSON.stringify(form.questions) !== JSON.stringify((JSON.parse(snapshot) as FormState).questions),
+    [form.questions, snapshot],
+  );
 
   function applyQuiz(loaded: ClassQuizView) {
     setQuiz(loaded);
@@ -163,11 +178,39 @@ export function CreatorQuizEditorPage() {
     const next = quiz ? fromView(quiz) : blankForm();
     setForm(next);
     setSnapshot(snapshotOf(next));
+    setSaveNotice(null);
   }
 
+  /** Saves, first previewing an answer-key correction - which `saveWithCorrection` then applies - when there is one. */
   async function save() {
+    if (quiz && correctingAnswers && questionsDirty) {
+      setSaving(true);
+      setSaveError(null);
+      setSaveNotice(null);
+      try {
+        setCorrectionPreview(
+          await previewClassQuizAnswerKeyCorrection(classId, quiz.id, form.questions.map(toQuestionCommand)),
+        );
+      } catch (error) {
+        setSaveError(error instanceof ApiError ? error.message : "Failed to check this correction");
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+    await saveAll(false);
+  }
+
+  /** The confirmed correction: errors stay in the dialog, which closes only on success. */
+  async function saveWithCorrection() {
+    await saveAll(true);
+    setCorrectionPreview(null);
+  }
+
+  async function saveAll(correcting: boolean) {
     setSaving(true);
     setSaveError(null);
+    setSaveNotice(null);
     try {
       const request = {
         title: form.title,
@@ -182,7 +225,11 @@ export function CreatorQuizEditorPage() {
         ...form.theme,
       };
       let saved = isNew ? await createClassQuiz(classId, request) : await updateClassQuiz(classId, quiz!.id, request);
-      if (form.questions.length > 0 || (quiz && quiz.questions.length > 0)) {
+      if (correcting) {
+        const correction = await correctClassQuizAnswerKey(classId, saved.id, form.questions.map(toQuestionCommand));
+        saved = correction.quiz ?? saved;
+        setSaveNotice(describeAnswerCorrection(correction, nouns));
+      } else if (!questionsReadOnly && (form.questions.length > 0 || (quiz && quiz.questions.length > 0))) {
         saved = await saveClassQuizQuestions(
           classId,
           saved.id,
@@ -194,6 +241,8 @@ export function CreatorQuizEditorPage() {
         navigate(`/creator/quizzes/${classId}/${saved.id}`, { replace: true });
       }
     } catch (error) {
+      // A failed correction is shown in its dialog, which stays open.
+      if (correcting) throw error;
       setSaveError(error instanceof ApiError ? error.message : "Failed to save this quiz");
     } finally {
       setSaving(false);
@@ -258,6 +307,7 @@ export function CreatorQuizEditorPage() {
 
       {loadError && <Alert variant="error">{loadError}</Alert>}
       {saveError && <Alert variant="error">{saveError}</Alert>}
+      {saveNotice && !dirty && <Alert variant="success">{saveNotice}</Alert>}
 
       {showForm && (
         <div className="max-w-2xl space-y-6">
@@ -268,8 +318,11 @@ export function CreatorQuizEditorPage() {
           )}
           {questionsReadOnly && !readOnly && (
             <Alert variant="info">
-              Learners have already submitted this quiz. Only the closing date (later only) and the reveal
-              setting below can still be changed.
+              Learners have already submitted this quiz. The closing date (later only), the timer and the
+              reveal setting below can still be changed - a new timer applies to learners who haven&apos;t
+              started yet.
+              {correctingAnswers &&
+                " Each question's correct answer and points can be corrected too; saving re-scores every submitted attempt."}
             </Alert>
           )}
 
@@ -347,7 +400,8 @@ export function CreatorQuizEditorPage() {
           <QuestionEditor
             questions={form.questions}
             onChange={(questions) => setForm({ ...form, questions })}
-            disabled={questionsReadOnly}
+            disabled={questionsReadOnly && !correctingAnswers}
+            answerKeyOnly={correctingAnswers}
             importer={{
               importFile: (file) => importClassQuizQuestions(classId, quiz?.id ?? "", file),
               fetchTemplate: (format) => fetchClassQuestionTemplate(classId, format),
@@ -384,6 +438,14 @@ export function CreatorQuizEditorPage() {
             (form.theme.themePreset ?? null) !== (quiz.themePreset ?? null)
           }
           onClose={() => setPreviewOpen(false)}
+        />
+      )}
+
+      {correctionPreview && (
+        <AnswerCorrectionDialog
+          preview={correctionPreview}
+          onConfirm={saveWithCorrection}
+          onClose={() => setCorrectionPreview(null)}
         />
       )}
 

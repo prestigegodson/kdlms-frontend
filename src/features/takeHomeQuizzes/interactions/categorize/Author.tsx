@@ -17,15 +17,17 @@ interface CategorizeAuthorProps {
   value: CategorizeConfig;
   onChange(config: CategorizeConfig): void;
   disabled: boolean;
+  answerOnly?: boolean;
   idPrefix: string;
 }
 
 /**
  * Authors a categorize question: the groups, then each item with the group it belongs in. Students
- * see both lists shuffled.
+ * see both lists shuffled. `answerOnly` leaves only which group each item belongs in.
  */
-export function CategorizeAuthor({ value, onChange, disabled }: CategorizeAuthorProps) {
+export function CategorizeAuthor({ value, onChange, disabled, answerOnly = false }: CategorizeAuthorProps) {
   const { groups, items } = value;
+  const layoutDisabled = disabled || answerOnly;
 
   function updateItem(index: number, patch: Partial<CategorizeItem>) {
     onChange({ ...value, items: items.map((item, i) => (i === index ? { ...item, ...patch } : item)) });
@@ -55,11 +57,11 @@ export function CategorizeAuthor({ value, onChange, disabled }: CategorizeAuthor
                   }
                   singleLine
                   allowImages
-                  disabled={disabled}
+                  disabled={layoutDisabled}
                   ariaLabel={`Group ${letter(index)}`}
                 />
               </div>
-              {!disabled && groups.length > MIN_CATEGORIZE_GROUPS && (
+              {!layoutDisabled && groups.length > MIN_CATEGORIZE_GROUPS && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -73,7 +75,7 @@ export function CategorizeAuthor({ value, onChange, disabled }: CategorizeAuthor
             </li>
           ))}
         </ul>
-        {!disabled && groups.length < MAX_CATEGORIZE_GROUPS && (
+        {!layoutDisabled && groups.length < MAX_CATEGORIZE_GROUPS && (
           <Button
             type="button"
             variant="secondary"
@@ -95,7 +97,7 @@ export function CategorizeAuthor({ value, onChange, disabled }: CategorizeAuthor
                 onChange={(html) => updateItem(index, { html })}
                 singleLine
                 allowImages
-                disabled={disabled}
+                disabled={layoutDisabled}
                 ariaLabel={`Item ${index + 1}`}
               />
               <Select
@@ -111,7 +113,7 @@ export function CategorizeAuthor({ value, onChange, disabled }: CategorizeAuthor
                   </option>
                 ))}
               </Select>
-              {!disabled && (
+              {!layoutDisabled && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -125,7 +127,7 @@ export function CategorizeAuthor({ value, onChange, disabled }: CategorizeAuthor
             </li>
           ))}
         </ul>
-        {!disabled && items.length < MAX_CATEGORIZE_ITEMS && (
+        {!layoutDisabled && items.length < MAX_CATEGORIZE_ITEMS && (
           <Button
             type="button"
             variant="secondary"

@@ -12,16 +12,25 @@ interface DiagramLabelAuthorProps {
   value: DiagramLabelConfig;
   onChange(config: DiagramLabelConfig): void;
   disabled: boolean;
+  answerOnly?: boolean;
   idPrefix: string;
 }
 
 /**
  * Authors a diagram-labelling question: the label bank (a label no zone accepts is a distractor),
  * then the image with a zone drawn for each place a label goes, each ticking the labels that are
- * right for it. Students see the labels shuffled and never which zone takes which.
+ * right for it. Students see the labels shuffled and never which zone takes which. `answerOnly`
+ * leaves only which labels each zone accepts - students see the zones, so they stay put.
  */
-export function DiagramLabelAuthor({ value, onChange, disabled, idPrefix }: DiagramLabelAuthorProps) {
+export function DiagramLabelAuthor({
+  value,
+  onChange,
+  disabled,
+  answerOnly = false,
+  idPrefix,
+}: DiagramLabelAuthorProps) {
   const { labels, zones } = value;
+  const layoutDisabled = disabled || answerOnly;
 
   function removeLabel(index: number) {
     const removed = labels[index].id;
@@ -57,11 +66,11 @@ export function DiagramLabelAuthor({ value, onChange, disabled, idPrefix }: Diag
                   }
                   singleLine
                   allowImages
-                  disabled={disabled}
+                  disabled={layoutDisabled}
                   ariaLabel={`Label ${letter(index)}`}
                 />
               </div>
-              {!disabled && (
+              {!layoutDisabled && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -75,7 +84,7 @@ export function DiagramLabelAuthor({ value, onChange, disabled, idPrefix }: Diag
             </li>
           ))}
         </ul>
-        {!disabled && labels.length < MAX_DIAGRAM_LABELS && (
+        {!layoutDisabled && labels.length < MAX_DIAGRAM_LABELS && (
           <Button
             type="button"
             variant="secondary"
@@ -99,7 +108,7 @@ export function DiagramLabelAuthor({ value, onChange, disabled, idPrefix }: Diag
           allowedKinds={["RECT"]}
           maxRegions={MAX_DIAGRAM_ZONES}
           regionName={(index) => `Zone ${index + 1}`}
-          disabled={disabled}
+          disabled={layoutDisabled}
           renderRegionPanel={(zone, zoneIndex) => (
             <fieldset className="mt-1">
               <legend className="text-xs text-slate-500">Right label{labels.length === 1 ? "" : "s"} for zone {zoneIndex + 1}</legend>
@@ -129,7 +138,7 @@ export function DiagramLabelAuthor({ value, onChange, disabled, idPrefix }: Diag
           id={`${idPrefix}-reuse`}
           checked={value.reuseLabels}
           onChange={(event) => onChange({ ...value, reuseLabels: event.target.checked })}
-          disabled={disabled}
+          disabled={layoutDisabled}
         />
         One label can go on more than one zone
       </label>
