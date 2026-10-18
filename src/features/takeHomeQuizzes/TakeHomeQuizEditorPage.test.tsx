@@ -242,7 +242,7 @@ describe("TakeHomeQuizEditorPage - choosing students", () => {
     renderAt("/school/take-home-quizzes/new?classId=class-1&subjectId=subject-1&termId=term-1");
     const user = userEvent.setup();
 
-    expect(await screen.findByLabelText("All students in these classrooms")).toBeChecked();
+    expect(await screen.findByLabelText("All pupils in these classrooms")).toBeChecked();
     await user.type(screen.getByLabelText("Title"), "Week 3 quiz");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
@@ -261,7 +261,7 @@ describe("TakeHomeQuizEditorPage - choosing students", () => {
     renderAt("/school/take-home-quizzes/new?classId=class-1&subjectId=subject-1&termId=term-1");
     const user = userEvent.setup();
 
-    await user.click(await screen.findByLabelText("Selected students"));
+    await user.click(await screen.findByLabelText("Selected pupils"));
     await user.click(await screen.findByLabelText(/Bola Ade/));
     expect(takeHomeQuizzesApi.getEligibleStudents).toHaveBeenCalledWith(
       "class-1",
@@ -282,7 +282,7 @@ describe("TakeHomeQuizEditorPage - choosing students", () => {
     renderAt("/school/take-home-quizzes/new?classId=class-1&subjectId=subject-1&termId=term-1");
     const user = userEvent.setup();
 
-    await user.click(await screen.findByLabelText("Selected students"));
+    await user.click(await screen.findByLabelText("Selected pupils"));
     await screen.findByLabelText(/Bola Ade/);
     await user.type(screen.getByLabelText("Title"), "Retake");
     await user.click(screen.getByRole("button", { name: "Save changes" }));

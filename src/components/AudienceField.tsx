@@ -1,41 +1,61 @@
-import { useMemo, useState } from "react";
-import type { EligibleStudentView } from "@/api/takeHomeQuizzes";
+import { type ReactNode, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
 
-export type QuizAudience = "ALL" | "SELECTED";
+export type Audience = "ALL" | "SELECTED";
 
-interface QuizAudienceFieldProps {
-  audience: QuizAudience;
+/** One pickable pupil - the shape both `takehomequiz`'s and `learning`'s backend `EligibleStudentView` share. */
+export interface AudienceStudent {
+  studentId: string;
+  fullName: string;
+  admissionNumber: string | null;
+  classId: string;
+  className: string;
+  portalLogin: boolean;
+}
+
+interface AudienceFieldProps {
+  /** Radio-group name and checkbox id prefix - unique per form. */
+  name: string;
+  audience: Audience;
   /** The chosen students - only meaningful while `audience` is `SELECTED`. */
   selected: ReadonlySet<string>;
-  onChange: (audience: QuizAudience, selected: Set<string>) => void;
-  /** Every student of the classrooms the quiz reaches; `null` while loading (or when it couldn't be listed). */
-  students: EligibleStudentView[] | null;
-  /** A chosen student that can't be unticked any more - once anyone has submitted, students can only be added. */
+  onChange: (audience: Audience, selected: Set<string>) => void;
+  /** Every student of the classrooms the item reaches; `null` while loading (or when it couldn't be listed). */
+  students: AudienceStudent[] | null;
+  /** A chosen student that can't be unticked any more (a quiz someone has submitted only grows). */
   isLocked?: (studentId: string) => boolean;
-  /** "Selected students" can't be picked - narrowing a whole-class quiz someone has submitted would drop students. */
+  /** "Selected pupils" can't be picked; `narrowingLockedNote` explains why. */
   narrowingLocked?: boolean;
+  narrowingLockedNote?: string;
+  /** The short tag after a pupil without a portal login, e.g. "link". */
+  noLoginTag: string;
+  /** What ticking a pupil means for this item, shown under the list. */
+  footnote: ReactNode;
   disabled?: boolean;
 }
 
 /**
- * Who a take-home quiz goes to: every student of its classrooms (the default), or only the students
- * ticked here - a retake, remedial work, one group's quiz. The list is grouped by classroom, with a
- * search box and a per-classroom Select all / Clear all, and stays a bounded scrolling box however
- * big the classrooms are.
+ * Who a take-home quiz or learning resource goes to: every student of its classrooms (the default),
+ * or only the students ticked here - a retake, remedial work, one group's material. The list is
+ * grouped by classroom, with a search box and a per-classroom Select all / Clear all, and stays a
+ * bounded scrolling box however big the classrooms are.
  */
-export function QuizAudienceField({
+export function AudienceField({
+  name,
   audience,
   selected,
   onChange,
   students,
   isLocked,
   narrowingLocked = false,
+  narrowingLockedNote,
+  noLoginTag,
+  footnote,
   disabled = false,
-}: QuizAudienceFieldProps) {
+}: AudienceFieldProps) {
   const [query, setQuery] = useState("");
   const groups = useMemo(() => groupByClass(students ?? [], query), [students, query]);
   const chosenCount = students ? students.filter((student) => selected.has(student.studentId)).length : selected.size;
@@ -63,7 +83,7 @@ export function QuizAudienceField({
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input
             type="radio"
-            name="quiz-audience"
+            name={name}
             className="h-4 w-4 border-slate-300 text-brand-500"
             checked={audience === "ALL"}
             onChange={() => onChange("ALL", new Set(selected))}
@@ -73,7 +93,7 @@ export function QuizAudienceField({
         <label className={`flex items-center gap-2 text-sm ${narrowingLocked ? "text-slate-400" : "text-slate-700"}`}>
           <input
             type="radio"
-            name="quiz-audience"
+            name={name}
             className="h-4 w-4 border-slate-300 text-brand-500"
             checked={audience === "SELECTED"}
             disabled={narrowingLocked}
@@ -83,10 +103,8 @@ export function QuizAudienceField({
           {audience === "SELECTED" && <Badge variant="brand">{chosenCount} chosen</Badge>}
         </label>
       </div>
-      {narrowingLocked && audience === "ALL" && (
-        <p className="text-xs text-slate-500">
-          Pupils have already submitted, so this quiz can't be narrowed to selected pupils any more.
-        </p>
+      {narrowingLocked && audience === "ALL" && narrowingLockedNote && (
+        <p className="text-xs text-slate-500">{narrowingLockedNote}</p>
       )}
 
       {audience === "SELECTED" && (
@@ -138,7 +156,7 @@ export function QuizAudienceField({
                             }`}
                           >
                             <Checkbox
-                              id={`quiz-student-${student.studentId}`}
+                              id={`${name}-student-${student.studentId}`}
                               checked={locked || selected.has(student.studentId)}
                               disabled={disabled || locked}
                               onChange={() => toggle(student.studentId)}
@@ -147,7 +165,7 @@ export function QuizAudienceField({
                             {student.admissionNumber && (
                               <span className="text-xs text-slate-500"> · {student.admissionNumber}</span>
                             )}
-                            {!student.portalLogin && <span className="text-xs text-slate-500"> · link</span>}
+                            {!student.portalLogin && <span className="text-xs text-slate-500"> · {noLoginTag}</span>}
                           </label>
                         );
                       })}
@@ -157,10 +175,7 @@ export function QuizAudienceField({
               </div>
             </>
           )}
-          <p className="text-xs text-slate-500">
-            Only the pupils you tick see this quiz, get a link, and appear in its results. Pupils marked
-            "link" have no portal login - their guardians are emailed a link when you publish.
-          </p>
+          <p className="text-xs text-slate-500">{footnote}</p>
         </div>
       )}
     </fieldset>
@@ -170,10 +185,10 @@ export function QuizAudienceField({
 interface ClassGroup {
   classId: string;
   className: string;
-  students: EligibleStudentView[];
+  students: AudienceStudent[];
 }
 
-function groupByClass(students: EligibleStudentView[], query: string): ClassGroup[] {
+function groupByClass(students: AudienceStudent[], query: string): ClassGroup[] {
   const needle = query.trim().toLowerCase();
   const groups = new Map<string, ClassGroup>();
   for (const student of students) {

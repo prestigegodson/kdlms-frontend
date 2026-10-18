@@ -172,7 +172,12 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   const classOptions = (isBranchScoped ? classes?.filter((c) => c.branchId) : classes) ?? [];
   // Narrows the Classroom dropdown to the selected Class (level) - the same
   // cascade RegisterStudentModal's own pickers use.
-  const classOptionsInLevel = levelId ? classOptions.filter((c) => c.levelId === levelId) : classOptions;
+  // The filter dropdown follows the selected branch ("" = all branches); the
+  // full list still feeds RegisterStudentModal, which has its own branch picker.
+  const classOptionsInBranch = branchId ? classOptions.filter((c) => c.branchId === branchId) : classOptions;
+  const classOptionsInLevel = levelId
+    ? classOptionsInBranch.filter((c) => c.levelId === levelId)
+    : classOptionsInBranch;
   // The branch filter only counts as "active" when it deviates from its
   // main-branch default - otherwise every fresh load would show a "1" badge.
   const activeFilterCount = [branchId !== defaultBranchId, levelId, classId, status, hasGuardian].filter(
@@ -185,6 +190,11 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
     resetToFirstPage(setClassId)("");
     resetToFirstPage(setStatus)("");
     resetToFirstPage(setHasGuardian)("");
+  }
+
+  function handleBranchChange(value: string) {
+    resetToFirstPage(setBranchId)(value);
+    resetToFirstPage(setClassId)("");
   }
 
   function handleLevelChange(value: string) {
@@ -250,7 +260,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
           levels={headedLevels}
           classOptions={classOptionsInLevel}
           branchId={branchId}
-          onBranchChange={resetToFirstPage(setBranchId)}
+          onBranchChange={handleBranchChange}
           levelId={levelId}
           onLevelChange={handleLevelChange}
           classId={classId}
@@ -272,7 +282,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
               levels={headedLevels}
               classOptions={classOptionsInLevel}
               branchId={branchId}
-              onBranchChange={resetToFirstPage(setBranchId)}
+              onBranchChange={handleBranchChange}
               levelId={levelId}
               onLevelChange={handleLevelChange}
               classId={classId}

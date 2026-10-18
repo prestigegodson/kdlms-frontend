@@ -19,6 +19,7 @@ vi.mock("@/api/learning", async () => {
     updateLearningResource: vi.fn(),
     listLearningGalleryFiles: vi.fn(),
     getShareableClasses: vi.fn(),
+    getEligibleStudents: vi.fn(),
   };
 });
 
@@ -42,6 +43,7 @@ function renderModalWithWindow(
   availableFrom: string | null,
   availableUntil: string | null,
   classes?: learningApi.SharedClassView[],
+  students?: learningApi.EligibleStudentView[],
 ) {
   vi.mocked(learningApi.updateLearningResource).mockResolvedValue({} as learningApi.LearningResourceView);
   render(
@@ -73,6 +75,7 @@ function renderModalWithWindow(
         actions: { canEdit: true, canPublish: true, canUnpublish: false, canArchive: true, canDelete: true },
         updatedAt: "2026-01-01T00:00:00Z",
         classes,
+        students,
       }}
       onClose={vi.fn()}
       onSaved={vi.fn()}
@@ -95,6 +98,11 @@ const ARMS = [
   { classId: "class-1", className: "JSS 1A" },
   { classId: "class-2", className: "JSS 1B" },
   { classId: "class-3", className: "JSS 1C" },
+];
+
+const PUPILS: learningApi.EligibleStudentView[] = [
+  { studentId: "s1", fullName: "Ada Okoye", admissionNumber: "KDL001", classId: "class-1", className: "JSS 1A", portalLogin: true },
+  { studentId: "s2", fullName: "Bola Ade", admissionNumber: "KDL002", classId: "class-1", className: "JSS 1A", portalLogin: false },
 ];
 
 describe("ResourceEditorModal", () => {
@@ -173,6 +181,70 @@ describe("ResourceEditorModal", () => {
     expect(learningApi.updateLearningResource).toHaveBeenCalledWith(
       "resource-1",
       expect.objectContaining({ classIds: ["class-1"] }),
+    );
+  });
+
+  it("sends a new resource to every pupil by default", async () => {
+    vi.mocked(learningApi.createLearningResource).mockResolvedValue({} as learningApi.LearningResourceView);
+    renderModal(false);
+    const user = userEvent.setup();
+
+    expect(await screen.findByLabelText("All pupils in these classrooms")).toBeChecked();
+    await user.type(screen.getByLabelText("Title"), "Fractions");
+    await user.click(screen.getByRole("button", { name: "Add resource" }));
+
+    expect(learningApi.getEligibleStudents).not.toHaveBeenCalled();
+    expect(learningApi.createLearningResource).toHaveBeenCalledWith(expect.objectContaining({ studentIds: [] }));
+  });
+
+  it("creates a resource for just the ticked pupils", async () => {
+    vi.mocked(learningApi.getEligibleStudents).mockResolvedValue(PUPILS);
+    vi.mocked(learningApi.createLearningResource).mockResolvedValue({} as learningApi.LearningResourceView);
+    renderModal(false);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByLabelText("Selected pupils"));
+    await user.click(await screen.findByLabelText(/Bola Ade/));
+    expect(screen.getByLabelText(/Bola Ade/).closest("label")).toHaveTextContent("· no login");
+    await user.type(screen.getByLabelText("Title"), "Remedial fractions");
+    await user.click(screen.getByRole("button", { name: "Add resource" }));
+
+    expect(learningApi.getEligibleStudents).toHaveBeenCalledWith(
+      "class-1",
+      { subjectId: "subject-1", subjectGroupId: null },
+      "term-1",
+      ["class-1"],
+    );
+    expect(learningApi.createLearningResource).toHaveBeenCalledWith(expect.objectContaining({ studentIds: ["s2"] }));
+  });
+
+  it("refuses to save Selected pupils with nobody ticked", async () => {
+    vi.mocked(learningApi.getEligibleStudents).mockResolvedValue(PUPILS);
+    renderModal(false);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByLabelText("Selected pupils"));
+    await screen.findByLabelText(/Ada Okoye/);
+    await user.type(screen.getByLabelText("Title"), "Fractions");
+    await user.click(screen.getByRole("button", { name: "Add resource" }));
+
+    expect(await screen.findByText(/Choose at least one pupil/)).toBeInTheDocument();
+    expect(learningApi.createLearningResource).not.toHaveBeenCalled();
+  });
+
+  it("pre-ticks an existing resource's chosen pupils and can widen it to everyone", async () => {
+    vi.mocked(learningApi.getEligibleStudents).mockResolvedValue(PUPILS);
+    renderModalWithWindow(null, null, undefined, [PUPILS[0]]);
+    const user = userEvent.setup();
+
+    expect(await screen.findByLabelText(/Ada Okoye/)).toBeChecked();
+    expect(screen.getByLabelText(/Bola Ade/)).not.toBeChecked();
+    await user.click(screen.getByLabelText("All pupils in these classrooms"));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(learningApi.updateLearningResource).toHaveBeenCalledWith(
+      "resource-1",
+      expect.objectContaining({ studentIds: [] }),
     );
   });
 

@@ -15,6 +15,7 @@ import type { StudentMedicalView, StudentView } from "@/api/students";
 import { StudentsPage } from "@/features/students/StudentsPage";
 import { studentListHref } from "@/features/students/studentListReturn";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetBranchStore } from "@/stores/branchStore";
 import { resetFeatureStore, useFeatureStore } from "@/stores/featureStore";
 import { resetLevelStore } from "@/stores/levelStore";
 
@@ -132,6 +133,7 @@ describe("StudentsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetLevelStore();
+    resetBranchStore();
     resetFeatureStore();
     sessionStorage.clear();
     vi.mocked(branchesApi.listBranches).mockResolvedValue({
@@ -246,6 +248,45 @@ describe("StudentsPage", () => {
       expect.any(Number),
     );
     expect(studentListHref()).toBe("/school/students?level=level-1&class=class-1&status=GRADUATED&q=ada&page=2");
+  });
+
+  it("narrows the Classroom filter to the selected branch and clears a classroom from another branch", async () => {
+    const otherBranch: BranchView = { id: "branch-2", schoolId: "school-1", name: "Annex", main: false, status: "ACTIVE" };
+    vi.mocked(branchesApi.listBranches).mockResolvedValue({
+      content: [MAIN_BRANCH, otherBranch],
+      totalElements: 2,
+      totalPages: 1,
+      number: 0,
+      size: 50,
+    });
+    vi.mocked(classesApi.listClasses).mockResolvedValue({
+      content: [CLASS_VIEW, { ...CLASS_VIEW, id: "class-2", branchId: "branch-2", name: "Annex Primary 1" }],
+      totalElements: 2,
+      totalPages: 1,
+      number: 0,
+      size: 200,
+    });
+    mockStudents([STUDENT_VIEW]);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Ada Obi");
+
+    const classroom = screen.getByLabelText("Classroom");
+    expect(within(classroom).getByRole("option", { name: "Primary 1" })).toBeInTheDocument();
+    expect(within(classroom).queryByRole("option", { name: "Annex Primary 1" })).not.toBeInTheDocument();
+
+    await user.selectOptions(classroom, "class-1");
+    await user.selectOptions(screen.getByLabelText("Branch"), "branch-2");
+
+    expect(screen.getByLabelText("Classroom")).toHaveValue("");
+    expect(within(screen.getByLabelText("Classroom")).getByRole("option", { name: "Annex Primary 1" })).toBeInTheDocument();
+    expect(within(screen.getByLabelText("Classroom")).queryByRole("option", { name: "Primary 1" })).not.toBeInTheDocument();
+    expect(studentsApi.listStudents).toHaveBeenLastCalledWith(
+      expect.objectContaining({ branchId: "branch-2", classId: undefined }),
+      0,
+      expect.any(Number),
+    );
   });
 
   it("filters by guardian linkage through the inline field", async () => {

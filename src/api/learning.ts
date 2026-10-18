@@ -25,6 +25,17 @@ export interface SharedClassView {
   className: string;
 }
 
+/** Mirrors backend learning.application.port.in.EligibleStudentView - one pupil a school resource may be narrowed to (V150). */
+export interface EligibleStudentView {
+  studentId: string;
+  fullName: string;
+  admissionNumber: string | null;
+  classId: string;
+  className: string;
+  /** False for a pupil without a portal login, who can't open a resource at all. */
+  portalLogin: boolean;
+}
+
 /** Mirrors backend learning.application.port.in.LearningResourceSummaryView - one row of the staff list. */
 export interface LearningResourceSummaryView {
   id: string;
@@ -89,6 +100,8 @@ export interface LearningResourceView {
   updatedAt: string;
   /** Every class a school resource reaches - `classId` (its home class) first. */
   classes?: SharedClassView[];
+  /** The chosen pupils a school resource is narrowed to - empty when it reaches its whole classrooms. */
+  students?: EligibleStudentView[];
 }
 
 /** Mirrors backend learning.adapter.in.web.LearningResourceController.CreateLearningResourceRequest. Exactly one of `bodyHtml`/`fileId`/`youtubeUrl` applies, matching `resourceType`; exactly one of `subjectId`/`subjectGroupId` (Phase 35M). */
@@ -110,6 +123,8 @@ export interface CreateLearningResourceRequest {
   availableUntil: string | null;
   /** Other arms of `classId`'s level and branch to share the resource with (`getShareableClasses`); `classId` is always included. */
   classIds?: string[];
+  /** Narrows the resource to these pupils of its classrooms (`getEligibleStudents`); omit or `[]` for everyone. */
+  studentIds?: string[];
 }
 
 /** Mirrors backend learning.adapter.in.web.LearningResourceController.UpdateLearningResourceRequest. `resourceType` isn't here - it's immutable once created. */
@@ -124,6 +139,8 @@ export interface UpdateLearningResourceRequest {
   availableUntil: string | null;
   /** Replaces the classes the resource reaches (its home class always stays); omit to leave them unchanged. */
   classIds?: string[];
+  /** Replaces the chosen pupils; `[]` reaches everyone again, omit to leave them unchanged. */
+  studentIds?: string[];
 }
 
 /** Mirrors backend learning.application.port.in.MyLearningResourceSummaryView - one row of the calling STUDENT's own resource list, published only. `completed` (Phase 35H) is the caller's own interaction state, resolved in one batched query for the whole list. */
@@ -335,6 +352,20 @@ export function getShareableClasses(classId: string, target: ResourceTarget): Pr
   if (target.subjectId) params.set("subjectId", target.subjectId);
   if (target.subjectGroupId) params.set("subjectGroupId", target.subjectGroupId);
   return apiFetch<SharedClassView[]>(`${BASE}/shareable-classes?${params.toString()}`);
+}
+
+/** The pupils a resource authored in `classId` (and shared with `classIds`) may be narrowed to. */
+export function getEligibleStudents(
+  classId: string,
+  target: ResourceTarget,
+  termId: string,
+  classIds: string[],
+): Promise<EligibleStudentView[]> {
+  const params = new URLSearchParams({ classId, termId });
+  if (target.subjectId) params.set("subjectId", target.subjectId);
+  if (target.subjectGroupId) params.set("subjectGroupId", target.subjectGroupId);
+  classIds.filter((id) => id !== classId).forEach((id) => params.append("classIds", id));
+  return apiFetch<EligibleStudentView[]>(`${BASE}/eligible-students?${params.toString()}`);
 }
 
 export function createLearningResource(request: CreateLearningResourceRequest): Promise<LearningResourceView> {

@@ -6,6 +6,8 @@ import {
   type AuthorableSubjectGroupView,
   type AuthorableSubjectView,
   createLearningResource,
+  type EligibleStudentView,
+  getEligibleStudents,
   getShareableClasses,
   type LearningGalleryFileView,
   type LearningResourceType,
@@ -14,6 +16,7 @@ import {
   updateLearningResource,
   type UpdateLearningResourceRequest,
 } from "@/api/learning";
+import { type Audience, AudienceField } from "@/components/AudienceField";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { DateInput } from "@/components/ui/DateInput";
@@ -227,6 +230,59 @@ export function ResourceEditorModal({
     return [homeClassId, ...[...sharedClassIds].filter((id) => id !== homeClassId && offered.has(id))];
   }
 
+  // A school resource may go to every pupil of its classrooms or only chosen ones (V150).
+  const initialStudents = resource && "students" in resource ? (resource.students ?? []) : [];
+  const [audience, setAudience] = useState<Audience>(initialStudents.length > 0 ? "SELECTED" : "ALL");
+  const [chosenStudents, setChosenStudents] = useState<Set<string>>(
+    () => new Set(initialStudents.map((student) => student.studentId)),
+  );
+  const resourceTermId = resource && "termId" in resource && resource.termId ? resource.termId : termId;
+  const reachedClassIds =
+    shareableClasses.length > 0
+      ? chosenClassIds()
+      : [homeClassId, ...[...sharedClassIds].filter((id) => id !== homeClassId)];
+  // The pupils of the classrooms the resource reaches, loaded only once the author picks "Selected pupils".
+  const studentsKey =
+    shareKey && resourceTermId && audience === "SELECTED"
+      ? `${shareKey}|${resourceTermId}|${reachedClassIds.join(",")}`
+      : null;
+  const [loadedStudents, setLoadedStudents] = useState<{ key: string; students: EligibleStudentView[] | null } | null>(
+    null,
+  );
+  const eligibleStudents = studentsKey && loadedStudents?.key === studentsKey ? loadedStudents.students : null;
+  useEffect(() => {
+    if (!studentsKey) return;
+    let cancelled = false;
+    getEligibleStudents(homeClassId, target, resourceTermId, reachedClassIds)
+      .then((students) => {
+        if (!cancelled) setLoadedStudents({ key: studentsKey, students });
+      })
+      .catch(() => {
+        // The chosen pupils still save as they are; the server checks every one is in the resource's classrooms.
+        if (!cancelled) setLoadedStudents({ key: studentsKey, students: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+    // Every input is encoded in `studentsKey`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentsKey]);
+
+  /**
+   * The chosen pupils to save - `[]` for everyone; `undefined` (leave unchanged) when the picker
+   * isn't offered. Pupils of a classroom since unticked drop out of the selection.
+   */
+  function chosenStudentIds(): string[] | undefined {
+    if (!shareKey) return undefined;
+    if (audience === "ALL") return [];
+    const offered = eligibleStudents ? new Set(eligibleStudents.map((student) => student.studentId)) : null;
+    const chosen = [...chosenStudents].filter((id) => !offered || offered.has(id));
+    if (chosen.length === 0) {
+      throw new ApiError(422, "Choose at least one pupil, or send the resource to everyone.");
+    }
+    return chosen;
+  }
+
   const [uploading, setUploading] = useState(false);
   // An mp3/mp4 goes up in parts straight to the bucket (`uploadMediaFile`) - this tracks its
   // progress (0-100) and lets the author cancel it; closing the form cancels it too.
@@ -322,10 +378,11 @@ export function ResourceEditorModal({
       };
       // Sent only once the arms have loaded, so a failed lookup never drops a resource's other arms.
       const classIds = shareableClasses.length > 0 ? chosenClassIds() : undefined;
+      const studentIds = isSchoolResource ? chosenStudentIds() : undefined;
       if (save) {
         await save({ ...payload, resourceType: resource?.resourceType ?? resourceType });
       } else if (isEdit) {
-        await updateLearningResource(resource.id, { ...payload, classIds });
+        await updateLearningResource(resource.id, { ...payload, classIds, studentIds });
       } else {
         await createLearningResource({
           classId,
@@ -334,6 +391,7 @@ export function ResourceEditorModal({
           resourceType,
           ...payload,
           classIds,
+          studentIds,
         });
       }
       onSaved();
@@ -386,6 +444,24 @@ export function ResourceEditorModal({
               selected={sharedClassIds}
               onChange={setSharedClassIds}
               hint="One resource for every classroom you tick - edits, publishing and comments are shared."
+            />
+          )}
+
+          {(shareKey || initialStudents.length > 0) && (
+            <AudienceField
+              name="resource-audience"
+              audience={audience}
+              selected={chosenStudents}
+              onChange={(next, selected) => {
+                setAudience(next);
+                setChosenStudents(selected);
+              }}
+              students={eligibleStudents ?? (shareKey ? null : initialStudents)}
+              noLoginTag="no login"
+              footnote={
+                'Only the pupils you tick see this resource and appear in its completions. Pupils marked "no login" have no portal login, so they can\'t open it until they get one.'
+              }
+              disabled={!shareKey}
             />
           )}
 

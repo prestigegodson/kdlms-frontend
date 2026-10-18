@@ -44,7 +44,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { UnsavedChangesBar } from "@/features/assessments/components/UnsavedChangesBar";
 import { PublishQuizModal } from "@/features/takeHomeQuizzes/components/PublishQuizModal";
 import { PublishReadinessPanel } from "@/features/takeHomeQuizzes/components/PublishReadinessPanel";
-import { type QuizAudience, QuizAudienceField } from "@/features/takeHomeQuizzes/components/QuizAudienceField";
+import { type Audience, AudienceField } from "@/components/AudienceField";
 import type { QuestionBankSource } from "@/features/takeHomeQuizzes/components/QuestionBankModal";
 import { QuestionEditor } from "@/features/takeHomeQuizzes/components/QuestionEditor";
 import { QuizPreviewModal } from "@/features/takeHomeQuizzes/components/QuizPreviewModal";
@@ -71,7 +71,7 @@ interface FormState {
   /** The other arms of the home class's level a Normal quiz is shared with - never the home class itself. */
   sharedClassIds: string[];
   /** Every student of the quiz's classrooms, or only `studentIds`. */
-  audience: QuizAudience;
+  audience: Audience;
   studentIds: string[];
   theme: ThemeChoice;
   questions: EditableQuestion[];
@@ -579,7 +579,8 @@ export function TakeHomeQuizEditorPage() {
           )}
 
           {(shareKey || (quiz?.students ?? []).length > 0) && (
-            <QuizAudienceField
+            <AudienceField
+              name="quiz-audience"
               audience={form.audience}
               selected={new Set(form.studentIds)}
               onChange={(audience, next) => setForm({ ...form, audience, studentIds: [...next] })}
@@ -587,6 +588,11 @@ export function TakeHomeQuizEditorPage() {
               // Once students have submitted, a chosen student can be added but not removed.
               isLocked={(id) => questionsReadOnly && (quiz?.students ?? []).some((s) => s.studentId === id)}
               narrowingLocked={questionsReadOnly && (quiz?.students ?? []).length === 0}
+              narrowingLockedNote="Pupils have already submitted, so this quiz can't be narrowed to selected pupils any more."
+              noLoginTag="link"
+              footnote={
+                'Only the pupils you tick see this quiz, get a link, and appear in its results. Pupils marked "link" have no portal login - their guardians are emailed a link when you publish.'
+              }
               disabled={readOnly || !shareKey}
             />
           )}
