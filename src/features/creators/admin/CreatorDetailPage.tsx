@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { ApiError } from "@/api/client";
-import { type CreatorAdminView, getCreator } from "@/api/creators";
+import { type CreatorAdminView, deleteCreator, getCreator } from "@/api/creators";
 import { activateSchool, suspendSchool } from "@/api/schools";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
-import { CREATOR_STATUS_VARIANT } from "@/features/creators/admin/creatorStatus";
+import { CREATOR_STATUS_LABEL, CREATOR_STATUS_VARIANT } from "@/features/creators/admin/creatorStatus";
 import { ImpersonateDialog } from "@/features/schools/components/ImpersonateDialog";
 import { SubscriptionCard } from "@/features/schools/SchoolDetailPage";
 import { formatInstant } from "@/utils/date";
@@ -21,9 +21,9 @@ type LoadState =
   | { kind: "error"; message: string };
 
 /**
- * System-admin view of one creator: profile, suspend/resume, subscription, and impersonation.
- * A creator's tenant id is a school id, so suspend/activate, the subscription card, and
- * impersonation all reuse the school endpoints unchanged.
+ * System-admin view of one creator: profile, suspend/resume, subscription, impersonation, and
+ * deletion. A creator's tenant id is a school id, so suspend/activate, the subscription card, and
+ * impersonation all reuse the school endpoints unchanged; deletion is creator-specific.
  */
 export function CreatorDetailPage() {
   const { schoolId } = useParams<{ schoolId: string }>();
@@ -31,6 +31,8 @@ export function CreatorDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmSuspend, setConfirmSuspend] = useState(false);
   const [impersonating, setImpersonating] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const navigate = useNavigate();
 
   function fetchCreator() {
     if (!schoolId) return;
@@ -82,7 +84,7 @@ export function CreatorDetailPage() {
         title={creator.businessName}
         description={`${creator.firstName} ${creator.lastName}`}
         backTo="/admin/creators"
-        actions={<Badge variant={CREATOR_STATUS_VARIANT[creator.status]}>{creator.status}</Badge>}
+        actions={<Badge variant={CREATOR_STATUS_VARIANT[creator.status]}>{CREATOR_STATUS_LABEL[creator.status]}</Badge>}
       />
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
@@ -126,6 +128,11 @@ export function CreatorDetailPage() {
               Impersonate
             </Button>
           )}
+          {creator.status !== "ARCHIVED" && (
+            <Button variant="danger" onClick={() => setConfirmDelete(true)}>
+              Delete creator
+            </Button>
+          )}
         </div>
       </Card>
 
@@ -147,6 +154,27 @@ export function CreatorDetailPage() {
             load();
           }}
           onClose={() => setConfirmSuspend(false)}
+        />
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Delete this creator?"
+          message={
+            <>
+              <strong>{creator.businessName}</strong> will be permanently deleted. Their login is removed, their
+              name and contact details are erased, their classes are archived and upcoming sessions cancelled, and
+              their plan stops renewing. Payment records are kept. This cannot be undone.
+            </>
+          }
+          confirmLabel="Delete creator"
+          variant="danger"
+          confirmationText={creator.email ?? creator.businessName}
+          onConfirm={async () => {
+            await deleteCreator(creator.schoolId);
+            navigate("/admin/creators");
+          }}
+          onClose={() => setConfirmDelete(false)}
         />
       )}
 

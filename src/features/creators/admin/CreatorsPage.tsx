@@ -23,7 +23,7 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { TableSkeleton } from "@/components/ui/TableSkeleton";
-import { CREATOR_STATUS_VARIANT } from "@/features/creators/admin/creatorStatus";
+import { CREATOR_STATUS_LABEL, CREATOR_STATUS_VARIANT } from "@/features/creators/admin/creatorStatus";
 import { CreatorProfileFields } from "@/features/creators/components/CreatorProfileFields";
 import { emptyCreatorProfile } from "@/features/creators/creatorProfileDefaults";
 
@@ -121,7 +121,7 @@ export function CreatorsPage() {
                       )}
                     </TableCell>
                     <TableCell label="Status">
-                      <Badge variant={CREATOR_STATUS_VARIANT[creator.status]}>{creator.status}</Badge>
+                      <Badge variant={CREATOR_STATUS_VARIANT[creator.status]}>{CREATOR_STATUS_LABEL[creator.status]}</Badge>
                     </TableCell>
                   </TableRow>
                 ))}

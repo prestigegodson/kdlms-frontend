@@ -24,7 +24,7 @@ export interface CreatorProfile extends CreatorProfileInput {
 /** Mirrors backend creator.application.port.in.CreatorAdminView. */
 export interface CreatorAdminView extends CreatorProfileInput {
   schoolId: string;
-  /** The creator tenant's lifecycle status - ACTIVE, SUSPENDED, ARCHIVED (or UNKNOWN). */
+  /** The creator tenant's lifecycle status - ACTIVE, SUSPENDED, ARCHIVED (a deleted creator), or UNKNOWN. */
   status: "ACTIVE" | "SUSPENDED" | "ARCHIVED" | "UNKNOWN";
   userId: string | null;
   email: string | null;
@@ -90,4 +90,12 @@ export function onboardCreator(email: string, profile: CreatorProfileInput): Pro
     method: "POST",
     body: JSON.stringify({ email, profile }),
   });
+}
+
+/**
+ * Deletes a creator - irreversible. The tenant is archived, the login soft-deleted, personal data
+ * scrubbed, classes and renewals shut down; the email can register again.
+ */
+export function deleteCreator(schoolId: string): Promise<void> {
+  return apiFetch<void>(`${ADMIN_BASE}/${schoolId}`, { method: "DELETE" });
 }
