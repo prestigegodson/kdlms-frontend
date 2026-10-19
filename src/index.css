@@ -1,68 +1,17 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /*
- * Mobile chrome boundary (mobile-plan.md "Two boundaries"): below `lg`
- * (1024px) the sidebar becomes a bottom tab bar + app bar. The density
- * boundary is `md` (767.98px, just below Tailwind's `md`), named here as a
- * custom variant so feature code never repeats the literal — matches
- * `.responsive-table`'s query below.
- */
-@custom-variant mobile (@media (max-width: 767.98px));
-
-/*
- * Design tokens follow /style_guide.md — the source of record for all
- * frontend styling (see CLAUDE.md's Frontend Design System section).
- * Tailwind v4 is CSS-first: theme customization happens here via @theme,
- * not in a tailwind.config.js.
+ * Design tokens (brand/accent colors, radii, the `mobile` variant, the
+ * tabbar spacing) live in tailwind.config.js and follow /style_guide.md - the
+ * source of record for all frontend styling.
  *
- * The guide's neutral ramp (slate) and semantic colors (success/warning/
- * error/info) are byte-identical to Tailwind's built-in slate/green-600/
- * amber-600/red-600/blue-600, so only brand (indigo) and accent (amber CTA)
- * need custom stops here. Brand runs 50/100/200/400/500/600/800 per the
- * guide — there is no 700 stop; hover states use 600, text-on-tint uses 800.
+ * Cascade note: Tailwind 3 has no real cascade layers. The unlayered rules
+ * below come after `@tailwind utilities`, so they win ties on specificity, but
+ * a utility with higher specificity (e.g. `focus:outline-none`) beats them -
+ * under v4 they beat every utility. Where that matters, a rule says so.
  */
-@theme {
-  --color-brand-50: #eef1fc;
-  --color-brand-100: #d6ddf8;
-  --color-brand-200: #aebaf1;
-  --color-brand-400: #5d75e3;
-  --color-brand-500: #3b4fd9;
-  --color-brand-600: #2f3fae;
-  --color-brand-800: #182057;
-
-  /*
-   * Accent amber is reserved for the one key CTA per view (style_guide.md
-   * §3/§5) — never for status/warning, which stays on the semantic amber-600
-   * (Tailwind's default `amber` scale) as a tint, not a fill.
-   */
-  --color-accent-50: #fff7e6;
-  --color-accent-100: #fdecc4;
-  --color-accent-200: #fbd888;
-  --color-accent-300: #f9c44d;
-  --color-accent-500: #f59e0b;
-  --color-accent-600: #c47d08;
-  --color-accent-800: #623e04;
-
-  --font-display: "Lexend Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-
-  /* controls (inputs/buttons) 6px, panels (alerts/menus) 8px, cards/modals 12px */
-  --radius-control: 6px;
-  --radius-panel: 8px;
-  --radius-card: 12px;
-
-  /*
-   * MobileTabBar's touch-row height, below `lg` only. Registered under the
-   * --spacing-* namespace so `h-tabbar`/`bottom-tabbar`/`pb-tabbar-safe`
-   * generate as first-class utilities rather than fragile arbitrary values
-   * (CSS calc() needs whitespace around `+`, which arbitrary-value syntax
-   * makes easy to get wrong with a nested env()). `-safe` bakes in the
-   * bottom safe-area inset for consumers that sit above the bar itself
-   * (PortalShell's <main>); the bar's own padding uses the inset directly.
-   */
-  --spacing-tabbar: 3.5rem;
-  --spacing-tabbar-safe: calc(3.5rem + env(safe-area-inset-bottom));
-}
 
 body {
   @apply bg-slate-50 font-sans text-slate-900 antialiased;
@@ -75,29 +24,28 @@ h4 {
   @apply font-display;
 }
 
-/* One focus treatment everywhere, replacing the previous outline/ring split between Button and form controls. */
+/*
+ * One focus treatment everywhere, replacing the previous outline/ring split
+ * between Button and form controls. `!important` so `focus:outline-none`/
+ * `focus-visible:outline-none` utilities can't remove it (see cascade note).
+ */
 :focus-visible {
-  outline: 2px solid var(--color-brand-500);
-  outline-offset: 2px;
+  outline: 2px solid var(--color-brand-500) !important;
+  outline-offset: 2px !important;
 }
 
-/*
- * Tailwind v4's Preflight dropped v3's `button { cursor: pointer }`, so every
- * button in the app fell back to the arrow cursor. Restored globally here
- * rather than per-component, matching the `:focus-visible` treatment above.
- * MUST stay inside `@layer base`: the other element rules in this file are
- * unlayered, and unlayered CSS outranks `@layer utilities` regardless of
- * specificity — a bare `button {}` rule here would stomp the designer's
- * `cursor-grab` utilities and `DateInput`'s `disabled:cursor-not-allowed`.
- */
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
   }
 
-  button:not(:disabled),
-  [role="button"]:not(:disabled) {
-    cursor: pointer;
+  /*
+   * v4 Preflight parity: the `hidden` attribute wins over display utilities.
+   * (Button cursors need nothing here - v3's Preflight already gives
+   * `button`/`[role="button"]` a pointer and `:disabled` the default.)
+   */
+  [hidden]:where(:not([hidden="until-found"])) {
+    display: none !important;
   }
 
   /*
@@ -105,11 +53,10 @@ h4 {
    * so a mouse never sees it - desktop already has `hover:` states. Instant,
    * not transitioned: a native press dims on touch-down, and an instant state
    * change is also why prefers-reduced-motion correctly leaves it alone.
+   * `:where()` keeps it at zero specificity so utilities still win.
    */
   @media (hover: none) {
-    button:not(:disabled):active,
-    [role="button"]:not(:disabled):active,
-    a:active {
+    :where(button:not(:disabled), [role="button"]:not(:disabled), a):active {
       opacity: 0.6;
     }
   }
@@ -212,9 +159,9 @@ h4 {
  * vocabulary producing all of them. These rules mirror RichContent.tsx's
  * own read-view classes value-for-value, so authoring finally looks like
  * what saving and reading back produce - true WYSIWYG rather than a
- * surprise on save. Unlayered (not `@layer`), so it outranks Tailwind's
- * own layered utilities without needing `!important`; safe to do here
- * since `.rich-text-content` never appears outside this editor.
+ * surprise on save. Unlayered and more specific than any single utility, so it outranks
+ * them without needing `!important`; safe to do here since
+ * `.rich-text-content` never appears outside this editor.
  */
 .rich-text-content ul {
   list-style: disc;
@@ -294,7 +241,8 @@ h4 {
   content: "";
   position: absolute;
   inset: 0;
-  background-color: color-mix(in srgb, var(--color-brand-500) 14%, transparent);
+  /* brand-500 at 14% - rgba rather than color-mix(), which old tablets lack */
+  background-color: rgba(59, 79, 217, 0.14);
   pointer-events: none;
 }
 
@@ -304,7 +252,7 @@ h4 {
  * `label` prop (rendered as data-label) becomes a label/value row; a cell
  * without one (e.g. a colSpan detail panel) renders as a plain full-width
  * block, so nested content isn't forced into the label/value layout.
- * 767.98px matches the `mobile` custom variant above.
+ * 767.98px matches tailwind.config.js's `mobile` variant.
  */
 @media (max-width: 767.98px) {
   .responsive-table thead {
@@ -392,4 +340,14 @@ h4 {
  */
 [data-quiz-theme-surface] .min-h-dvh {
   min-height: 0;
+}
+
+/* dvh needs Chrome 108 / Safari 15.4; older tablets fall back to vh. */
+@supports not (height: 100dvh) {
+  .min-h-dvh {
+    min-height: 100vh;
+  }
+  .h-dvh {
+    height: 100vh;
+  }
 }

@@ -12,7 +12,8 @@ export interface QuizTransport {
   /** A stable per-attempt key for the localStorage write-behind buffer - see `QuizRunner`'s own doc comment on its `bufferKey` prop. */
   bufferKey: string;
   saveAnswers: (answers: AnswerCommand[]) => Promise<QuizAttemptView>;
-  submit: () => Promise<SubmitConfirmationView>;
+  /** `answers` is the full on-screen state, saved server-side with the submit itself. */
+  submit: (answers: AnswerCommand[]) => Promise<SubmitConfirmationView>;
   /** See `QuestionCard`'s own `renderImage` prop. */
   renderQuestionImage: (fileId: string, alt: string, size: "prompt" | "option") => ReactNode;
 }

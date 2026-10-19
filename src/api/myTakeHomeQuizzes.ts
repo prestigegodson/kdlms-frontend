@@ -79,8 +79,12 @@ export function saveMyTakeHomeQuizAnswers(quizId: string, answers: AnswerCommand
   });
 }
 
-export function submitMyTakeHomeQuiz(quizId: string): Promise<SubmitConfirmationView> {
-  return apiFetch<SubmitConfirmationView>(`${ME_BASE}/${quizId}/submit`, { method: "POST" });
+/** See `submitTakeHomeQuiz` for `answers`. */
+export function submitMyTakeHomeQuiz(quizId: string, answers: AnswerCommand[]): Promise<SubmitConfirmationView> {
+  return apiFetch<SubmitConfirmationView>(`${ME_BASE}/${quizId}/submit`, {
+    method: "POST",
+    body: JSON.stringify({ answers }),
+  });
 }
 
 /** The caller's own score and per-question review - 404s unless `revealResults` is true. */

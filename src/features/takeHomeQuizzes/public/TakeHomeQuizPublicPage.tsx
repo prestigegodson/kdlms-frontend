@@ -95,7 +95,7 @@ export function TakeHomeQuizPublicPage() {
     () => ({
       bufferKey: token,
       saveAnswers: (answers) => saveTakeHomeQuizAnswers(token, answers),
-      submit: () => submitTakeHomeQuiz(token),
+      submit: (answers) => submitTakeHomeQuiz(token, answers),
       renderQuestionImage: (fileId, alt, size) => (
         <img
           src={publicQuestionImageUrl(token, fileId)}

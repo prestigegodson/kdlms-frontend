@@ -135,6 +135,8 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, do
     () => new Map(initialAttempt.questions.map((question) => [question.id, question.questionType])),
   );
 
+  // Mirrors `answers` synchronously - what's on screen right now, for the final save before submit.
+  const answersRef = useRef(answers);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   // The latest answers not yet confirmed saved - null once the server has them.
   const pendingAnswersRef = useRef<AnswersState | null>(null);
@@ -157,6 +159,20 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, do
     };
   }, []);
 
+  const toCommands = useCallback(
+    (state: AnswersState): AnswerCommand[] =>
+      Object.entries(state).map(([questionId, answer]) => ({
+        questionId,
+        selectedOptionIds: answer.selectedOptionIds ?? [],
+        textAnswer: answer.textAnswer ?? null,
+        interaction:
+          answer.interaction && questionTypes.has(questionId)
+            ? { type: questionTypes.get(questionId)!, response: answer.interaction }
+            : null,
+      })),
+    [questionTypes],
+  );
+
   const flushAnswers = useCallback(
     (toSave: AnswersState): Promise<void> => {
       if (Object.keys(toSave).length === 0) {
@@ -166,15 +182,7 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, do
         return inFlightSaveRef.current;
       }
       setSaveStatus("saving");
-      const commands: AnswerCommand[] = Object.entries(toSave).map(([questionId, answer]) => ({
-        questionId,
-        selectedOptionIds: answer.selectedOptionIds ?? [],
-        textAnswer: answer.textAnswer ?? null,
-        interaction:
-          answer.interaction && questionTypes.has(questionId)
-            ? { type: questionTypes.get(questionId)!, response: answer.interaction }
-            : null,
-      }));
+      const commands = toCommands(toSave);
       const save = inFlightSaveRef.current
         .catch(() => undefined)
         .then(() => saveAnswers(commands))
@@ -199,7 +207,7 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, do
       inFlightSaveRef.current = save;
       return save;
     },
-    [bufferKey, questionTypes, saveAnswers],
+    [bufferKey, toCommands, saveAnswers],
   );
 
   // Flush any locally-buffered edits from a previous, interrupted session once, on mount - the
@@ -231,11 +239,12 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, do
   );
 
   function handleAnswerChange(questionId: string, answer: PublicAnswerView) {
-    setAnswers((current) => {
-      const next = { ...current, [questionId]: answer };
-      scheduleSave(next);
-      return next;
-    });
+    // Built from the ref, not inside a setAnswers updater, so the pending save is recorded the
+    // moment the student acts - never later, whenever React happens to render.
+    const next = { ...answersRef.current, [questionId]: answer };
+    answersRef.current = next;
+    setAnswers(next);
+    scheduleSave(next);
   }
 
   /** Saves any unsaved edits now; resolves once every save so far has reached the server. */
@@ -258,18 +267,24 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, do
     }
     setConfirmOpen(false);
     setSubmitting(true);
-    // Submit sends no answers - the server scores what it has stored - so the last edit must be
-    // saved first, or it is lost (e.g. the final item dropped just before Submit).
-    flushPending()
-      .then(() => submit())
+    // Submit carries everything on screen and the server saves it, unthrottled, before scoring - a
+    // separate pre-submit autosave can be skipped by the portal's autosave throttle, losing a last
+    // edit (e.g. the final item dropped just before Submit). Chained after any in-flight save, so
+    // an older autosave never lands after it.
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    const finalAnswers = toCommands(answersRef.current);
+    inFlightSaveRef.current
+      .catch(() => undefined)
+      .then(() => submit(finalAnswers))
       .then((confirmation) => {
         clearBuffer(bufferKey);
         onSubmitted(confirmation);
       })
       .catch((error: unknown) => onError(error))
       .finally(() => setSubmitting(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- flushPending reads refs only
-  }, [bufferKey, submit, submitting, onSubmitted, onError]);
+  }, [bufferKey, toCommands, submit, submitting, onSubmitted, onError]);
 
   const questions = attempt.questions;
   const answeredIndexes = useMemo(() => {

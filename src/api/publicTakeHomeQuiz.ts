@@ -194,8 +194,13 @@ export function saveTakeHomeQuizAnswers(token: string, answers: AnswerCommand[])
   });
 }
 
-export function submitTakeHomeQuiz(token: string): Promise<SubmitConfirmationView> {
-  return apiFetch<SubmitConfirmationView>(`${base(token)}/submit`, { method: "POST", authenticated: false });
+/** `answers` is everything on screen - saved with the submit itself, so a last edit is never lost to a skipped autosave. */
+export function submitTakeHomeQuiz(token: string, answers: AnswerCommand[]): Promise<SubmitConfirmationView> {
+  return apiFetch<SubmitConfirmationView>(`${base(token)}/submit`, {
+    method: "POST",
+    authenticated: false,
+    body: JSON.stringify({ answers }),
+  });
 }
 
 /** The caller's own score and per-question review - 404s (the identical shape every other failure on this surface produces) unless `revealResults` is true. */

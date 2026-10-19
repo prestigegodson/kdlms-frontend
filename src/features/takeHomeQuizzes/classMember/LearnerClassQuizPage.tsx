@@ -84,7 +84,7 @@ export function LearnerClassQuizPage() {
   const transport: QuizTransport = {
     bufferKey: `learner:${quizId}`,
     saveAnswers: (answers) => saveLearnerClassQuizAnswers(classId, quizId, answers),
-    submit: () => submitLearnerClassQuiz(classId, quizId),
+    submit: (answers) => submitLearnerClassQuiz(classId, quizId, answers),
     renderQuestionImage: (fileId, alt, size) => (
       <ClassQuizImage reader={reader} quizId={quizId} fileId={fileId} alt={alt} size={size} />
     ),

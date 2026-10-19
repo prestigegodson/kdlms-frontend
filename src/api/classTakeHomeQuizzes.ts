@@ -415,6 +415,14 @@ export function saveLearnerClassQuizAnswers(
   });
 }
 
-export function submitLearnerClassQuiz(classId: string, quizId: string): Promise<SubmitConfirmationView> {
-  return apiFetch<SubmitConfirmationView>(`${learnerBase(classId)}/${quizId}/submit`, { method: "POST" });
+/** See `submitTakeHomeQuiz` for `answers`. */
+export function submitLearnerClassQuiz(
+  classId: string,
+  quizId: string,
+  answers: AnswerCommand[],
+): Promise<SubmitConfirmationView> {
+  return apiFetch<SubmitConfirmationView>(`${learnerBase(classId)}/${quizId}/submit`, {
+    method: "POST",
+    body: JSON.stringify({ answers }),
+  });
 }

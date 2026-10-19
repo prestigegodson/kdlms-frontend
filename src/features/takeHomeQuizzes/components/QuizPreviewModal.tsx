@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Eye } from "lucide-react";
 import { downloadFile } from "@/api/files";
-import type { PublicAnswerView, QuizAttemptView } from "@/api/publicTakeHomeQuiz";
+import type { AnswerCommand, PublicAnswerView, QuizAttemptView } from "@/api/publicTakeHomeQuiz";
 import type { QuizThemeStyle } from "@/api/quizThemes";
 import { AuthenticatedRichImage } from "@/components/richText/AuthenticatedRichImage";
 import { Alert } from "@/components/ui/Alert";
@@ -231,21 +231,27 @@ function previewTransport(
   attempt: QuizAttemptView,
   saved: { answers: Record<string, PublicAnswerView> },
 ): QuizTransport {
+  function save(commands: AnswerCommand[]) {
+    const next = { ...saved.answers };
+    for (const command of commands) {
+      next[command.questionId] = {
+        selectedOptionIds: command.selectedOptionIds,
+        textAnswer: command.textAnswer,
+        interaction: command.interaction?.response ?? null,
+      };
+    }
+    saved.answers = next;
+    return next;
+  }
+
   return {
     bufferKey,
-    saveAnswers: async (commands) => {
-      const next = { ...saved.answers };
-      for (const command of commands) {
-        next[command.questionId] = {
-          selectedOptionIds: command.selectedOptionIds,
-          textAnswer: command.textAnswer,
-          interaction: command.interaction?.response ?? null,
-        };
-      }
-      saved.answers = next;
-      return { ...attempt, answers: next, serverTime: new Date().toISOString() };
+    saveAnswers: async (commands) => ({ ...attempt, answers: save(commands), serverTime: new Date().toISOString() }),
+    // Like the real endpoints, submit carries the final on-screen answers.
+    submit: async (commands) => {
+      save(commands);
+      return { alreadySubmitted: false, revealResults: true, serverTime: new Date().toISOString() };
     },
-    submit: async () => ({ alreadySubmitted: false, revealResults: true, serverTime: new Date().toISOString() }),
     renderQuestionImage: (fileId, alt, size) => <PreviewQuestionImage fileId={fileId} alt={alt} size={size} />,
   };
 }

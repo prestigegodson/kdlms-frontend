@@ -85,7 +85,7 @@ export function StudentQuizPage() {
   const transport: QuizTransport = {
     bufferKey: `portal:${quizId}`,
     saveAnswers: (answers) => saveMyTakeHomeQuizAnswers(quizId, answers),
-    submit: () => submitMyTakeHomeQuiz(quizId),
+    submit: (answers) => submitMyTakeHomeQuiz(quizId, answers),
     renderQuestionImage: (fileId, alt, size) => (
       <PortalQuizImage quizId={quizId} fileId={fileId} alt={alt} size={size} />
     ),

@@ -1,4 +1,14 @@
-import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { useRef } from "react";
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragOverEvent,
+} from "@dnd-kit/core";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ChevronDown, ChevronUp, GripVertical } from "lucide-react";
@@ -35,6 +45,9 @@ export function SequencePlayer(props: SequencePlayerProps) {
 
 function SequenceList({ config, value, onChange, disabled, renderImage }: SequencePlayerProps) {
   const announce = useAnnouncer();
+  // The last row the drag was over - a fast flick can end before dnd-kit recomputes `over`, so the
+  // drop falls back to this rather than silently snapping the row back.
+  const lastOverRef = useRef<string | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }),
@@ -56,11 +69,23 @@ function SequenceList({ config, value, onChange, disabled, renderImage }: Sequen
     announce(`${describe(order[from], from)} moved to position ${to + 1} of ${order.length}.`);
   }
 
+  function resetLastOver() {
+    lastOverRef.current = null;
+  }
+
+  function onDragOver(event: DragOverEvent) {
+    if (event.over) {
+      lastOverRef.current = String(event.over.id);
+    }
+  }
+
   function onDragEnd(event: DragEndEvent) {
-    if (!event.over) {
+    const overId = event.over ? String(event.over.id) : lastOverRef.current;
+    lastOverRef.current = null;
+    if (!overId) {
       return;
     }
-    move(order.indexOf(String(event.active.id)), order.indexOf(String(event.over.id)));
+    move(order.indexOf(String(event.active.id)), order.indexOf(overId));
   }
 
   return (
@@ -69,7 +94,15 @@ function SequenceList({ config, value, onChange, disabled, renderImage }: Sequen
         {timeline ? "Put these events in order, earliest first." : "Put these in the correct order."} Drag a
         row, or use its arrows.
       </p>
-      <DndContext sensors={sensors} onDragEnd={onDragEnd} accessibility={{ announcements: SILENT }}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={resetLastOver}
+        onDragOver={onDragOver}
+        onDragEnd={onDragEnd}
+        onDragCancel={resetLastOver}
+        accessibility={{ announcements: SILENT }}
+      >
         <SortableContext items={order} strategy={verticalListSortingStrategy} disabled={disabled}>
           <ol className={`space-y-2 ${timeline ? "border-l-2 border-brand-200 pl-4" : ""}`} aria-label="Order">
             {order.map((id, index) => (

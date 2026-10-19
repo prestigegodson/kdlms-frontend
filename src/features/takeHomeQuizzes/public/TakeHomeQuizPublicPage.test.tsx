@@ -124,10 +124,10 @@ describe("TakeHomeQuizPublicPage", () => {
     await user.click(within(dialog).getByRole("button", { name: "Submit quiz" }));
 
     expect(await screen.findByText("Quiz submitted")).toBeInTheDocument();
-    expect(publicApi.submitTakeHomeQuiz).toHaveBeenCalledWith("abc123");
+    expect(publicApi.submitTakeHomeQuiz).toHaveBeenCalledWith("abc123", expect.any(Array));
   });
 
-  it("waits for the last answer to save before submitting", async () => {
+  it("waits for an in-flight save, then submits with the last answer", async () => {
     vi.mocked(publicApi.resolveTakeHomeQuiz).mockResolvedValue(interstitial);
     vi.mocked(publicApi.startTakeHomeQuiz).mockResolvedValue(attempt);
     let finishSave: (view: publicApi.QuizAttemptView) => void = () => undefined;
@@ -160,13 +160,20 @@ describe("TakeHomeQuizPublicPage", () => {
     finishSave(attempt);
 
     expect(await screen.findByText("Quiz submitted")).toBeInTheDocument();
-    expect(publicApi.submitTakeHomeQuiz).toHaveBeenCalledWith("abc123");
+    expect(publicApi.submitTakeHomeQuiz).toHaveBeenCalledWith("abc123", [
+      expect.objectContaining({ questionId: "q1", selectedOptionIds: ["opt-b"] }),
+    ]);
   });
 
-  it("does not submit when the final save fails", async () => {
+  it("still submits the last answer when an autosave failed", async () => {
     vi.mocked(publicApi.resolveTakeHomeQuiz).mockResolvedValue(interstitial);
     vi.mocked(publicApi.startTakeHomeQuiz).mockResolvedValue(attempt);
     vi.mocked(publicApi.saveTakeHomeQuizAnswers).mockRejectedValue(new Error("network down"));
+    vi.mocked(publicApi.submitTakeHomeQuiz).mockResolvedValue({
+      alreadySubmitted: false,
+      revealResults: false,
+      serverTime: "2026-01-01T00:00:00Z",
+    });
     const user = userEvent.setup();
     renderAt("/take-home-quiz?token=abc123");
 
@@ -176,9 +183,10 @@ describe("TakeHomeQuizPublicPage", () => {
     const dialog = await screen.findByRole("dialog", { name: "Submit quiz?" });
     await user.click(within(dialog).getByRole("button", { name: "Submit quiz" }));
 
-    await waitFor(() => expect(screen.queryByText("2 + 2 = ?")).not.toBeInTheDocument());
-    expect(publicApi.saveTakeHomeQuizAnswers).toHaveBeenCalled();
-    expect(publicApi.submitTakeHomeQuiz).not.toHaveBeenCalled();
+    expect(await screen.findByText("Quiz submitted")).toBeInTheDocument();
+    expect(publicApi.submitTakeHomeQuiz).toHaveBeenCalledWith("abc123", [
+      expect.objectContaining({ questionId: "q1", selectedOptionIds: ["opt-b"] }),
+    ]);
   });
 
   it("warns about unanswered questions and lets the student jump back to one", async () => {
@@ -277,7 +285,7 @@ describe("TakeHomeQuizPublicPage", () => {
 
     await vi.advanceTimersByTimeAsync(6000);
 
-    await waitFor(() => expect(publicApi.submitTakeHomeQuiz).toHaveBeenCalledWith("abc123"));
+    await waitFor(() => expect(publicApi.submitTakeHomeQuiz).toHaveBeenCalledWith("abc123", expect.any(Array)));
     expect(await screen.findByText("Quiz submitted")).toBeInTheDocument();
   });
 });

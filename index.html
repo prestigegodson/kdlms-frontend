@@ -19,10 +19,12 @@
   <body>
     <div id="root"></div>
     <!--
-      Unsupported-browser fallback. The bundle targets Vite 8's default baseline
-      (roughly Chrome 111+, Safari 16.4+, Firefox 114+) and Tailwind 4 needs the
-      same, so an older tablet would otherwise get a silent blank page. Plain
-      ES5 and inline styles on purpose: it must run where the app can't.
+      Unsupported-browser fallback. The build reaches back to Chrome 64 /
+      iOS 12 (package.json's "browserslist"): Tailwind 3 CSS, a modern ESM
+      bundle, and a polyfilled `nomodule` legacy bundle from
+      @vitejs/plugin-legacy. Below that floor the app can't run, so this shows
+      a message instead of a blank page. Plain ES5 and inline styles on
+      purpose: it must run where the app can't.
     -->
     <script>
       (function () {
@@ -38,12 +40,15 @@
         }
         var supported = false;
         try {
+          // Only what the legacy bundle can't polyfill: CSS variables (Tailwind 3
+          // builds transforms, rings, shadows and color opacity on them),
+          // Promise and fetch. JS syntax and other APIs are handled by the build.
           supported =
             !!window.CSS &&
-            CSS.supports("color", "oklch(0 0 0)") &&
-            CSS.supports("selector(:has(a))") &&
-            typeof Array.prototype.at === "function" &&
-            typeof window.structuredClone === "function";
+            typeof CSS.supports === "function" &&
+            CSS.supports("--a", "0") &&
+            typeof window.Promise === "function" &&
+            typeof window.fetch === "function";
         } catch (e) {
           supported = false;
         }
@@ -51,19 +56,24 @@
           showUnsupported();
           return;
         }
-        // Safety net: the load event fires after the module script has run, so
-        // a root React never attached to (createRoot tags it with a
+        // Safety net: a root React never attached to (createRoot tags it with a
         // __reactContainer$ key) means the bundle failed. Not "root is empty":
-        // the app legitimately renders null while the session hydrates.
+        // the app legitimately renders null while the session hydrates. The
+        // legacy bundle is imported asynchronously by SystemJS and can finish
+        // well after `load` on a slow tablet, so give it a generous window; if
+        // React mounts after the message went up, it replaces it.
+        function reactAttached() {
+          var root = document.getElementById("root");
+          if (!root) return true;
+          for (var key in root) {
+            if (key.indexOf("__reactContainer$") === 0) return true;
+          }
+          return false;
+        }
         window.addEventListener("load", function () {
           setTimeout(function () {
-            var root = document.getElementById("root");
-            if (!root) return;
-            for (var key in root) {
-              if (key.indexOf("__reactContainer$") === 0) return;
-            }
-            showUnsupported();
-          }, 4000);
+            if (!reactAttached()) showUnsupported();
+          }, 15000);
         });
       })();
     </script>

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -151,6 +151,44 @@ describe("QuizRunner with an interactive question", () => {
         textAnswer: null,
         interaction: { type: "SEQUENCE", response: { order: ["a", "b", "c"] } },
       },
+    ]);
+  });
+});
+
+describe("QuizRunner submitting right after a sequence move on the last question", () => {
+  it("sends the moved order with the submit itself, without waiting for the autosave", async () => {
+    vi.useRealTimers();
+    const calls: string[] = [];
+    const saveAnswers = vi.fn<QuizTransport["saveAnswers"]>(async () => {
+      calls.push("save");
+      return attempt;
+    });
+    const submit = vi.fn<QuizTransport["submit"]>(async () => {
+      calls.push("submit");
+      return { alreadySubmitted: false, revealResults: false, serverTime: "" };
+    });
+    const onSubmitted = vi.fn();
+    const transport: QuizTransport = {
+      bufferKey: `wiring-submit-${crypto.randomUUID()}`,
+      saveAnswers,
+      submit,
+      renderQuestionImage: () => null,
+    };
+    render(<QuizRunner initialAttempt={attempt} transport={transport} onSubmitted={onSubmitted} onError={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Move One up" }));
+    fireEvent.click(screen.getByRole("button", { name: "Submit quiz" }));
+    const dialog = await screen.findByRole("dialog", { name: "Submit quiz?" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Submit quiz" }));
+
+    await waitFor(() => expect(onSubmitted).toHaveBeenCalled());
+    // No separate pre-submit save - the server's autosave throttle could skip it (and lose the move).
+    expect(calls).toEqual(["submit"]);
+    expect(submit).toHaveBeenLastCalledWith([
+      expect.objectContaining({
+        questionId: "q1",
+        interaction: { type: "SEQUENCE", response: { order: ["a", "b", "c"] } },
+      }),
     ]);
   });
 });

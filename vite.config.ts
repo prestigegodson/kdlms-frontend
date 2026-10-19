@@ -1,7 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
+import legacy from "@vitejs/plugin-legacy";
 import { fileURLToPath, URL } from "node:url";
 
 // One value per build - a timestamp is enough to tell "different build" from
@@ -27,7 +27,19 @@ function emitVersionFile(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), emitVersionFile()],
+  plugins: [
+    react(),
+    // Old kids' tablets (Chrome 64 / iOS 12 - package.json's "browserslist").
+    // Modern browsers get the ESM bundle plus core-js polyfills for whatever it
+    // uses; browsers without ESM get a SystemJS `nomodule` legacy bundle.
+    legacy({ modernPolyfills: true }),
+    emitVersionFile(),
+  ],
+  build: {
+    // Lowers modern CSS syntax (ours and dependencies' - livekit, katex) to the
+    // same floor while minifying. JS targets come from plugin-legacy.
+    cssTarget: ["chrome64", "safari12", "firefox68", "edge79"],
+  },
   define: {
     __APP_VERSION__: JSON.stringify(APP_VERSION),
   },
