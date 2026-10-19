@@ -5,6 +5,8 @@ import {
   downloadMyTakeHomeQuizImage,
   getMyQuizReview,
   getMyTakeHomeQuiz,
+  heartbeatMyTakeHomeQuiz,
+  pauseMyTakeHomeQuiz,
   saveMyTakeHomeQuizAnswers,
   startMyTakeHomeQuiz,
   submitMyTakeHomeQuiz,
@@ -25,6 +27,7 @@ import type { QuizTransport } from "@/features/takeHomeQuizzes/runner/quizTransp
 import { QuizThemeFrame } from "@/features/takeHomeQuizzes/theme/QuizThemeFrame";
 import type { ThemeImageSource } from "@/features/takeHomeQuizzes/theme/themeImages";
 import { formatInstant } from "@/utils/date";
+import { timeLimitLabel } from "@/features/takeHomeQuizzes/timeLimitLabel";
 
 type Status =
   | { kind: "loading" }
@@ -86,6 +89,8 @@ export function StudentQuizPage() {
     bufferKey: `portal:${quizId}`,
     saveAnswers: (answers) => saveMyTakeHomeQuizAnswers(quizId, answers),
     submit: (answers) => submitMyTakeHomeQuiz(quizId, answers),
+    heartbeat: () => heartbeatMyTakeHomeQuiz(quizId),
+    pause: () => pauseMyTakeHomeQuiz(quizId),
     renderQuestionImage: (fileId, alt, size) => (
       <PortalQuizImage quizId={quizId} fileId={fileId} alt={alt} size={size} />
     ),
@@ -159,7 +164,7 @@ export function StudentQuizPage() {
               <div>
                 <dt className="text-slate-500">Time limit</dt>
                 <dd className="font-medium text-slate-900">
-                  {data.timed ? `${data.durationMinutes} minutes` : "Untimed"}
+                  {timeLimitLabel(data)}
                 </dd>
               </div>
               <div>

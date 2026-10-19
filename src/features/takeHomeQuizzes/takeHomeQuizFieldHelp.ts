@@ -11,6 +11,8 @@ export const TAKE_HOME_QUIZ_FIELD_HELP = {
   closesAt: "When the link stops accepting answers - can only be extended, never brought forward, once a pupil has started.",
   timed: "Turn this on to give each pupil a countdown once they press Start, rather than the full window until closesAt.",
   durationMinutes: "How long a pupil has once they press Start.",
+  pauseTimerOnLeave:
+    "Off by default. When on, the timer stops while a pupil has the quiz closed - shut the page, their phone went to the background, or they lost their connection - and they get the time they had left when they come back. Switching to another tab doesn't stop it. Never runs past the closing time. A change only reaches pupils who start afterwards.",
   revealResultsOnSubmit:
     "Off by default. When on, a pupil sees their score and which answers were correct as soon as they submit - including a pupil who finishes before their classmates, who could then share the answers.",
   shuffle:

@@ -12,13 +12,36 @@ interface AnswerCorrectionDialogProps {
 }
 
 /**
- * Confirms an answer-key correction on a quiz that already has submissions, showing what the
- * server's preview says it will do - how many submitted attempts are re-scored and change, which
- * manual adjustments are kept, and whether the gradebook is rewritten - before anything is saved.
+ * Confirms a correction on a quiz that already has submissions, showing what the server's preview
+ * says it will do - how many submitted attempts are re-scored and change, which manual adjustments
+ * are kept, and whether the gradebook is rewritten - before anything is saved. A wording-only fix
+ * (prompts, option labels, passage text) re-scores nothing, and says so.
  */
 export function AnswerCorrectionDialog({ preview, onConfirm, onClose }: AnswerCorrectionDialogProps) {
   const { singular, plural } = useParticipantNoun();
   const totalChanged = preview.previousTotalPoints !== preview.newTotalPoints;
+  if (preview.rescoredQuestions === 0) {
+    return (
+      <ConfirmDialog
+        title="Save the corrected wording?"
+        confirmLabel="Save wording"
+        onConfirm={onConfirm}
+        onClose={onClose}
+        message={
+          <div className="space-y-3">
+            <ul className="list-disc space-y-1 pl-5">
+              {preview.changedQuestions > 0 && <li>{count(preview.changedQuestions, "question")} reworded.</li>}
+              {preview.passagesChanged && <li>Passage text updated.</li>}
+              <li>No answers or points changed, so no scores change.</li>
+            </ul>
+            <p className="text-xs text-slate-500">
+              {capitalize(plural)} who already submitted see the new wording when they review the quiz.
+            </p>
+          </div>
+        }
+      />
+    );
+  }
   return (
     <ConfirmDialog
       title="Correct the answer key?"

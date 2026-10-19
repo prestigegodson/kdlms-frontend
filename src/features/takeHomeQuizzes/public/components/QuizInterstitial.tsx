@@ -3,6 +3,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { formatInstant } from "@/utils/date";
+import { timeLimitLabel } from "@/features/takeHomeQuizzes/timeLimitLabel";
 
 interface QuizInterstitialProps {
   data: QuizInterstitialView;
@@ -58,7 +59,7 @@ export function QuizInterstitial({ data, starting, onStart }: QuizInterstitialPr
           <div>
             <dt className="text-slate-500">Time limit</dt>
             <dd className="font-medium text-slate-900">
-              {data.timed ? `${data.durationMinutes} minutes` : "Untimed"}
+              {timeLimitLabel(data)}
             </dd>
           </div>
         </dl>

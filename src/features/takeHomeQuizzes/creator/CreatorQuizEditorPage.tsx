@@ -42,7 +42,7 @@ import { QuizWindowFields } from "@/features/takeHomeQuizzes/components/QuizWind
 import { ShuffleFields } from "@/features/takeHomeQuizzes/components/ShuffleFields";
 import { NO_THEME, type ThemeChoice } from "@/features/takeHomeQuizzes/theme/themeChoice";
 import { ThemeSection } from "@/features/takeHomeQuizzes/theme/ThemeSection";
-import { type EditableQuestion, toEditableQuestion, toQuestionCommand } from "@/features/takeHomeQuizzes/editableQuestion";
+import { type EditableQuestion, toEditableQuestion } from "@/features/takeHomeQuizzes/editableQuestion";
 import {
   type EditableStimulus,
   toContentCommands,
@@ -54,6 +54,7 @@ interface FormState {
   instructions: string;
   timed: boolean;
   durationMinutes: string;
+  pauseTimerOnLeave: boolean;
   opensAt: string;
   closesAt: string;
   revealResultsOnSubmit: boolean;
@@ -75,6 +76,7 @@ function blankForm(): FormState {
     instructions: "",
     timed: false,
     durationMinutes: "",
+    pauseTimerOnLeave: false,
     opensAt: nowPlusHours(1),
     closesAt: nowPlusHours(24 * 7),
     revealResultsOnSubmit: false,
@@ -92,6 +94,7 @@ function fromView(view: ClassQuizView): FormState {
     instructions: view.instructions ?? "",
     timed: view.timed,
     durationMinutes: view.durationMinutes !== null ? String(view.durationMinutes) : "",
+    pauseTimerOnLeave: view.pauseTimerOnLeave ?? false,
     opensAt: view.opensAt,
     closesAt: view.closesAt,
     revealResultsOnSubmit: view.revealResultsOnSubmit,
@@ -166,15 +169,19 @@ export function CreatorQuizEditorPage() {
   const showForm = !loadError && (isNew || quiz !== null);
   const readOnly = quiz ? !quiz.actions.canEditMetadata : false;
   const questionsReadOnly = quiz ? !quiz.actions.canEditQuestions : false;
-  // Once a learner has submitted, the questions' answers and points can still be corrected.
+  // Once a learner has submitted, the questions' wording, answers and points can still be corrected.
   const correctingAnswers = quiz?.actions.canCorrectAnswers ?? false;
   // Once a learner has submitted, only `closesAt` (extend-only), the timer and the reveal setting stay editable.
   const locked = readOnly || questionsReadOnly;
   const dirty = snapshotOf(form) !== snapshot;
-  const questionsDirty = useMemo(
-    () => JSON.stringify(form.questions) !== JSON.stringify((JSON.parse(snapshot) as FormState).questions),
-    [form.questions, snapshot],
-  );
+  // Questions or passages - both go through the correction once a submission exists.
+  const questionsDirty = useMemo(() => {
+    const saved = JSON.parse(snapshot) as FormState;
+    return (
+      JSON.stringify(form.questions) !== JSON.stringify(saved.questions) ||
+      JSON.stringify(form.stimuli) !== JSON.stringify(saved.stimuli)
+    );
+  }, [form.questions, form.stimuli, snapshot]);
 
   function applyQuiz(loaded: ClassQuizView) {
     setQuiz(loaded);
@@ -197,8 +204,9 @@ export function CreatorQuizEditorPage() {
       setSaveError(null);
       setSaveNotice(null);
       try {
+        const content = toContentCommands(form.stimuli, form.questions);
         setCorrectionPreview(
-          await previewClassQuizAnswerKeyCorrection(classId, quiz.id, form.questions.map(toQuestionCommand)),
+          await previewClassQuizAnswerKeyCorrection(classId, quiz.id, content.questions, content.stimuli),
         );
       } catch (error) {
         setSaveError(error instanceof ApiError ? error.message : "Failed to check this correction");
@@ -226,6 +234,7 @@ export function CreatorQuizEditorPage() {
         instructions: form.instructions || null,
         timed: form.timed,
         durationMinutes: form.timed && form.durationMinutes ? Number(form.durationMinutes) : null,
+        pauseTimerOnLeave: form.timed && form.pauseTimerOnLeave,
         opensAt: form.opensAt,
         closesAt: form.closesAt,
         revealResultsOnSubmit: form.revealResultsOnSubmit,
@@ -235,7 +244,8 @@ export function CreatorQuizEditorPage() {
       };
       let saved = isNew ? await createClassQuiz(classId, request) : await updateClassQuiz(classId, quiz!.id, request);
       if (correcting) {
-        const correction = await correctClassQuizAnswerKey(classId, saved.id, form.questions.map(toQuestionCommand));
+        const content = toContentCommands(form.stimuli, form.questions);
+        const correction = await correctClassQuizAnswerKey(classId, saved.id, content.questions, content.stimuli);
         saved = correction.quiz ?? saved;
         setSaveNotice(describeAnswerCorrection(correction, nouns));
       } else if (
@@ -333,7 +343,7 @@ export function CreatorQuizEditorPage() {
               reveal setting below can still be changed - a new timer applies to learners who haven&apos;t
               started yet.
               {correctingAnswers &&
-                " Each question's correct answer and points can be corrected too; saving re-scores every submitted attempt."}
+                " Each question's wording, correct answer and points, and each passage's text, can be corrected too - a changed answer or points re-scores every submitted attempt; a wording fix re-scores nothing."}
             </Alert>
           )}
 
@@ -369,6 +379,8 @@ export function CreatorQuizEditorPage() {
             onTimedChange={(value) => setForm({ ...form, timed: value })}
             durationMinutes={form.durationMinutes}
             onDurationMinutesChange={(value) => setForm({ ...form, durationMinutes: value })}
+            pauseTimerOnLeave={form.pauseTimerOnLeave}
+            onPauseTimerOnLeaveChange={(value) => setForm({ ...form, pauseTimerOnLeave: value })}
             disabled={readOnly}
             opensAtDisabled={questionsReadOnly}
           />

@@ -7,6 +7,8 @@ import {
   downloadClassQuizImage,
   getLearnerClassQuiz,
   getMemberClassQuizReview,
+  heartbeatLearnerClassQuiz,
+  pauseLearnerClassQuiz,
   saveLearnerClassQuizAnswers,
   startLearnerClassQuiz,
   submitLearnerClassQuiz,
@@ -27,6 +29,7 @@ import type { QuizTransport } from "@/features/takeHomeQuizzes/runner/quizTransp
 import { QuizThemeFrame } from "@/features/takeHomeQuizzes/theme/QuizThemeFrame";
 import type { ThemeImageSource } from "@/features/takeHomeQuizzes/theme/themeImages";
 import { formatInstant } from "@/utils/date";
+import { timeLimitLabel } from "@/features/takeHomeQuizzes/timeLimitLabel";
 
 type Status =
   | { kind: "loading" }
@@ -85,6 +88,8 @@ export function LearnerClassQuizPage() {
     bufferKey: `learner:${quizId}`,
     saveAnswers: (answers) => saveLearnerClassQuizAnswers(classId, quizId, answers),
     submit: (answers) => submitLearnerClassQuiz(classId, quizId, answers),
+    heartbeat: () => heartbeatLearnerClassQuiz(classId, quizId),
+    pause: () => pauseLearnerClassQuiz(classId, quizId),
     renderQuestionImage: (fileId, alt, size) => (
       <ClassQuizImage reader={reader} quizId={quizId} fileId={fileId} alt={alt} size={size} />
     ),
@@ -161,7 +166,7 @@ export function LearnerClassQuizPage() {
               </div>
               <div>
                 <dt className="text-slate-500">Time limit</dt>
-                <dd className="font-medium text-slate-900">{data.timed ? `${data.durationMinutes} minutes` : "Untimed"}</dd>
+                <dd className="font-medium text-slate-900">{timeLimitLabel(data)}</dd>
               </div>
               <div>
                 <dt className="text-slate-500">Closes</dt>

@@ -43,8 +43,9 @@ interface QuestionEditorProps {
   onChange: (questions: EditableQuestion[]) => void;
   disabled?: boolean;
   /**
-   * Answer-key correction mode, once a quiz has submissions: only which answer is right and each
-   * question's points stay editable - nothing a student sees, and no question added, removed or moved.
+   * Correction mode, once a quiz has submissions: only the wording (prompts, option labels, passage
+   * text), which answer is right and each question's points stay editable - no question, option or
+   * passage added, removed or moved, and no type, tag or passage link changed.
    */
   answerKeyOnly?: boolean;
   /** Offers "Import from file" (a csv/xlsx/xls bulk upload) when given - see `QuestionImportModal`. */
@@ -89,7 +90,7 @@ export function QuestionEditor({
   stimuli = [],
   onStimuliChange,
 }: QuestionEditorProps) {
-  // What a student sees - the question set, prompts, options, tags - stays locked while correcting.
+  // The question set's structure - questions, options, types, tags, passage links - stays locked while correcting.
   const structureDisabled = disabled || answerKeyOnly;
   const [importOpen, setImportOpen] = useState(false);
   const [bankOpen, setBankOpen] = useState(false);
@@ -285,7 +286,7 @@ export function QuestionEditor({
           value={question.prompt}
           onChange={(prompt) => updateAt(index, { prompt })}
           allowImages
-          disabled={structureDisabled}
+          disabled={disabled}
           ariaLabel={`Question ${index + 1} prompt`}
         />
       </FormField>
@@ -364,6 +365,7 @@ export function QuestionEditor({
               name={stimulusName(stimulus)}
               range={range}
               disabled={structureDisabled}
+              textDisabled={disabled}
               canMoveUp={first !== undefined && first > 0}
               canMoveDown={last !== undefined && last < questions.length - 1}
               onMove={(direction) => onChange(moveStimulusRun(questions, stimulus.key, direction))}

@@ -12,7 +12,7 @@ interface ChoiceOptionsFieldProps {
   /** A stable per-question identifier so SINGLE_CHOICE's native radio group stays mutually exclusive - the question's own `key`, not derived from its (mutable) option list. */
   groupName: string;
   disabled?: boolean;
-  /** Only which options are correct may change - an answer-key correction once a quiz has submissions. */
+  /** Only which options are correct, and their labels, may change - a correction once a quiz has submissions. */
   answerOnly?: boolean;
 }
 
@@ -77,7 +77,7 @@ export function ChoiceOptionsField({
                 onChange={(label) => updateAt(index, { label })}
                 singleLine
                 allowImages
-                disabled={layoutDisabled}
+                disabled={disabled}
                 ariaLabel={`Option ${index + 1} label`}
               />
             </div>

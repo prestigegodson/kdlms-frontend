@@ -52,7 +52,7 @@ import { QuestionTemplateDownload } from "@/features/takeHomeQuizzes/components/
 import { QuizWindowFields } from "@/features/takeHomeQuizzes/components/QuizWindowFields";
 import { ShareQuizModal } from "@/features/takeHomeQuizzes/components/ShareQuizModal";
 import { StudentLinksPanel } from "@/features/takeHomeQuizzes/components/StudentLinksPanel";
-import { type EditableQuestion, toEditableQuestion, toQuestionCommand } from "@/features/takeHomeQuizzes/editableQuestion";
+import { type EditableQuestion, toEditableQuestion } from "@/features/takeHomeQuizzes/editableQuestion";
 import {
   type EditableStimulus,
   toContentCommands,
@@ -68,6 +68,7 @@ interface FormState {
   quizType: QuizType;
   timed: boolean;
   durationMinutes: string;
+  pauseTimerOnLeave: boolean;
   opensAt: string;
   closesAt: string;
   revealResultsOnSubmit: boolean;
@@ -95,6 +96,7 @@ function blankForm(): FormState {
     quizType: "NORMAL",
     timed: false,
     durationMinutes: "",
+    pauseTimerOnLeave: false,
     opensAt: nowPlusHours(24),
     closesAt: nowPlusHours(24 * 8),
     revealResultsOnSubmit: false,
@@ -116,6 +118,7 @@ function fromView(view: TakeHomeQuizView): FormState {
     quizType: view.quizType,
     timed: view.timed,
     durationMinutes: view.durationMinutes !== null ? String(view.durationMinutes) : "",
+    pauseTimerOnLeave: view.pauseTimerOnLeave ?? false,
     opensAt: view.opensAt,
     closesAt: view.closesAt,
     revealResultsOnSubmit: view.revealResultsOnSubmit,
@@ -224,17 +227,21 @@ export function TakeHomeQuizEditorPage() {
   const showForm = !loadError && (isNew || quiz !== null);
   const readOnly = quiz ? !quiz.actions.canEditMetadata : false;
   const questionsReadOnly = quiz ? !quiz.actions.canEditQuestions : false;
-  // Once a submission exists, the questions' answers and points can still be corrected.
+  // Once a submission exists, the questions' wording, answers and points can still be corrected.
   const correctingAnswers = quiz?.actions.canCorrectAnswers ?? false;
   // Once a submission exists, only `closesAt` (extend-only), `revealResultsOnSubmit` and the timer
   // stay editable - everything else metadata-shaped locks alongside the question set. `readOnly`
   // (the quiz is archived) locks every field including those.
   const locked = readOnly || questionsReadOnly;
   const dirty = snapshotOf(form) !== snapshot;
-  const questionsDirty = useMemo(
-    () => JSON.stringify(form.questions) !== JSON.stringify((JSON.parse(snapshot) as FormState).questions),
-    [form.questions, snapshot],
-  );
+  // Questions or passages - both go through the correction once a submission exists.
+  const questionsDirty = useMemo(() => {
+    const saved = JSON.parse(snapshot) as FormState;
+    return (
+      JSON.stringify(form.questions) !== JSON.stringify(saved.questions) ||
+      JSON.stringify(form.stimuli) !== JSON.stringify(saved.stimuli)
+    );
+  }, [form.questions, form.stimuli, snapshot]);
   // A subject-group quiz is always Normal - a midterm score belongs to exactly one subject.
   const isGroupQuiz = isNew ? subjectGroupId !== "" : quiz?.subjectGroupId != null;
 
@@ -338,8 +345,9 @@ export function TakeHomeQuizEditorPage() {
       setSaveError(null);
       setSaveNotice(null);
       try {
+        const content = toContentCommands(form.stimuli, form.questions);
         setCorrectionPreview(
-          await previewTakeHomeQuizAnswerKeyCorrection(quiz.id, form.questions.map(toQuestionCommand)),
+          await previewTakeHomeQuizAnswerKeyCorrection(quiz.id, content.questions, content.stimuli),
         );
       } catch (error) {
         setSaveError(error instanceof ApiError ? error.message : "Failed to check this correction");
@@ -376,6 +384,7 @@ export function TakeHomeQuizEditorPage() {
           quizType: form.quizType,
           timed: form.timed,
           durationMinutes,
+          pauseTimerOnLeave: form.timed && form.pauseTimerOnLeave,
           opensAt: form.opensAt,
           closesAt: form.closesAt,
           revealResultsOnSubmit: form.revealResultsOnSubmit,
@@ -392,6 +401,7 @@ export function TakeHomeQuizEditorPage() {
           quizType: form.quizType,
           timed: form.timed,
           durationMinutes,
+          pauseTimerOnLeave: form.timed && form.pauseTimerOnLeave,
           opensAt: form.opensAt,
           closesAt: form.closesAt,
           revealResultsOnSubmit: form.revealResultsOnSubmit,
@@ -404,7 +414,8 @@ export function TakeHomeQuizEditorPage() {
       }
       let notice = "Quiz saved.";
       if (correcting) {
-        const correction = await correctTakeHomeQuizAnswerKey(saved.id, form.questions.map(toQuestionCommand));
+        const content = toContentCommands(form.stimuli, form.questions);
+        const correction = await correctTakeHomeQuizAnswerKey(saved.id, content.questions, content.stimuli);
         saved = correction.quiz ?? saved;
         notice = describeAnswerCorrection(correction, nouns);
       } else if (
@@ -539,7 +550,7 @@ export function TakeHomeQuizEditorPage() {
               reveal setting below can still be changed - a new timer applies to pupils who haven&apos;t
               started yet.
               {correctingAnswers &&
-                " Each question's correct answer and points can be corrected too; saving re-scores every submitted attempt."}
+                " Each question's wording, correct answer and points, and each passage's text, can be corrected too - a changed answer or points re-scores every submitted attempt; a wording fix re-scores nothing."}
             </Alert>
           )}
 
@@ -618,6 +629,8 @@ export function TakeHomeQuizEditorPage() {
             onTimedChange={(value) => setForm({ ...form, timed: value })}
             durationMinutes={form.durationMinutes}
             onDurationMinutesChange={(value) => setForm({ ...form, durationMinutes: value })}
+            pauseTimerOnLeave={form.pauseTimerOnLeave}
+            onPauseTimerOnLeaveChange={(value) => setForm({ ...form, pauseTimerOnLeave: value })}
             disabled={readOnly}
             opensAtDisabled={questionsReadOnly}
           />

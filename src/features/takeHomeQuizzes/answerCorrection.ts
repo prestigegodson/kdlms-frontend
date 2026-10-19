@@ -2,7 +2,8 @@ import type { AnswerCorrectionView } from "@/api/takeHomeQuizzes";
 
 /** The success notice after a correction is saved. */
 export function describeAnswerCorrection(result: AnswerCorrectionView<unknown>, nouns: { singular: string; plural: string }): string {
-  if (result.changedQuestions === 0) return "Quiz saved. The answer key was unchanged.";
+  if (result.changedQuestions === 0 && !result.passagesChanged) return "Quiz saved. The questions were unchanged.";
+  if (result.rescoredQuestions === 0) return "Quiz saved. The wording was corrected - no scores changed.";
   const scores =
     result.scoresChanged === 0
       ? "no scores changed"

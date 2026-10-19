@@ -25,7 +25,10 @@ interface StimulusSectionHeaderProps {
   /** "Questions 3-7", or null while it has none. */
   range: string | null;
   questionCount: number;
+  /** Locks the passage's structure - its kind, paragraph labels, moving and removing it - and, unless `textDisabled` says otherwise, its text. */
   disabled: boolean;
+  /** Locks the title and text - defaults to `disabled`; `false` while correcting a quiz with submissions, whose passage text can still be fixed. */
+  textDisabled?: boolean;
   canMoveUp: boolean;
   canMoveDown: boolean;
   onMove: (direction: -1 | 1) => void;
@@ -45,6 +48,7 @@ export function StimulusSectionHeader({
   range,
   questionCount,
   disabled,
+  textDisabled = disabled,
   canMoveUp,
   canMoveDown,
   onMove,
@@ -167,7 +171,7 @@ export function StimulusSectionHeader({
             maxLength={MAX_TITLE_LENGTH}
             placeholder={stimulus.kind === "PASSAGE" ? "e.g. The Life of Bees" : "e.g. Questions on the chart"}
             onChange={(event) => onChange({ title: event.target.value })}
-            disabled={disabled}
+            disabled={textDisabled}
           />
         </FormField>
 
@@ -178,7 +182,7 @@ export function StimulusSectionHeader({
             onChange={(body) => onChange({ body })}
             allowImages
             maxImages={MAX_IMAGES_PER_STIMULUS}
-            disabled={disabled}
+            disabled={textDisabled}
             ariaLabel={`${name} text`}
           />
         </FormField>

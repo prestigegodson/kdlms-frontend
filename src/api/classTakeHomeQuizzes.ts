@@ -4,6 +4,7 @@ import type { MyQuizInterstitialView, MyTakeHomeQuizSummaryView } from "@/api/my
 import type { Page } from "@/api/types";
 import type {
   AnswerCommand,
+  AttemptClockView,
   QuizAttemptView,
   QuizReviewView,
   SubmitConfirmationView,
@@ -88,6 +89,8 @@ export interface ClassQuizView {
   theme: QuizThemeStyle | null;
   /** Shared passages and group instructions (Phase 20L). */
   stimuli: TakeHomeQuizStimulusView[];
+  /** A timed quiz's clock pauses while the learner is away. */
+  pauseTimerOnLeave: boolean;
 }
 
 /** Mirrors backend `CreatorTakeHomeQuizController.SaveClassQuizRequest`. */
@@ -104,6 +107,8 @@ export interface SaveClassQuizRequest {
   /** A full replace - both null for the plain look. */
   themeId: string | null;
   themePreset: string | null;
+  /** A timed quiz only - see `ClassQuizView.pauseTimerOnLeave`. */
+  pauseTimerOnLeave: boolean;
 }
 
 /** Mirrors backend `LearnerResultRowView` - `overLimit` means the plan's class size keeps them from taking it. */
@@ -251,10 +256,11 @@ export function previewClassQuizAnswerKeyCorrection(
   classId: string,
   quizId: string,
   questions: QuestionCommand[],
+  stimuli?: StimulusCommand[],
 ): Promise<AnswerCorrectionView<ClassQuizView>> {
   return apiFetch<AnswerCorrectionView<ClassQuizView>>(`${creatorBase(classId)}/${quizId}/answer-key/preview`, {
     method: "POST",
-    body: JSON.stringify({ questions }),
+    body: JSON.stringify({ questions, stimuli }),
   });
 }
 
@@ -263,10 +269,11 @@ export function correctClassQuizAnswerKey(
   classId: string,
   quizId: string,
   questions: QuestionCommand[],
+  stimuli?: StimulusCommand[],
 ): Promise<AnswerCorrectionView<ClassQuizView>> {
   return apiFetch<AnswerCorrectionView<ClassQuizView>>(`${creatorBase(classId)}/${quizId}/answer-key`, {
     method: "PUT",
-    body: JSON.stringify({ questions }),
+    body: JSON.stringify({ questions, stimuli }),
   });
 }
 
@@ -413,6 +420,16 @@ export function saveLearnerClassQuizAnswers(
     method: "PUT",
     body: JSON.stringify({ answers }),
   });
+}
+
+/** See `heartbeatTakeHomeQuiz`. */
+export function heartbeatLearnerClassQuiz(classId: string, quizId: string): Promise<AttemptClockView> {
+  return apiFetch<AttemptClockView>(`${learnerBase(classId)}/${quizId}/heartbeat`, { method: "POST" });
+}
+
+/** See `pauseTakeHomeQuiz`. */
+export function pauseLearnerClassQuiz(classId: string, quizId: string): Promise<AttemptClockView> {
+  return apiFetch<AttemptClockView>(`${learnerBase(classId)}/${quizId}/pause`, { method: "POST", keepalive: true });
 }
 
 /** See `submitTakeHomeQuiz` for `answers`. */

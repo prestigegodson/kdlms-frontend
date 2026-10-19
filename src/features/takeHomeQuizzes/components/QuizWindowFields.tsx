@@ -15,6 +15,9 @@ interface QuizWindowFieldsProps {
   onTimedChange: (timed: boolean) => void;
   durationMinutes: string;
   onDurationMinutesChange: (value: string) => void;
+  /** Only shown, and only sent as `true`, for a timed quiz. */
+  pauseTimerOnLeave: boolean;
+  onPauseTimerOnLeaveChange: (pause: boolean) => void;
   disabled?: boolean;
   /**
    * `opensAt` is frozen once a submission exists - see `TakeHomeQuiz.updateMetadata`'s per-field
@@ -24,7 +27,8 @@ interface QuizWindowFieldsProps {
 }
 
 /**
- * The quiz window - opens/closes instants plus the timed/duration toggle.
+ * The quiz window - opens/closes instants plus the timed/duration toggle and, for a timed quiz,
+ * whether its timer pauses while the participant is away.
  * There is no datetime input in this app's component kit, so each instant
  * is a `DateInput` (date-only) paired with a native `<input type="time">`
  * (the `features/timetable/components/PeriodRows.tsx` idiom), combined via
@@ -41,6 +45,8 @@ export function QuizWindowFields({
   onTimedChange,
   durationMinutes,
   onDurationMinutesChange,
+  pauseTimerOnLeave,
+  onPauseTimerOnLeaveChange,
   disabled = false,
   opensAtDisabled = false,
 }: QuizWindowFieldsProps) {
@@ -107,21 +113,34 @@ export function QuizWindowFields({
         Timed
       </label>
       {timed && (
-        <FormField
-          label="Duration (minutes)"
-          htmlFor="quiz-duration"
-          description={adapt(TAKE_HOME_QUIZ_FIELD_HELP.durationMinutes)}
-          className="max-w-xs"
-        >
-          <Input
-            id="quiz-duration"
-            type="number"
-            min={1}
-            value={durationMinutes}
-            onChange={(event) => onDurationMinutesChange(event.target.value)}
-            disabled={disabled}
-          />
-        </FormField>
+        <>
+          <FormField
+            label="Duration (minutes)"
+            htmlFor="quiz-duration"
+            description={adapt(TAKE_HOME_QUIZ_FIELD_HELP.durationMinutes)}
+            className="max-w-xs"
+          >
+            <Input
+              id="quiz-duration"
+              type="number"
+              min={1}
+              value={durationMinutes}
+              onChange={(event) => onDurationMinutesChange(event.target.value)}
+              disabled={disabled}
+            />
+          </FormField>
+          <div>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <Checkbox
+                checked={pauseTimerOnLeave}
+                onChange={(event) => onPauseTimerOnLeaveChange(event.target.checked)}
+                disabled={disabled}
+              />
+              {adapt("Pause the timer when a pupil leaves the quiz")}
+            </label>
+            <p className="mt-1 text-xs text-slate-500">{adapt(TAKE_HOME_QUIZ_FIELD_HELP.pauseTimerOnLeave)}</p>
+          </div>
+        </>
       )}
     </div>
   );

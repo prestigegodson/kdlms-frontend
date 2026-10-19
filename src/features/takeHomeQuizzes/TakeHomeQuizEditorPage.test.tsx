@@ -95,6 +95,7 @@ const SAVED_VIEW: takeHomeQuizzesApi.TakeHomeQuizView = {
   revealResultsOnSubmit: false,
   shuffleQuestions: false,
   shuffleChoices: false,
+  pauseTimerOnLeave: false,
   totalPoints: 0,
   stimuli: [],
   questions: [],
@@ -629,10 +630,12 @@ describe("TakeHomeQuizEditorPage - correcting the answer key once pupils have su
     vi.mocked(takeHomeQuizzesApi.updateTakeHomeQuiz).mockResolvedValue(SUBMITTED_VIEW);
   });
 
-  it("leaves only the answer and points editable, then re-scores after confirming the previewed impact", async () => {
+  it("leaves only the wording, answer and points editable, then re-scores after confirming the previewed impact", async () => {
     const user = userEvent.setup();
     const correction = {
       changedQuestions: 1,
+      rescoredQuestions: 1,
+      passagesChanged: false,
       submittedAttempts: 3,
       scoresChanged: 2,
       overridesKept: 1,
@@ -667,7 +670,10 @@ describe("TakeHomeQuizEditorPage - correcting the answer key once pupils have su
     expect(screen.getByLabelText("Question type")).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Add question" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add option" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Remove option 1" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Remove question 1" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Question 1 prompt")).toHaveAttribute("contenteditable", "true");
+    expect(screen.getByLabelText("Option 1 label")).toHaveAttribute("contenteditable", "true");
     expect(screen.getByRole("checkbox", { name: "Timed" })).not.toBeDisabled();
 
     await user.click(secondCorrect);
@@ -675,8 +681,10 @@ describe("TakeHomeQuizEditorPage - correcting the answer key once pupils have su
 
     expect(await screen.findByText("The score changes for 2 pupils.")).toBeInTheDocument();
     expect(screen.getByText(/1 manually adjusted score will be kept/)).toBeInTheDocument();
-    const [, previewed] = vi.mocked(takeHomeQuizzesApi.previewTakeHomeQuizAnswerKeyCorrection).mock.calls[0];
+    const [, previewed, previewedStimuli] = vi.mocked(takeHomeQuizzesApi.previewTakeHomeQuizAnswerKeyCorrection).mock
+      .calls[0];
     expect(previewed[0].options.map((option) => option.correct)).toEqual([false, true]);
+    expect(previewedStimuli).toEqual([]);
     expect(takeHomeQuizzesApi.updateTakeHomeQuiz).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Correct and re-score" }));
@@ -687,6 +695,39 @@ describe("TakeHomeQuizEditorPage - correcting the answer key once pupils have su
     expect(
       await screen.findByText("Answer key corrected - 3 attempts re-scored, the score changed for 2 pupils."),
     ).toBeInTheDocument();
+  });
+
+  it("confirms a wording-only correction without re-scoring", async () => {
+    const user = userEvent.setup();
+    const correction = {
+      changedQuestions: 1,
+      rescoredQuestions: 0,
+      passagesChanged: false,
+      submittedAttempts: 3,
+      scoresChanged: 0,
+      overridesKept: 0,
+      overridesAboveNewTotal: 0,
+      previousTotalPoints: 2,
+      newTotalPoints: 2,
+      midtermMaxExceeded: false,
+      gradebookResync: false,
+    };
+    vi.mocked(takeHomeQuizzesApi.previewTakeHomeQuizAnswerKeyCorrection).mockResolvedValue(correction);
+    vi.mocked(takeHomeQuizzesApi.correctTakeHomeQuizAnswerKey).mockResolvedValue({
+      ...correction,
+      quiz: SUBMITTED_VIEW,
+    });
+
+    renderAt("/school/take-home-quizzes/quiz-1?classId=class-1&subjectId=subject-1&termId=term-1");
+
+    await user.click(await screen.findByRole("radio", { name: "Option 2 is correct" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByText("No answers or points changed, so no scores change.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Save wording" }));
+
+    await waitFor(() => expect(takeHomeQuizzesApi.correctTakeHomeQuizAnswerKey).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("Quiz saved. The wording was corrected - no scores changed.")).toBeInTheDocument();
   });
 
   it("saves a timer change without touching the locked questions", async () => {

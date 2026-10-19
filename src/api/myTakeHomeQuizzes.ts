@@ -2,6 +2,7 @@ import { apiFetch, apiFetchBlob } from "@/api/client";
 import type { QuizThemeStyle } from "@/api/quizThemes";
 import type {
   AnswerCommand,
+  AttemptClockView,
   AttemptState,
   QuizAttemptView,
   QuizAvailability,
@@ -53,6 +54,8 @@ export interface MyQuizInterstitialView {
   serverTime: string;
   /** The quiz's look - null for the plain one. */
   theme?: QuizThemeStyle | null;
+  /** The timer pauses while the student is away - absent from an older server. */
+  pauseTimerOnLeave?: boolean;
 }
 
 /** The caller's own class's quizzes for the school's current term only - an empty page when no term is marked current. */
@@ -77,6 +80,16 @@ export function saveMyTakeHomeQuizAnswers(quizId: string, answers: AnswerCommand
     method: "PUT",
     body: JSON.stringify({ answers }),
   });
+}
+
+/** See `heartbeatTakeHomeQuiz`. */
+export function heartbeatMyTakeHomeQuiz(quizId: string): Promise<AttemptClockView> {
+  return apiFetch<AttemptClockView>(`${ME_BASE}/${quizId}/heartbeat`, { method: "POST" });
+}
+
+/** See `pauseTakeHomeQuiz`. */
+export function pauseMyTakeHomeQuiz(quizId: string): Promise<AttemptClockView> {
+  return apiFetch<AttemptClockView>(`${ME_BASE}/${quizId}/pause`, { method: "POST", keepalive: true });
 }
 
 /** See `submitTakeHomeQuiz` for `answers`. */

@@ -85,6 +85,8 @@ export interface QuizInterstitialView {
   serverTime: string;
   /** The quiz's look - null for the plain one. */
   theme?: QuizThemeStyle | null;
+  /** The timer pauses while the student is away - absent from an older server. */
+  pauseTimerOnLeave?: boolean;
 }
 
 /** Mirrors backend `TakeTakeHomeQuizUseCase.QuizAttemptView` - returned by Start/resume/autosave. */
@@ -95,6 +97,17 @@ export interface QuizAttemptView {
   serverTime: string;
   /** Every passage the questions link to - absent from an older server. */
   stimuli?: PublicStimulusView[];
+  /**
+   * The attempt's clock stops while the student is away (closed page, backgrounded phone, lost
+   * connection), so the runner heartbeats and re-reads `deadlineAt` when it comes back.
+   */
+  pauseTimerOnLeave?: boolean;
+}
+
+/** Mirrors backend `TakeTakeHomeQuizUseCase.AttemptClockView` - what a heartbeat or a pause returns. */
+export interface AttemptClockView {
+  deadlineAt: string | null;
+  serverTime: string;
 }
 
 export interface AnswerCommand {
@@ -191,6 +204,20 @@ export function saveTakeHomeQuizAnswers(token: string, answers: AnswerCommand[])
     method: "PUT",
     authenticated: false,
     body: JSON.stringify({ answers }),
+  });
+}
+
+/** Keeps a pause-on-leave attempt's clock running - the open runner calls it every 30s. */
+export function heartbeatTakeHomeQuiz(token: string): Promise<AttemptClockView> {
+  return apiFetch<AttemptClockView>(`${base(token)}/heartbeat`, { method: "POST", authenticated: false });
+}
+
+/** Stops a pause-on-leave attempt's clock - sent with `keepalive` as the page goes away. */
+export function pauseTakeHomeQuiz(token: string): Promise<AttemptClockView> {
+  return apiFetch<AttemptClockView>(`${base(token)}/pause`, {
+    method: "POST",
+    authenticated: false,
+    keepalive: true,
   });
 }
 

@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import {
   getTakeHomeQuizReview,
+  heartbeatTakeHomeQuiz,
+  pauseTakeHomeQuiz,
   publicQuestionImageUrl,
   resolveTakeHomeQuiz,
   saveTakeHomeQuizAnswers,
@@ -96,6 +98,8 @@ export function TakeHomeQuizPublicPage() {
       bufferKey: token,
       saveAnswers: (answers) => saveTakeHomeQuizAnswers(token, answers),
       submit: (answers) => submitTakeHomeQuiz(token, answers),
+      heartbeat: () => heartbeatTakeHomeQuiz(token),
+      pause: () => pauseTakeHomeQuiz(token),
       renderQuestionImage: (fileId, alt, size) => (
         <img
           src={publicQuestionImageUrl(token, fileId)}

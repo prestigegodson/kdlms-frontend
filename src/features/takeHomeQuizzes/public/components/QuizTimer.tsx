@@ -66,6 +66,10 @@ export function QuizTimer({ deadlineAt, serverTime, onExpire }: QuizTimerProps) 
       if (remaining <= 0 && !expiredRef.current) {
         expiredRef.current = true;
         onExpire();
+      } else if (remaining > 0) {
+        // Time came back - a pause-on-leave attempt's re-check found the deadline hadn't passed
+        // after all - so a later zero must fire again.
+        expiredRef.current = false;
       }
     }
 

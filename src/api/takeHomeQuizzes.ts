@@ -179,6 +179,8 @@ export interface TakeHomeQuizView {
   shuffleQuestions: boolean;
   /** Each attempt sees a choice question's options in its own seeded order - off by default, frozen once a submission exists. */
   shuffleChoices: boolean;
+  /** A timed quiz's clock pauses while the student is away - off by default; only attempts started afterwards pick up a change. */
+  pauseTimerOnLeave: boolean;
   totalPoints: number;
   questions: TakeHomeQuizQuestionView[];
   actions: TakeHomeQuizActionsView;
@@ -279,6 +281,8 @@ export interface CreateTakeHomeQuizRequest {
   revealResultsOnSubmit: boolean;
   shuffleQuestions: boolean;
   shuffleChoices: boolean;
+  /** A timed quiz only. */
+  pauseTimerOnLeave: boolean;
   /** Other arms of `classId`'s level and branch to share a Normal quiz with (`getShareableClasses`); `classId` is always included. */
   classIds?: string[];
   themeId: string | null;
@@ -298,6 +302,8 @@ export interface UpdateTakeHomeQuizRequest {
   revealResultsOnSubmit: boolean;
   shuffleQuestions: boolean;
   shuffleChoices: boolean;
+  /** A timed quiz only. */
+  pauseTimerOnLeave: boolean;
   /** Omitted leaves the classes the quiz reaches unchanged. Once a submission exists, classes can only be added. */
   classIds?: string[];
   /** A full replace - both null for the plain look. Never frozen by a submission. */
@@ -386,12 +392,16 @@ export function saveTakeHomeQuizQuestions(
 }
 
 /**
- * Mirrors backend takehomequiz.application.port.in.AnswerCorrectionView - what correcting the answer
- * key of a quiz with submissions did (or, from a preview, would do). `quiz` is the corrected quiz,
- * absent on a preview; `writeBack` is present only when the gradebook was rewritten.
+ * Mirrors backend takehomequiz.application.port.in.AnswerCorrectionView - what correcting a quiz
+ * with submissions did (or, from a preview, would do). `changedQuestions` counts every changed
+ * question, wording-only fixes included; `rescoredQuestions` only those whose answer or points
+ * changed - zero means no attempt is re-scored. `quiz` is the corrected quiz, absent on a preview;
+ * `writeBack` is present only when the gradebook was rewritten.
  */
 export interface AnswerCorrectionView<Q> {
   changedQuestions: number;
+  rescoredQuestions: number;
+  passagesChanged: boolean;
   submittedAttempts: number;
   scoresChanged: number;
   overridesKept: number;
@@ -406,27 +416,34 @@ export interface AnswerCorrectionView<Q> {
 }
 
 /**
- * What correcting the answer key to `questions` would do - the current question set with only
- * correct options, expected answers, interactive answers and points changed. Saves nothing.
+ * What correcting the quiz to `questions`/`stimuli` would do - the current question set with only
+ * prompts, option labels, correct options, expected answers, interactive answers and points changed,
+ * and the current passages with only their title and text changed. Omitting `stimuli` leaves the
+ * passages untouched. Saves nothing.
  */
 export function previewTakeHomeQuizAnswerKeyCorrection(
   quizId: string,
   questions: QuestionCommand[],
+  stimuli?: StimulusCommand[],
 ): Promise<AnswerCorrectionView<TakeHomeQuizView>> {
   return apiFetch<AnswerCorrectionView<TakeHomeQuizView>>(`${BASE}/${quizId}/answer-key/preview`, {
     method: "POST",
-    body: JSON.stringify({ questions }),
+    body: JSON.stringify({ questions, stimuli }),
   });
 }
 
-/** Corrects the answer key of a quiz with submissions and re-scores every submitted attempt. */
+/**
+ * Corrects a quiz with submissions - its wording, answer key and points - re-scoring every
+ * submitted attempt when an answer or points changed.
+ */
 export function correctTakeHomeQuizAnswerKey(
   quizId: string,
   questions: QuestionCommand[],
+  stimuli?: StimulusCommand[],
 ): Promise<AnswerCorrectionView<TakeHomeQuizView>> {
   return apiFetch<AnswerCorrectionView<TakeHomeQuizView>>(`${BASE}/${quizId}/answer-key`, {
     method: "PUT",
-    body: JSON.stringify({ questions }),
+    body: JSON.stringify({ questions, stimuli }),
   });
 }
 

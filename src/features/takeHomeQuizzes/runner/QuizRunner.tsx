@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BookOpen, ChevronLeft, ChevronRight, PartyPopper } from "lucide-react";
 import type {
   AnswerCommand,
+  AttemptClockView,
   PublicAnswerView,
   QuizAttemptView,
   SubmitConfirmationView,
@@ -24,6 +25,8 @@ import { stimulusGroups } from "@/features/takeHomeQuizzes/runner/stimulusGroups
 type AnswersState = Record<string, PublicAnswerView>;
 
 const AUTOSAVE_DEBOUNCE_MS = 1500;
+/** Well under the server's `away-after` (90s), so an open page never reads as away. */
+const HEARTBEAT_INTERVAL_MS = 30_000;
 
 function bufferStorageKey(bufferKey: string): string {
   return `thq:${bufferKey}`;
@@ -140,6 +143,8 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, do
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   // The latest answers not yet confirmed saved - null once the server has them.
   const pendingAnswersRef = useRef<AnswersState | null>(null);
+  // Mirrors `submitting` for callbacks that outlive a render (the heartbeat interval, pagehide).
+  const submittingRef = useRef(false);
   // The tail of the save chain: every save waits for the previous one, so an older full-state
   // save can never land after a newer one, and submit can wait for the last one to finish.
   const inFlightSaveRef = useRef<Promise<void>>(Promise.resolve());
@@ -262,9 +267,11 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, do
   }
 
   const handleSubmit = useCallback(() => {
-    if (submitting) {
+    // The ref too: the timer's `onExpire` can be a closure from before `submitting` re-rendered.
+    if (submitting || submittingRef.current) {
       return;
     }
+    submittingRef.current = true;
     setConfirmOpen(false);
     setSubmitting(true);
     // Submit carries everything on screen and the server saves it, unthrottled, before scoring - a
@@ -283,8 +290,104 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, do
         onSubmitted(confirmation);
       })
       .catch((error: unknown) => onError(error))
-      .finally(() => setSubmitting(false));
+      .finally(() => {
+        submittingRef.current = false;
+        setSubmitting(false);
+      });
   }, [bufferKey, toCommands, submit, submitting, onSubmitted, onError]);
+
+  // Pause-on-leave (V152): the server stops this attempt's clock while the student is away - the
+  // page closed, a phone backgrounded, the connection lost - and moves `deadlineAt` forward by the
+  // time away on their next request. An open page heartbeats so it never reads as away, re-checks
+  // the clock the moment it's visible or online again, and says so explicitly as it goes away.
+  const pausable = !!attempt.pauseTimerOnLeave && !!transport.heartbeat;
+  const heartbeatRef = useRef(transport.heartbeat);
+  const pauseRef = useRef(transport.pause);
+  useEffect(() => {
+    heartbeatRef.current = transport.heartbeat;
+    pauseRef.current = transport.pause;
+  });
+
+  /**
+   * Resolves with the server's clock, or null when the heartbeat failed or was skipped. Doesn't put
+   * it on screen - see `applyClock` - so the expiry check can submit without re-arming the timer.
+   */
+  const sendHeartbeat = useCallback((): Promise<AttemptClockView | null> => {
+    const send = heartbeatRef.current;
+    if (!send || submittingRef.current) {
+      return Promise.resolve(null);
+    }
+    // Chained into the save chain, so a heartbeat never races an autosave or the submit for the
+    // same attempt row.
+    const beat = inFlightSaveRef.current.catch(() => undefined).then(() => send());
+    inFlightSaveRef.current = beat.then(
+      () => undefined,
+      () => undefined,
+    );
+    return beat.then(
+      (clock) => clock,
+      () => null,
+    );
+  }, []);
+
+  const applyClock = useCallback((clock: AttemptClockView | null) => {
+    if (clock) {
+      setAttempt((current) => ({ ...current, deadlineAt: clock.deadlineAt, serverTime: clock.serverTime }));
+    }
+  }, []);
+
+  const refreshClock = useCallback(() => {
+    void sendHeartbeat().then(applyClock);
+  }, [sendHeartbeat, applyClock]);
+
+  useEffect(() => {
+    if (!pausable) {
+      return;
+    }
+    const interval = setInterval(refreshClock, HEARTBEAT_INTERVAL_MS);
+    function handleVisibility() {
+      if (document.visibilityState === "visible") {
+        refreshClock();
+      }
+    }
+    function handleOnline() {
+      refreshClock();
+    }
+    function handlePageHide() {
+      if (!submittingRef.current) {
+        void pauseRef.current?.().catch(() => undefined);
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("pagehide", handlePageHide);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("pagehide", handlePageHide);
+    };
+  }, [pausable, refreshClock]);
+
+  // A paused clock's deadline on screen is stale until the server has credited the time away -
+  // a phone back from the background must not auto-submit on it. Ask the server first, and submit
+  // only if time really is up; otherwise the refreshed deadline re-arms the timer.
+  const handleExpire = useCallback(() => {
+    if (!pausable) {
+      handleSubmit();
+      return;
+    }
+    void sendHeartbeat().then((clock) => {
+      const remaining = clock?.deadlineAt
+        ? new Date(clock.deadlineAt).getTime() - new Date(clock.serverTime).getTime()
+        : 0;
+      if (remaining <= 0) {
+        handleSubmit();
+      } else {
+        applyClock(clock);
+      }
+    });
+  }, [pausable, sendHeartbeat, applyClock, handleSubmit]);
 
   const questions = attempt.questions;
   const answeredIndexes = useMemo(() => {
@@ -333,7 +436,7 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, do
         <QuizTimer
           deadlineAt={attempt.deadlineAt}
           serverTime={attempt.serverTime}
-          onExpire={handleSubmit}
+          onExpire={handleExpire}
         />
       </div>
 
