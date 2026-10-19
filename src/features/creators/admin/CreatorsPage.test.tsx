@@ -3,12 +3,18 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as creatorsApi from "@/api/creators";
+import * as dashboardApi from "@/api/dashboard";
 import type { CreatorAdminView } from "@/api/creators";
 import { CreatorsPage } from "@/features/creators/admin/CreatorsPage";
 
 vi.mock("@/api/creators", async () => {
   const actual = await vi.importActual<typeof import("@/api/creators")>("@/api/creators");
   return { ...actual, listCreators: vi.fn(), onboardCreator: vi.fn() };
+});
+
+vi.mock("@/api/dashboard", async () => {
+  const actual = await vi.importActual<typeof import("@/api/dashboard")>("@/api/dashboard");
+  return { ...actual, getCreatorDashboard: vi.fn() };
 });
 
 const CREATOR: CreatorAdminView = {
@@ -41,6 +47,7 @@ function renderPage() {
 describe("CreatorsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(dashboardApi.getCreatorDashboard).mockReturnValue(new Promise(() => {}));
     vi.mocked(creatorsApi.listCreators).mockResolvedValue({
       content: [CREATOR],
       totalElements: 1,
@@ -57,6 +64,14 @@ describe("CreatorsPage", () => {
     expect(screen.getByText("ada@creator.example")).toBeInTheDocument();
     expect(screen.getByText("Unverified")).toBeInTheDocument();
     expect(screen.getByText("ACTIVE")).toBeInTheDocument();
+  });
+
+  it("still lists creators when the overview fails to load", async () => {
+    vi.mocked(dashboardApi.getCreatorDashboard).mockRejectedValue(new Error("boom"));
+    renderPage();
+
+    expect(await screen.findByText("Failed to load the creators overview")).toBeInTheDocument();
+    expect(await screen.findByText("Analytical Tutors")).toBeInTheDocument();
   });
 
   it("searches by the typed query", async () => {

@@ -23,6 +23,7 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { TableSkeleton } from "@/components/ui/TableSkeleton";
+import { CreatorsOverview } from "@/features/creators/admin/CreatorsOverview";
 import { CREATOR_STATUS_LABEL, CREATOR_STATUS_VARIANT } from "@/features/creators/admin/creatorStatus";
 import { CreatorProfileFields } from "@/features/creators/components/CreatorProfileFields";
 import { emptyCreatorProfile } from "@/features/creators/creatorProfileDefaults";
@@ -34,7 +35,7 @@ type ListState =
   | { kind: "loaded"; page: Page<CreatorAdminView> }
   | { kind: "error"; message: string };
 
-/** System-admin creator directory: search every education creator, onboard a new one. */
+/** System-admin creators page: the platform-wide overview, then the directory - search every creator, onboard a new one. */
 export function CreatorsPage() {
   const [query, setQuery] = useState("");
   const [pageIndex, setPageIndex] = useState(0);
@@ -59,6 +60,9 @@ export function CreatorsPage() {
         actions={<Button onClick={() => setOnboardOpen(true)}>Onboard creator</Button>}
       />
 
+      <CreatorsOverview />
+
+      <h2 className="text-sm font-semibold text-slate-900">Directory</h2>
       <StickySubHeader>
         <FormField
           label="Search"

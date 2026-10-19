@@ -245,3 +245,103 @@ export function getAdminDashboard(): Promise<AdminDashboardView> {
 export function getSchoolDashboard(): Promise<SchoolDashboardView> {
   return apiFetch<SchoolDashboardView>("/api/v1/dashboard");
 }
+
+/** Mirrors backend dashboard.application.port.in.CreatorDashboardView.MonthCount - `month` is `yyyy-MM`. */
+export interface CreatorDashboardMonthCount {
+  month: string;
+  count: number;
+}
+
+/** Mirrors backend dashboard.application.port.in.CreatorDashboardView.PlanCount. */
+export interface CreatorDashboardPlanCount {
+  packageId: string;
+  name: string;
+  free: boolean;
+  creators: number;
+}
+
+/** Mirrors backend dashboard.application.port.in.CreatorDashboardView.CurrencyRevenue - amounts in minor units. */
+export interface CreatorDashboardCurrencyRevenue {
+  currency: string;
+  receivedMinor: number;
+  last30DaysMinor: number;
+  discountMinor: number;
+  successfulCharges: number;
+  failedCharges: number;
+  abandonedCharges: number;
+}
+
+/** Mirrors backend dashboard.application.port.in.CreatorDashboardView.RevenueRow. */
+export interface CreatorDashboardRevenueRow {
+  schoolId: string;
+  name: string;
+  currency: string;
+  amountMinor: number;
+}
+
+/** Mirrors backend dashboard.application.port.in.CreatorDashboardView.CountRow. */
+export interface CreatorDashboardCountRow {
+  schoolId: string;
+  name: string;
+  count: number;
+}
+
+/**
+ * Mirrors backend dashboard.application.port.in.CreatorDashboardView - the SYSTEM_ADMIN creators
+ * overview above the Creators list. All-time unless a field says otherwise; cached a few minutes
+ * server-side.
+ */
+export interface CreatorDashboardView {
+  creators: {
+    total: number;
+    active: number;
+    suspended: number;
+    archived: number;
+    unverifiedEmail: number;
+    /** The last six calendar months (UTC), oldest first. */
+    signupsByMonth: CreatorDashboardMonthCount[];
+  };
+  plans: {
+    plans: CreatorDashboardPlanCount[];
+    onPaidPlan: number;
+    withoutPlan: number;
+    autoRenewOn: number;
+    inGrace: number;
+  };
+  classes: {
+    total: number;
+    active: number;
+    archived: number;
+    sessionsHeld: number;
+    /** Starting in the next seven days. */
+    sessionsUpcoming: number;
+    sessionsCancelled: number;
+    sessionsLive: number;
+    hoursDelivered: number;
+    /** Scheduled hours in the next seven days. */
+    hoursUpcoming: number;
+  };
+  learners: {
+    total: number;
+    adults: number;
+    minors: number;
+    withLogin: number;
+    guardians: number;
+    pendingInvites: number;
+    activeEnrollments: number;
+    attendanceHours: number;
+  };
+  /** One row per currency - amounts in different currencies are never added together. */
+  revenue: CreatorDashboardCurrencyRevenue[];
+  top: {
+    /** Up to five per currency, largest first. */
+    byRevenue: CreatorDashboardRevenueRow[];
+    byClasses: CreatorDashboardCountRow[];
+    byLearners: CreatorDashboardCountRow[];
+  };
+  generatedAt: string;
+}
+
+export function getCreatorDashboard(): Promise<CreatorDashboardView> {
+  return apiFetch<CreatorDashboardView>("/api/v1/admin/dashboard/creators");
+}
