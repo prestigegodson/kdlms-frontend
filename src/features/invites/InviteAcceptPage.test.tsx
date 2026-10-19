@@ -50,7 +50,7 @@ describe("InviteAcceptPage", () => {
   beforeEach(() => {
     resetAuthStore();
     vi.clearAllMocks();
-    vi.mocked(authApi.getAuthConfig).mockResolvedValue({ googleClientId: null });
+    vi.mocked(authApi.getAuthConfig).mockResolvedValue({ googleClientId: null, captchaSiteKey: null });
   });
 
   afterEach(() => {
@@ -135,7 +135,7 @@ describe("InviteAcceptPage", () => {
         },
       },
     };
-    vi.mocked(authApi.getAuthConfig).mockResolvedValue({ googleClientId: "client.apps.googleusercontent.com" });
+    vi.mocked(authApi.getAuthConfig).mockResolvedValue({ googleClientId: "client.apps.googleusercontent.com", captchaSiteKey: null });
     vi.mocked(invitesApi.previewInvite).mockResolvedValue(invite());
     vi.mocked(authApi.googleSignIn).mockResolvedValue(session);
 

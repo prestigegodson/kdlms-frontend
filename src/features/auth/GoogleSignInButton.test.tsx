@@ -29,7 +29,7 @@ describe("GoogleSignInButton", () => {
   });
 
   it("renders nothing while Google sign-in is off", async () => {
-    vi.mocked(authApi.getAuthConfig).mockResolvedValue({ googleClientId: null });
+    vi.mocked(authApi.getAuthConfig).mockResolvedValue({ googleClientId: null, captchaSiteKey: null });
 
     render(<GoogleSignInButton mode="signin" onCredential={vi.fn()} after={<span>or</span>} />);
 
@@ -40,7 +40,7 @@ describe("GoogleSignInButton", () => {
   });
 
   it("renders Google's button and hands its ID token to the page", async () => {
-    vi.mocked(authApi.getAuthConfig).mockResolvedValue({ googleClientId: "client.apps.googleusercontent.com" });
+    vi.mocked(authApi.getAuthConfig).mockResolvedValue({ googleClientId: "client.apps.googleusercontent.com", captchaSiteKey: null });
     const onCredential = vi.fn();
 
     render(<GoogleSignInButton mode="signup" onCredential={onCredential} after={<span>or</span>} />);

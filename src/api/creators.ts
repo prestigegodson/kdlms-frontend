@@ -36,6 +36,8 @@ export interface RegisterCreatorRequest {
   email: string;
   password: string;
   profile: CreatorProfileInput;
+  /** The Turnstile widget's token - required only while the backend serves a `captchaSiteKey`. */
+  captchaToken?: string | null;
 }
 
 export interface RegistrationResponse {

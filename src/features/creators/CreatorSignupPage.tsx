@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { AuthLayout } from "@/features/auth/AuthLayout";
 import { GoogleSignInButton, OrDivider } from "@/features/auth/GoogleSignInButton";
+import { TurnstileWidget } from "@/features/auth/TurnstileWidget";
 import { CreatorProfileFields } from "@/features/creators/components/CreatorProfileFields";
 import { emptyCreatorProfile } from "@/features/creators/creatorProfileDefaults";
 import { useAuthStore } from "@/stores/authStore";
@@ -18,7 +19,9 @@ import { useAuthStore } from "@/stores/authStore";
  * straight away and lands in their portal, where a banner asks them to verify their email -
  * every write is refused server-side until they do. Signing up with Google instead (Phase C2) skips
  * the form entirely: the account is created verified, and RequireRole then forces the creator
- * through /creator/complete-profile for their business details.
+ * through /creator/complete-profile for their business details. While the backend serves a
+ * Turnstile site key the form also needs a passed CAPTCHA; a token is single-use, so the widget is
+ * remounted for a fresh one after every failed submit.
  */
 export function CreatorSignupPage() {
   const login = useAuthStore((state) => state.login);
@@ -29,19 +32,24 @@ export function CreatorSignupPage() {
   const [profile, setProfile] = useState(emptyCreatorProfile);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaKey, setCaptchaKey] = useState(0);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
     setError(null);
     try {
-      await registerCreator({ email, password, profile });
+      await registerCreator({ email, password, profile, captchaToken });
       // Creators always sign in on the platform's own host - never a school subdomain.
       await login(email, password, null);
       navigate("/creator", { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "We couldn't create your account. Please try again.");
       setSubmitting(false);
+      setCaptchaToken(null);
+      setCaptchaKey((key) => key + 1);
     }
   }
 
@@ -89,7 +97,13 @@ export function CreatorSignupPage() {
           />
         </FormField>
         <CreatorProfileFields value={profile} onChange={setProfile} idPrefix="signup" />
-        <Button type="submit" loading={submitting} className="w-full">
+        <TurnstileWidget key={captchaKey} onToken={setCaptchaToken} onAvailable={setCaptchaRequired} />
+        <Button
+          type="submit"
+          loading={submitting}
+          disabled={captchaRequired && !captchaToken}
+          className="w-full"
+        >
           {submitting ? "Creating account…" : "Create account"}
         </Button>
       </form>

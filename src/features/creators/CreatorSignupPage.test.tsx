@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -35,10 +35,24 @@ async function fillForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Mobile number"), "+2348000000000");
 }
 
+/** Stands in for Cloudflare's script: records each rendered widget so a test can "pass" it. */
+function stubTurnstile() {
+  const widgets: Array<{ callback: (token: string) => void }> = [];
+  window.turnstile = {
+    render: vi.fn((_container, options) => {
+      widgets.push(options);
+      return `widget-${widgets.length}`;
+    }),
+    remove: vi.fn(),
+  };
+  return widgets;
+}
+
 describe("CreatorSignupPage", () => {
   beforeEach(() => {
     resetAuthStore();
     vi.clearAllMocks();
+    delete window.turnstile;
   });
 
   it("registers, signs in at the root domain, and lands in the creator portal", async () => {
@@ -85,5 +99,38 @@ describe("CreatorSignupPage", () => {
 
     expect(await screen.findByText("An account with this email already exists.")).toBeInTheDocument();
     expect(authApi.login).not.toHaveBeenCalled();
+  });
+
+  describe("with the CAPTCHA on", () => {
+    beforeEach(() => {
+      vi.mocked(authApi.getAuthConfig).mockResolvedValue({ googleClientId: null, captchaSiteKey: "site-key" });
+    });
+
+    it("keeps the form locked until the check passes, then sends its token", async () => {
+      const widgets = stubTurnstile();
+      vi.mocked(creatorsApi.registerCreator).mockRejectedValue(
+        new ApiError(400, "Please complete the verification and try again."),
+      );
+      const user = userEvent.setup();
+
+      renderPage();
+      await fillForm(user);
+      const submit = screen.getByRole("button", { name: "Create account" });
+      expect(submit).toBeDisabled();
+
+      await vi.waitFor(() => expect(widgets).toHaveLength(1));
+      act(() => widgets[0].callback("captcha-token"));
+      expect(submit).toBeEnabled();
+      await user.click(submit);
+
+      expect(creatorsApi.registerCreator).toHaveBeenCalledWith(
+        expect.objectContaining({ captchaToken: "captcha-token" }),
+      );
+      // A token is single-use: a failure discards it and renders a fresh widget.
+      expect(await screen.findByText("Please complete the verification and try again.")).toBeInTheDocument();
+      await vi.waitFor(() => expect(widgets).toHaveLength(2));
+      expect(window.turnstile?.remove).toHaveBeenCalledWith("widget-1");
+      expect(screen.getByRole("button", { name: "Create account" })).toBeDisabled();
+    });
   });
 });

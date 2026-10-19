@@ -104,9 +104,13 @@ export function googleSignIn(
 
 export const GOOGLE_ACCOUNT_NOT_FOUND = "https://kdlms.com/problems/google-account-not-found";
 
-/** The sign-in options to offer - `googleClientId` is null while Google sign-in is off. */
+/**
+ * The sign-in options to offer - `googleClientId` is null while Google sign-in is off, and
+ * `captchaSiteKey` while the creator sign-up CAPTCHA (Cloudflare Turnstile) is off.
+ */
 export interface AuthConfig {
   googleClientId: string | null;
+  captchaSiteKey: string | null;
 }
 
 export function getAuthConfig(): Promise<AuthConfig> {

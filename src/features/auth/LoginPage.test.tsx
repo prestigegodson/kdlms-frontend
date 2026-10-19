@@ -211,7 +211,7 @@ describe("LoginPage", () => {
         },
       },
     };
-    vi.mocked(authApi.getAuthConfig).mockResolvedValue({ googleClientId: "client.apps.googleusercontent.com" });
+    vi.mocked(authApi.getAuthConfig).mockResolvedValue({ googleClientId: "client.apps.googleusercontent.com", captchaSiteKey: null });
     vi.mocked(authApi.googleSignIn).mockRejectedValue(
       new ApiError(401, "We couldn't find an account you can sign in to with this Google account.", {
         type: "https://kdlms.com/problems/google-account-not-found",
