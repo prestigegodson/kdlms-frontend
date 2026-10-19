@@ -14,6 +14,7 @@ function choice(key: string, type: "SINGLE_CHOICE" | "MULTI_CHOICE", correct: bo
     tags: [],
     interaction: null,
     scoring: null,
+    stimulusKey: null,
   };
 }
 

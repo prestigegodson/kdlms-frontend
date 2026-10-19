@@ -96,6 +96,7 @@ const SAVED_VIEW: takeHomeQuizzesApi.TakeHomeQuizView = {
   shuffleQuestions: false,
   shuffleChoices: false,
   totalPoints: 0,
+  stimuli: [],
   questions: [],
   actions: {
     canEditMetadata: true,

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
+import type { PublicStimulusView } from "@/api/publicTakeHomeQuiz";
 import { type AnsweredQuestionView, getStudentTakeHomeQuizResult } from "@/api/takeHomeQuizzes";
 import { Alert } from "@/components/ui/Alert";
 import { Modal } from "@/components/ui/Modal";
@@ -19,6 +20,7 @@ interface StudentAnswersModalProps {
 /** The part of a staff attempt detail this modal reads - shared by a student's and a learner's. */
 interface AttemptDetail {
   questions: AnsweredQuestionView[];
+  stimuli?: PublicStimulusView[];
 }
 
 function toReviewQuestions(detail: AttemptDetail) {
@@ -36,6 +38,7 @@ function toReviewQuestions(detail: AttemptDetail) {
     interaction: question.interaction,
     response: question.response,
     parts: question.parts,
+    stimulusId: question.stimulusId ?? null,
   }));
 }
 
@@ -69,6 +72,7 @@ export function StudentAnswersModal({ quizId, studentId, studentName, onClose, l
       {detail && (
         <QuizReview
           questions={toReviewQuestions(detail)}
+          stimuli={detail.stimuli}
           renderImage={(fileId, alt) => <AuthenticatedRichImage fileId={fileId} alt={alt} />}
         />
       )}

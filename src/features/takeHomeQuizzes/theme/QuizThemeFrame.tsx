@@ -13,6 +13,8 @@ interface QuizThemeFrameProps {
    * `compact` is a thumbnail (the theme gallery's swatches).
    */
   variant?: "page" | "embedded" | "compact";
+  /** A `page` widens from `lg` up for a quiz with reading passages, which sit beside the question there (Phase 20L). */
+  wide?: boolean;
   children: ReactNode;
 }
 
@@ -23,7 +25,7 @@ interface QuizThemeFrameProps {
  * `--color-brand-*` tokens for this subtree with a readable version of it (`brandRamp`) - so no
  * player component needs to know themes exist, and none can end up unreadable.
  */
-export function QuizThemeFrame({ theme, images, variant = "embedded", children }: QuizThemeFrameProps) {
+export function QuizThemeFrame({ theme, images, variant = "embedded", wide = false, children }: QuizThemeFrameProps) {
   const backgroundUrl = useThemeImageUrl(
     images,
     theme?.backgroundKind === "IMAGE" ? theme.backgroundImageFileId : null,
@@ -55,10 +57,12 @@ export function QuizThemeFrame({ theme, images, variant = "embedded", children }
       data-quiz-theme=""
       style={frameStyle}
       className={
-        page ? "min-h-dvh px-3 py-4 sm:px-4 sm:py-8" : compact ? "p-2" : "overflow-hidden rounded-card p-3 sm:p-5"
+        // `overflow-clip`, not `-hidden`: it rounds the background the same way without becoming a
+        // scroll container, which would stop the quiz's sticky action bar from sticking.
+        page ? "min-h-dvh px-3 py-4 sm:px-4 sm:py-8" : compact ? "p-2" : "overflow-clip rounded-card p-3 sm:p-5"
       }
     >
-      <div className={page ? "mx-auto max-w-2xl" : undefined}>
+      <div className={page ? `mx-auto max-w-2xl ${wide ? "lg:max-w-6xl" : ""}` : undefined}>
         {theme.headerImageFileId && (
           <div
             className={`aspect-[4/1] w-full overflow-hidden bg-white/40 shadow-sm ${compact ? "mb-1.5" : "mb-3 sm:mb-4"}`}

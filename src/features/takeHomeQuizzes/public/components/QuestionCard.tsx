@@ -24,6 +24,8 @@ interface QuestionCardProps {
    * the transport's own `<img>`/component is expected to size itself to fill its container.
    */
   renderImage: (fileId: string, alt: string, size: "prompt" | "option") => ReactNode;
+  /** A passage is on screen alongside the question, so options always go one per line - never 2-up. */
+  stackOptions?: boolean;
 }
 
 /** Short enough to sit two-up on a wider screen without wrapping awkwardly. */
@@ -56,11 +58,11 @@ function allOptionsShort(options: PublicOptionView[]): boolean {
  * while screen readers, keyboard arrows/space, and form semantics still
  * work. Selection is never colour-only: the letter badge turns into a tick.
  */
-export function QuestionCard({ question, answer, answered, onChange, renderImage }: QuestionCardProps) {
+export function QuestionCard({ question, answer, answered, onChange, renderImage, stackOptions = false }: QuestionCardProps) {
   const selected = new Set(answer?.selectedOptionIds ?? []);
   const multi = question.questionType === "MULTI_CHOICE";
   const choice = multi || question.questionType === "SINGLE_CHOICE";
-  const grid = choice && allOptionsShort(question.options);
+  const grid = !stackOptions && choice && allOptionsShort(question.options);
   const plugin = question.playerConfig ? pluginFor(question.questionType) : undefined;
 
   function renderOptionImage(fallbackAlt: string) {
@@ -95,7 +97,7 @@ export function QuestionCard({ question, answer, answered, onChange, renderImage
           <RichContent
             html={question.prompt}
             renderImage={(fileId, alt) => renderImage(fileId, alt, "prompt")}
-            className="min-w-0 break-words pt-1 font-display text-lg font-semibold text-slate-900"
+            className="min-w-0 space-y-2 break-words pt-1 font-display text-lg font-semibold text-slate-900"
           />
         </span>
         <span className="flex shrink-0 items-center gap-1.5 pt-1.5 text-xs font-medium text-slate-500">

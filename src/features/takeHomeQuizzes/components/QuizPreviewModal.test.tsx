@@ -21,6 +21,7 @@ const questions: EditableQuestion[] = [
     tags: [],
     interaction: null,
     scoring: null,
+    stimulusKey: null,
   },
 ];
 

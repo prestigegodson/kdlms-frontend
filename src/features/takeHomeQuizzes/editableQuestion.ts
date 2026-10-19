@@ -44,6 +44,8 @@ export interface EditableQuestion {
   interaction: InteractionConfig | null;
   /** `null` takes the type's default - `PARTIAL` for an interactive type. */
   scoring: ScoringMode | null;
+  /** The `EditableStimulus.key` of the passage this question belongs to - `null` for a standalone question. */
+  stimulusKey: string | null;
 }
 
 /** Every question type's name - the original three and each interactive plugin's (interactions/registry.ts). */
@@ -77,6 +79,7 @@ export function blankQuestion(): EditableQuestion {
     tags: [],
     interaction: null,
     scoring: null,
+    stimulusKey: null,
   };
 }
 
@@ -98,6 +101,8 @@ export function toEditableQuestion(question: TakeHomeQuizQuestionView): Editable
     tags: question.tags ?? [],
     interaction: question.interaction ?? null,
     scoring: question.interaction ? (question.scoring ?? null) : null,
+    // A saved stimulus's key is its id (`toEditableStimulus`), so the link survives the round trip.
+    stimulusKey: question.stimulusId ?? null,
   };
 }
 
@@ -123,6 +128,8 @@ export function fromQuestionCommand(question: QuestionCommand): EditableQuestion
     tags: question.tags ?? [],
     interaction: question.interaction ?? null,
     scoring: question.interaction ? (question.scoring ?? null) : null,
+    // An import or a bank copy is always a standalone question.
+    stimulusKey: null,
   };
 }
 

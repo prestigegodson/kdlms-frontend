@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, PartyPopper } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, PartyPopper } from "lucide-react";
 import type {
   AnswerCommand,
   PublicAnswerView,
@@ -9,6 +9,7 @@ import type {
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Modal } from "@/components/ui/Modal";
 import { QuestionCard } from "@/features/takeHomeQuizzes/public/components/QuestionCard";
 import { QuestionNavStrip } from "@/features/takeHomeQuizzes/public/components/QuestionNavStrip";
 import { QuizTimer } from "@/features/takeHomeQuizzes/public/components/QuizTimer";
@@ -17,6 +18,8 @@ import {
   SaveStatusIndicator,
 } from "@/features/takeHomeQuizzes/public/components/SaveStatusIndicator";
 import type { QuizTransport } from "@/features/takeHomeQuizzes/runner/quizTransport";
+import { StimulusBody, StimulusPanel } from "@/features/takeHomeQuizzes/runner/StimulusPanel";
+import { stimulusGroups } from "@/features/takeHomeQuizzes/runner/stimulusGroups";
 
 type AnswersState = Record<string, PublicAnswerView>;
 
@@ -53,8 +56,31 @@ function writeBuffer(bufferKey: string, answers: AnswersState) {
 function clearBuffer(bufferKey: string) {
   try {
     localStorage.removeItem(bufferStorageKey(bufferKey));
+    localStorage.removeItem(collapsedStorageKey(bufferKey));
   } catch {
     // Same as above.
+  }
+}
+
+/** Which passages the student has hidden - a per-device reading preference, never sent anywhere. */
+function collapsedStorageKey(bufferKey: string): string {
+  return `thq:${bufferKey}:collapsed`;
+}
+
+function readCollapsed(bufferKey: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(collapsedStorageKey(bufferKey));
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeCollapsed(bufferKey: string, collapsed: Set<string>) {
+  try {
+    localStorage.setItem(collapsedStorageKey(bufferKey), JSON.stringify([...collapsed]));
+  } catch {
+    // A convenience only.
   }
 }
 
@@ -67,6 +93,11 @@ export interface QuizRunnerProps {
   onSubmitted: (confirmation: SubmitConfirmationView) => void;
   /** Called when submit fails outright, or the final save before it does (an autosave failure is silently retried) - the caller renders its own error chrome. */
   onError: (error: unknown) => void;
+  /**
+   * Where the sticky Previous/Next bar docks below `lg`: the viewport's bottom edge (the full-page
+   * token path, a modal) or just above the portal's `MobileTabBar`.
+   */
+  dock?: "viewport" | "tabbar";
 }
 
 /**
@@ -78,7 +109,7 @@ export interface QuizRunnerProps {
  * submitted/error screens - those differ in chrome (full-viewport vs. portal shell) and stay with
  * each caller; this component starts already in progress, given `initialAttempt`.
  */
-export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: QuizRunnerProps) {
+export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, dock = "viewport" }: QuizRunnerProps) {
   const { bufferKey, saveAnswers, submit, renderQuestionImage } = transport;
   const [attempt, setAttempt] = useState(initialAttempt);
   const [answers, setAnswers] = useState<AnswersState>(() => {
@@ -92,6 +123,11 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
   );
   const [submitting, setSubmitting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // Every passage starts open - the first time a student reaches it they see it - and stays the way
+  // they last left it, across questions and reloads.
+  const [collapsedStimuli, setCollapsedStimuli] = useState<Set<string>>(() => readCollapsed(bufferKey));
+  const [readerOpen, setReaderOpen] = useState(false);
+  const [scrollPositions] = useState(() => new Map<string, number>());
 
   // An attempt's question set never changes, so neither does each question's type - what an
   // interactive answer is tagged with on save.
@@ -258,6 +294,22 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
   );
 
   const currentQuestion = questions[currentIndex];
+  const groups = useMemo(() => stimulusGroups(questions, attempt.stimuli), [questions, attempt.stimuli]);
+  const currentGroup = currentQuestion?.stimulusId ? groups.get(currentQuestion.stimulusId) : undefined;
+  const currentCollapsed = currentGroup ? collapsedStimuli.has(currentGroup.stimulus.id) : false;
+  // IELTS-style split view from `lg` up: the passage on the left, the question on the right.
+  const split = currentGroup?.stimulus.kind === "PASSAGE" && !currentCollapsed;
+  const renderStimulusImage = (fileId: string, alt: string) => renderQuestionImage(fileId, alt, "prompt");
+
+  function toggleStimulus(stimulusId: string) {
+    setCollapsedStimuli((current) => {
+      const next = new Set(current);
+      if (next.has(stimulusId)) next.delete(stimulusId);
+      else next.add(stimulusId);
+      writeCollapsed(bufferKey, next);
+      return next;
+    });
+  }
 
   return (
     <div>
@@ -304,29 +356,67 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
           currentIndex={currentIndex}
           answeredIndexes={answeredIndexes}
           onSelect={setCurrentIndex}
+          groups={[...groups.values()].map((group) => ({ first: group.first, last: group.last, name: group.name }))}
         />
       </div>
 
       {currentQuestion && (
-        <div onBlur={handleBlurFlush}>
-          <QuestionCard
-            question={currentQuestion}
-            answer={answers[currentQuestion.id]}
-            answered={answeredIndexes.has(currentIndex)}
-            onChange={(answer) => handleAnswerChange(currentQuestion.id, answer)}
-            renderImage={renderQuestionImage}
-          />
+        <div
+          data-testid="question-layout"
+          className={split ? "lg:grid lg:grid-cols-2 lg:items-start lg:gap-6" : undefined}
+        >
+          {currentGroup && (
+            <div
+              className={`mb-4 ${split ? "lg:sticky lg:top-4 lg:mb-0" : ""}`}
+              data-testid="stimulus-column"
+            >
+              <StimulusPanel
+                key={currentGroup.stimulus.id}
+                stimulus={currentGroup.stimulus}
+                name={currentGroup.name}
+                rangeLabel={currentGroup.rangeLabel}
+                collapsed={currentCollapsed}
+                onToggle={() => toggleStimulus(currentGroup.stimulus.id)}
+                onExpand={() => setReaderOpen(true)}
+                renderImage={renderStimulusImage}
+                scrollPositions={scrollPositions}
+              />
+            </div>
+          )}
+          <div onBlur={handleBlurFlush} className="min-w-0">
+            <QuestionCard
+              question={currentQuestion}
+              answer={answers[currentQuestion.id]}
+              answered={answeredIndexes.has(currentIndex)}
+              onChange={(answer) => handleAnswerChange(currentQuestion.id, answer)}
+              renderImage={renderQuestionImage}
+              stackOptions={currentGroup?.stimulus.kind === "PASSAGE"}
+            />
+          </div>
         </div>
       )}
 
-      <div className="mt-6 flex items-center justify-between gap-3">
+      {/* Docked to the bottom so a long passage above the question never pushes navigation off-screen. */}
+      <div
+        className={`sticky z-10 mt-6 flex items-center justify-between gap-2 border-t border-slate-200 bg-white/95 py-3 backdrop-blur pb-[max(0.75rem,env(safe-area-inset-bottom))] ${
+          dock === "tabbar" ? "bottom-tabbar-safe lg:bottom-0" : "bottom-0"
+        }`}
+        data-testid="quiz-action-bar"
+      >
         <Button
           variant="secondary"
           onClick={() => setCurrentIndex((index) => Math.max(0, index - 1))}
           disabled={currentIndex === 0}
         >
-          <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Previous
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          {/* Room for the Passage button on a narrow phone - the label stays for screen readers. */}
+          <span className={currentGroup?.stimulus.kind === "PASSAGE" ? "max-sm:sr-only" : undefined}>Previous</span>
         </Button>
+        {currentGroup?.stimulus.kind === "PASSAGE" && (
+          <Button variant="ghost" className="lg:hidden" onClick={() => setReaderOpen(true)}>
+            <BookOpen className="h-4 w-4" aria-hidden="true" /> Passage
+          </Button>
+        )}
         {currentIndex < questions.length - 1 ? (
           <Button
             onClick={() => setCurrentIndex((index) => Math.min(questions.length - 1, index + 1))}
@@ -339,6 +429,24 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError }: 
           </Button>
         )}
       </div>
+
+      {readerOpen && currentGroup && (
+        <Modal
+          open
+          onClose={() => setReaderOpen(false)}
+          title={currentGroup.stimulus.title?.trim() || currentGroup.name}
+          size="xxl"
+          fullScreenOnMobile
+        >
+          <p className="mb-3 text-sm font-medium text-slate-500">{currentGroup.rangeLabel}</p>
+          <StimulusBody stimulus={currentGroup.stimulus} renderImage={renderStimulusImage} />
+          <div className="sticky bottom-0 mt-6 bg-white pt-3">
+            <Button className="w-full" onClick={() => setReaderOpen(false)}>
+              Back to question {currentIndex + 1}
+            </Button>
+          </div>
+        </Modal>
+      )}
 
       {confirmOpen && (
         <ConfirmDialog

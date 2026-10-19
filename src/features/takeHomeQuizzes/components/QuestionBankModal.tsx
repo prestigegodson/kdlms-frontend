@@ -332,7 +332,7 @@ function BankItemRow({ item, selected, locked, onToggle, onDelete }: BankItemRow
             {item.createdByName && <span>· by {item.createdByName}</span>}
           </div>
           <label htmlFor={checkboxId} className="block cursor-pointer text-sm text-slate-900">
-            <RichContent html={item.prompt} renderImage={renderImage} />
+            <RichContent html={item.prompt} renderImage={renderImage} className="space-y-2" />
           </label>
           {item.options.length > 0 && (
             <ul className="space-y-1 text-sm">

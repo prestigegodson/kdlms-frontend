@@ -95,6 +95,24 @@ export interface TakeHomeQuizAnswerKeyView {
   expectedAnswer: string;
 }
 
+/** Mirrors backend takehomequiz.domain.StimulusKind (Phase 20L). */
+export type StimulusKind = "PASSAGE" | "INSTRUCTION";
+
+/**
+ * Mirrors backend takehomequiz.application.port.in.TakeHomeQuizView.StimulusView - a shared reading
+ * passage or group instruction several questions link to by `stimulusId` (Phase 20L).
+ */
+export interface TakeHomeQuizStimulusView {
+  id: string;
+  position: number;
+  kind: StimulusKind;
+  title: string | null;
+  /** Sanitized HTML in the prompt vocabulary, images included. Render with `RichContent`. */
+  body: string;
+  /** Letter each paragraph A, B, C... at display time - passage-only. */
+  paragraphLabels: boolean;
+}
+
 /** Mirrors backend takehomequiz.application.port.in.TakeHomeQuizView.QuestionView. */
 export interface TakeHomeQuizQuestionView {
   id: string;
@@ -110,6 +128,8 @@ export interface TakeHomeQuizQuestionView {
   /** An interactive question's config, answer included; absent for the original three types. */
   interaction?: InteractionConfig | null;
   scoring?: ScoringMode | null;
+  /** The passage this question belongs to - null for a standalone question. */
+  stimulusId?: string | null;
 }
 
 /**
@@ -175,6 +195,8 @@ export interface TakeHomeQuizView {
   theme: QuizThemeStyle | null;
   /** The chosen students of a selective-audience quiz - empty when it reaches every student of `classes`. */
   students: EligibleStudentView[];
+  /** Shared passages and group instructions, in position order - empty when there are none. */
+  stimuli: TakeHomeQuizStimulusView[];
 }
 
 /** Mirrors backend takehomequiz.application.port.in.PublishReadinessView. */
@@ -228,6 +250,17 @@ export interface QuestionCommand {
   interaction?: InteractionConfig | null;
   /** Omitted takes the type's default (`PARTIAL` for an interactive type). */
   scoring?: ScoringMode | null;
+  /** Index into the same save's `stimuli` - the passage this question belongs to. Omitted/null = standalone. */
+  stimulusIndex?: number | null;
+}
+
+/** A passage or group instruction in a question-set save. `id` null means a freshly authored one. */
+export interface StimulusCommand {
+  id: string | null;
+  kind: StimulusKind;
+  title: string | null;
+  body: string;
+  paragraphLabels: boolean;
 }
 
 /** Exactly one of `subjectId`/`subjectGroupId`; a subject-group quiz must be `NORMAL`. */
@@ -344,10 +377,11 @@ export function updateTakeHomeQuiz(quizId: string, request: UpdateTakeHomeQuizRe
 export function saveTakeHomeQuizQuestions(
   quizId: string,
   questions: QuestionCommand[],
+  stimuli: StimulusCommand[] = [],
 ): Promise<TakeHomeQuizView> {
   return apiFetch<TakeHomeQuizView>(`${BASE}/${quizId}/questions`, {
     method: "PUT",
-    body: JSON.stringify({ questions }),
+    body: JSON.stringify({ questions, stimuli }),
   });
 }
 
@@ -669,6 +703,7 @@ export interface AnsweredQuestionView {
   scoring?: ScoringMode | null;
   response?: InteractionResponse | null;
   parts?: PartFeedback[];
+  stimulusId?: string | null;
 }
 
 /** Mirrors backend ReviewTakeHomeQuizResultsUseCase.StudentAttemptDetailView. */
@@ -683,6 +718,7 @@ export interface StudentAttemptDetailView {
   submittedAt: string | null;
   autoSubmitted: boolean;
   questions: AnsweredQuestionView[];
+  stimuli?: TakeHomeQuizStimulusView[];
 }
 
 export interface AdjustScoreRequest {

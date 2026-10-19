@@ -193,6 +193,7 @@ export function StudentQuizPage() {
       <QuizRunner
         initialAttempt={status.attempt}
         transport={transport}
+        dock="tabbar"
         onSubmitted={(confirmation) =>
           setStatus({ kind: "submitted", title: null, revealResults: confirmation.revealResults })
         }

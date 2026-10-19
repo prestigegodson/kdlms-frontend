@@ -113,6 +113,19 @@ describe("QuestionCard", () => {
     expect(screen.getByTestId("question-options")).toHaveClass("grid");
     unmount();
 
+    const { unmount: unmountStacked } = render(
+      <QuestionCard
+        question={shortQuestion}
+        answer={undefined}
+        answered={false}
+        onChange={onChange}
+        renderImage={renderImage}
+        stackOptions
+      />,
+    );
+    expect(screen.getByTestId("question-options")).not.toHaveClass("grid");
+    unmountStacked();
+
     const imageQuestion = questionWithOptions([
       { id: "opt-a", position: 1, label: '<img data-file-id="11111111-1111-1111-1111-111111111111" alt="cat">' },
       { id: "opt-b", position: 2, label: "<p>Dog</p>" },

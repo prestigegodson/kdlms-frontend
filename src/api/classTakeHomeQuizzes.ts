@@ -22,6 +22,8 @@ import type {
   TakeHomeQuizAttemptState,
   TakeHomeQuizAvailability,
   TakeHomeQuizQuestionView,
+  TakeHomeQuizStimulusView,
+  StimulusCommand,
   TakeHomeQuizStatus,
 } from "@/api/takeHomeQuizzes";
 import { questionBankParams } from "@/api/takeHomeQuizzes";
@@ -84,6 +86,8 @@ export interface ClassQuizView {
   themePreset: string | null;
   /** What `themeId`/`themePreset` resolve to. */
   theme: QuizThemeStyle | null;
+  /** Shared passages and group instructions (Phase 20L). */
+  stimuli: TakeHomeQuizStimulusView[];
 }
 
 /** Mirrors backend `CreatorTakeHomeQuizController.SaveClassQuizRequest`. */
@@ -143,6 +147,7 @@ export interface LearnerAttemptDetailView {
   submittedAt: string | null;
   autoSubmitted: boolean;
   questions: AnsweredQuestionView[];
+  stimuli?: TakeHomeQuizStimulusView[];
 }
 
 /** Mirrors backend `ClassQuizPreflightView`. */
@@ -233,10 +238,11 @@ export function saveClassQuizQuestions(
   classId: string,
   quizId: string,
   questions: QuestionCommand[],
+  stimuli: StimulusCommand[] = [],
 ): Promise<ClassQuizView> {
   return apiFetch<ClassQuizView>(`${creatorBase(classId)}/${quizId}/questions`, {
     method: "PUT",
-    body: JSON.stringify({ questions }),
+    body: JSON.stringify({ questions, stimuli }),
   });
 }
 

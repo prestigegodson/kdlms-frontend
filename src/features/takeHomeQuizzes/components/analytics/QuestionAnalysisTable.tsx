@@ -62,7 +62,7 @@ export function QuestionAnalysisTable({ questions }: QuestionAnalysisTableProps)
                     {question.distractorFlag && <Badge variant="warning">Check answer key</Badge>}
                   </div>
                   <div className="line-clamp-2 text-sm text-slate-900">
-                    <RichContent html={question.prompt} renderImage={renderImage} />
+                    <RichContent html={question.prompt} renderImage={renderImage} className="space-y-2" />
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
@@ -97,7 +97,7 @@ export function QuestionAnalysisTable({ questions }: QuestionAnalysisTableProps)
 function QuestionDetail({ question }: { question: QuizQuestionStats }) {
   return (
     <div className="space-y-4 bg-slate-50 px-4 pb-4 pt-2 text-sm sm:px-6">
-      <RichContent html={question.prompt} renderImage={renderImage} />
+      <RichContent html={question.prompt} renderImage={renderImage} className="space-y-2" />
       <p className="text-xs text-slate-500">
         {question.correctCount} correct · {question.answeredCount} answered · average{" "}
         {question.averagePoints ?? 0} of {question.points} pts

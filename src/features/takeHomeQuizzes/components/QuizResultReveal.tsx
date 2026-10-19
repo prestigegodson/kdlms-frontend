@@ -56,7 +56,12 @@ export function QuizResultReveal({ load, renderImage }: QuizResultRevealProps) {
           {review.score} <span className="text-lg font-normal text-slate-500">/ {review.totalPoints}</span>
         </p>
       </div>
-      <QuizReview questions={review.questions} renderImage={renderImage} perspective="self" />
+      <QuizReview
+        questions={review.questions}
+        stimuli={review.stimuli}
+        renderImage={renderImage}
+        perspective="self"
+      />
     </div>
   );
 }

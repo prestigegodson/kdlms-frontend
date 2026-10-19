@@ -7,6 +7,12 @@ export interface RichContentProps {
   /** Resolves an embedded image's `data-file-id` to a renderable element - omit for a caller that has no need to render images here, in which case any `<img>` is silently dropped. */
   renderImage?: (fileId: string, alt: string) => ReactNode;
   className?: string;
+  /**
+   * Letters each top-level paragraph A, B, C... (a take-home quiz reading passage's IELTS-style
+   * option, Phase 20L) as a real text label, so a screen reader, the review and the player all agree.
+   * Blank paragraphs are skipped.
+   */
+  paragraphLabels?: boolean;
 }
 
 /**
@@ -28,9 +34,47 @@ export interface RichContentProps {
  * take-home quiz plan's poor-connectivity note) - `RichTextField`, the
  * authoring editor, is the only place that dependency is paid.
  */
-export function RichContent({ html, renderImage, className }: RichContentProps) {
+export function RichContent({ html, renderImage, className, paragraphLabels = false }: RichContentProps) {
   const body = useMemo(() => new DOMParser().parseFromString(html, "text/html").body, [html]);
-  return <div className={className}>{renderChildren(body, renderImage)}</div>;
+  return (
+    // `whitespace-pre-wrap` mirrors ProseMirror's own editor styling, so a run of spaces the author
+    // typed survives - safe because stored HTML never carries formatting whitespace between tags
+    // (TipTap's getHTML and the backend sanitizer's `prettyPrint(false)` both emit none).
+    <div className={`whitespace-pre-wrap ${className ?? ""}`}>
+      {paragraphLabels ? renderLabelledParagraphs(body, renderImage) : renderChildren(body, renderImage)}
+    </div>
+  );
+}
+
+/** The paragraph letter for a 0-based index - A..Z, then AA, AB... for an unusually long passage. */
+function paragraphLetter(index: number): string {
+  let letter = "";
+  let n = index;
+  do {
+    letter = String.fromCharCode(65 + (n % 26)) + letter;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return letter;
+}
+
+function renderLabelledParagraphs(body: HTMLElement, renderImage?: RichContentProps["renderImage"]): ReactNode {
+  let count = 0;
+  return Array.from(body.childNodes).map((node, index) => {
+    const isParagraph = node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === "P";
+    if (!isParagraph || (node.textContent ?? "").trim() === "") {
+      return <Fragment key={index}>{renderNode(node, renderImage)}</Fragment>;
+    }
+    const letter = paragraphLetter(count++);
+    return (
+      <div key={index} className="flex gap-3" data-paragraph-label={letter}>
+        <span className="w-6 shrink-0 pt-px text-sm font-semibold text-slate-500">
+          <span className="sr-only">Paragraph </span>
+          {letter}
+        </span>
+        <div className="min-w-0 flex-1">{renderNode(node, renderImage)}</div>
+      </div>
+    );
+  });
 }
 
 function renderChildren(parent: Node, renderImage?: RichContentProps["renderImage"]): ReactNode {
@@ -53,7 +97,9 @@ function renderNode(node: Node, renderImage?: RichContentProps["renderImage"]): 
     case "BR":
       return <br />;
     case "P":
-      return <p>{children()}</p>;
+      // TipTap stores a blank line as `<p></p>`, which Preflight collapses to zero height - the
+      // editor shows it a line tall via ProseMirror's trailing break, so the reader does the same.
+      return <p>{isEmptyParagraph(element) ? <br /> : children()}</p>;
     case "UL":
       return <ul className="list-disc pl-5">{children()}</ul>;
     case "OL":
@@ -164,6 +210,11 @@ function renderBlockMathDiv(element: Element): ReactNode {
   }
   // Safe per katexHtml.ts's doc comment: KaTeX's own output for this one expression, rendered with trust: false.
   return <div className="my-1" dangerouslySetInnerHTML={{ __html: rendered }} />;
+}
+
+/** A paragraph with no text, image, maths, or line break - an author's blank line. */
+function isEmptyParagraph(element: Element): boolean {
+  return (element.textContent ?? "") === "" && element.querySelector("img, span[data-latex], br") === null;
 }
 
 /** `colspan`/`rowspan` as a React `colSpan`/`rowSpan` number - `undefined` (not rendered) rather than `NaN` for a missing or malformed attribute. */

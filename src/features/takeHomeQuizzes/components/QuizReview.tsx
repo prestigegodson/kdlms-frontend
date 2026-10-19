@@ -1,9 +1,12 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode, useMemo, useState } from "react";
+import type { PublicStimulusView } from "@/api/publicTakeHomeQuiz";
 import type { InteractionConfig, InteractionResponse, PartFeedback, QuestionType } from "@/api/takeHomeQuizzes";
 import { RichContent } from "@/components/richText/RichContent";
 import { Check, X } from "lucide-react";
 import { pluginFor } from "@/features/takeHomeQuizzes/interactions/registry";
 import { useParticipantNoun } from "@/components/ParticipantNoun";
+import { StimulusPanel } from "@/features/takeHomeQuizzes/runner/StimulusPanel";
+import { stimulusGroups } from "@/features/takeHomeQuizzes/runner/stimulusGroups";
 
 export interface QuizReviewOption {
   id: string;
@@ -27,10 +30,14 @@ export interface QuizReviewQuestion {
   interaction?: InteractionConfig | null;
   response?: InteractionResponse | null;
   parts?: PartFeedback[];
+  /** The shared passage this question belongs to (Phase 20L). */
+  stimulusId?: string | null;
 }
 
 interface QuizReviewProps {
   questions: QuizReviewQuestion[];
+  /** The passages `questions` link to - each shown once, collapsed, above its first question. */
+  stimuli?: PublicStimulusView[];
   renderImage: (fileId: string, alt: string) => ReactNode;
   /** "staff" (default) reads "Student's answer"; "self" reads "Your answer", for a student's own reveal-on-submit review. */
   perspective?: "staff" | "self";
@@ -42,19 +49,42 @@ interface QuizReviewProps {
  * and portal paths), so the three surfaces can never render this differently. Extracted from
  * `StudentAnswersModal`, which originally owned this rendering alone.
  */
-export function QuizReview({ questions, renderImage, perspective = "staff" }: QuizReviewProps) {
+export function QuizReview({ questions, stimuli, renderImage, perspective = "staff" }: QuizReviewProps) {
   const { Singular } = useParticipantNoun();
   const answerLabel = perspective === "self" ? "Your answer: " : `${Singular}'s answer: `;
+  const groups = useMemo(() => stimulusGroups(questions, stimuli), [questions, stimuli]);
+  // Collapsed by default here - the answers are what a review is for; the passage is one tap away.
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   return (
     <div className="space-y-6">
-      {questions.map((question) => {
+      {questions.map((question, index) => {
         const plugin = question.interaction ? pluginFor(question.questionType) : undefined;
+        const group = question.stimulusId ? groups.get(question.stimulusId) : undefined;
         return (
-          <div key={question.id} className="space-y-2 border-b border-slate-100 pb-4 last:border-0">
+          <Fragment key={question.id}>
+          {group && group.first === index && (
+            <StimulusPanel
+              stimulus={group.stimulus}
+              name={group.name}
+              rangeLabel={group.rangeLabel}
+              collapsed={!expanded.has(group.stimulus.id)}
+              onToggle={() =>
+                setExpanded((current) => {
+                  const next = new Set(current);
+                  if (next.has(group.stimulus.id)) next.delete(group.stimulus.id);
+                  else next.add(group.stimulus.id);
+                  return next;
+                })
+              }
+              renderImage={renderImage}
+              mode="review"
+            />
+          )}
+          <div className="space-y-2 border-b border-slate-100 pb-4 last:border-0">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 font-medium text-slate-900">
                 <span className="block text-xs font-normal text-slate-500">Question {question.position}</span>
-                <RichContent html={question.prompt} renderImage={renderImage} />
+                <RichContent html={question.prompt} renderImage={renderImage} className="space-y-2" />
               </div>
               <span className="shrink-0 text-sm text-slate-500">
                 {question.awardedPoints ?? 0} / {question.points} pts
@@ -114,6 +144,7 @@ export function QuizReview({ questions, renderImage, perspective = "staff" }: Qu
               </div>
             )}
           </div>
+          </Fragment>
         );
       })}
     </div>

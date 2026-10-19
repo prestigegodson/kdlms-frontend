@@ -6,6 +6,7 @@ import type {
   PartFeedback,
   QuestionType,
   ScoringMode,
+  StimulusKind,
 } from "@/api/takeHomeQuizzes";
 
 /** An interactive question's answer-free, shuffled shape - the type's own player view (interaction-quiz.md §10.1). */
@@ -39,6 +40,21 @@ export interface PublicQuestionView {
   options: PublicOptionView[];
   /** An interactive question's player view - absent for the original three types. */
   playerConfig?: PlayerConfig | null;
+  /** The shared passage this question belongs to (Phase 20L) - null for a standalone question. */
+  stimulusId?: string | null;
+}
+
+/**
+ * Mirrors backend `TakeTakeHomeQuizUseCase.PublicStimulusView` - a shared reading passage or group
+ * instruction (Phase 20L). Display content only, nothing answer-bearing.
+ */
+export interface PublicStimulusView {
+  id: string;
+  kind: StimulusKind;
+  title: string | null;
+  /** Sanitized HTML - render with `RichContent`. */
+  body: string;
+  paragraphLabels: boolean;
 }
 
 export interface PublicAnswerView {
@@ -77,6 +93,8 @@ export interface QuizAttemptView {
   answers: Record<string, PublicAnswerView>;
   deadlineAt: string | null;
   serverTime: string;
+  /** Every passage the questions link to - absent from an older server. */
+  stimuli?: PublicStimulusView[];
 }
 
 export interface AnswerCommand {
@@ -127,6 +145,7 @@ export interface ReviewQuestionView {
   scoring?: ScoringMode | null;
   response?: InteractionResponse | null;
   parts?: PartFeedback[];
+  stimulusId?: string | null;
 }
 
 /** Mirrors backend `TakeTakeHomeQuizUseCase.QuizReviewView`. `score` is the attempt's effective score - a later teacher adjustment is reflected here too. */
@@ -136,6 +155,7 @@ export interface QuizReviewView {
   questions: ReviewQuestionView[];
   /** The quiz's look - null for the plain one. */
   theme?: QuizThemeStyle | null;
+  stimuli?: PublicStimulusView[];
 }
 
 function base(token: string): string {

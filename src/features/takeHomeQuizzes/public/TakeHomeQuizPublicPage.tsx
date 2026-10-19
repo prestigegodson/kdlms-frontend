@@ -23,6 +23,7 @@ import { QuizRunner } from "@/features/takeHomeQuizzes/runner/QuizRunner";
 import { QUIZ_IMAGE_SIZE_CLASS } from "@/features/takeHomeQuizzes/runner/quizImageSizes";
 import type { QuizTransport } from "@/features/takeHomeQuizzes/runner/quizTransport";
 import { QuizThemeFrame } from "@/features/takeHomeQuizzes/theme/QuizThemeFrame";
+import { hasPassages } from "@/features/takeHomeQuizzes/runner/stimulusGroups";
 import type { ThemeImageSource } from "@/features/takeHomeQuizzes/theme/themeImages";
 
 type Status =
@@ -147,7 +148,12 @@ export function TakeHomeQuizPublicPage() {
   }
 
   return (
-    <QuizThemeFrame theme={theme} images={themeImages} variant="page">
+    <QuizThemeFrame
+      theme={theme}
+      images={themeImages}
+      variant="page"
+      wide={status.kind === "inProgress" && hasPassages(status.attempt)}
+    >
       {status.kind === "submitted" ? (
         status.revealResults ? (
           <div className="mx-auto min-h-dvh max-w-2xl px-4 py-8">
@@ -159,7 +165,9 @@ export function TakeHomeQuizPublicPage() {
       ) : status.kind === "interstitial" ? (
         <QuizInterstitial data={status.data} starting={starting} onStart={handleStart} />
       ) : (
-        <div className="mx-auto min-h-dvh max-w-2xl px-4 py-6 pb-28">
+        <div
+          className={`mx-auto min-h-dvh max-w-2xl px-4 py-6 pb-28 ${hasPassages(status.attempt) ? "lg:max-w-6xl" : ""}`}
+        >
           <QuizRunner
             initialAttempt={status.attempt}
             transport={transport}

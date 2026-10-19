@@ -43,6 +43,11 @@ import { ShuffleFields } from "@/features/takeHomeQuizzes/components/ShuffleFiel
 import { NO_THEME, type ThemeChoice } from "@/features/takeHomeQuizzes/theme/themeChoice";
 import { ThemeSection } from "@/features/takeHomeQuizzes/theme/ThemeSection";
 import { type EditableQuestion, toEditableQuestion, toQuestionCommand } from "@/features/takeHomeQuizzes/editableQuestion";
+import {
+  type EditableStimulus,
+  toContentCommands,
+  toEditableStimulus,
+} from "@/features/takeHomeQuizzes/editableStimulus";
 
 interface FormState {
   title: string;
@@ -56,6 +61,8 @@ interface FormState {
   shuffleChoices: boolean;
   theme: ThemeChoice;
   questions: EditableQuestion[];
+  /** Shared passages and group instructions (Phase 20L) - saved together with `questions`. */
+  stimuli: EditableStimulus[];
 }
 
 function nowPlusHours(hours: number): string {
@@ -75,6 +82,7 @@ function blankForm(): FormState {
     shuffleChoices: false,
     theme: NO_THEME,
     questions: [],
+    stimuli: [],
   };
 }
 
@@ -91,6 +99,7 @@ function fromView(view: ClassQuizView): FormState {
     shuffleChoices: view.shuffleChoices,
     theme: { themeId: view.themeId ?? null, themePreset: view.themePreset ?? null },
     questions: view.questions.map(toEditableQuestion),
+    stimuli: (view.stimuli ?? []).map(toEditableStimulus),
   };
 }
 
@@ -229,12 +238,14 @@ export function CreatorQuizEditorPage() {
         const correction = await correctClassQuizAnswerKey(classId, saved.id, form.questions.map(toQuestionCommand));
         saved = correction.quiz ?? saved;
         setSaveNotice(describeAnswerCorrection(correction, nouns));
-      } else if (!questionsReadOnly && (form.questions.length > 0 || (quiz && quiz.questions.length > 0))) {
-        saved = await saveClassQuizQuestions(
-          classId,
-          saved.id,
-          form.questions.map(toQuestionCommand),
-        );
+      } else if (
+        !questionsReadOnly &&
+        (form.questions.length > 0 ||
+          form.stimuli.length > 0 ||
+          (quiz && (quiz.questions.length > 0 || (quiz.stimuli ?? []).length > 0)))
+      ) {
+        const content = toContentCommands(form.stimuli, form.questions);
+        saved = await saveClassQuizQuestions(classId, saved.id, content.questions, content.stimuli);
       }
       applyQuiz(saved);
       if (isNew) {
@@ -399,7 +410,9 @@ export function CreatorQuizEditorPage() {
           <h2 className="font-display text-lg font-medium text-slate-900">Questions</h2>
           <QuestionEditor
             questions={form.questions}
-            onChange={(questions) => setForm({ ...form, questions })}
+            onChange={(questions) => setForm((current) => ({ ...current, questions }))}
+            stimuli={form.stimuli}
+            onStimuliChange={(stimuli) => setForm((current) => ({ ...current, stimuli }))}
             disabled={questionsReadOnly && !correctingAnswers}
             answerKeyOnly={correctingAnswers}
             importer={{
@@ -432,6 +445,7 @@ export function CreatorQuizEditorPage() {
           shuffleQuestions={form.shuffleQuestions}
           shuffleChoices={form.shuffleChoices}
           questions={form.questions}
+          stimuli={form.stimuli}
           theme={quiz.theme ?? null}
           themeUnsaved={
             (form.theme.themeId ?? null) !== (quiz.themeId ?? null) ||

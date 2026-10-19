@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { QuizReview } from "@/features/takeHomeQuizzes/components/QuizReview";
 import type { EditableQuestion } from "@/features/takeHomeQuizzes/editableQuestion";
+import type { EditableStimulus } from "@/features/takeHomeQuizzes/editableStimulus";
 import { isInteractive } from "@/features/takeHomeQuizzes/interactions/registry";
 import {
   type PreviewQuiz,
@@ -32,6 +33,8 @@ export interface QuizPreviewModalProps {
   shuffleQuestions: boolean;
   shuffleChoices: boolean;
   questions: EditableQuestion[];
+  /** The editor's passages (Phase 20L), saved or not. */
+  stimuli?: EditableStimulus[];
   /** The saved quiz's resolved look - null for the plain one. */
   theme: QuizThemeStyle | null;
   /** True when the editor's theme choice isn't saved yet, so the preview still wears the old one. */
@@ -86,6 +89,7 @@ export function QuizPreviewModal({
   shuffleQuestions,
   shuffleChoices,
   questions,
+  stimuli = [],
   theme,
   themeUnsaved = false,
   onClose,
@@ -111,10 +115,11 @@ export function QuizPreviewModal({
     if (bufferKeyRef.current) clearPreviewBuffer(bufferKeyRef.current);
     const bufferKey = `preview:${crypto.randomUUID()}`;
     bufferKeyRef.current = bufferKey;
-    const quiz = toPreviewQuestions(questions, { shuffleQuestions, shuffleChoices });
+    const quiz = toPreviewQuestions(questions, { shuffleQuestions, shuffleChoices }, Math.random, stimuli);
     const now = Date.now();
     const attempt: QuizAttemptView = {
       questions: quiz.questions,
+      stimuli: quiz.stimuli,
       answers: {},
       deadlineAt: minutes ? new Date(now + minutes * 60_000).toISOString() : null,
       serverTime: new Date(now).toISOString(),
@@ -125,7 +130,10 @@ export function QuizPreviewModal({
 
   function finish(run: Extract<Stage, { kind: "running" }>) {
     clearPreviewBuffer(run.bufferKey);
-    setStage({ kind: "done", result: scorePreview(run.quiz.questions, questions, run.saved.answers) });
+    setStage({
+      kind: "done",
+      result: scorePreview(run.quiz.questions, questions, run.saved.answers, run.quiz.stimuli),
+    });
   }
 
   const renderReviewImage = (fileId: string, alt: string) => <AuthenticatedRichImage fileId={fileId} alt={alt} />;
@@ -192,7 +200,12 @@ export function QuizPreviewModal({
                 A {singular} with these answers would score {formatPoints(stage.result.score)} of{" "}
                 {formatPoints(stage.result.totalPoints)} points.
               </Alert>
-              <QuizReview questions={stage.result.questions} renderImage={renderReviewImage} perspective="self" />
+              <QuizReview
+                questions={stage.result.questions}
+                stimuli={stage.result.stimuli}
+                renderImage={renderReviewImage}
+                perspective="self"
+              />
             </div>
           )}
         </QuizThemeFrame>

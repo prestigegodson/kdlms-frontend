@@ -194,6 +194,7 @@ export function LearnerClassQuizPage() {
       <QuizRunner
         initialAttempt={status.attempt}
         transport={transport}
+        dock="tabbar"
         onSubmitted={(confirmation) => setStatus({ kind: "submitted", title: null, revealResults: confirmation.revealResults })}
         onError={(error) => setStatus({ kind: "error", message: getErrorMessage(error, "Failed to load this quiz") })}
       />

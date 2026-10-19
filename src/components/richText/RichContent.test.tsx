@@ -134,4 +134,58 @@ describe("RichContent", () => {
     expect(container.querySelectorAll(".katex")).toHaveLength(0);
     expect(container).toHaveTextContent("plain text");
   });
+
+  it("letters a passage's non-blank top-level paragraphs A, B, C when asked (Phase 20L)", () => {
+    const { container } = render(
+      <RichContent html="<p>Bees dance.</p><p></p><p>They make honey.</p><ul><li>list</li></ul>" paragraphLabels />,
+    );
+    const labelled = Array.from(container.querySelectorAll("[data-paragraph-label]"));
+    expect(labelled.map((node) => node.getAttribute("data-paragraph-label"))).toEqual(["A", "B"]);
+    expect(labelled[1]).toHaveTextContent("Paragraph BThey make honey.");
+    expect(container.querySelector("ul")).toHaveTextContent("list");
+  });
+
+  it("adds no labels by default", () => {
+    const { container } = render(<RichContent html="<p>One</p><p>Two</p>" />);
+    expect(container.querySelector("[data-paragraph-label]")).toBeNull();
+  });
+
+  it("gives an author's blank line a line break so it keeps its height", () => {
+    const { container } = render(<RichContent html="<p>a</p><p></p><p>b</p>" />);
+
+    const paragraphs = container.querySelectorAll("p");
+    expect(paragraphs).toHaveLength(3);
+    expect(paragraphs[1].querySelector("br")).not.toBeNull();
+    expect(paragraphs[0].querySelector("br")).toBeNull();
+  });
+
+  it("does not add a line break to a paragraph holding only an image or maths", () => {
+    const { container } = render(
+      <RichContent
+        html={
+          '<p><img data-file-id="11111111-1111-1111-1111-111111111111" alt="x"></p>' +
+          '<p><span data-type="inline-math" data-latex="x^2"></span></p>'
+        }
+        renderImage={() => <span data-testid="image-slot" />}
+      />,
+    );
+
+    expect(container.querySelector("br")).toBeNull();
+  });
+
+  it("keeps a blank passage paragraph a line tall without lettering it", () => {
+    const { container } = render(<RichContent html="<p>First</p><p></p><p>Second</p>" paragraphLabels />);
+
+    const labels = Array.from(container.querySelectorAll("[data-paragraph-label]")).map((el) =>
+      el.getAttribute("data-paragraph-label"),
+    );
+    expect(labels).toEqual(["A", "B"]);
+    expect(container.querySelector("p br")).not.toBeNull();
+  });
+
+  it("preserves runs of spaces the author typed", () => {
+    const { container } = render(<RichContent html="<p>a   b</p>" className="text-sm" />);
+
+    expect(container.firstElementChild).toHaveClass("whitespace-pre-wrap", "text-sm");
+  });
 });

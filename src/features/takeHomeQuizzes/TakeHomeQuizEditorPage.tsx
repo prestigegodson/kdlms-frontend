@@ -53,6 +53,11 @@ import { QuizWindowFields } from "@/features/takeHomeQuizzes/components/QuizWind
 import { ShareQuizModal } from "@/features/takeHomeQuizzes/components/ShareQuizModal";
 import { StudentLinksPanel } from "@/features/takeHomeQuizzes/components/StudentLinksPanel";
 import { type EditableQuestion, toEditableQuestion, toQuestionCommand } from "@/features/takeHomeQuizzes/editableQuestion";
+import {
+  type EditableStimulus,
+  toContentCommands,
+  toEditableStimulus,
+} from "@/features/takeHomeQuizzes/editableStimulus";
 import { TAKE_HOME_QUIZ_FIELD_HELP } from "@/features/takeHomeQuizzes/takeHomeQuizFieldHelp";
 import { NO_THEME, type ThemeChoice } from "@/features/takeHomeQuizzes/theme/themeChoice";
 import { ThemeSection } from "@/features/takeHomeQuizzes/theme/ThemeSection";
@@ -75,6 +80,8 @@ interface FormState {
   studentIds: string[];
   theme: ThemeChoice;
   questions: EditableQuestion[];
+  /** Shared passages and group instructions (Phase 20L) - saved together with `questions`. */
+  stimuli: EditableStimulus[];
 }
 
 function nowPlusHours(hours: number): string {
@@ -98,6 +105,7 @@ function blankForm(): FormState {
     studentIds: [],
     theme: NO_THEME,
     questions: [],
+    stimuli: [],
   };
 }
 
@@ -120,6 +128,7 @@ function fromView(view: TakeHomeQuizView): FormState {
     studentIds: (view.students ?? []).map((student) => student.studentId),
     theme: { themeId: view.themeId ?? null, themePreset: view.themePreset ?? null },
     questions: view.questions.map(toEditableQuestion),
+    stimuli: (view.stimuli ?? []).map(toEditableStimulus),
   };
 }
 
@@ -398,11 +407,14 @@ export function TakeHomeQuizEditorPage() {
         const correction = await correctTakeHomeQuizAnswerKey(saved.id, form.questions.map(toQuestionCommand));
         saved = correction.quiz ?? saved;
         notice = describeAnswerCorrection(correction, nouns);
-      } else if (!questionsReadOnly && (form.questions.length > 0 || (quiz && quiz.questions.length > 0))) {
-        saved = await saveTakeHomeQuizQuestions(
-          saved.id,
-          form.questions.map(toQuestionCommand),
-        );
+      } else if (
+        !questionsReadOnly &&
+        (form.questions.length > 0 ||
+          form.stimuli.length > 0 ||
+          (quiz && (quiz.questions.length > 0 || (quiz.stimuli ?? []).length > 0)))
+      ) {
+        const content = toContentCommands(form.stimuli, form.questions);
+        saved = await saveTakeHomeQuizQuestions(saved.id, content.questions, content.stimuli);
       }
       applyQuiz(saved);
       setSaveNotice(notice);
@@ -644,7 +656,9 @@ export function TakeHomeQuizEditorPage() {
           <h2 className="font-display text-lg font-medium text-slate-900">Questions</h2>
           <QuestionEditor
             questions={form.questions}
-            onChange={(questions) => setForm({ ...form, questions })}
+            onChange={(questions) => setForm((current) => ({ ...current, questions }))}
+            stimuli={form.stimuli}
+            onStimuliChange={(stimuli) => setForm((current) => ({ ...current, stimuli }))}
             disabled={questionsReadOnly && !correctingAnswers}
             answerKeyOnly={correctingAnswers}
             importer={{
@@ -687,6 +701,7 @@ export function TakeHomeQuizEditorPage() {
           shuffleQuestions={form.shuffleQuestions}
           shuffleChoices={form.shuffleChoices}
           questions={form.questions}
+          stimuli={form.stimuli}
           theme={quiz.theme ?? null}
           themeUnsaved={
             (form.theme.themeId ?? null) !== (quiz.themeId ?? null) ||

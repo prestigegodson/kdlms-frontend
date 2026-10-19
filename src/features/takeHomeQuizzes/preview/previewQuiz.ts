@@ -1,6 +1,7 @@
-import type { PublicAnswerView, PublicQuestionView } from "@/api/publicTakeHomeQuiz";
+import type { PublicAnswerView, PublicQuestionView, PublicStimulusView } from "@/api/publicTakeHomeQuiz";
 import type { QuizReviewQuestion } from "@/features/takeHomeQuizzes/components/QuizReview";
 import type { EditableQuestion } from "@/features/takeHomeQuizzes/editableQuestion";
+import type { EditableStimulus } from "@/features/takeHomeQuizzes/editableStimulus";
 import { pluginFor } from "@/features/takeHomeQuizzes/interactions/registry";
 
 /**
@@ -23,6 +24,8 @@ interface PlayableQuestion {
 
 export interface PreviewQuiz {
   questions: PublicQuestionView[];
+  /** The passages the played questions link to, as the player receives them. */
+  stimuli: PublicStimulusView[];
   /** Interactive questions with no config yet - left out of the preview. */
   skipped: number;
 }
@@ -55,11 +58,31 @@ export function toPreviewQuestions(
   questions: EditableQuestion[],
   shuffle: ShuffleOptions,
   random: () => number = Math.random,
+  stimuli: EditableStimulus[] = [],
 ): PreviewQuiz {
   const rows = playable(questions);
-  const ordered = shuffle.shuffleQuestions ? fisherYates(rows, random) : rows;
+  // A passage's questions shuffle as one block, in order inside it - the server's `displayOrder` rule.
+  const blocks: PlayableQuestion[][] = [];
+  for (const row of rows) {
+    const last = blocks[blocks.length - 1];
+    const key = row.source.stimulusKey;
+    if (key !== null && last && last[0].source.stimulusKey === key) last.push(row);
+    else blocks.push([row]);
+  }
+  const ordered = (shuffle.shuffleQuestions ? fisherYates(blocks, random) : blocks).flat();
+  const stimulusIdOf = new Map(stimuli.map((stimulus) => [stimulus.key, stimulus.id ?? stimulus.key]));
+  const usedKeys = new Set(rows.map((row) => row.source.stimulusKey).filter((key) => key !== null));
   return {
     skipped: questions.length - rows.length,
+    stimuli: stimuli
+      .filter((stimulus) => usedKeys.has(stimulus.key))
+      .map((stimulus) => ({
+        id: stimulus.id ?? stimulus.key,
+        kind: stimulus.kind,
+        title: stimulus.title.trim() === "" ? null : stimulus.title.trim(),
+        body: stimulus.body,
+        paragraphLabels: stimulus.kind === "PASSAGE" && stimulus.paragraphLabels,
+      })),
     questions: ordered.map(({ id, source }, index) => {
       const plugin = pluginFor(source.questionType);
       const options = source.options.map((option) => ({ id: option.id ?? option.key, label: option.label }));
@@ -73,6 +96,7 @@ export function toPreviewQuestions(
         points: Number(source.points) || 0,
         options: plugin ? [] : orderedOptions.map((option, optionIndex) => ({ ...option, position: optionIndex + 1 })),
         playerConfig: plugin ? plugin.toPlayerView(source.interaction) : null,
+        stimulusId: source.stimulusKey !== null ? (stimulusIdOf.get(source.stimulusKey) ?? null) : null,
       };
     }),
   };
@@ -98,6 +122,8 @@ function sameSet(a: string[], b: string[]): boolean {
 }
 
 export interface PreviewResult {
+  /** The passages the reviewed questions link to. */
+  stimuli: PublicStimulusView[];
   score: number;
   totalPoints: number;
   questions: QuizReviewQuestion[];
@@ -113,6 +139,7 @@ export function scorePreview(
   played: PublicQuestionView[],
   questions: EditableQuestion[],
   answers: Record<string, PublicAnswerView>,
+  stimuli: PublicStimulusView[] = [],
 ): PreviewResult {
   const byId = new Map(playable(questions).map(({ id, source }) => [id, source]));
   let score = 0;
@@ -166,8 +193,9 @@ export function scorePreview(
       interaction: plugin ? source.interaction : null,
       response: plugin ? (answer?.interaction ?? null) : null,
       parts,
+      stimulusId: view.stimulusId ?? null,
     });
   }
 
-  return { score, totalPoints, questions: reviewed };
+  return { score, totalPoints, questions: reviewed, stimuli };
 }
