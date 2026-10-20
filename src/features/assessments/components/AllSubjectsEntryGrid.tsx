@@ -27,6 +27,12 @@ import { UnsavedChangesBar } from "@/features/assessments/components/UnsavedChan
 
 type SheetSubject = ClassAssessmentSheetView["subjects"][number];
 
+/**
+ * Pins a header cell to the top of the grid's scroll box. The background and inset bottom rule sit
+ * on the `th` itself - the thead's own background and border don't travel with sticky cells.
+ */
+const STICKY_HEADER_CELL = "sticky top-0 bg-slate-50 shadow-[inset_0_-1px_0_theme(colors.slate.200)]";
+
 /** A (student, subject) cell's draft key - enrollment and subject ids are UUIDs, so `:` never collides. */
 function cellKey(enrollmentId: string, subjectId: string): string {
   return `${enrollmentId}:${subjectId}`;
@@ -126,7 +132,8 @@ interface AllSubjectsEntryGridProps {
  * students across the top. One period at a time via the Mid-term / End of term toggle - a cell is
  * the period's rating (QUALITATIVE) or its quiz/exam mark (NUMERIC), never an observation, and a
  * save never touches the other period. Same shell as the single-subject grids: dirty cells batch
- * into the sticky save bar, and leaving (or switching period) with unsaved cells asks first.
+ * into the sticky save bar, and leaving (or switching period) with unsaved cells asks first. From
+ * `md` up the sheet scrolls inside a viewport-high box so the student-name row stays pinned.
  * Below `md` the shared Table collapses each subject into a card listing its students.
  */
 export function AllSubjectsEntryGrid({ sheet, onSaved }: AllSubjectsEntryGridProps) {
@@ -277,16 +284,18 @@ export function AllSubjectsEntryGrid({ sheet, onSaved }: AllSubjectsEntryGridPro
             : "No students are enrolled in this class."}
         </p>
       ) : (
-        <Table>
+        <Table containerClassName="md:max-h-[75vh] md:overflow-y-auto">
           <TableHead>
             <TableRow>
-              <TableHeaderCell className="sticky left-0 z-10 min-w-[12rem] bg-slate-50">
+              <TableHeaderCell
+                className={`left-0 z-30 min-w-[12rem] ${STICKY_HEADER_CELL}`}
+              >
                 Subject
               </TableHeaderCell>
               {sheet.students.map((student) => (
                 <TableHeaderCell
                   key={student.enrollmentId}
-                  className="min-w-[10rem] normal-case tracking-normal"
+                  className={`z-20 min-w-[10rem] normal-case tracking-normal ${STICKY_HEADER_CELL}`}
                 >
                   <span className="block text-sm font-medium text-slate-900">
                     {student.studentName}

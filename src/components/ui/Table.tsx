@@ -9,9 +9,19 @@ import { useNavigate } from "react-router";
  * collapses into stacked record cards, driven by each TableCell's `label`
  * prop - see the `.responsive-table` rules in index.css.
  */
-export function Table({ className = "", ...props }: HTMLAttributes<HTMLTableElement>) {
+interface TableProps extends HTMLAttributes<HTMLTableElement> {
+  /**
+   * Extra classes for the scroll wrapper. Its `overflow-x-auto` makes it the
+   * scroll container for `position: sticky` on both axes, so a sticky header
+   * row needs this wrapper bounded and scrolling vertically too (e.g.
+   * `md:max-h-[75vh] md:overflow-y-auto`).
+   */
+  containerClassName?: string;
+}
+
+export function Table({ className = "", containerClassName = "", ...props }: TableProps) {
   return (
-    <div className="overflow-x-auto overscroll-x-contain">
+    <div className={`overflow-x-auto overscroll-x-contain ${containerClassName}`}>
       <table className={`responsive-table min-w-full ${className}`} {...props} />
     </div>
   );
