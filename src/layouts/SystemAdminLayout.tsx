@@ -7,6 +7,7 @@ import {
   Inbox,
   LayoutDashboard,
   LifeBuoy,
+  Mail,
   Package,
   Ticket,
 } from "lucide-react";
@@ -15,7 +16,7 @@ import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useContactEnquiriesUnreadStore } from "@/stores/contactEnquiriesUnreadStore";
 
 // Only the first four are tab-bar primary (MobileTabBar caps at 4), so
-// Creators, Enquiries, Payments, Coupons, Support Contact and AI live in the drawer behind "More" below `lg`.
+// Creators, Enquiries, Newsletters, Payments, Coupons, Support Contact and AI live in the drawer behind "More" below `lg`.
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard, primary: ["SYSTEM_ADMIN"] },
   { label: "Schools", href: "/admin/schools", icon: Building2, primary: ["SYSTEM_ADMIN"] },
@@ -29,6 +30,7 @@ const NAV_ITEMS: NavItem[] = [
     // "Contact us" enquiries from the public website that nobody has opened yet.
     badge: () => useContactEnquiriesUnreadStore.getState().count,
   },
+  { label: "Newsletters", href: "/admin/newsletters", icon: Mail },
   { label: "Payments", href: "/admin/payments", icon: CreditCard },
   { label: "Coupons", href: "/admin/coupons", icon: Ticket },
   { label: "Support Contact", href: "/admin/support", icon: LifeBuoy },

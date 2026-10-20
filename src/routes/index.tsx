@@ -78,6 +78,10 @@ import { HowToGuidesPage } from "@/features/onboarding/pages/HowToGuidesPage";
 import { CouponsPage } from "@/features/coupons/CouponsPage";
 import { EnquiriesPage } from "@/features/enquiries/EnquiriesPage";
 import { EnquiryDetailPage } from "@/features/enquiries/EnquiryDetailPage";
+import { NewsletterEditorPage } from "@/features/newsletters/NewsletterEditorPage";
+import { NewslettersPage } from "@/features/newsletters/NewslettersPage";
+import { SuppressionsPage } from "@/features/newsletters/SuppressionsPage";
+import { UnsubscribePage } from "@/features/newsletters/UnsubscribePage";
 import { PackagesPage } from "@/features/packages/PackagesPage";
 import { ReportSettingsPage } from "@/features/reporting/ReportSettingsPage";
 import { ReportsPage } from "@/features/reporting/ReportsPage";
@@ -149,6 +153,7 @@ export const routes: RouteObject[] = [
       { path: "creators/signup", element: <CreatorSignupPage /> },
       { path: "creator/complete-profile", element: <CompleteProfilePage /> },
       { path: "verify-email", element: <VerifyEmailPage /> },
+      { path: "unsubscribe", element: <UnsubscribePage /> },
       { path: "invite/:token", element: <InviteAcceptPage /> },
       { path: "take-home-quiz", element: <TakeHomeQuizRoute /> },
       {
@@ -198,6 +203,11 @@ export const routes: RouteObject[] = [
           { path: "coupons", element: <CouponsPage /> },
           { path: "enquiries", element: <EnquiriesPage /> },
           { path: "enquiries/:enquiryId", element: <EnquiryDetailPage /> },
+          { path: "newsletters", element: <NewslettersPage /> },
+          { path: "newsletters/unsubscribed", element: <SuppressionsPage /> },
+          // `new` and `:newsletterId` render the same editor, so the first save's URL change keeps its state.
+          { path: "newsletters/new", element: <NewsletterEditorPage /> },
+          { path: "newsletters/:newsletterId", element: <NewsletterEditorPage /> },
           { path: "help", element: <HowToGuidesPage /> },
         ],
       },

@@ -316,6 +316,15 @@ describe("can.manageSupportContact", () => {
   });
 });
 
+describe("can.manageNewsletters", () => {
+  it("is true only for SYSTEM_ADMIN", () => {
+    expect(can.manageNewsletters("SYSTEM_ADMIN")).toBe(true);
+    expect(can.manageNewsletters("SCHOOL_ADMIN")).toBe(false);
+    expect(can.manageNewsletters("CREATOR")).toBe(false);
+    expect(can.manageNewsletters(undefined)).toBe(false);
+  });
+});
+
 describe("can.recordRemarks", () => {
   it("is true only for a class-teaching TEACHER", () => {
     expect(can.recordRemarks("TEACHER", { isClassTeacher: true })).toBe(true);
@@ -791,6 +800,7 @@ describe("can - a STUDENT is denied every staff/guardian capability", () => {
     manageSupportContact: () => can.manageSupportContact("STUDENT"),
     viewSupportContact: () => can.viewSupportContact("STUDENT"),
     manageAiSettings: () => can.manageAiSettings("STUDENT"),
+    manageNewsletters: () => can.manageNewsletters("STUDENT"),
     viewBilling: () => can.viewBilling("STUDENT", true),
     manageFees: () => can.manageFees("STUDENT", true),
     manageFeePrices: () => can.manageFeePrices("STUDENT", true),

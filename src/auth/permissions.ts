@@ -793,6 +793,15 @@ export const can = {
   },
 
   /**
+   * Writing, scheduling and sending the platform's newsletters to school admins, creators and
+   * hand-entered addresses, and managing the unsubscribe list - SYSTEM_ADMIN only, outside tenant
+   * scope entirely, like `manageSupportContact`.
+   */
+  manageNewsletters(role: Role | undefined): boolean {
+    return role === "SYSTEM_ADMIN";
+  },
+
+  /**
    * Seeing the "Fees & Bills" screen at all - SCHOOL_ADMIN or BRANCH_ADMIN (read-only on fee
    * definitions/settings; own-branch pricing/publication land in later phases), gated on the
    * school's Billing package entitlement, the same full-lockout shape Messages/Timetable/Lesson
