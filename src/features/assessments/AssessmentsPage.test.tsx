@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { openSubjectPicker } from "@/test/subjectPicker";
+import { openSubjectPicker, pickSubject } from "@/test/subjectPicker";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as assessmentsApi from "@/api/assessments";
@@ -34,7 +34,7 @@ vi.mock("@/api/sessions", async () => {
 
 vi.mock("@/api/assessments", async () => {
   const actual = await vi.importActual<typeof import("@/api/assessments")>("@/api/assessments");
-  return { ...actual, openSheet: vi.fn() };
+  return { ...actual, openSheet: vi.fn(), openClassSheet: vi.fn() };
 });
 
 function renderAs(role: "TEACHER" | "SCHOOL_ADMIN", initialEntry = "/") {
@@ -165,5 +165,62 @@ describe("AssessmentsPage", () => {
     await vi.waitFor(() => expect(assessmentsApi.openSheet).toHaveBeenCalledWith("class-1", "subject-1", "term-1"));
     expect(await screen.findByLabelText("Class")).toHaveValue("class-1");
     expect(screen.getByLabelText("Subject")).toHaveValue("Mathematics");
+  });
+
+  function mockSessionAndTerm() {
+    vi.mocked(sessionsApi.listSessions).mockResolvedValue({
+      content: [
+        { id: "session-1", schoolId: "school-1", name: "2026/2027", startDate: "2026-09-01", endDate: null, current: true },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 50,
+    });
+    vi.mocked(sessionsApi.listTerms).mockResolvedValue([
+      { id: "term-1", schoolId: "school-1", sessionId: "session-1", termNumber: 1, name: "First Term", startDate: "2026-09-01", endDate: "2026-12-01", current: true },
+    ]);
+  }
+
+  it("offers \"All subjects\" to a class teacher and opens the all-subjects sheet", async () => {
+    vi.mocked(meApi.listMyClasses).mockResolvedValue([
+      { classId: "class-1", className: "Nursery 1", branchId: "branch-1", levelId: "level-1", isClassTeacher: true, isAssistantTeacher: false, subjectIds: [] },
+    ]);
+    vi.mocked(meApi.listRecordableSubjects).mockResolvedValue([
+      { id: "subject-1", schoolId: "school-1", levelId: "level-1", name: "Numeracy", selective: false, graded: true, assessmentPeriods: "BOTH", termNumbers: [1, 2, 3], status: "ACTIVE" },
+    ]);
+    mockSessionAndTerm();
+    vi.mocked(assessmentsApi.openClassSheet).mockResolvedValue({
+      classId: "class-1",
+      termId: "term-1",
+      assessmentMode: "QUALITATIVE",
+      ratingOptions: [{ id: "rating-1", label: "Meets Expectation", rank: 1 }],
+      subjects: [{ subjectId: "subject-1", name: "Numeracy", assessmentPeriods: "BOTH" }],
+      students: [{ enrollmentId: "enrollment-1", studentName: "Adebayo Tolu", admissionNumber: "SCH/0001" }],
+      cells: [{ enrollmentId: "enrollment-1", subjectId: "subject-1", offered: true }],
+    });
+
+    renderAs("TEACHER", "/?classId=class-1");
+    await pickSubject(userEvent.setup(), "All subjects");
+
+    await vi.waitFor(() => expect(assessmentsApi.openClassSheet).toHaveBeenCalledWith("class-1", "term-1"));
+    expect(await screen.findByLabelText("Mid-term rating for Adebayo Tolu in Numeracy")).toBeInTheDocument();
+    expect(assessmentsApi.openSheet).not.toHaveBeenCalled();
+  });
+
+  it("doesn't offer \"All subjects\" for a class the teacher only subject-teaches", async () => {
+    vi.mocked(meApi.listMyClasses).mockResolvedValue([
+      { classId: "class-1", className: "JSS 1A", branchId: "branch-1", levelId: "level-1", isClassTeacher: false, isAssistantTeacher: false, subjectIds: ["subject-1"] },
+    ]);
+    vi.mocked(meApi.listRecordableSubjects).mockResolvedValue([
+      { id: "subject-1", schoolId: "school-1", levelId: "level-1", name: "Mathematics", selective: false, graded: true, assessmentPeriods: "BOTH", termNumbers: [1, 2, 3], status: "ACTIVE" },
+    ]);
+    mockSessionAndTerm();
+
+    renderAs("TEACHER", "/?classId=class-1");
+
+    const listbox = await openSubjectPicker(userEvent.setup());
+    expect(await within(listbox).findByRole("option", { name: "Mathematics" })).toBeInTheDocument();
+    expect(within(listbox).queryByRole("option", { name: "All subjects" })).not.toBeInTheDocument();
   });
 });

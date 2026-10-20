@@ -16,6 +16,11 @@ interface SubjectTargetSelectProps {
   subjects: GroupableSubject[];
   /** The groups the caller may pick as a target - every other group is a heading only. */
   subjectGroups?: { subjectGroupId: string; subjectGroupName: string }[];
+  /**
+   * Extra non-subject options listed first, right after the empty one (e.g. the assessment page's
+   * "All subjects") - their keys must not collide with a subject id or a `group:` key.
+   */
+  leadingOptions?: { key: string; label: string }[];
   /** The empty option's text; `null` renders no empty option (a picker that always has a value). */
   placeholder?: string | null;
   disabled?: boolean;
@@ -37,6 +42,8 @@ interface Section {
   heading: string | null;
   options: Option[];
 }
+
+const NO_LEADING_OPTIONS: { key: string; label: string }[] = [];
 
 function optionId(id: string, key: string): string {
   return `${id}-option-${key || "none"}`;
@@ -65,6 +72,7 @@ export function SubjectTargetSelect({
   onChange,
   subjects,
   subjectGroups = [],
+  leadingOptions = NO_LEADING_OPTIONS,
   placeholder = "Select a subject…",
   disabled,
 }: SubjectTargetSelectProps) {
@@ -99,13 +107,15 @@ export function SubjectTargetSelect({
   }, [subjects, subjectGroups]);
 
   const selectedLabel = useMemo(() => {
+    const leading = leadingOptions.find((option) => option.key === value);
+    if (leading) return leading.label;
     for (const section of sections) {
       for (const option of [section.groupOption, ...section.options]) {
         if (option?.key === value) return option.label;
       }
     }
     return "";
-  }, [sections, value]);
+  }, [sections, leadingOptions, value]);
 
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const blocks = useMemo<Block[]>(() => {
@@ -113,6 +123,11 @@ export function SubjectTargetSelect({
     const lone = (option: Option): Block => ({ kind: "option", option });
     if (placeholder !== null && !normalizedQuery) {
       visible.push(lone({ key: "", label: placeholder, indent: false, placeholder: true }));
+    }
+    for (const option of leadingOptions) {
+      if (!normalizedQuery || matches(option.label, normalizedQuery)) {
+        visible.push(lone({ key: option.key, label: option.label, indent: false }));
+      }
     }
     for (const section of sections) {
       const sectionLabel = section.groupOption?.label ?? section.heading ?? "";
@@ -131,7 +146,7 @@ export function SubjectTargetSelect({
       }
     }
     return visible;
-  }, [sections, normalizedQuery, placeholder]);
+  }, [sections, leadingOptions, normalizedQuery, placeholder]);
 
   const optionKeys = blocks.flatMap((block) =>
     block.kind === "option" ? [block.option.key] : block.options.map((option) => option.key),

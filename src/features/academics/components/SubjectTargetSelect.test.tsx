@@ -17,11 +17,13 @@ function Harness({
   onChange = vi.fn(),
   subjectGroups,
   placeholder,
+  leadingOptions,
 }: {
   initial?: string;
   onChange?: (key: string) => void;
   subjectGroups?: { subjectGroupId: string; subjectGroupName: string }[];
   placeholder?: string | null;
+  leadingOptions?: { key: string; label: string }[];
 }) {
   const [value, setValue] = useState(initial);
   return (
@@ -37,6 +39,7 @@ function Harness({
         subjects={SUBJECTS}
         subjectGroups={subjectGroups}
         placeholder={placeholder}
+        leadingOptions={leadingOptions}
       />
       <button type="button" onClick={() => setValue("french")}>
         Reset externally
@@ -152,5 +155,23 @@ describe("SubjectTargetSelect", () => {
 
     await user.click(screen.getByRole("button", { name: "Reset externally" }));
     expect(screen.getByLabelText("Subject")).toHaveValue("French");
+  });
+
+  it("lists leading options first, shows a picked one's label, and filters them by the query", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Harness onChange={onChange} leadingOptions={[{ key: "all", label: "All subjects" }]} />);
+
+    const listbox = await open(user);
+    const labels = within(listbox).getAllByRole("option").map((option) => option.textContent);
+    expect(labels.slice(0, 2)).toEqual(["Select a subject…", "All subjects"]);
+
+    await user.click(within(listbox).getByRole("option", { name: "All subjects" }));
+    expect(onChange).toHaveBeenCalledWith("all");
+    expect(screen.getByLabelText("Subject")).toHaveValue("All subjects");
+
+    await user.click(screen.getByLabelText("Subject"));
+    await user.type(screen.getByLabelText("Subject"), "phy");
+    expect(within(screen.getByRole("listbox", { name: "Subjects" })).queryByRole("option", { name: "All subjects" })).toBeNull();
   });
 });

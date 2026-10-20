@@ -254,6 +254,80 @@ export function saveRatings(
   });
 }
 
+/**
+ * Mirrors backend assessment.application.port.in.ClassAssessmentSheetView - the
+ * class teacher's all-subjects sheet for one term: `subjects` are the grid's
+ * rows, `students` its columns, and `cells` one entry per (student, subject)
+ * carrying both periods' current values. `offered` is false when a selective
+ * subject isn't one the student registered for. Observations are deliberately
+ * absent - they stay on the single-subject sheet.
+ */
+export interface ClassAssessmentSheetView {
+  classId: string;
+  termId: string;
+  assessmentMode: AssessmentMode;
+  quizMax?: number;
+  examMax?: number;
+  ratingOptions: RatingOption[];
+  subjects: Array<{
+    subjectId: string;
+    name: string;
+    subjectGroupId?: string;
+    subjectGroupName?: string;
+    assessmentPeriods: SubjectAssessmentPeriods;
+  }>;
+  students: Array<{ enrollmentId: string; studentName: string; admissionNumber: string }>;
+  cells: ClassSheetCell[];
+}
+
+export interface ClassSheetCell {
+  enrollmentId: string;
+  subjectId: string;
+  offered: boolean;
+  quizScore?: number;
+  examScore?: number;
+  midtermRatingOptionId?: string;
+  ratingOptionId?: string;
+}
+
+/** Mirrors backend RecordAssessmentsUseCase.CellOutcome - one (student, subject) cell's save result. */
+export interface CellOutcome {
+  enrollmentId: string;
+  subjectId: string;
+  success: boolean;
+  message?: string;
+}
+
+export function openClassSheet(classId: string, termId: string): Promise<ClassAssessmentSheetView> {
+  return apiFetch<ClassAssessmentSheetView>(`/api/v1/assessments/class-sheet?classId=${classId}&termId=${termId}`);
+}
+
+/** `score` is the quiz mark for MIDTERM, the exam mark for TERM; `null` clears it. The other period is untouched. */
+export function saveClassScores(
+  classId: string,
+  termId: string,
+  period: ResultScope,
+  entries: Array<{ enrollmentId: string; subjectId: string; score: number | null }>,
+): Promise<{ outcomes: CellOutcome[] }> {
+  return apiFetch<{ outcomes: CellOutcome[] }>("/api/v1/assessments/class-scores", {
+    method: "PUT",
+    body: JSON.stringify({ classId, termId, period, entries }),
+  });
+}
+
+/** `ratingOptionId` is the period's own rating; `null` clears it. The other period and every observation are untouched. */
+export function saveClassRatings(
+  classId: string,
+  termId: string,
+  period: ResultScope,
+  entries: Array<{ enrollmentId: string; subjectId: string; ratingOptionId: string | null }>,
+): Promise<{ outcomes: CellOutcome[] }> {
+  return apiFetch<{ outcomes: CellOutcome[] }>("/api/v1/assessments/class-ratings", {
+    method: "PUT",
+    body: JSON.stringify({ classId, termId, period, entries }),
+  });
+}
+
 export function getBroadsheet(classId: string, termId: string, scope: ResultScope = "TERM"): Promise<BroadsheetView> {
   return apiFetch<BroadsheetView>(`/api/v1/results/broadsheet?classId=${classId}&termId=${termId}&scope=${scope}`);
 }
