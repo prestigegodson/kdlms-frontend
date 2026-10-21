@@ -111,21 +111,60 @@ describe("AllSubjectsEntryGrid", () => {
     );
   });
 
-  it("locks cells a student doesn't offer or a subject doesn't assess this period", async () => {
-    const user = userEvent.setup();
+  it("locks cells a student doesn't offer", () => {
     renderGrid();
 
     expect(
       screen.getByLabelText("Okafor Chidera, French: Doesn't offer this subject"),
     ).toBeInTheDocument();
+  });
+
+  it("hides a MIDTERM_ONLY subject at end of term", async () => {
+    const user = userEvent.setup();
+    renderGrid();
+
     expect(
       screen.getByLabelText("Mid-term rating for Adebayo Tolu in Literacy"),
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole("radio", { name: "End of term" }));
+    expect(screen.queryByText("Literacy")).not.toBeInTheDocument();
+    const rowText = screen
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => within(row).getAllByRole("cell")[0].textContent);
+    expect(rowText).toEqual(["Core", "1.Numeracy", "Other subjects", "2.French"]);
     expect(
-      screen.getByLabelText("Adebayo Tolu, Literacy: Not assessed at end of term"),
+      screen.getByLabelText("Okafor Chidera, French: Doesn't offer this subject"),
     ).toBeInTheDocument();
+  });
+
+  it("hides an EXAM_ONLY subject at mid-term", async () => {
+    const user = userEvent.setup();
+    renderGrid({
+      ...RATING_SHEET,
+      subjects: RATING_SHEET.subjects.map((s) =>
+        s.subjectId === "french" ? { ...s, assessmentPeriods: "EXAM_ONLY" } : s,
+      ),
+    });
+
+    expect(screen.queryByText("French")).not.toBeInTheDocument();
+    expect(screen.queryByText("Other subjects")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: "End of term" }));
+    expect(
+      screen.getByLabelText("End of term rating for Adebayo Tolu in French"),
+    ).toBeInTheDocument();
+  });
+
+  it("says so when no subject is assessed in the selected period", () => {
+    renderGrid({
+      ...RATING_SHEET,
+      subjects: RATING_SHEET.subjects.map((s) => ({ ...s, assessmentPeriods: "EXAM_ONLY" })),
+    });
+
+    expect(screen.getByText("No graded subjects are assessed at mid-term.")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
   it("saves only the dirty cells, for the selected period", async () => {

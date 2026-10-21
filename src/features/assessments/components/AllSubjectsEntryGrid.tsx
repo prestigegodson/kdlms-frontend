@@ -77,17 +77,16 @@ function scoreError(value: string, max: number): string | null {
   return null;
 }
 
-/** Why a cell can't be recorded this period, or `null` when it can. */
-function lockedReason(
-  subject: SheetSubject,
-  cell: ClassSheetCell | undefined,
-  period: ResultScope,
-): string | null {
+/** Whether a subject is assessed in this period at all - one that isn't gets no row. */
+function assessedIn(subject: SheetSubject, period: ResultScope): boolean {
+  return period === "MIDTERM"
+    ? subject.assessmentPeriods !== "EXAM_ONLY"
+    : subject.assessmentPeriods !== "MIDTERM_ONLY";
+}
+
+/** Why a cell can't be recorded, or `null` when it can. */
+function lockedReason(cell: ClassSheetCell | undefined): string | null {
   if (cell && !cell.offered) return "Doesn't offer this subject";
-  if (period === "MIDTERM" && subject.assessmentPeriods === "EXAM_ONLY")
-    return "Not assessed at mid-term";
-  if (period === "TERM" && subject.assessmentPeriods === "MIDTERM_ONLY")
-    return "Not assessed at end of term";
   return null;
 }
 
@@ -131,7 +130,8 @@ interface AllSubjectsEntryGridProps {
  * down the left (under their subject groups when the class has any, "Other subjects" trailing),
  * students across the top. One period at a time via the Mid-term / End of term toggle - a cell is
  * the period's rating (QUALITATIVE) or its quiz/exam mark (NUMERIC), never an observation, and a
- * save never touches the other period. Same shell as the single-subject grids: dirty cells batch
+ * save never touches the other period. A subject not assessed in the selected period (EXAM_ONLY at
+ * mid-term, MIDTERM_ONLY at end of term) is hidden outright rather than shown locked. Same shell as the single-subject grids: dirty cells batch
  * into the sticky save bar, and leaving (or switching period) with unsaved cells asks first. From
  * `md` up the sheet scrolls inside a viewport-high box so the student-name row stays pinned.
  * Below `md` the shared Table collapses each subject into a card listing its students.
@@ -169,7 +169,11 @@ export function AllSubjectsEntryGrid({ sheet, onSaved }: AllSubjectsEntryGridPro
 
   const numeric = sheet.assessmentMode === "NUMERIC";
   const max = (period === "MIDTERM" ? sheet.quizMax : sheet.examMax) ?? 100;
-  const rows = useMemo(() => displayRows(sheet.subjects), [sheet.subjects]);
+  const periodSubjects = useMemo(
+    () => sheet.subjects.filter((subject) => assessedIn(subject, period)),
+    [sheet.subjects, period],
+  );
+  const rows = useMemo(() => displayRows(periodSubjects), [periodSubjects]);
   const cellsByKey = useMemo(() => {
     const map = new Map<string, ClassSheetCell>();
     for (const cell of sheet.cells) map.set(cellKey(cell.enrollmentId, cell.subjectId), cell);
@@ -277,11 +281,13 @@ export function AllSubjectsEntryGrid({ sheet, onSaved }: AllSubjectsEntryGridPro
 
       {error && <Alert variant="error">{error}</Alert>}
 
-      {sheet.subjects.length === 0 || sheet.students.length === 0 ? (
+      {periodSubjects.length === 0 || sheet.students.length === 0 ? (
         <p className="text-sm text-slate-500">
           {sheet.subjects.length === 0
             ? "No graded subjects are taught this term."
-            : "No students are enrolled in this class."}
+            : periodSubjects.length === 0
+              ? `No graded subjects are assessed at ${periodLabel.toLowerCase()}.`
+              : "No students are enrolled in this class."}
         </p>
       ) : (
         <Table containerClassName="md:max-h-[75vh] md:overflow-y-auto">
@@ -326,7 +332,7 @@ export function AllSubjectsEntryGrid({ sheet, onSaved }: AllSubjectsEntryGridPro
                   </TableCell>
                   {sheet.students.map((student, columnIndex) => {
                     const key = cellKey(student.enrollmentId, row.subject.subjectId);
-                    const locked = lockedReason(row.subject, cellsByKey.get(key), period);
+                    const locked = lockedReason(cellsByKey.get(key));
                     const isDirty = dirty.has(key);
                     const value = drafts[key] ?? "";
                     const label = `${periodLabel} ${numeric ? "mark" : "rating"} for ${student.studentName} in ${row.subject.name}`;
