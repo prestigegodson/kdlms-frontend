@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { DateInput } from "@/components/ui/DateInput";
 import { FormField } from "@/components/ui/FormField";
@@ -24,6 +25,11 @@ interface QuizWindowFieldsProps {
    * checks on the backend. The timer isn't: a change reaches only attempts started afterwards.
    */
   opensAtDisabled?: boolean;
+  /**
+   * Shown as a "Close now" action under Closes while the quiz is open - sets the closing time to
+   * now, which takes effect on save. Moving it earlier cuts off pupils still mid-attempt.
+   */
+  onCloseNow?: () => void;
 }
 
 /**
@@ -49,6 +55,7 @@ export function QuizWindowFields({
   onPauseTimerOnLeaveChange,
   disabled = false,
   opensAtDisabled = false,
+  onCloseNow,
 }: QuizWindowFieldsProps) {
   const { adapt } = useParticipantNoun();
   const opens = splitInstant(opensAt);
@@ -101,6 +108,11 @@ export function QuizWindowFields({
               disabled={disabled}
             />
           </div>
+          {onCloseNow && (
+            <Button type="button" variant="secondary" size="sm" className="mt-2" onClick={onCloseNow} disabled={disabled}>
+              Close now
+            </Button>
+          )}
         </FormField>
       </div>
 

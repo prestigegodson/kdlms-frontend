@@ -50,3 +50,8 @@ const AVAILABILITY_VARIANTS: Record<TakeHomeQuizAvailability, "neutral" | "info"
   OPEN: "success",
   CLOSED: "warning",
 };
+
+/** A published quiz inside its saved window right now - the only state "Close now" makes sense in. */
+export function isQuizOpenNow(status: TakeHomeQuizStatus, opensAt: string, closesAt: string, now = Date.now()): boolean {
+  return status === "PUBLISHED" && Date.parse(opensAt) <= now && now < Date.parse(closesAt);
+}

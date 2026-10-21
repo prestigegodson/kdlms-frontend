@@ -50,6 +50,7 @@ import { QuestionEditor } from "@/features/takeHomeQuizzes/components/QuestionEd
 import { QuizPreviewModal } from "@/features/takeHomeQuizzes/components/QuizPreviewModal";
 import { QuestionTemplateDownload } from "@/features/takeHomeQuizzes/components/QuestionImportModal";
 import { QuizWindowFields } from "@/features/takeHomeQuizzes/components/QuizWindowFields";
+import { isQuizOpenNow } from "@/features/takeHomeQuizzes/takeHomeQuizStatus";
 import { ShareQuizModal } from "@/features/takeHomeQuizzes/components/ShareQuizModal";
 import { StudentLinksPanel } from "@/features/takeHomeQuizzes/components/StudentLinksPanel";
 import { type EditableQuestion, toEditableQuestion } from "@/features/takeHomeQuizzes/editableQuestion";
@@ -229,7 +230,7 @@ export function TakeHomeQuizEditorPage() {
   const questionsReadOnly = quiz ? !quiz.actions.canEditQuestions : false;
   // Once a submission exists, the questions' wording, answers and points can still be corrected.
   const correctingAnswers = quiz?.actions.canCorrectAnswers ?? false;
-  // Once a submission exists, only `closesAt` (extend-only), `revealResultsOnSubmit` and the timer
+  // Once a submission exists, only `closesAt` (either way - moving it earlier closes the quiz early), `revealResultsOnSubmit` and the timer
   // stay editable - everything else metadata-shaped locks alongside the question set. `readOnly`
   // (the quiz is archived) locks every field including those.
   const locked = readOnly || questionsReadOnly;
@@ -633,6 +634,11 @@ export function TakeHomeQuizEditorPage() {
             onPauseTimerOnLeaveChange={(value) => setForm({ ...form, pauseTimerOnLeave: value })}
             disabled={readOnly}
             opensAtDisabled={questionsReadOnly}
+            onCloseNow={
+              quiz && isQuizOpenNow(quiz.status, quiz.opensAt, quiz.closesAt)
+                ? () => setForm({ ...form, closesAt: new Date().toISOString() })
+                : undefined
+            }
           />
 
           <label className="flex items-center gap-2 text-sm text-slate-700">

@@ -8,7 +8,8 @@ export const TAKE_HOME_QUIZ_FIELD_HELP = {
   quizType:
     "MIDTERM writes the result straight into this subject's midterm quiz score once results are published - for a quiz shared with other classes, each class's own score; NORMAL is assessment-only.",
   opensAt: "When the link starts accepting answers. Shown in your own timezone.",
-  closesAt: "When the link stops accepting answers - can only be extended, never brought forward, once a pupil has started.",
+  closesAt:
+    "When the link stops accepting answers. Move it earlier (or use Close now) to close the quiz early - pupils still mid-attempt are cut off at the new time.",
   timed: "Turn this on to give each pupil a countdown once they press Start, rather than the full window until closesAt.",
   durationMinutes: "How long a pupil has once they press Start.",
   pauseTimerOnLeave:

@@ -568,6 +568,55 @@ describe("TakeHomeQuizEditorPage - an existing quiz", () => {
     expect(screen.getByLabelText("Closes time")).not.toBeDisabled();
   });
 
+  it("closes an open quiz early with Close now, even once pupils have submitted", async () => {
+    const user = userEvent.setup();
+    const openView: takeHomeQuizzesApi.TakeHomeQuizView = {
+      ...SAVED_VIEW,
+      status: "PUBLISHED",
+      opensAt: new Date(Date.now() - 86_400_000).toISOString(),
+      closesAt: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+      actions: { ...SAVED_VIEW.actions, canEditQuestions: false, canDelete: false, canPublishResults: true },
+    };
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuiz).mockResolvedValue(openView);
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizValidation).mockResolvedValue({
+      canPublish: true,
+      blockers: [],
+      totalPoints: 4,
+      midtermMax: null,
+      rosterSize: 3,
+      portalRosterSize: 0,
+    });
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizLinks).mockResolvedValue([]);
+    vi.mocked(takeHomeQuizzesApi.updateTakeHomeQuiz).mockResolvedValue(openView);
+
+    renderAt("/school/take-home-quizzes/quiz-1?classId=class-1&subjectId=subject-1&termId=term-1");
+
+    const before = Date.now();
+    await user.click(await screen.findByRole("button", { name: "Close now" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    const request = vi.mocked(takeHomeQuizzesApi.updateTakeHomeQuiz).mock.calls[0][1];
+    expect(Date.parse(request.closesAt)).toBeGreaterThanOrEqual(before);
+    expect(Date.parse(request.closesAt)).toBeLessThanOrEqual(Date.now());
+  });
+
+  it("offers no Close now for a quiz that isn't open", async () => {
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuiz).mockResolvedValue(SAVED_VIEW);
+    vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizValidation).mockResolvedValue({
+      canPublish: false,
+      blockers: [],
+      totalPoints: 0,
+      midtermMax: null,
+      rosterSize: 3,
+      portalRosterSize: 0,
+    });
+
+    renderAt("/school/take-home-quizzes/quiz-1?classId=class-1&subjectId=subject-1&termId=term-1");
+
+    expect(await screen.findByDisplayValue("Week 3 quiz")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Close now" })).not.toBeInTheDocument();
+  });
+
   it("shows the Publish action only when the server reports the quiz publishable", async () => {
     vi.mocked(takeHomeQuizzesApi.getTakeHomeQuiz).mockResolvedValue(SAVED_VIEW);
     vi.mocked(takeHomeQuizzesApi.getTakeHomeQuizValidation).mockResolvedValue({
