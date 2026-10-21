@@ -60,6 +60,8 @@ describe("TakeHomeQuizPublicPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    // Submit now needs every question answered, and answering autosaves.
+    vi.mocked(publicApi.saveTakeHomeQuizAnswers).mockResolvedValue(attempt);
   });
 
   afterEach(() => {
@@ -117,7 +119,7 @@ describe("TakeHomeQuizPublicPage", () => {
     renderAt("/take-home-quiz?token=abc123");
 
     await user.click(await screen.findByRole("button", { name: "Start quiz" }));
-    await screen.findByText("2 + 2 = ?");
+    await user.click(await screen.findByRole("radio", { name: "4" }));
     await user.click(screen.getByRole("button", { name: "Submit quiz" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Submit quiz?" });
@@ -189,7 +191,7 @@ describe("TakeHomeQuizPublicPage", () => {
     ]);
   });
 
-  it("warns about unanswered questions and lets the student jump back to one", async () => {
+  it("keeps Submit disabled until every question is answered", async () => {
     vi.mocked(publicApi.resolveTakeHomeQuiz).mockResolvedValue(interstitial);
     vi.mocked(publicApi.startTakeHomeQuiz).mockResolvedValue(attempt);
     const user = userEvent.setup();
@@ -197,16 +199,12 @@ describe("TakeHomeQuizPublicPage", () => {
 
     await user.click(await screen.findByRole("button", { name: "Start quiz" }));
     await screen.findByText("2 + 2 = ?");
-    await user.click(screen.getByRole("button", { name: "Submit quiz" }));
+    expect(screen.getByRole("button", { name: "Submit quiz" })).toBeDisabled();
+    expect(screen.getByText("Answer 1 more question to submit")).toBeInTheDocument();
 
-    const dialog = await screen.findByRole("dialog", { name: "Submit quiz?" });
-    expect(within(dialog).getByText("You have 1 unanswered question")).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "4" }));
+    expect(screen.getByRole("button", { name: "Submit quiz" })).toBeEnabled();
     expect(publicApi.submitTakeHomeQuiz).not.toHaveBeenCalled();
-
-    await user.click(within(dialog).getByRole("button", { name: "1" }));
-
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByText("2 + 2 = ?")).toBeInTheDocument();
   });
 
   it("closes the confirm dialog without submitting on cancel", async () => {
@@ -216,7 +214,7 @@ describe("TakeHomeQuizPublicPage", () => {
     renderAt("/take-home-quiz?token=abc123");
 
     await user.click(await screen.findByRole("button", { name: "Start quiz" }));
-    await screen.findByText("2 + 2 = ?");
+    await user.click(await screen.findByRole("radio", { name: "4" }));
     await user.click(screen.getByRole("button", { name: "Submit quiz" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Submit quiz?" });

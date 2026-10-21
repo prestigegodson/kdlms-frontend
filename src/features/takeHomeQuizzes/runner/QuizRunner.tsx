@@ -7,7 +7,6 @@ import type {
   QuizAttemptView,
   SubmitConfirmationView,
 } from "@/api/publicTakeHomeQuiz";
-import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
@@ -120,6 +119,9 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, do
     return buffered ? { ...initialAttempt.answers, ...buffered } : initialAttempt.answers;
   });
   const [currentIndex, setCurrentIndex] = useState(0);
+  // Set once the student first reaches the last question - from then on the bar offers Submit
+  // (disabled until every question is answered) and walks them back through the gaps in order.
+  const [reachedEnd, setReachedEnd] = useState(() => initialAttempt.questions.length <= 1);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
   const [online, setOnline] = useState(() =>
     typeof navigator === "undefined" ? true : navigator.onLine,
@@ -411,6 +413,23 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, do
     [questions.length, answeredIndexes],
   );
 
+  // The next gap after this question, wrapping round to the start - never the current one.
+  const nextUnansweredIndex = useMemo(
+    () =>
+      unansweredIndexes.find((index) => index > currentIndex) ??
+      unansweredIndexes.find((index) => index !== currentIndex) ??
+      null,
+    [unansweredIndexes, currentIndex],
+  );
+
+  function goTo(index: number) {
+    setCurrentIndex(index);
+    if (index === questions.length - 1) {
+      setReachedEnd(true);
+    }
+  }
+
+  const reviewing = reachedEnd || currentIndex === questions.length - 1;
   const currentQuestion = questions[currentIndex];
   const groups = useMemo(() => stimulusGroups(questions, attempt.stimuli), [questions, attempt.stimuli]);
   const currentGroup = currentQuestion?.stimulusId ? groups.get(currentQuestion.stimulusId) : undefined;
@@ -473,7 +492,7 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, do
           count={questions.length}
           currentIndex={currentIndex}
           answeredIndexes={answeredIndexes}
-          onSelect={setCurrentIndex}
+          onSelect={goTo}
           groups={[...groups.values()].map((group) => ({ first: group.first, last: group.last, name: group.name }))}
         />
       </div>
@@ -514,6 +533,13 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, do
         </div>
       )}
 
+      {reviewing && unansweredIndexes.length > 0 && (
+        <p className="mt-6 -mb-4 text-right text-sm text-slate-500" data-testid="unanswered-hint">
+          Answer {unansweredIndexes.length} more question{unansweredIndexes.length === 1 ? "" : "s"} to
+          submit
+        </p>
+      )}
+
       {/* Docked to the bottom so a long passage above the question never pushes navigation off-screen. */}
       <div
         className={`sticky z-10 mt-6 flex items-center justify-between gap-2 border-t border-slate-200 bg-white/95 py-3 backdrop-blur pb-[max(0.75rem,env(safe-area-inset-bottom))] ${
@@ -523,28 +549,39 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, do
       >
         <Button
           variant="secondary"
-          onClick={() => setCurrentIndex((index) => Math.max(0, index - 1))}
+          onClick={() => goTo(Math.max(0, currentIndex - 1))}
           disabled={currentIndex === 0}
         >
           <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-          {/* Room for the Passage button on a narrow phone - the label stays for screen readers. */}
-          <span className={currentGroup?.stimulus.kind === "PASSAGE" ? "max-sm:sr-only" : undefined}>Previous</span>
+          {/* Room for the Passage / Next unanswered buttons on a narrow phone - the label stays for screen readers. */}
+          <span className={currentGroup?.stimulus.kind === "PASSAGE" || reviewing ? "max-sm:sr-only" : undefined}>
+            Previous
+          </span>
         </Button>
         {currentGroup?.stimulus.kind === "PASSAGE" && (
           <Button variant="ghost" className="lg:hidden" onClick={() => setReaderOpen(true)}>
             <BookOpen className="h-4 w-4" aria-hidden="true" /> Passage
           </Button>
         )}
-        {currentIndex < questions.length - 1 ? (
-          <Button
-            onClick={() => setCurrentIndex((index) => Math.min(questions.length - 1, index + 1))}
-          >
+        {!reviewing ? (
+          <Button onClick={() => goTo(Math.min(questions.length - 1, currentIndex + 1))}>
             Next <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </Button>
         ) : (
-          <Button onClick={() => setConfirmOpen(true)} loading={submitting}>
-            Submit quiz
-          </Button>
+          <div className="flex items-center gap-2">
+            {nextUnansweredIndex !== null && (
+              <Button variant="secondary" onClick={() => goTo(nextUnansweredIndex)}>
+                Next unanswered <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            )}
+            <Button
+              onClick={() => setConfirmOpen(true)}
+              loading={submitting}
+              disabled={unansweredIndexes.length > 0}
+            >
+              Submit quiz
+            </Button>
+          </div>
         )}
       </div>
 
@@ -570,43 +607,18 @@ export function QuizRunner({ initialAttempt, transport, onSubmitted, onError, do
         <ConfirmDialog
           title="Submit quiz?"
           confirmLabel="Submit quiz"
-          onConfirm={async () => handleSubmit()}
+          onConfirm={async () => {
+            // Only the timer may submit with gaps - never a stale confirm dialog.
+            if (unansweredIndexes.length === 0) {
+              handleSubmit();
+            }
+          }}
           onClose={() => setConfirmOpen(false)}
           message={
-            unansweredIndexes.length === 0 ? (
-              <p>
-                You&apos;ve answered all {questions.length} question
-                {questions.length === 1 ? "" : "s"}. Once submitted, you can&apos;t change your
-                answers.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                <Alert
-                  variant="warning"
-                  title={`You have ${unansweredIndexes.length} unanswered question${unansweredIndexes.length === 1 ? "" : "s"}`}
-                >
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {unansweredIndexes.map((index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onClick={() => {
-                          setConfirmOpen(false);
-                          setCurrentIndex(index);
-                        }}
-                        className="flex h-8 w-8 items-center justify-center rounded-full border border-amber-300 bg-white text-sm font-medium text-amber-800 hover:bg-amber-100"
-                      >
-                        {index + 1}
-                      </button>
-                    ))}
-                  </div>
-                </Alert>
-                <p>
-                  Unanswered questions will score zero. Once submitted, you can&apos;t change your
-                  answers.
-                </p>
-              </div>
-            )
+            <p>
+              You&apos;ve answered all {questions.length} question
+              {questions.length === 1 ? "" : "s"}. Once submitted, you can&apos;t change your answers.
+            </p>
           }
         />
       )}
