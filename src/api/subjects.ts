@@ -80,7 +80,7 @@ export interface UpdateSubjectRequest {
 const BASE = "/api/v1/subjects";
 
 /** {@code levelId} narrows to one level; omit to list every subject of the caller's school. */
-export function listSubjects(levelId?: string, page = 0, size = 100): Promise<Page<SubjectView>> {
+export function listSubjects(levelId?: string, page = 0, size = 200): Promise<Page<SubjectView>> {
   const levelParam = levelId ? `&levelId=${levelId}` : "";
   return apiFetch<Page<SubjectView>>(`${BASE}?page=${page}&size=${size}${levelParam}`);
 }
