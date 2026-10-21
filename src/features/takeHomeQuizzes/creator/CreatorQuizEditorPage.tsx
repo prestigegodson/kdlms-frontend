@@ -408,7 +408,6 @@ export function CreatorQuizEditorPage() {
             shuffleQuestions={form.shuffleQuestions}
             shuffleChoices={form.shuffleChoices}
             onChange={(value) => setForm({ ...form, ...value })}
-            disabled={locked}
           />
 
           <ThemeSection

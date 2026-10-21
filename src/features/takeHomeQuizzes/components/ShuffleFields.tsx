@@ -6,12 +6,13 @@ interface ShuffleFieldsProps {
   shuffleQuestions: boolean;
   shuffleChoices: boolean;
   onChange: (value: { shuffleQuestions: boolean; shuffleChoices: boolean }) => void;
-  /** Locked once a submission exists - a changed order would reshuffle an attempt mid-way. */
-  disabled: boolean;
 }
 
-/** The quiz's two randomisation toggles - shared by the school and creator quiz editors. */
-export function ShuffleFields({ shuffleQuestions, shuffleChoices, onChange, disabled }: ShuffleFieldsProps) {
+/**
+ * The quiz's two randomisation toggles - shared by the school and creator quiz editors. Never locked:
+ * each attempt keeps the order it started with, so a change only reaches attempts started afterwards.
+ */
+export function ShuffleFields({ shuffleQuestions, shuffleChoices, onChange }: ShuffleFieldsProps) {
   const { adapt } = useParticipantNoun();
   return (
     <div className="space-y-1">
@@ -19,7 +20,6 @@ export function ShuffleFields({ shuffleQuestions, shuffleChoices, onChange, disa
         <Checkbox
           checked={shuffleQuestions}
           onChange={(event) => onChange({ shuffleQuestions: event.target.checked, shuffleChoices })}
-          disabled={disabled}
         />
         Shuffle question order
       </label>
@@ -27,7 +27,6 @@ export function ShuffleFields({ shuffleQuestions, shuffleChoices, onChange, disa
         <Checkbox
           checked={shuffleChoices}
           onChange={(event) => onChange({ shuffleQuestions, shuffleChoices: event.target.checked })}
-          disabled={disabled}
         />
         Shuffle answer choices
       </label>

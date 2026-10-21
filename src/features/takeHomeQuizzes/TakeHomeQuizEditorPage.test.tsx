@@ -795,6 +795,22 @@ describe("TakeHomeQuizEditorPage - correcting the answer key once pupils have su
     expect(takeHomeQuizzesApi.saveTakeHomeQuizQuestions).not.toHaveBeenCalled();
     expect(takeHomeQuizzesApi.previewTakeHomeQuizAnswerKeyCorrection).not.toHaveBeenCalled();
   });
+
+  it("keeps the shuffle toggles editable once pupils have started", async () => {
+    const user = userEvent.setup();
+    renderAt("/school/take-home-quizzes/quiz-1?classId=class-1&subjectId=subject-1&termId=term-1");
+
+    const shuffleQuestions = await screen.findByLabelText("Shuffle question order");
+    expect(shuffleQuestions).toBeEnabled();
+    expect(screen.getByLabelText("Shuffle answer choices")).toBeEnabled();
+    await user.click(shuffleQuestions);
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(takeHomeQuizzesApi.updateTakeHomeQuiz).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(takeHomeQuizzesApi.updateTakeHomeQuiz).mock.calls[0][1]).toMatchObject({
+      shuffleQuestions: true,
+    });
+  });
 });
 
 describe("TakeHomeQuizEditorPage - sharing a copy with another class", () => {
