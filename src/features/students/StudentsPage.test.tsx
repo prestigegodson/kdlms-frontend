@@ -289,6 +289,22 @@ describe("StudentsPage", () => {
     );
   });
 
+  it("lets an admin filter for soft-deleted pupils", async () => {
+    mockStudents([STUDENT_VIEW]);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Ada Obi");
+
+    await user.selectOptions(screen.getByLabelText("Status"), "DELETED");
+
+    expect(studentsApi.listStudents).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "DELETED" }),
+      0,
+      expect.any(Number),
+    );
+  });
+
   it("filters by guardian linkage through the inline field", async () => {
     mockStudents([STUDENT_VIEW]);
     const user = userEvent.setup();

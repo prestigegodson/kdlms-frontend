@@ -25,8 +25,11 @@ import {
   provisionStudentCredentials,
   reinstateStudent,
   replaceStudentSubjects,
+  restoreStudent,
   resetStudentCredentials,
   revokeStudentCredentials,
+  softDeleteStudent,
+  type StudentDeletionEligibilityView,
   type StudentGuardianView,
   type StudentLoginView,
   type StudentMedicalView,
@@ -101,7 +104,10 @@ export function StudentDetailPage() {
   const [confirmingGraduate, setConfirmingGraduate] = useState(false);
   const [confirmingWithdraw, setConfirmingWithdraw] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [deletable, setDeletable] = useState(false);
+  const [confirmingRestore, setConfirmingRestore] = useState(false);
+  // `null` until the eligibility check answers - Delete stays hidden meanwhile, since whether it
+  // hard- or soft-deletes depends on it.
+  const [deletion, setDeletion] = useState<StudentDeletionEligibilityView | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   function fetchStudent() {
@@ -123,10 +129,10 @@ export function StudentDetailPage() {
     let cancelled = false;
     getStudentDeletionEligibility(studentId)
       .then((eligibility) => {
-        if (!cancelled) setDeletable(eligibility.deletable);
+        if (!cancelled) setDeletion(eligibility);
       })
       .catch(() => {
-        if (!cancelled) setDeletable(false);
+        if (!cancelled) setDeletion(null);
       });
     return () => {
       cancelled = true;
@@ -154,9 +160,21 @@ export function StudentDetailPage() {
 
   async function confirmDelete() {
     if (!studentId) return;
-    await deleteStudent(studentId);
+    // A record-free registration is deleted outright; anyone else is soft-deleted and restorable.
+    if (deletion?.deletable) {
+      await deleteStudent(studentId);
+    } else {
+      await softDeleteStudent(studentId);
+    }
     setConfirmingDelete(false);
     navigate(studentListHref());
+  }
+
+  async function confirmRestore() {
+    if (!studentId) return;
+    await restoreStudent(studentId);
+    setConfirmingRestore(false);
+    load();
   }
 
   async function handleReinstate() {
@@ -190,6 +208,9 @@ export function StudentDetailPage() {
   }
 
   const { student } = state;
+  // A soft-deleted pupil is read-only until restored - the server refuses every edit anyway.
+  const isDeleted = student.status === "DELETED";
+  const canEdit = canManage && !isDeleted;
 
   return (
     <div className="space-y-6">
@@ -204,14 +225,14 @@ export function StudentDetailPage() {
               variant={
                 student.status === "ACTIVE"
                   ? "success"
-                  : student.status === "WITHDRAWN"
+                  : student.status === "WITHDRAWN" || student.status === "DELETED"
                     ? "danger"
                     : "neutral"
               }
             >
               {student.status}
             </Badge>
-            {canManage && (
+            {canEdit && (
               <Button variant="secondary" onClick={() => setEditing(true)}>
                 Edit
               </Button>
@@ -231,9 +252,14 @@ export function StudentDetailPage() {
                 Reinstate
               </Button>
             )}
-            {canDelete && deletable && (
+            {canDelete && !isDeleted && deletion && (
               <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
                 Delete
+              </Button>
+            )}
+            {canDelete && isDeleted && (
+              <Button variant="secondary" onClick={() => setConfirmingRestore(true)}>
+                Restore
               </Button>
             )}
           </>
@@ -242,12 +268,20 @@ export function StudentDetailPage() {
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
+      {isDeleted && (
+        <Alert variant="warning">
+          This pupil was deleted{student.deletedAt ? ` on ${formatInstant(student.deletedAt)}` : ""}. They
+          are hidden from the registry, class lists, and portals, and their records are kept. Restore
+          them to make changes.
+        </Alert>
+      )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Accordion title="Bio" defaultOpen>
           <div className="flex gap-4 sm:gap-6">
             <StudentPhotoPanel
               student={student}
-              canManage={canManage}
+              canManage={canEdit}
               onEdit={() => setEditingPhoto(true)}
             />
             <dl className="grid min-w-0 flex-1 grid-cols-1 gap-x-4 gap-y-3 text-sm sm:grid-cols-2">
@@ -291,7 +325,7 @@ export function StudentDetailPage() {
 
         <GuardiansCard
           studentId={student.id}
-          canManage={can.manageGuardians(role)}
+          canManage={can.manageGuardians(role) && !isDeleted}
           onActionError={setActionError}
         />
       </div>
@@ -299,7 +333,7 @@ export function StudentDetailPage() {
       <EnrollmentHistoryCard
         key={refreshKey}
         student={student}
-        canManage={canManage}
+        canManage={canEdit}
         onTransferred={load}
         onActionError={setActionError}
       />
@@ -307,13 +341,13 @@ export function StudentDetailPage() {
       {/* Medical details and guardian links stay admin-only writes - read-only for a Head of Level. */}
       <MedicalCard
         studentId={student.id}
-        canManage={can.manageStudentMedical(role)}
+        canManage={can.manageStudentMedical(role) && !isDeleted}
         onActionError={setActionError}
       />
 
-      <SubjectsCard student={student} canManage={canManage} onActionError={setActionError} />
+      <SubjectsCard student={student} canManage={canEdit} onActionError={setActionError} />
 
-      {studentLoginsEntitled && canManageLogins && (
+      {studentLoginsEntitled && canManageLogins && !isDeleted && (
         <PortalAccessCard studentId={student.id} studentFirstName={student.firstName} onActionError={setActionError} />
       )}
 
@@ -369,7 +403,7 @@ export function StudentDetailPage() {
           onClose={() => setConfirmingWithdraw(false)}
         />
       )}
-      {confirmingDelete && (
+      {confirmingDelete && deletion?.deletable && (
         <ConfirmDialog
           title="Delete this pupil?"
           message={
@@ -384,6 +418,44 @@ export function StudentDetailPage() {
           confirmationText={student.admissionNumber}
           onConfirm={confirmDelete}
           onClose={() => setConfirmingDelete(false)}
+        />
+      )}
+      {confirmingDelete && deletion && !deletion.deletable && (
+        <ConfirmDialog
+          title="Delete this pupil?"
+          message={
+            <div className="space-y-3">
+              <p>
+                <strong>{student.fullName}</strong> ({student.admissionNumber}) can't be permanently
+                deleted: {deletion.blockers.join("; ")}.
+              </p>
+              <p>
+                They will be removed from the registry, class lists, and the guardian and pupil
+                portals, and their portal login disabled. Every record is kept, and an admin can
+                restore them later from the Deleted filter on the pupils page.
+              </p>
+            </div>
+          }
+          confirmLabel="Delete pupil"
+          variant="danger"
+          confirmationText={student.admissionNumber}
+          onConfirm={confirmDelete}
+          onClose={() => setConfirmingDelete(false)}
+        />
+      )}
+      {confirmingRestore && (
+        <ConfirmDialog
+          title="Restore this pupil?"
+          message={
+            <>
+              <strong>{student.fullName}</strong> will return to the registry with the status they
+              had before. A pupil who was active comes back as withdrawn: reinstate them afterwards
+              to re-enable their login and place them back in a class.
+            </>
+          }
+          confirmLabel="Restore"
+          onConfirm={confirmRestore}
+          onClose={() => setConfirmingRestore(false)}
         />
       )}
     </div>

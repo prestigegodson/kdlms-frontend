@@ -1,7 +1,8 @@
 import { apiFetch } from "@/api/client";
 import type { Page } from "@/api/types";
 
-export type StudentStatus = "ACTIVE" | "GRADUATED" | "WITHDRAWN";
+/** `DELETED` is a soft delete - hidden from every list unless filtered for, restorable by an admin. */
+export type StudentStatus = "ACTIVE" | "GRADUATED" | "WITHDRAWN" | "DELETED";
 export type Gender = "MALE" | "FEMALE";
 
 /** Mirrors backend student.application.port.in.StudentView. */
@@ -31,6 +32,8 @@ export interface StudentView {
   loginStatus: StudentLoginStatus;
   /** Last portal sign-in; absent if never, or no login. */
   lastLoginAt?: string;
+  /** When the pupil was soft-deleted; absent unless `status` is `DELETED`. */
+  deletedAt?: string | null;
 }
 
 /** Mirrors backend student.domain.StudentLoginStatus. PENDING = provisioned but never signed in. */
@@ -310,6 +313,16 @@ export function getStudentDeletionEligibility(studentId: string): Promise<Studen
 /** Hard-deletes a mistakenly registered student who has nothing recorded against them yet. */
 export function deleteStudent(studentId: string): Promise<void> {
   return apiFetch<void>(`${BASE}/${studentId}`, { method: "DELETE" });
+}
+
+/** Soft-deletes a pupil who has records - hidden everywhere, login disabled, every record kept. */
+export function softDeleteStudent(studentId: string): Promise<void> {
+  return apiFetch<void>(`${BASE}/${studentId}/soft-delete`, { method: "PATCH" });
+}
+
+/** Restores a soft-deleted pupil to the status they held before (an active pupil comes back withdrawn). */
+export function restoreStudent(studentId: string): Promise<void> {
+  return apiFetch<void>(`${BASE}/${studentId}/restore`, { method: "PATCH" });
 }
 
 export function listStudentEnrollments(studentId: string): Promise<EnrollmentView[]> {

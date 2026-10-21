@@ -143,9 +143,10 @@ export const can = {
   },
 
   /**
-   * Hard-deleting a mistakenly registered student who has nothing recorded yet - SCHOOL_ADMIN and
-   * BRANCH_ADMIN (own branch) only, never a Head of Level. The server decides per student whether
-   * it's still deletable (`GET /api/v1/students/{id}/deletion-eligibility`).
+   * Deleting a student - SCHOOL_ADMIN and BRANCH_ADMIN (own branch) only, never a Head of Level.
+   * The server decides per student (`GET /api/v1/students/{id}/deletion-eligibility`): a record-free
+   * registration is hard-deleted, anyone else is soft-deleted. Also gates restoring a soft-deleted
+   * student and the registry's "Deleted" status filter.
    */
   deleteStudents(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";

@@ -45,6 +45,8 @@ vi.mock("@/api/students", async () => {
     revokeStudentCredentials: vi.fn(),
     getStudentDeletionEligibility: vi.fn(),
     deleteStudent: vi.fn(),
+    softDeleteStudent: vi.fn(),
+    restoreStudent: vi.fn(),
   };
 });
 
@@ -197,16 +199,46 @@ describe("StudentDetailPage", () => {
     });
   });
 
-  it("hides Delete for a student who already has records", async () => {
+  it("soft-deletes a student who already has records, explaining why and that records are kept", async () => {
     vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
     vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
     vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+    vi.mocked(studentsApi.softDeleteStudent).mockResolvedValue(undefined);
+    const user = userEvent.setup();
 
     renderAsSchoolAdmin();
-    await screen.findByRole("heading", { name: "Ada Obi" });
-    await waitFor(() => expect(studentsApi.getStudentDeletionEligibility).toHaveBeenCalledWith("student-1"));
+    await user.click(await screen.findByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/the pupil has attendance recorded/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Every record is kept/)).toBeInTheDocument();
 
+    await user.type(within(dialog).getByLabelText(/to confirm/), "BFA/2026/0001");
+    await user.click(within(dialog).getByRole("button", { name: "Delete pupil" }));
+
+    expect(studentsApi.softDeleteStudent).toHaveBeenCalledWith("student-1");
+    expect(studentsApi.deleteStudent).not.toHaveBeenCalled();
+    expect(await screen.findByText("Pupil registry page")).toBeInTheDocument();
+  });
+
+  it("shows a deleted student read-only with a Restore action", async () => {
+    vi.mocked(studentsApi.getStudent)
+      .mockResolvedValueOnce({ ...STUDENT_VIEW, status: "DELETED", deletedAt: "2026-10-20T09:00:00Z" })
+      .mockResolvedValue({ ...STUDENT_VIEW, status: "WITHDRAWN" });
+    vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+    vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+    vi.mocked(studentsApi.restoreStudent).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    expect(await screen.findByText(/This pupil was deleted/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Restore" }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Restore" }));
+
+    expect(studentsApi.restoreStudent).toHaveBeenCalledWith("student-1");
+    await waitFor(() => expect(screen.queryByText(/This pupil was deleted/)).not.toBeInTheDocument());
   });
 
   it("deletes a record-free student after typing the admission number to confirm", async () => {

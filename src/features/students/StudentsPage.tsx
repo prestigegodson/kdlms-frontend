@@ -76,6 +76,8 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   const canManage = can.manageStudents(role, capabilities);
   const studentLoginsEntitled = useFeatureStore((state) => state.studentLogins);
   const canPromote = can.managePromotions(role, capabilities);
+  // Only the admins who can restore a soft-deleted pupil may filter for them.
+  const canViewDeleted = can.deleteStudents(role);
   const navigate = useNavigate();
   // Every filter lives in the query string, so the pupil detail page's back
   // link (studentListReturn) and the browser's own back/refresh restore them.
@@ -93,7 +95,9 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   const [classId, setClassId] = useState(() => searchParams.get("class") ?? "");
   const [status, setStatus] = useState<StudentStatus | "">(() => {
     const param = searchParams.get("status");
-    return param === "ACTIVE" || param === "GRADUATED" || param === "WITHDRAWN" ? param : "";
+    return param === "ACTIVE" || param === "GRADUATED" || param === "WITHDRAWN" || (param === "DELETED" && canViewDeleted)
+      ? param
+      : "";
   });
   // Also seeded so NeedsAttentionCard's "no linked guardian" deep link
   // (`?hasGuardian=false`) lands pre-filtered.
@@ -267,6 +271,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
           onClassChange={resetToFirstPage(setClassId)}
           status={status}
           onStatusChange={resetToFirstPage(setStatus)}
+          canViewDeleted={canViewDeleted}
           hasGuardian={hasGuardian}
           onHasGuardianChange={resetToFirstPage(setHasGuardian)}
         />
@@ -289,6 +294,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
               onClassChange={resetToFirstPage(setClassId)}
               status={status}
               onStatusChange={resetToFirstPage(setStatus)}
+              canViewDeleted={canViewDeleted}
               hasGuardian={hasGuardian}
               onHasGuardianChange={resetToFirstPage(setHasGuardian)}
             />
@@ -355,7 +361,7 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
                         variant={
                           student.status === "ACTIVE"
                             ? "success"
-                            : student.status === "WITHDRAWN"
+                            : student.status === "WITHDRAWN" || student.status === "DELETED"
                               ? "danger"
                               : "neutral"
                         }
@@ -409,6 +415,8 @@ interface StudentFilterFieldsProps {
   onClassChange: (value: string) => void;
   status: StudentStatus | "";
   onStatusChange: (value: StudentStatus | "") => void;
+  /** Offers the "Deleted" status option - soft-deleted pupils are hidden from "All statuses". */
+  canViewDeleted: boolean;
   hasGuardian: HasGuardianFilter;
   onHasGuardianChange: (value: HasGuardianFilter) => void;
 }
@@ -428,6 +436,7 @@ function StudentFilterFields({
   onClassChange,
   status,
   onStatusChange,
+  canViewDeleted,
   hasGuardian,
   onHasGuardianChange,
 }: StudentFilterFieldsProps) {
@@ -478,6 +487,7 @@ function StudentFilterFields({
           <option value="ACTIVE">Active</option>
           <option value="GRADUATED">Graduated</option>
           <option value="WITHDRAWN">Withdrawn</option>
+          {canViewDeleted && <option value="DELETED">Deleted</option>}
         </Select>
       </FormField>
       <FormField label="Guardian" htmlFor={`${idPrefix}-has-guardian`}>
