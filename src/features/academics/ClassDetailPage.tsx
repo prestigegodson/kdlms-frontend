@@ -236,11 +236,15 @@ export function ClassDetailPage() {
   const boys = roster?.filter((student) => student.gender === "MALE").length ?? 0;
   const girls = roster?.filter((student) => student.gender === "FEMALE").length ?? 0;
   const assignedSubjectCount = assignments?.length ?? 0;
-  const showBirthdays = can.viewClassBirthdays(
-    role,
+  const isClassTeacherOfThisClass =
     currentUserId !== undefined &&
-      (schoolClass.classTeacherId === currentUserId || schoolClass.assistantTeacherId === currentUserId),
-  );
+    (schoolClass.classTeacherId === currentUserId || schoolClass.assistantTeacherId === currentUserId);
+  const showBirthdays = can.viewClassBirthdays(role, isClassTeacherOfThisClass);
+  // A class/assistant teacher lands straight on their Broadsheet tab; an admin's Assessments page is the broadsheet already.
+  const resultsHref =
+    role === "TEACHER" && isClassTeacherOfThisClass
+      ? `/school/assessments?classId=${schoolClass.id}&tab=broadsheet`
+      : `/school/assessments?classId=${schoolClass.id}`;
 
   return (
     <div className="space-y-6">
@@ -294,7 +298,7 @@ export function ClassDetailPage() {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => navigate(`/school/assessments?classId=${schoolClass.id}`)}
+              onClick={() => navigate(resultsHref)}
             >
               Results & broadsheet
             </Button>

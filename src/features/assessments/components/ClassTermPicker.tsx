@@ -35,6 +35,8 @@ interface ClassTermPickerProps {
   onClassChange: (classId: string) => void;
   termId: string;
   onTermChange: (termId: string, termNumber: number) => void;
+  /** The selected session's and term's display names, for a caller that labels output with them (a printed broadsheet's heading, a download's filename). */
+  onLabelsChange?: (labels: { sessionName?: string; termName?: string }) => void;
   /**
    * An extra field rendered as a trailing cell in the same responsive grid -
    * e.g. `TeacherEntryPanel`'s Subject select - so a caller with a fourth
@@ -59,6 +61,7 @@ export function ClassTermPicker({
   onClassChange,
   termId,
   onTermChange,
+  onLabelsChange,
   children,
 }: ClassTermPickerProps) {
   const [sessions, setSessions] = useState<AcademicSessionView[]>([]);
@@ -86,8 +89,15 @@ export function ClassTermPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs only when the session changes; onTermChange defaults to that session's current (or else first) term
   }, [sessionId]);
 
-  useFilterChip("session", sessions.find((session) => session.id === sessionId)?.name);
-  useFilterChip("term", terms.find((term) => term.id === termId)?.name);
+  const sessionName = sessions.find((session) => session.id === sessionId)?.name;
+  const termName = terms.find((term) => term.id === termId)?.name;
+  useEffect(() => {
+    onLabelsChange?.({ sessionName, termName });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reports when the names change, not when the caller re-creates its callback
+  }, [sessionName, termName]);
+
+  useFilterChip("session", sessionName);
+  useFilterChip("term", termName);
   useFilterChip("class", classes.find((option) => option.id === classId)?.name);
   const levelGroups = groupByLevel(classes);
   const renderOption = (option: ClassOption) => (

@@ -11,6 +11,7 @@ import * as sessionsApi from "@/api/sessions";
 import { AssessmentsPage } from "@/features/assessments/AssessmentsPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import { resetBranchStore } from "@/stores/branchStore";
+import { resetTeacherScopeStore, useTeacherScopeStore } from "@/stores/teacherScopeStore";
 
 vi.mock("@/api/me", async () => {
   const actual = await vi.importActual<typeof import("@/api/me")>("@/api/me");
@@ -52,6 +53,7 @@ describe("AssessmentsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetBranchStore();
+    resetTeacherScopeStore();
     vi.mocked(meApi.listMyClasses).mockResolvedValue([]);
     vi.mocked(classesApi.listClasses).mockResolvedValue({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 200 });
     vi.mocked(branchesApi.listBranches).mockResolvedValue({
@@ -222,5 +224,28 @@ describe("AssessmentsPage", () => {
     const listbox = await openSubjectPicker(userEvent.setup());
     expect(await within(listbox).findByRole("option", { name: "Mathematics" })).toBeInTheDocument();
     expect(within(listbox).queryByRole("option", { name: "All subjects" })).not.toBeInTheDocument();
+  });
+
+  it("adds a Broadsheet tab for a class teacher only, opened directly by ?tab=broadsheet", async () => {
+    useTeacherScopeStore.setState({
+      capabilities: { isClassTeacher: true, classTeacherClassIds: ["class-1"], subjectTeacherClassIds: [], headOfLevelIds: [] },
+      status: "loaded",
+    });
+
+    renderAs("TEACHER", "/?tab=broadsheet");
+
+    expect(await screen.findByRole("tab", { name: "Broadsheet" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("hides the Broadsheet tab from a subject-only teacher", async () => {
+    useTeacherScopeStore.setState({
+      capabilities: { isClassTeacher: false, classTeacherClassIds: [], subjectTeacherClassIds: ["class-1"], headOfLevelIds: [] },
+      status: "loaded",
+    });
+
+    renderAs("TEACHER", "/?tab=broadsheet");
+
+    expect(await screen.findByRole("tab", { name: "Scores" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("tab", { name: "Broadsheet" })).not.toBeInTheDocument();
   });
 });

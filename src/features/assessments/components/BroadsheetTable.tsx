@@ -1,5 +1,6 @@
 import type { BroadsheetView } from "@/api/assessments";
 import type { ResultScope } from "@/api/types";
+import { broadsheetLayout } from "@/features/assessments/broadsheet";
 import { classAverageCellText, scoreCellText, scoreHeader } from "@/features/assessments/finalScore";
 
 interface BroadsheetTableProps {
@@ -15,32 +16,16 @@ interface BroadsheetTableProps {
  * deliberately opts out: a plain `<table>` in its own `overflow-x-auto`
  * wrapper with a sticky student column, rather than `components/ui/Table`.
  * Subject headers abbreviate to their code, with the full name in `title`.
+ * Column/row derivation lives in `broadsheetLayout`, shared with the CSV
+ * export so the two never disagree. Inside a `BroadsheetPrintArea` the
+ * scroll wrapper and sticky column are flattened by index.css's print rules.
  */
 export function BroadsheetTable({ broadsheet, scope = "TERM" }: BroadsheetTableProps) {
-  const isNumeric = broadsheet.assessmentMode === "NUMERIC";
-  // A MIDTERM result never carries a total/average/position - a checkpoint
-  // is never a term aggregate or a ranking (see CLAUDE.md's ResultScope
-  // domain rule).
-  const showsAggregates = isNumeric && scope === "TERM";
-  const rows = showsAggregates
-    ? [...broadsheet.rows].sort((a, b) => (a.position ?? Infinity) - (b.position ?? Infinity))
-    : broadsheet.rows;
-  // Undefined unless the school's "Show class average per subject" opt-in is on
-  // (Report Settings) - rides both TERM and MIDTERM scopes, unlike the
-  // per-student aggregates above, since it's a subject-axis figure, not a
-  // per-student one (see CLAUDE.md's Domain Rules).
-  const showClassAverage = isNumeric && broadsheet.subjects.some((subject) => subject.classAverage != null);
-  // A MIDTERM subject's scoreMax (the raw mark's denominator) is uniform across
-  // the class - reused from whichever row happens to carry it, the same
-  // assumption the backend's own class-average computation makes. It prints
-  // once in the subject's header ("MTH (20)"), leaving bare marks in the cells.
-  const scoreMaxFor = (subjectId: string) =>
-    broadsheet.rows.map((row) => row.subjectResults.find((result) => result.subjectId === subjectId)?.scoreMax)
-      .find((scoreMax) => scoreMax != null);
+  const { isNumeric, showsAggregates, showClassAverage, rows, scoreMaxFor } = broadsheetLayout(broadsheet, scope);
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-slate-500 lg:hidden">Scroll sideways to see every subject &rarr;</p>
+      <p className="text-xs text-slate-500 lg:hidden print:hidden">Scroll sideways to see every subject &rarr;</p>
       <div className="overflow-x-auto overscroll-x-contain rounded-card border border-slate-200">
         <table className="min-w-full border-collapse text-sm">
           <thead className="border-b border-slate-200 bg-slate-50">

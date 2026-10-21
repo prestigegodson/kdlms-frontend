@@ -171,6 +171,17 @@ describe("AdminResultsPanel", () => {
     expect(await screen.findByText("Head of Primary's remarks")).toBeInTheDocument();
   });
 
+  it("offers CSV download and print once the broadsheet has rows", async () => {
+    const user = userEvent.setup();
+    vi.mocked(assessmentsApi.getPublicationStatus).mockResolvedValue({ published: false });
+
+    renderPanel();
+    await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
+
+    expect(await screen.findByRole("button", { name: "Download CSV" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Print" })).toBeInTheDocument();
+  });
+
   it("defaults to End of term, then refetches the broadsheet and publication status with MIDTERM on toggle", async () => {
     const user = userEvent.setup();
     vi.mocked(assessmentsApi.getPublicationStatus).mockResolvedValue({ published: false });

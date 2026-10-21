@@ -255,9 +255,22 @@ export const can = {
     return role === "TEACHER";
   },
 
-  /** Computed results and the broadsheet - admins read-only (their own branch for BRANCH_ADMIN), teacher's own classes. */
+  /** Computed results - admins read-only (their own branch for BRANCH_ADMIN), teacher's own classes. The broadsheet itself is narrower: see viewBroadsheet. */
   viewResults(role: Role | undefined): boolean {
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER";
+  },
+
+  /**
+   * The whole-class broadsheet (with CSV download and print) - admins, or a
+   * TEACHER who class-teaches/assists at least one class. A subject-only
+   * teacher is left out because it exposes every subject's scores; the
+   * per-class check is server-side (AssessmentAccessGuard.requireBroadsheetVisible).
+   */
+  viewBroadsheet(role: Role | undefined, scope: TeacherScope | null): boolean {
+    if (isAcademicAdmin(role, scope)) {
+      return true;
+    }
+    return role === "TEACHER" && (scope?.isClassTeacher ?? false);
   },
 
   /**

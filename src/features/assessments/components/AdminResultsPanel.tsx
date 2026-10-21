@@ -21,12 +21,16 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
+import { BroadsheetActions } from "@/features/assessments/components/BroadsheetActions";
+import { BroadsheetPrintArea } from "@/features/assessments/components/BroadsheetPrintArea";
 import { BroadsheetTable } from "@/features/assessments/components/BroadsheetTable";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
 import { GradeKey } from "@/features/assessments/components/GradeKey";
 import { RemarksEntryGrid } from "@/features/assessments/components/RemarksEntryGrid";
 import { SaveOutcomeList } from "@/features/assessments/components/SaveOutcomeList";
 import { ScopeToggle } from "@/features/assessments/components/ScopeToggle";
+import { broadsheetPrintTitle } from "@/features/assessments/broadsheet";
+import { useBroadsheetPrint } from "@/features/assessments/useBroadsheetPrint";
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
 import { useBranchScope } from "@/features/branches/useBranchScope";
 import { useAuthStore } from "@/stores/authStore";
@@ -39,7 +43,7 @@ interface AdminResultsPanelProps {
   initialClassId?: string;
 }
 
-/** An admin's read-only view: pick a class + term, see the broadsheet, and publish/unpublish results for guardians. */
+/** An admin's read-only view: pick a class + term, see (and download/print) the broadsheet, and publish/unpublish results for guardians. */
 export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {}) {
   const role = useAuthStore((state) => state.user?.role);
   const capabilities = useTeacherScopeStore((state) => state.capabilities);
@@ -51,6 +55,8 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
   const [classId, setClassId] = useState(initialClassId ?? "");
   const [termId, setTermId] = useState("");
   const [scope, setScope] = useState<ResultScope>("TERM");
+  const [labels, setLabels] = useState<{ sessionName?: string; termName?: string }>({});
+  const { printing, print } = useBroadsheetPrint();
 
   const [broadsheet, setBroadsheet] = useState<BroadsheetView | null>(null);
   const [gradingSystem, setGradingSystem] = useState<GradingSystemView | null>(null);
@@ -142,6 +148,7 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
   }
 
   const classOptions = (classes ?? []).map((c) => ({ id: c.id, name: c.name }));
+  const className = classes?.find((c) => c.id === classId)?.name ?? "";
   const showsBranchFilter = can.selectBranch(role);
 
   return (
@@ -175,7 +182,14 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
         <StickySubHeader collapsible>
           <BranchFilter id="assessments-branch" />
           {classes.length > 0 && (
-            <ClassTermPicker classes={classOptions} classId={classId} onClassChange={setClassId} termId={termId} onTermChange={setTermId} />
+            <ClassTermPicker
+              classes={classOptions}
+              classId={classId}
+              onClassChange={setClassId}
+              termId={termId}
+              onTermChange={setTermId}
+              onLabelsChange={setLabels}
+            />
           )}
           <ScopeToggle scope={scope} onChange={setScope} />
         </StickySubHeader>
@@ -188,12 +202,23 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
       )}
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
-      {gradingSystem && <GradeKey system={gradingSystem} />}
+      {broadsheet && broadsheet.rows.length > 0 && (
+        <BroadsheetActions
+          broadsheet={broadsheet}
+          scope={scope}
+          fileStem={`${className} ${labels.termName ?? ""}`}
+          onPrint={print}
+        />
+      )}
+
+      <BroadsheetPrintArea printing={printing} title={broadsheetPrintTitle(className, labels, scope)}>
+        {gradingSystem && <GradeKey system={gradingSystem} />}
+        {broadsheet && broadsheet.rows.length > 0 && <BroadsheetTable broadsheet={broadsheet} scope={scope} />}
+      </BroadsheetPrintArea>
 
       {broadsheet && broadsheet.rows.length === 0 && (
         <EmptyState icon={BarChart3} title="No results recorded for this term yet" />
       )}
-      {broadsheet && broadsheet.rows.length > 0 && <BroadsheetTable broadsheet={broadsheet} scope={scope} />}
 
       {canRecordPrincipalRemark && remarksSheet && (
         <div className="space-y-4">

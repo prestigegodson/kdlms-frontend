@@ -351,3 +351,44 @@ h4 {
     height: 100vh;
   }
 }
+
+/*
+ * Printing a broadsheet (BroadsheetActions' Print button, or Ctrl+P): while
+ * printing, BroadsheetPrintArea portals a copy of the broadsheet into a
+ * `.print-area` directly under <body>, and everything else under <body> -
+ * the portal shell, pickers, buttons - is dropped from the paper. Landscape,
+ * since a broadsheet is wide; its scroll wrapper, sticky Pupil column, and
+ * that column's edge shadow are screen-only affordances, flattened here so
+ * every subject column prints instead of being clipped at the wrapper's edge.
+ */
+@media print {
+  @page {
+    size: landscape;
+    margin: 10mm;
+  }
+  body {
+    background: #fff;
+  }
+  body > :not(.print-area) {
+    display: none !important;
+  }
+  .print-area .overflow-x-auto {
+    overflow: visible;
+  }
+  .print-area .sticky {
+    position: static;
+  }
+  .print-area .sticky::after {
+    display: none;
+  }
+  .print-area table {
+    font-size: 10px;
+  }
+  .print-area th,
+  .print-area td {
+    padding: 4px 6px;
+  }
+  .print-area tr {
+    break-inside: avoid;
+  }
+}
