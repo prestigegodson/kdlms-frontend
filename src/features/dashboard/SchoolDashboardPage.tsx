@@ -111,13 +111,20 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
   // A Head of Level's tiles are their own levels (server-narrowed); their teacher section below
   // already carries the birthdays card, and the age distribution is a branch-wide admin read.
   const levelHead = isLevelHead(role, capabilities);
-  const { classesMarked, totalClasses, present, absent, late, excused } = admin.attendanceToday;
+  const { classesMarked, totalClasses } = admin.attendanceToday;
+  // A two-session school's rate and counts span both of today's registers; the
+  // "Registers marked" tile keeps them apart.
+  const afternoon = admin.afternoonAttendanceToday;
+  const present = admin.attendanceToday.present + (afternoon?.present ?? 0);
+  const absent = admin.attendanceToday.absent + (afternoon?.absent ?? 0);
+  const late = admin.attendanceToday.late + (afternoon?.late ?? 0);
+  const excused = admin.attendanceToday.excused + (afternoon?.excused ?? 0);
   const totalMarked = present + absent + late + excused;
   const attendanceRate = totalMarked === 0 ? null : Math.round(((present + late) / totalMarked) * 100);
   const attendanceCoverageHint =
     totalMarked === 0
       ? undefined
-      : classesMarked < totalClasses
+      : !afternoon && classesMarked < totalClasses
         ? `Across ${classesMarked} of ${totalClasses} registers`
         : `${present} present · ${absent} absent · ${late} late · ${excused} excused`;
   const allPublished =
@@ -157,9 +164,15 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
         />
         <StatTile
           icon={ClipboardCheck}
-          label="Registers marked"
+          label={afternoon ? "Morning registers marked" : "Registers marked"}
           value={admin.registersMarkable ? `${classesMarked} / ${totalClasses}` : "—"}
-          hint={admin.registersMarkable ? undefined : "Not a marking day"}
+          hint={
+            !admin.registersMarkable
+              ? "Not a marking day"
+              : afternoon
+                ? `Afternoon: ${afternoon.classesMarked} / ${afternoon.totalClasses}`
+                : undefined
+          }
           to="/school/attendance"
         />
       </div>
@@ -276,9 +289,20 @@ function YourClassesCard({ rows }: { rows: NonNullable<SchoolDashboardView["teac
               <span className="text-sm font-medium text-slate-900">{row.className}</span>
               <span className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                 {row.termResultsPublished && <Badge variant="success">Results published</Badge>}
-                <Badge variant={row.registerMarkedToday ? "success" : "warning"}>
-                  {row.registerMarkedToday ? "Register marked today" : "Register not marked yet"}
-                </Badge>
+                {row.afternoonRegisterMarkedToday === undefined ? (
+                  <Badge variant={row.registerMarkedToday ? "success" : "warning"}>
+                    {row.registerMarkedToday ? "Register marked today" : "Register not marked yet"}
+                  </Badge>
+                ) : (
+                  <>
+                    <Badge variant={row.registerMarkedToday ? "success" : "warning"}>
+                      {row.registerMarkedToday ? "Morning marked" : "Morning not marked"}
+                    </Badge>
+                    <Badge variant={row.afternoonRegisterMarkedToday ? "success" : "warning"}>
+                      {row.afternoonRegisterMarkedToday ? "Afternoon marked" : "Afternoon not marked"}
+                    </Badge>
+                  </>
+                )}
                 <ChevronRight className="h-4 w-4 text-slate-400" aria-hidden="true" />
               </span>
             </button>

@@ -7,17 +7,25 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@/components/ui/Table";
+import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
 
 interface ClassAttendanceSummaryTableProps {
   summary: ClassAttendanceSummaryView;
   onSelectStudent?: (studentId: string) => void;
 }
 
-/** A class's per-student attendance totals for one term. */
+/**
+ * A class's per-student attendance totals for one term. A two-session school
+ * counts each register once, so its denominator reads "Registers marked".
+ */
 export function ClassAttendanceSummaryTable({
   summary,
   onSelectStudent,
 }: ClassAttendanceSummaryTableProps) {
+  const markedLabel = useSchoolSettingsStore((state) => state.settings?.twoSessionAttendance)
+    ? "Registers marked"
+    : "Days marked";
+
   return (
     <Table>
       <TableHead>
@@ -27,7 +35,7 @@ export function ClassAttendanceSummaryTable({
           <TableHeaderCell numeric>Absent</TableHeaderCell>
           <TableHeaderCell numeric>Late</TableHeaderCell>
           <TableHeaderCell numeric>Excused</TableHeaderCell>
-          <TableHeaderCell numeric>Days marked</TableHeaderCell>
+          <TableHeaderCell numeric>{markedLabel}</TableHeaderCell>
           <TableHeaderCell numeric>Rate</TableHeaderCell>
         </TableRow>
       </TableHead>
@@ -60,7 +68,7 @@ export function ClassAttendanceSummaryTable({
             <TableCell label="Excused" numeric>
               {row.excused}
             </TableCell>
-            <TableCell label="Days marked" numeric>
+            <TableCell label={markedLabel} numeric>
               {row.daysMarked}
             </TableCell>
             <TableCell label="Rate" numeric>

@@ -64,7 +64,7 @@ const SUMMARY_1 = {
   excused: 0,
   daysMarked: 43,
   attendanceRate: 95.3,
-  days: [{ date: "2026-09-01", status: "PRESENT" as const }],
+  days: [{ date: "2026-09-01", session: "MORNING" as const, status: "PRESENT" as const }],
 };
 
 const SUMMARY_2 = {

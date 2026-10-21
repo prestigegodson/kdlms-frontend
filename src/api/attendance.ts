@@ -2,6 +2,13 @@ import { apiFetch } from "@/api/client";
 
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 
+/**
+ * Mirrors backend shared.domain.AttendanceSession - which of a day's two
+ * registers. A once-a-day school only ever has MORNING registers; one with
+ * School Settings' twoSessionAttendance on also takes AFTERNOON.
+ */
+export type AttendanceSession = "MORNING" | "AFTERNOON";
+
 /** Mirrors backend attendance.application.port.in.AttendanceRegisterView.RegisterRowView. */
 export interface RegisterRow {
   studentId: string;
@@ -21,6 +28,7 @@ export interface AttendanceRegisterView {
   classId: string;
   className: string;
   date: string;
+  session: AttendanceSession;
   termId: string;
   editable: boolean;
   rows: RegisterRow[];
@@ -63,9 +71,10 @@ export interface ClassAttendanceSummaryView {
   rows: StudentSummaryRow[];
 }
 
-/** Mirrors backend attendance.application.port.in.StudentAttendanceSummaryView.DayEntryView. */
+/** Mirrors backend attendance.application.port.in.StudentAttendanceSummaryView.DayEntryView - a two-session school has up to two per date, morning first. */
 export interface DayEntry {
   date: string;
+  session: AttendanceSession;
   status: AttendanceStatus;
 }
 
@@ -101,6 +110,7 @@ export interface ClassOverviewRow {
 /** Mirrors backend attendance.application.port.in.AttendanceOverviewView - today's (or any day's) marking status across every class in scope. */
 export interface AttendanceOverviewView {
   date: string;
+  session: AttendanceSession;
   totalClasses: number;
   classesMarked: number;
   classes: ClassOverviewRow[];
@@ -108,27 +118,37 @@ export interface AttendanceOverviewView {
 
 const BASE = "/api/v1/attendance";
 
-export function getRegister(classId: string, date: string): Promise<AttendanceRegisterView> {
-  return apiFetch<AttendanceRegisterView>(`${BASE}/register?classId=${classId}&date=${date}`);
+export function getRegister(
+  classId: string,
+  date: string,
+  session: AttendanceSession = "MORNING",
+): Promise<AttendanceRegisterView> {
+  return apiFetch<AttendanceRegisterView>(
+    `${BASE}/register?classId=${classId}&date=${date}&session=${session}`,
+  );
 }
 
 export function saveRegister(
   classId: string,
   date: string,
+  session: AttendanceSession,
   entries: EntryInput[],
 ): Promise<SaveOutcome> {
   return apiFetch<SaveOutcome>(`${BASE}/register`, {
     method: "PUT",
-    body: JSON.stringify({ classId, date, entries }),
+    body: JSON.stringify({ classId, date, session, entries }),
   });
 }
 
+/** `session` narrows the totals to one register of the day; omitted, every session counts. */
 export function getClassTermSummary(
   classId: string,
   termId: string,
+  session?: AttendanceSession,
 ): Promise<ClassAttendanceSummaryView> {
+  const sessionParam = session ? `&session=${session}` : "";
   return apiFetch<ClassAttendanceSummaryView>(
-    `${BASE}/summary/class?classId=${classId}&termId=${termId}`,
+    `${BASE}/summary/class?classId=${classId}&termId=${termId}${sessionParam}`,
   );
 }
 
@@ -141,8 +161,12 @@ export function getStudentTermSummary(
   );
 }
 
-export function getDailyOverview(date: string, branchId?: string): Promise<AttendanceOverviewView> {
-  const params = new URLSearchParams({ date });
+export function getDailyOverview(
+  date: string,
+  branchId?: string,
+  session: AttendanceSession = "MORNING",
+): Promise<AttendanceOverviewView> {
+  const params = new URLSearchParams({ date, session });
   if (branchId) params.set("branchId", branchId);
   return apiFetch<AttendanceOverviewView>(`${BASE}/overview?${params.toString()}`);
 }

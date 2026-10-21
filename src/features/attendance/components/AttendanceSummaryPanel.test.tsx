@@ -16,10 +16,10 @@ const MULTI_MONTH_SUMMARY: StudentAttendanceSummaryView = {
   daysMarked: 4,
   attendanceRate: 75,
   days: [
-    { date: "2026-01-05", status: "PRESENT" },
-    { date: "2026-02-02", status: "ABSENT" },
-    { date: "2026-03-10", status: "PRESENT" },
-    { date: "2026-04-01", status: "PRESENT" },
+    { date: "2026-01-05", session: "MORNING", status: "PRESENT" },
+    { date: "2026-02-02", session: "MORNING", status: "ABSENT" },
+    { date: "2026-03-10", session: "MORNING", status: "PRESENT" },
+    { date: "2026-04-01", session: "MORNING", status: "PRESENT" },
   ],
 };
 
@@ -74,5 +74,25 @@ describe("AttendanceSummaryPanel", () => {
 
     expect(screen.getByText("No attendance recorded")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("shows one row per date with a labelled badge per register for a two-session school", () => {
+    render(
+      <AttendanceSummaryPanel
+        summary={{
+          ...MULTI_MONTH_SUMMARY,
+          daysMarked: 2,
+          days: [
+            { date: "2026-04-01", session: "MORNING", status: "PRESENT" },
+            { date: "2026-04-01", session: "AFTERNOON", status: "ABSENT" },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getAllByText("1 April, 2026")).toHaveLength(1);
+    expect(screen.getByText("Morning: PRESENT")).toBeInTheDocument();
+    expect(screen.getByText("Afternoon: ABSENT")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /April/ })).toHaveTextContent("1 day");
   });
 });

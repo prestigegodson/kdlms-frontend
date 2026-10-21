@@ -90,7 +90,10 @@ export interface SchoolDashboardAdminSection {
   activeStudentLimit?: number;
   activeClasses: number;
   registersMarkable: boolean;
+  /** The morning register only when afternoonAttendanceToday is set; every register otherwise. */
   attendanceToday: DashboardAttendanceToday;
+  /** Set only when the school takes two registers a day. */
+  afternoonAttendanceToday?: DashboardAttendanceToday;
   publicationProgress?: DashboardPublicationProgress;
   setupGaps: DashboardSetupGaps;
 }
@@ -99,7 +102,10 @@ export interface SchoolDashboardAdminSection {
 export interface DashboardTeacherClassRow {
   classId: string;
   className: string;
+  /** The morning register when afternoonRegisterMarkedToday is set. */
   registerMarkedToday: boolean;
+  /** Set only when the school takes two registers a day. */
+  afternoonRegisterMarkedToday?: boolean;
   midtermResultsPublished: boolean;
   termResultsPublished: boolean;
 }

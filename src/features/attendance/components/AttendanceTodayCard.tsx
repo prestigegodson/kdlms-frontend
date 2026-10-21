@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { type AttendanceOverviewView, type ClassOverviewRow, getDailyOverview } from "@/api/attendance";
+import {
+  type AttendanceOverviewView,
+  type AttendanceSession,
+  type ClassOverviewRow,
+  getDailyOverview,
+} from "@/api/attendance";
 import { ApiError } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
 import { AttendanceLevelGroup } from "@/features/attendance/components/AttendanceLevelGroup";
+import { SessionToggle } from "@/features/attendance/components/SessionToggle";
 import { useLevelStore } from "@/stores/levelStore";
+import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
 import { todayIso } from "@/utils/date";
 
 const OTHER_LEVEL_KEY = "__other__";
@@ -52,8 +59,16 @@ interface AttendanceTodayCardProps {
   branchId?: string;
 }
 
-/** Which classes have taken today's register and which haven't - SCHOOL_ADMIN/BRANCH_ADMIN only. */
+/**
+ * Which classes have taken today's register and which haven't - SCHOOL_ADMIN/BRANCH_ADMIN only.
+ * A school that takes two registers a day switches between the morning and afternoon register.
+ */
 export function AttendanceTodayCard({ date = todayIso(), branchId }: AttendanceTodayCardProps) {
+  const twoSessionAttendance = useSchoolSettingsStore(
+    (state) => state.settings?.twoSessionAttendance ?? false,
+  );
+  const [selectedSession, setSession] = useState<AttendanceSession>("MORNING");
+  const session: AttendanceSession = twoSessionAttendance ? selectedSession : "MORNING";
   const [overview, setOverview] = useState<AttendanceOverviewView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const levels = useLevelStore((state) => state.levels);
@@ -71,7 +86,7 @@ export function AttendanceTodayCard({ date = todayIso(), branchId }: AttendanceT
 
   // A date or branch change resets downstream state during render (see ScoreEntryGrid's
   // comment on this pattern) rather than in an effect; the effect below only fetches.
-  const selectionKey = `${date}|${branchId ?? ""}`;
+  const selectionKey = `${date}|${branchId ?? ""}|${session}`;
   const [lastSelectionKey, setLastSelectionKey] = useState(selectionKey);
   if (selectionKey !== lastSelectionKey) {
     setLastSelectionKey(selectionKey);
@@ -80,14 +95,14 @@ export function AttendanceTodayCard({ date = todayIso(), branchId }: AttendanceT
   }
 
   useEffect(() => {
-    getDailyOverview(date, branchId)
+    getDailyOverview(date, branchId, session)
       .then(setOverview)
       .catch((error: unknown) =>
         setLoadError(
           error instanceof ApiError ? error.message : "Failed to load today's attendance",
         ),
       );
-  }, [date, branchId]);
+  }, [date, branchId, session]);
 
   const allMarked =
     overview !== null &&
@@ -98,6 +113,9 @@ export function AttendanceTodayCard({ date = todayIso(), branchId }: AttendanceT
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-slate-900">Today&rsquo;s attendance</h2>
+        {twoSessionAttendance && (
+          <SessionToggle session={session} onChange={(next) => setSession(next ?? "MORNING")} />
+        )}
         {overview && overview.totalClasses > 0 && (
           <Badge variant={allMarked ? "success" : "neutral"}>
             {overview.classesMarked} of {overview.totalClasses} classes marked

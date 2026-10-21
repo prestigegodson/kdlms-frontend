@@ -3,7 +3,7 @@ import type { DayEntry } from "@/api/attendance";
 import { groupDaysByMonth } from "@/features/attendance/groupDaysByMonth";
 
 function day(date: string): DayEntry {
-  return { date, status: "PRESENT" };
+  return { date, session: "MORNING", status: "PRESENT" };
 }
 
 describe("groupDaysByMonth", () => {

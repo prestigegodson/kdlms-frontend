@@ -105,7 +105,7 @@ export function AttendanceRegisterGrid({ register, onSaved }: AttendanceRegister
           studentId: row.studentId,
           status: drafts[row.studentId] as AttendanceStatus,
         }));
-      const outcome = await saveRegister(register.classId, register.date, entries);
+      const outcome = await saveRegister(register.classId, register.date, register.session, entries);
       setDirty(new Set());
       onSaved(outcome.outcomes);
     } catch (err) {

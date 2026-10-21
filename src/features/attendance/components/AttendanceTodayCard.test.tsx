@@ -25,6 +25,7 @@ const LEVELS: LevelView[] = [
 
 const OVERVIEW: AttendanceOverviewView = {
   date: "2026-08-11",
+  session: "MORNING",
   totalClasses: 3,
   classesMarked: 2,
   classes: [

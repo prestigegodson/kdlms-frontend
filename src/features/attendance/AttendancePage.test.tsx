@@ -72,6 +72,7 @@ describe("AttendancePage", () => {
     vi.mocked(levelsApi.listLevels).mockResolvedValue([]);
     vi.mocked(attendanceApi.getDailyOverview).mockResolvedValue({
       date: "2026-09-14",
+      session: "MORNING",
       totalClasses: 0,
       classesMarked: 0,
       classes: [],
@@ -101,7 +102,7 @@ describe("AttendancePage", () => {
     expect(await screen.findByText("Today’s attendance")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Mark register" })).not.toBeInTheDocument();
     expect(await screen.findAllByLabelText("Branch")).not.toHaveLength(0);
-    expect(attendanceApi.getDailyOverview).toHaveBeenCalledWith(expect.any(String), "branch-1");
+    expect(attendanceApi.getDailyOverview).toHaveBeenCalledWith(expect.any(String), "branch-1", "MORNING");
     expect(classesApi.listClasses).toHaveBeenCalledWith("branch-1", undefined, 0, 200);
   });
 });

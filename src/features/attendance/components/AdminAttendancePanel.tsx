@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   type AttendanceRegisterView,
+  type AttendanceSession,
   type ClassAttendanceSummaryView,
   getClassTermSummary,
   getRegister,
@@ -18,11 +19,13 @@ import { AttendanceRegisterGrid } from "@/features/attendance/components/Attenda
 import { AttendanceTodayCard } from "@/features/attendance/components/AttendanceTodayCard";
 import { ClassAttendanceSummaryTable } from "@/features/attendance/components/ClassAttendanceSummaryTable";
 import { ClassDatePicker } from "@/features/attendance/components/ClassDatePicker";
+import { type SessionFilter, SessionToggle } from "@/features/attendance/components/SessionToggle";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
 import { useBranchScope } from "@/features/branches/useBranchScope";
 import { StudentAttendanceCard } from "@/features/attendance/components/StudentAttendanceCard";
 import { useAuthStore } from "@/stores/authStore";
+import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
 import { todayIso } from "@/utils/date";
 import { BarChart3 } from "lucide-react";
 
@@ -37,7 +40,9 @@ interface AdminAttendancePanelProps {
  * An admin's read-only view: today's marking-status rollup up top, then a
  * choice between one day's register (any class, any date) and one term's
  * per-student totals - never anything to mark, matching CLAUDE.md's
- * class-teacher-write/admin-read rule for attendance.
+ * class-teacher-write/admin-read rule for attendance. A school that takes
+ * two registers a day gets a Morning/Afternoon toggle on the day register
+ * and an All day/Morning/Afternoon one on the term summary.
  */
 export function AdminAttendancePanel({ initialClassId }: AdminAttendancePanelProps = {}) {
   const role = useAuthStore((state) => state.user?.role);
@@ -128,15 +133,23 @@ interface ClassOption {
   name: string;
 }
 
+/** Whether the caller's school takes two registers a day - SchoolLayout fetches the settings store on mount. */
+function useTwoSessionAttendance(): boolean {
+  return useSchoolSettingsStore((state) => state.settings?.twoSessionAttendance ?? false);
+}
+
 function DayRegisterTab({ classOptions, initialClassId }: { classOptions: ClassOption[]; initialClassId?: string }) {
+  const twoSessionAttendance = useTwoSessionAttendance();
   const [classId, setClassId] = useState(initialClassId ?? classOptions[0]?.id ?? "");
   const [date, setDate] = useState(todayIso());
+  const [selectedSession, setSession] = useState<AttendanceSession>("MORNING");
+  const session: AttendanceSession = twoSessionAttendance ? selectedSession : "MORNING";
   const [register, setRegister] = useState<AttendanceRegisterView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // A selection change resets downstream state during render (see ScoreEntryGrid's
   // comment on this pattern) rather than in an effect; the effect below only fetches.
-  const selectionKey = `${classId}|${date}`;
+  const selectionKey = `${classId}|${date}|${session}`;
   const [lastSelectionKey, setLastSelectionKey] = useState(selectionKey);
   if (selectionKey !== lastSelectionKey) {
     setLastSelectionKey(selectionKey);
@@ -146,12 +159,12 @@ function DayRegisterTab({ classOptions, initialClassId }: { classOptions: ClassO
 
   useEffect(() => {
     if (!classId || !date) return;
-    getRegister(classId, date)
+    getRegister(classId, date, session)
       .then(setRegister)
       .catch((error: unknown) =>
         setLoadError(error instanceof ApiError ? error.message : "Failed to load the register"),
       );
-  }, [classId, date]);
+  }, [classId, date, session]);
 
   return (
     <div className="space-y-4">
@@ -164,6 +177,9 @@ function DayRegisterTab({ classOptions, initialClassId }: { classOptions: ClassO
           date={date}
           onDateChange={setDate}
         />
+        {twoSessionAttendance && (
+          <SessionToggle session={session} onChange={(next) => setSession(next ?? "MORNING")} />
+        )}
       </StickySubHeader>
 
       {loadError && <Alert variant="error">{loadError}</Alert>}
@@ -185,13 +201,16 @@ function DayRegisterTab({ classOptions, initialClassId }: { classOptions: ClassO
 }
 
 function TermSummaryTab({ classOptions, initialClassId }: { classOptions: ClassOption[]; initialClassId?: string }) {
+  const twoSessionAttendance = useTwoSessionAttendance();
   const [classId, setClassId] = useState(initialClassId ?? "");
   const [termId, setTermId] = useState("");
+  const [selectedSession, setSession] = useState<SessionFilter>(null);
+  const session = twoSessionAttendance ? selectedSession : null;
   const [summary, setSummary] = useState<ClassAttendanceSummaryView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
-  const selectionKey = `${classId}|${termId}`;
+  const selectionKey = `${classId}|${termId}|${session ?? ""}`;
   const [lastSelectionKey, setLastSelectionKey] = useState(selectionKey);
   if (selectionKey !== lastSelectionKey) {
     setLastSelectionKey(selectionKey);
@@ -201,12 +220,12 @@ function TermSummaryTab({ classOptions, initialClassId }: { classOptions: ClassO
 
   useEffect(() => {
     if (!classId || !termId) return;
-    getClassTermSummary(classId, termId)
+    getClassTermSummary(classId, termId, session ?? undefined)
       .then(setSummary)
       .catch((error: unknown) =>
         setLoadError(error instanceof ApiError ? error.message : "Failed to load the summary"),
       );
-  }, [classId, termId]);
+  }, [classId, termId, session]);
 
   return (
     <div className="space-y-4">
@@ -219,6 +238,7 @@ function TermSummaryTab({ classOptions, initialClassId }: { classOptions: ClassO
           termId={termId}
           onTermChange={setTermId}
         />
+        {twoSessionAttendance && <SessionToggle session={session} onChange={setSession} includeAll />}
       </StickySubHeader>
 
       {loadError && <Alert variant="error">{loadError}</Alert>}

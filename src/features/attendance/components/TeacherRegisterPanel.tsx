@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { type AttendanceRegisterView, getRegister, type RowOutcome } from "@/api/attendance";
+import {
+  type AttendanceRegisterView,
+  type AttendanceSession,
+  getRegister,
+  type RowOutcome,
+} from "@/api/attendance";
 import { ApiError } from "@/api/client";
 import { listMyClasses, type TeacherClassView } from "@/api/me";
 import { Alert } from "@/components/ui/Alert";
@@ -12,6 +17,7 @@ import {
   AttendanceRegisterGrid,
 } from "@/features/attendance/components/AttendanceRegisterGrid";
 import { ClassDatePicker } from "@/features/attendance/components/ClassDatePicker";
+import { SessionToggle } from "@/features/attendance/components/SessionToggle";
 import { useSchoolSettingsStore } from "@/stores/schoolSettingsStore";
 import { mostRecentWeekdayIso, todayIso } from "@/utils/date";
 import { ClipboardList } from "lucide-react";
@@ -26,7 +32,9 @@ interface TeacherRegisterPanelProps {
  * subject-teacher-only account has nothing to mark, see CLAUDE.md) and a
  * date, then fill in the register. Defaults to today's date - or the most
  * recent weekday, if the school hasn't opted in to weekend attendance and
- * today is a Saturday/Sunday - on the first class-taught class.
+ * today is a Saturday/Sunday - on the first class-taught class. A school that
+ * takes two registers a day also picks Morning or Afternoon; each is its own
+ * register.
  */
 export function TeacherRegisterPanel({ initialClassId }: TeacherRegisterPanelProps = {}) {
   // Fetched by SchoolLayout's mount effect (same pattern as teacherScopeStore/
@@ -34,10 +42,16 @@ export function TeacherRegisterPanel({ initialClassId }: TeacherRegisterPanelPro
   const allowWeekendAttendance = useSchoolSettingsStore(
     (state) => state.settings?.allowWeekendAttendance ?? false,
   );
+  const twoSessionAttendance = useSchoolSettingsStore(
+    (state) => state.settings?.twoSessionAttendance ?? false,
+  );
 
   const [classes, setClasses] = useState<TeacherClassView[] | null>(null);
   const [classId, setClassId] = useState(initialClassId ?? "");
   const [date, setDate] = useState(() => (allowWeekendAttendance ? todayIso() : mostRecentWeekdayIso()));
+  const [selectedSession, setSession] = useState<AttendanceSession>("MORNING");
+  // Turning two-session attendance off mid-session falls back to the morning register.
+  const session: AttendanceSession = twoSessionAttendance ? selectedSession : "MORNING";
 
   const [register, setRegister] = useState<AttendanceRegisterView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -56,7 +70,7 @@ export function TeacherRegisterPanel({ initialClassId }: TeacherRegisterPanelPro
 
   // Selection resets downstream state during render (see ScoreEntryGrid's comment on this
   // pattern) rather than in an effect; the effect below only fetches.
-  const selectionKey = `${effectiveClassId}|${date}`;
+  const selectionKey = `${effectiveClassId}|${date}|${session}`;
   const [lastSelectionKey, setLastSelectionKey] = useState(selectionKey);
   if (selectionKey !== lastSelectionKey) {
     setLastSelectionKey(selectionKey);
@@ -67,14 +81,14 @@ export function TeacherRegisterPanel({ initialClassId }: TeacherRegisterPanelPro
 
   function load() {
     if (!effectiveClassId || !date) return;
-    getRegister(effectiveClassId, date)
+    getRegister(effectiveClassId, date, session)
       .then(setRegister)
       .catch((error: unknown) =>
         setLoadError(error instanceof ApiError ? error.message : "Failed to load the register"),
       );
   }
 
-  useEffect(load, [effectiveClassId, date]);
+  useEffect(load, [effectiveClassId, date, session]);
 
   function handleSaved(rowOutcomes: RowOutcome[]) {
     setOutcomes(rowOutcomes);
@@ -116,6 +130,12 @@ export function TeacherRegisterPanel({ initialClassId }: TeacherRegisterPanelPro
             onDateChange={setDate}
             disableWeekends={!allowWeekendAttendance}
           />
+          {twoSessionAttendance && (
+            <SessionToggle
+              session={session}
+              onChange={(next) => setSession(next ?? "MORNING")}
+            />
+          )}
         </StickySubHeader>
       )}
 
@@ -123,7 +143,8 @@ export function TeacherRegisterPanel({ initialClassId }: TeacherRegisterPanelPro
 
       {register && !register.editable && (
         <Alert variant="warning">
-          This register is read-only for {date} — it falls outside the current term or is no longer
+          This {twoSessionAttendance ? `${session.toLowerCase()} ` : ""}register is read-only for {date} —
+          it falls outside the current term or is no longer
           open for correction.
         </Alert>
       )}

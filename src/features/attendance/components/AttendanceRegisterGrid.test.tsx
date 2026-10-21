@@ -18,6 +18,7 @@ const EDITABLE_REGISTER: AttendanceRegisterView = {
   classId: "class-1",
   className: "Primary 1",
   date: "2026-09-14",
+  session: "MORNING",
   termId: "term-1",
   editable: true,
   rows: [
@@ -85,7 +86,7 @@ describe("AttendanceRegisterGrid", () => {
     expect(saveButton).toBeEnabled();
     await user.click(saveButton);
 
-    expect(attendanceApi.saveRegister).toHaveBeenCalledWith("class-1", "2026-09-14", [
+    expect(attendanceApi.saveRegister).toHaveBeenCalledWith("class-1", "2026-09-14", "MORNING", [
       { studentId: "student-1", status: "PRESENT" },
       { studentId: "student-2", status: "ABSENT" },
     ]);

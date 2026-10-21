@@ -1,4 +1,4 @@
-import type { AttendanceStatus } from "@/api/attendance";
+import type { AttendanceSession, AttendanceStatus } from "@/api/attendance";
 
 /** Separate from `components/StatusSegments.tsx` so fast refresh doesn't warn about a file mixing a component with plain helpers - mirrors `assessments/finalScore.ts`. */
 export const ATTENDANCE_STATUSES: { value: AttendanceStatus; label: string; glyph: string }[] = [
@@ -36,4 +36,11 @@ export function statusRailClass(status: AttendanceStatus | undefined): string {
     default:
       return "border-l-slate-200";
   }
+}
+
+const SESSION_LABELS: Record<AttendanceSession, string> = { MORNING: "Morning", AFTERNOON: "Afternoon" };
+
+/** "Morning" / "Afternoon" - shared by SessionToggle and the per-register day badges. */
+export function sessionLabel(session: AttendanceSession): string {
+  return SESSION_LABELS[session];
 }

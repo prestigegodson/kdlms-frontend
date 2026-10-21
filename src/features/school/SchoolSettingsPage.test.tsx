@@ -23,6 +23,7 @@ describe("SchoolSettingsPage", () => {
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: false,
       allowStudentPasswordChange: true,
+      twoSessionAttendance: false,
     });
     vi.mocked(schoolSettingsApi.updateSchoolSettings).mockResolvedValue({
       schoolId: "school-1",
@@ -30,6 +31,7 @@ describe("SchoolSettingsPage", () => {
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: false,
       allowStudentPasswordChange: true,
+      twoSessionAttendance: false,
     });
     const user = userEvent.setup();
     render(<SchoolSettingsPage />);
@@ -47,6 +49,7 @@ describe("SchoolSettingsPage", () => {
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: false,
       allowStudentPasswordChange: true,
+      twoSessionAttendance: false,
     });
     expect(await screen.findByText("Settings updated.")).toBeInTheDocument();
   });
@@ -58,6 +61,7 @@ describe("SchoolSettingsPage", () => {
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: false,
       allowStudentPasswordChange: true,
+      twoSessionAttendance: false,
     });
     vi.mocked(schoolSettingsApi.updateSchoolSettings).mockResolvedValue({
       schoolId: "school-1",
@@ -65,6 +69,7 @@ describe("SchoolSettingsPage", () => {
       allowWeekendTimetable: true,
       guardianLessonNotesEnabled: false,
       allowStudentPasswordChange: true,
+      twoSessionAttendance: false,
     });
     const user = userEvent.setup();
     render(<SchoolSettingsPage />);
@@ -82,6 +87,7 @@ describe("SchoolSettingsPage", () => {
       allowWeekendTimetable: true,
       guardianLessonNotesEnabled: false,
       allowStudentPasswordChange: true,
+      twoSessionAttendance: false,
     });
     expect(await screen.findByText("Settings updated.")).toBeInTheDocument();
   });
@@ -93,6 +99,7 @@ describe("SchoolSettingsPage", () => {
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: false,
       allowStudentPasswordChange: true,
+      twoSessionAttendance: false,
     });
     vi.mocked(schoolSettingsApi.updateSchoolSettings).mockResolvedValue({
       schoolId: "school-1",
@@ -100,6 +107,7 @@ describe("SchoolSettingsPage", () => {
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: true,
       allowStudentPasswordChange: true,
+      twoSessionAttendance: false,
     });
     const user = userEvent.setup();
     render(<SchoolSettingsPage />);
@@ -117,6 +125,7 @@ describe("SchoolSettingsPage", () => {
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: true,
       allowStudentPasswordChange: true,
+      twoSessionAttendance: false,
     });
     expect(await screen.findByText("Settings updated.")).toBeInTheDocument();
   });
@@ -128,6 +137,7 @@ describe("SchoolSettingsPage", () => {
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: false,
       allowStudentPasswordChange: true,
+      twoSessionAttendance: false,
     });
     vi.mocked(schoolSettingsApi.updateSchoolSettings).mockResolvedValue({
       schoolId: "school-1",
@@ -135,6 +145,7 @@ describe("SchoolSettingsPage", () => {
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: false,
       allowStudentPasswordChange: false,
+      twoSessionAttendance: false,
     });
     const user = userEvent.setup();
     render(<SchoolSettingsPage />);
@@ -152,6 +163,7 @@ describe("SchoolSettingsPage", () => {
       allowWeekendTimetable: false,
       guardianLessonNotesEnabled: false,
       allowStudentPasswordChange: false,
+      twoSessionAttendance: false,
     });
     expect(await screen.findByText("Settings updated.")).toBeInTheDocument();
   });
@@ -161,5 +173,78 @@ describe("SchoolSettingsPage", () => {
     render(<SchoolSettingsPage />);
 
     expect(await screen.findByText("Failed to load settings")).toBeInTheDocument();
+  });
+
+  it("asks what this term's attendance becomes when two-session attendance is turned on, and sends the choice", async () => {
+    vi.mocked(schoolSettingsApi.getSchoolSettings).mockResolvedValue({
+      schoolId: "school-1",
+      allowWeekendAttendance: false,
+      allowWeekendTimetable: false,
+      guardianLessonNotesEnabled: false,
+      allowStudentPasswordChange: true,
+      twoSessionAttendance: false,
+    });
+    vi.mocked(schoolSettingsApi.updateSchoolSettings).mockResolvedValue({
+      schoolId: "school-1",
+      allowWeekendAttendance: false,
+      allowWeekendTimetable: false,
+      guardianLessonNotesEnabled: false,
+      allowStudentPasswordChange: true,
+      twoSessionAttendance: true,
+    });
+    const user = userEvent.setup();
+    render(<SchoolSettingsPage />);
+
+    await user.click(
+      await screen.findByRole("checkbox", { name: "Take attendance twice a day (morning and afternoon)" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(schoolSettingsApi.updateSchoolSettings).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Existing attendance this term" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Morning and afternoon" }));
+
+    expect(schoolSettingsApi.updateSchoolSettings).toHaveBeenCalledWith({
+      allowWeekendAttendance: false,
+      allowWeekendTimetable: false,
+      guardianLessonNotesEnabled: false,
+      allowStudentPasswordChange: true,
+      twoSessionAttendance: true,
+      existingAttendanceConversion: "MORNING_AND_AFTERNOON",
+    });
+    expect(await screen.findByText("Settings updated.")).toBeInTheDocument();
+  });
+
+  it("turns two-session attendance off without asking, noting afternoon registers are kept", async () => {
+    vi.mocked(schoolSettingsApi.getSchoolSettings).mockResolvedValue({
+      schoolId: "school-1",
+      allowWeekendAttendance: false,
+      allowWeekendTimetable: false,
+      guardianLessonNotesEnabled: false,
+      allowStudentPasswordChange: true,
+      twoSessionAttendance: true,
+    });
+    vi.mocked(schoolSettingsApi.updateSchoolSettings).mockResolvedValue({
+      schoolId: "school-1",
+      allowWeekendAttendance: false,
+      allowWeekendTimetable: false,
+      guardianLessonNotesEnabled: false,
+      allowStudentPasswordChange: true,
+      twoSessionAttendance: false,
+    });
+    const user = userEvent.setup();
+    render(<SchoolSettingsPage />);
+
+    await user.click(
+      await screen.findByRole("checkbox", { name: "Take attendance twice a day (morning and afternoon)" }),
+    );
+    expect(screen.getByText(/Afternoon registers already taken are kept/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(schoolSettingsApi.updateSchoolSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ twoSessionAttendance: false }),
+    );
   });
 });

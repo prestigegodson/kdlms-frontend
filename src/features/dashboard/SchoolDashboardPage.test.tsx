@@ -52,6 +52,7 @@ describe("SchoolDashboardPage", () => {
     resetAuthStore();
     vi.mocked(attendanceApi.getDailyOverview).mockResolvedValue({
       date: "2026-08-06",
+      session: "MORNING",
       totalClasses: 0,
       classesMarked: 0,
       classes: [],
