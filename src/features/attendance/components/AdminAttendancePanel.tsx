@@ -37,8 +37,9 @@ interface AdminAttendancePanelProps {
 }
 
 /**
- * An admin's read-only view: today's marking-status rollup up top, then a
- * choice between one day's register (any class, any date) and one term's
+ * An admin's read-only view: today's marking-status rollup (beside the
+ * filters and list from `xl` up, above them below that), plus a choice
+ * between one day's register (any class, any date) and one term's
  * per-student totals - never anything to mark, matching CLAUDE.md's
  * class-teacher-write/admin-read rule for attendance. A school that takes
  * two registers a day gets a Morning/Afternoon toggle on the day register
@@ -81,29 +82,40 @@ export function AdminAttendancePanel({ initialClassId }: AdminAttendancePanelPro
         description="Review a classroom's daily register or its totals for a term."
       />
 
-      {(!showsBranchFilter || branchReady) && <AttendanceTodayCard branchId={branchId} />}
+      {/* Two columns from `xl` up only - below that, PortalShell's `w-64` sidebar leaves too little
+          width for the register beside the card. The card comes first in the DOM so the stacked
+          layout keeps today's rollup above the register. */}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start">
+        {(!showsBranchFilter || branchReady) && (
+          <aside className="xl:sticky xl:top-6 xl:col-start-2 xl:row-start-1 xl:max-h-[calc(100dvh-3rem)] xl:overflow-y-auto">
+            <AttendanceTodayCard branchId={branchId} />
+          </aside>
+        )}
 
-      <div className="flex flex-wrap gap-2">
-        <TabButton active={tab === "day"} onClick={() => setTab("day")}>
-          Day register
-        </TabButton>
-        <TabButton active={tab === "term"} onClick={() => setTab("term")}>
-          Term summary
-        </TabButton>
-      </div>
+        <div className="min-w-0 space-y-6 xl:col-start-1 xl:row-start-1">
+          <div className="flex flex-wrap gap-2">
+            <TabButton active={tab === "day"} onClick={() => setTab("day")}>
+              Day register
+            </TabButton>
+            <TabButton active={tab === "term"} onClick={() => setTab("term")}>
+              Term summary
+            </TabButton>
+          </div>
 
-      {classes === null && (
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading classrooms…
+          {classes === null && (
+            <div className="flex items-center gap-2 text-sm text-slate-500">
+              <Spinner /> Loading classrooms…
+            </div>
+          )}
+
+          {classes !== null && (classes.length > 0 || showsBranchFilter) && tab === "day" && (
+            <DayRegisterTab classOptions={classOptions} initialClassId={initialClassId} />
+          )}
+          {classes !== null && (classes.length > 0 || showsBranchFilter) && tab === "term" && (
+            <TermSummaryTab classOptions={classOptions} initialClassId={initialClassId} />
+          )}
         </div>
-      )}
-
-      {classes !== null && (classes.length > 0 || showsBranchFilter) && tab === "day" && (
-        <DayRegisterTab classOptions={classOptions} initialClassId={initialClassId} />
-      )}
-      {classes !== null && (classes.length > 0 || showsBranchFilter) && tab === "term" && (
-        <TermSummaryTab classOptions={classOptions} initialClassId={initialClassId} />
-      )}
+      </div>
     </div>
   );
 }
