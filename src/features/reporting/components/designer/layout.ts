@@ -199,6 +199,7 @@ export const REPORT_CONDITION_FLAGS = [
   "HAS_CLASS_TEACHER_SIGNATURE",
   "HAS_PRINCIPAL_SIGNATURE",
   "HAS_RESULT_POSITION",
+  "HAS_PERCENTAGE_GRADE",
   "IS_MIDTERM",
   "HAS_AFFECTIVE_TRAITS",
   "HAS_PSYCHOMOTOR_TRAITS",
@@ -298,6 +299,7 @@ export const CONDITION_FLAG_LABELS: Record<ReportConditionFlag, string> = {
   HAS_CLASS_TEACHER_SIGNATURE: "Class teacher signature",
   HAS_PRINCIPAL_SIGNATURE: "Principal signature",
   HAS_RESULT_POSITION: "Class position",
+  HAS_PERCENTAGE_GRADE: "Percentage & grade",
   IS_MIDTERM: "Mid-term result",
   HAS_AFFECTIVE_TRAITS: "Affective ratings",
   HAS_PSYCHOMOTOR_TRAITS: "Psychomotor ratings",
@@ -330,6 +332,7 @@ export const SELECTABLE_CONDITION_FLAGS: readonly ReportConditionFlag[] = [
   "HAS_CLASS_TEACHER_SIGNATURE",
   "HAS_PRINCIPAL_SIGNATURE",
   "HAS_RESULT_POSITION",
+  "HAS_PERCENTAGE_GRADE",
 ];
 
 /** One-line summary shared by the inspector header, `RowShell`'s badge tooltip, and their tests. */

@@ -41,6 +41,8 @@ export function ReportSettingsPage() {
 
   const [branding, setBranding] = useState<BrandingValues>(BLANK);
   const [showClassAverage, setShowClassAverage] = useState(false);
+  const [showPercentageGrade, setShowPercentageGrade] = useState(false);
+  const [showPercentageGradeMidterm, setShowPercentageGradeMidterm] = useState(false);
   const [brandingLoaded, setBrandingLoaded] = useState(false);
   const [levels, setLevels] = useState<LevelTemplateAssignmentView[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -66,6 +68,8 @@ export function ReportSettingsPage() {
           principalSignatureFileId: settings.principalSignatureFileId,
         });
         setShowClassAverage(settings.showClassAverage);
+        setShowPercentageGrade(settings.showPercentageGrade);
+        setShowPercentageGradeMidterm(settings.showPercentageGradeMidterm);
       })
       .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load settings"))
       .finally(() => setBrandingLoaded(true));
@@ -82,6 +86,8 @@ export function ReportSettingsPage() {
         principalName: branding.principalName || null,
         principalSignatureFileId: branding.principalSignatureFileId ?? null,
         showClassAverage,
+        showPercentageGrade,
+        showPercentageGradeMidterm: showPercentageGrade && showPercentageGradeMidterm,
       });
       setSaved(true);
     } catch (error) {
@@ -145,6 +151,31 @@ export function ReportSettingsPage() {
                 Off by default. When on, every NUMERIC result report, the broadsheet, and the on-screen
                 result views print each subject's class-wide average alongside a pupil's own score.
               </p>
+
+              <label className="mt-4 flex items-center gap-2 text-sm text-slate-700">
+                <Checkbox
+                  checked={showPercentageGrade}
+                  disabled={!editable}
+                  onChange={(event) => {
+                    setShowPercentageGrade(event.target.checked);
+                    if (!event.target.checked) setShowPercentageGradeMidterm(false);
+                  }}
+                />
+                Show percentage and grade
+              </label>
+              <p className="mt-1 text-sm text-slate-500">
+                Off by default. When on, the score table ends with a Total row, the grading scale, and the
+                pupil's overall percentage (total score ÷ total obtainable × 100) with the grade it falls into,
+                in place of the Total / Average / Position row.
+              </p>
+              <label className="ml-6 mt-2 flex items-center gap-2 text-sm text-slate-700">
+                <Checkbox
+                  checked={showPercentageGradeMidterm}
+                  disabled={!editable || !showPercentageGrade}
+                  onChange={(event) => setShowPercentageGradeMidterm(event.target.checked)}
+                />
+                Also show on mid-term reports
+              </label>
             </div>
 
             {editable && (

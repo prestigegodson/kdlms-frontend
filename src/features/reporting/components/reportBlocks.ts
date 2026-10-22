@@ -29,7 +29,12 @@ export const REPORT_BLOCKS: ReportBlockDefinition[] = [
     label: "Pupil photo",
     description: "The pupil's profile picture, on its own - hidden entirely for a pupil with no photo on file",
   },
-  { id: "SCORE_TABLE", label: "Score table", mode: "NUMERIC", description: "Subjects, scores, grades, totals, position" },
+  {
+    id: "SCORE_TABLE",
+    label: "Score table",
+    mode: "NUMERIC",
+    description: "Subjects, scores, grades, totals, position (or percentage & grade)",
+  },
   { id: "RATING_TABLE", label: "Rating table", mode: "QUALITATIVE", description: "Subjects, ratings, observations" },
   { id: "ATTENDANCE_SUMMARY", label: "Attendance summary", description: "Present/absent/days marked/rate" },
   { id: "GRADE_KEY", label: "Grade key", mode: "NUMERIC", description: "Grade boundaries and remarks" },
@@ -110,6 +115,14 @@ export const REPORT_TOKENS: Array<{ key: string; description: string }> = [
   { key: "result.average", description: "Term average (NUMERIC only)" },
   { key: "result.position", description: "Class position (NUMERIC only)" },
   { key: "result.classSize", description: "Class size" },
+  {
+    key: "result.percentage",
+    description: "Overall percentage, e.g. 77% (NUMERIC, only when Report Settings' percentage & grade is on)",
+  },
+  {
+    key: "result.grade",
+    description: "Grade of the overall percentage (NUMERIC, only when Report Settings' percentage & grade is on)",
+  },
   { key: "result.scope", description: '"Mid-Term Assessment" or "End of Term"' },
   { key: "attendance.present", description: "Days present" },
   { key: "attendance.absent", description: "Days absent" },

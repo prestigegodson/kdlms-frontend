@@ -7,7 +7,11 @@ const BASE = "/api/v1/report-settings";
  * Mirrors backend reporting.application.port.in.ManageSchoolReportSettingsUseCase.SchoolReportSettingsView.
  * `showClassAverage` defaults to false for a school with no settings row yet -
  * off by default, since schools differ on whether parents should see class
- * comparatives.
+ * comparatives. `showPercentageGrade` (also off by default) ends a NUMERIC
+ * end-of-term report's score table with Total, Rating and
+ * "Percentage | Position/Grade" rows instead of Total/Average/Position;
+ * `showPercentageGradeMidterm` extends it to mid-term reports and is always
+ * false while `showPercentageGrade` is.
  */
 export interface SchoolReportSettingsView {
   schoolId: string;
@@ -15,6 +19,8 @@ export interface SchoolReportSettingsView {
   principalName?: string;
   principalSignatureFileId?: string;
   showClassAverage: boolean;
+  showPercentageGrade: boolean;
+  showPercentageGradeMidterm: boolean;
 }
 
 export interface SaveSettingsRequest {
@@ -22,6 +28,8 @@ export interface SaveSettingsRequest {
   principalName?: string | null;
   principalSignatureFileId?: string | null;
   showClassAverage: boolean;
+  showPercentageGrade: boolean;
+  showPercentageGradeMidterm: boolean;
 }
 
 /**

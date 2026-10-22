@@ -69,6 +69,8 @@ describe("ReportSettingsPage — preview sample", () => {
     vi.mocked(reportSettingsApi.getReportSettings).mockResolvedValue({
       schoolId: "school-1",
       showClassAverage: false,
+      showPercentageGrade: false,
+      showPercentageGradeMidterm: false,
     });
     vi.mocked(reportSettingsApi.listLevelTemplates).mockResolvedValue([RESOLVED_LEVEL, UNRESOLVED_LEVEL]);
   });
@@ -128,10 +130,14 @@ describe("ReportSettingsPage — class average opt-in", () => {
     vi.mocked(reportSettingsApi.getReportSettings).mockResolvedValue({
       schoolId: "school-1",
       showClassAverage: false,
+      showPercentageGrade: false,
+      showPercentageGradeMidterm: false,
     });
     vi.mocked(reportSettingsApi.saveReportSettings).mockResolvedValue({
       schoolId: "school-1",
       showClassAverage: false,
+      showPercentageGrade: false,
+      showPercentageGradeMidterm: false,
     });
     const user = userEvent.setup();
 
@@ -150,10 +156,14 @@ describe("ReportSettingsPage — class average opt-in", () => {
     vi.mocked(reportSettingsApi.getReportSettings).mockResolvedValue({
       schoolId: "school-1",
       showClassAverage: false,
+      showPercentageGrade: false,
+      showPercentageGradeMidterm: false,
     });
     vi.mocked(reportSettingsApi.saveReportSettings).mockResolvedValue({
       schoolId: "school-1",
       showClassAverage: true,
+      showPercentageGrade: false,
+      showPercentageGradeMidterm: false,
     });
     const user = userEvent.setup();
 
@@ -166,6 +176,58 @@ describe("ReportSettingsPage — class average opt-in", () => {
 
     expect(reportSettingsApi.saveReportSettings).toHaveBeenCalledWith(
       expect.objectContaining({ showClassAverage: true }),
+    );
+  });
+});
+
+describe("ReportSettingsPage — percentage & grade opt-in", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(reportSettingsApi.listLevelTemplates).mockResolvedValue([]);
+    vi.mocked(reportSettingsApi.getReportSettings).mockResolvedValue({
+      schoolId: "school-1",
+      showClassAverage: false,
+      showPercentageGrade: false,
+      showPercentageGradeMidterm: false,
+    });
+    vi.mocked(reportSettingsApi.saveReportSettings).mockResolvedValue({
+      schoolId: "school-1",
+      showClassAverage: false,
+      showPercentageGrade: true,
+      showPercentageGradeMidterm: true,
+    });
+  });
+
+  it("defaults both off, with the mid-term option disabled until the main one is on", async () => {
+    renderAsSchoolAdmin();
+    const main = await screen.findByRole("checkbox", { name: "Show percentage and grade" });
+    const midterm = screen.getByRole("checkbox", { name: "Also show on mid-term reports" });
+    expect(main).not.toBeChecked();
+    expect(midterm).not.toBeChecked();
+    expect(midterm).toBeDisabled();
+  });
+
+  it("saves both when turned on, and clears the mid-term option when the main one is turned off", async () => {
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    const main = await screen.findByRole("checkbox", { name: "Show percentage and grade" });
+    const midterm = screen.getByRole("checkbox", { name: "Also show on mid-term reports" });
+    await user.click(main);
+    expect(midterm).toBeEnabled();
+    await user.click(midterm);
+
+    await user.click(screen.getByRole("button", { name: "Save settings" }));
+    expect(reportSettingsApi.saveReportSettings).toHaveBeenLastCalledWith(
+      expect.objectContaining({ showPercentageGrade: true, showPercentageGradeMidterm: true }),
+    );
+
+    await user.click(main);
+    expect(midterm).not.toBeChecked();
+    expect(midterm).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Save settings" }));
+    expect(reportSettingsApi.saveReportSettings).toHaveBeenLastCalledWith(
+      expect.objectContaining({ showPercentageGrade: false, showPercentageGradeMidterm: false }),
     );
   });
 });
