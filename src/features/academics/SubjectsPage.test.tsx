@@ -256,9 +256,61 @@ describe("SubjectsPage", () => {
     renderAsSchoolAdmin();
 
     expect(await screen.findByText("Basic Science")).toBeInTheDocument();
-    expect(screen.getByText("Sciences")).toBeInTheDocument();
-    expect(screen.getByText("No subject")).toBeInTheDocument();
+    expect(screen.getByText("Sciences", { selector: "div" })).toBeInTheDocument();
+    expect(screen.getByText("No subject", { selector: "div" })).toBeInTheDocument();
     expect(screen.getByText("Mathematics")).toBeInTheDocument();
+  });
+
+  it("filters an early-years level's learning areas by subject", async () => {
+    vi.mocked(levelsApi.listLevels).mockResolvedValue([NURSERY_LEVEL, SECONDARY_LEVEL]);
+    mockSubjects([GROUPED_SUBJECT, UNGROUPED_SUBJECT]);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Basic Science");
+    const filter = await screen.findByLabelText("Subject");
+
+    await user.selectOptions(filter, "Sciences");
+    expect(screen.getByText("Basic Science")).toBeInTheDocument();
+    expect(screen.queryByText("Mathematics")).not.toBeInTheDocument();
+
+    await user.selectOptions(filter, "No subject");
+    expect(screen.getByText("Mathematics")).toBeInTheDocument();
+    expect(screen.queryByText("Basic Science")).not.toBeInTheDocument();
+
+    await user.selectOptions(filter, "All subjects");
+    expect(screen.getByText("Basic Science")).toBeInTheDocument();
+    expect(screen.getByText("Mathematics")).toBeInTheDocument();
+  });
+
+  it("shows an empty state when the filtered subject has no learning areas", async () => {
+    vi.mocked(levelsApi.listLevels).mockResolvedValue([NURSERY_LEVEL, SECONDARY_LEVEL]);
+    vi.mocked(subjectGroupsApi.listSubjectGroups).mockResolvedValue([
+      SCIENCES_GROUP,
+      { ...SCIENCES_GROUP, id: "group-2", name: "Languages" },
+    ]);
+    mockSubjects([GROUPED_SUBJECT]);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Basic Science");
+    expect(screen.queryByRole("option", { name: "No subject" })).not.toBeInTheDocument();
+
+    await user.selectOptions(await screen.findByLabelText("Subject"), "Languages");
+    expect(screen.getByText("No learning areas in this subject")).toBeInTheDocument();
+    expect(screen.queryByText("Basic Science")).not.toBeInTheDocument();
+  });
+
+  it("hides the subject filter on an early-years level that has no subjects (groups) yet", async () => {
+    vi.mocked(levelsApi.listLevels).mockResolvedValue([NURSERY_LEVEL, SECONDARY_LEVEL]);
+    vi.mocked(subjectGroupsApi.listSubjectGroups).mockResolvedValue([]);
+    mockSubjects([GROUPED_SUBJECT, UNGROUPED_SUBJECT]);
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Basic Science");
+    await waitFor(() => expect(subjectGroupsApi.listSubjectGroups).toHaveBeenCalled());
+
+    expect(screen.queryByLabelText("Subject")).not.toBeInTheDocument();
   });
 
   it("creates an early-years learning area in the selected subject", async () => {
@@ -575,7 +627,7 @@ describe("SubjectsPage", () => {
 
     expect(await screen.findByText("Basic Science")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Learning areas" })).toBeInTheDocument();
-    expect(screen.getByText("No subject")).toBeInTheDocument();
+    expect(screen.getByText("No subject", { selector: "div" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Manage subjects" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Add learning area" }));
@@ -595,6 +647,7 @@ describe("SubjectsPage", () => {
     expect(screen.queryByText("Ungrouped")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Manage groups" })).not.toBeInTheDocument();
     expect(subjectGroupsApi.listSubjectGroups).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText("Group")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Add subject" }));
     const dialog = await screen.findByRole("dialog", { name: "Add subject" });

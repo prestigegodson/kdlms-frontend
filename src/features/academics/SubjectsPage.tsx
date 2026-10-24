@@ -374,6 +374,8 @@ function AdminSubjects() {
   const groupsEnabled = isEarlyYearsLevel(selectedLevel);
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [groups, setGroups] = useState<SubjectGroupView[]>([]);
+  // "" means all; UNGROUPED_FILTER means subjects with no group.
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<SubjectView | null>(null);
   const [deleting, setDeleting] = useState<SubjectView | null>(null);
@@ -427,12 +429,26 @@ function AdminSubjects() {
     }
   }
 
-  const sections: SubjectSection[] =
-    state.kind !== "loaded"
-      ? []
-      : groupsEnabled
-        ? sectionByGroup(state.subjects, terms.ungrouped)
-        : [{ label: "", subjects: state.subjects }];
+  const subjects = state.kind === "loaded" ? state.subjects : [];
+  const hasUngrouped = subjects.some((subject) => !subject.subjectGroupId);
+  // Only offered when the level actually has groups to filter by.
+  const showGroupFilter = groupsEnabled && groups.length > 0 && subjects.length > 0;
+  // Derived rather than reset via an effect: a stale choice (another level's
+  // group, a deleted group) falls back to all.
+  const groupFilter =
+    showGroupFilter &&
+    ((selectedGroupFilter === UNGROUPED_FILTER && hasUngrouped) ||
+      groups.some((group) => group.id === selectedGroupFilter))
+      ? selectedGroupFilter
+      : "";
+  const visibleSubjects = !groupFilter
+    ? subjects
+    : subjects.filter((subject) =>
+        groupFilter === UNGROUPED_FILTER ? !subject.subjectGroupId : subject.subjectGroupId === groupFilter,
+      );
+  const sections: SubjectSection[] = groupsEnabled
+    ? sectionByGroup(visibleSubjects, terms.ungrouped)
+    : [{ label: "", subjects: visibleSubjects }];
 
   return (
     <div className="space-y-6">
@@ -475,8 +491,40 @@ function AdminSubjects() {
             className="min-w-0 flex-1 lg:max-w-xs"
             labelClassName="sr-only lg:not-sr-only"
           >
-            <LevelSelect id="subject-level-filter" levels={levels} value={levelId} onChange={setSelectedLevelId} />
+            <LevelSelect
+              id="subject-level-filter"
+              levels={levels}
+              value={levelId}
+              onChange={(nextLevelId) => {
+                setSelectedLevelId(nextLevelId);
+                setSelectedGroupFilter("");
+              }}
+            />
           </FormField>
+          {showGroupFilter && (
+            <FormField
+              label={terms.Group}
+              htmlFor="subject-group-filter"
+              className="min-w-0 flex-1 lg:max-w-xs"
+              labelClassName="sr-only lg:not-sr-only"
+            >
+              <Select
+                id="subject-group-filter"
+                value={groupFilter}
+                onChange={(event) => setSelectedGroupFilter(event.target.value)}
+              >
+                <option value="">All {terms.groups}</option>
+                {[...groups]
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name}
+                    </option>
+                  ))}
+                {hasUngrouped && <option value={UNGROUPED_FILTER}>{terms.ungrouped}</option>}
+              </Select>
+            </FormField>
+          )}
         </StickySubHeader>
       )}
 
@@ -495,7 +543,10 @@ function AdminSubjects() {
           description={`Add a ${terms.item} for this class to get started.`}
         />
       )}
-      {state.kind === "loaded" && state.subjects.length > 0 && (
+      {state.kind === "loaded" && state.subjects.length > 0 && visibleSubjects.length === 0 && (
+        <EmptyState icon={BookOpen} title={`No ${terms.items} in this ${terms.group}`} />
+      )}
+      {visibleSubjects.length > 0 && (
         <div className="space-y-6">
           {sections.map((section) => (
             <Card key={section.label} className="p-0">
@@ -685,6 +736,9 @@ function uniqueOptions(options: FilterOption[]): FilterOption[] {
   const byId = new Map(options.map((option) => [option.id, option]));
   return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
+
+/** The group filter's value for subjects that belong to no group. */
+const UNGROUPED_FILTER = "__ungrouped__";
 
 interface SubjectSection {
   label: string;
