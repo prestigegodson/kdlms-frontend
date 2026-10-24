@@ -2,12 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as authApi from "@/api/auth";
 import { apiFetch } from "@/api/client";
 import * as usersApi from "@/api/users";
+import * as wardsApi from "@/api/wards";
 import { initAuth, resetAuthStore, useAuthStore } from "@/stores/authStore";
 import { resetLevelStore, useLevelStore } from "@/stores/levelStore";
 import { useStudentStore } from "@/stores/studentStore";
 
 vi.mock("@/api/auth");
 vi.mock("@/api/users");
+vi.mock("@/api/wards");
 
 const SYSTEM_ADMIN = {
   id: "sysadmin-1",
@@ -177,6 +179,7 @@ describe("authStore", () => {
         sessionId: "session-1",
         expiresAt: "2026-01-01T01:00:00Z",
         schoolName: "Greenwood School",
+        kind: "ADMIN",
       });
       expect(state.stashedSession).toEqual({
         user: SYSTEM_ADMIN,
@@ -254,6 +257,46 @@ describe("authStore", () => {
       expect(state.user).toEqual(SYSTEM_ADMIN);
       expect(state.impersonation).toBeNull();
       expect(state.sessionNotice).toBe("Your impersonation session ended. You're back in your own account.");
+    });
+
+    it("startWardLogin stashes the guardian's session and switches to the ward's, tagged GUARDIAN", async () => {
+      const guardian = { id: "guardian-1", email: "parent@example.com", firstName: "Pat", lastName: "Parent", role: "GUARDIAN" } as const;
+      const ward = { id: "ward-user-1", email: "grace-kdl24001", firstName: "Grace", lastName: "Obi", role: "STUDENT" } as const;
+      useAuthStore.setState({ user: guardian, accessToken: "guardian-access", refreshToken: "guardian-refresh" });
+      vi.mocked(wardsApi.loginAsWard).mockResolvedValue({
+        accessToken: "ward-access",
+        sessionId: "session-w",
+        expiresAt: "2026-01-01T01:00:00Z",
+        schoolName: "Greenwood School",
+        user: ward,
+      });
+
+      await useAuthStore.getState().startWardLogin("student-1");
+
+      expect(wardsApi.loginAsWard).toHaveBeenCalledWith("student-1");
+      const state = useAuthStore.getState();
+      expect(state.user).toEqual(ward);
+      expect(state.accessToken).toBe("ward-access");
+      expect(state.refreshToken).toBeNull();
+      expect(state.impersonation?.kind).toBe("GUARDIAN");
+      expect(state.stashedSession).toEqual({ user: guardian, accessToken: "guardian-access", refreshToken: "guardian-refresh" });
+    });
+
+    it("an expired guardian ward session names the ward in its notice", async () => {
+      const guardian = { id: "guardian-1", email: "parent@example.com", firstName: "Pat", lastName: "Parent", role: "GUARDIAN" } as const;
+      useAuthStore.setState({
+        user: { id: "ward-user-1", email: "grace-kdl24001", firstName: "Grace", lastName: "Obi", role: "STUDENT" },
+        accessToken: "ward-access",
+        refreshToken: null,
+        impersonation: { sessionId: "session-w", expiresAt: "2026-01-01T01:00:00Z", kind: "GUARDIAN" },
+        stashedSession: { user: guardian, accessToken: "guardian-access", refreshToken: "guardian-refresh" },
+      });
+
+      await useAuthStore.getState().stopImpersonation({ expired: true });
+
+      const state = useAuthStore.getState();
+      expect(state.user).toEqual(guardian);
+      expect(state.sessionNotice).toBe("Your session as Grace Obi ended. You're back in your own account.");
     });
 
     it("initAuth's unauthorized handler restores the stashed session instead of logging out while impersonating", async () => {

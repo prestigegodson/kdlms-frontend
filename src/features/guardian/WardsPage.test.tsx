@@ -9,7 +9,13 @@ import { resetWardStore, useWardStore } from "@/stores/wardStore";
 
 vi.mock("@/api/wards", async () => {
   const actual = await vi.importActual<typeof import("@/api/wards")>("@/api/wards");
-  return { ...actual, listMyWards: vi.fn(), listWardTerms: vi.fn(), getWardAttendance: vi.fn() };
+  return {
+    ...actual,
+    listMyWards: vi.fn(),
+    listWardTerms: vi.fn(),
+    getWardAttendance: vi.fn(),
+    loginAsWard: vi.fn(),
+  };
 });
 
 function renderPage() {
@@ -30,6 +36,7 @@ function renderPage() {
     [
       { path: "/", element: <WardsPage /> },
       { path: "/guardian/results/:studentId", element: <p>Results page</p> },
+      { path: "/student", element: <p>Student portal</p> },
     ],
     { initialEntries: ["/"] },
   );
@@ -155,5 +162,53 @@ describe("WardsPage", () => {
     expect(screen.getByText("Bode Obi")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Bright Star Academy" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Sunrise Academy" })).toBeInTheDocument();
+  });
+
+  it("offers Log in as only for an eligible ward, and lands in the student portal as that ward", async () => {
+    vi.mocked(wardsApi.listMyWards).mockResolvedValue([
+      {
+        studentId: "s1",
+        fullName: "Ada Obi",
+        admissionNumber: "SCH/2026/0001",
+        relationship: "MOTHER",
+        gender: "FEMALE",
+        status: "ACTIVE",
+        schoolId: "school-1",
+        schoolName: "Bright Star Academy",
+        canLogInAs: true,
+      },
+      {
+        studentId: "s2",
+        fullName: "Bola Obi",
+        admissionNumber: "SCH/2026/0002",
+        relationship: "MOTHER",
+        gender: "MALE",
+        status: "ACTIVE",
+        schoolId: "school-1",
+        schoolName: "Bright Star Academy",
+        canLogInAs: false,
+      },
+    ]);
+    vi.mocked(wardsApi.loginAsWard).mockResolvedValue({
+      accessToken: "ward-access",
+      sessionId: "session-w",
+      expiresAt: "2026-01-01T01:00:00Z",
+      schoolName: "Bright Star Academy",
+      user: { id: "ward-user-1", email: "ada-kdl26001", firstName: "Ada", lastName: "Obi", role: "STUDENT" },
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText("Ada Obi");
+
+    expect(screen.queryByRole("button", { name: "Log in as Bola" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Log in as Ada" }));
+    await user.click(screen.getByRole("button", { name: "Log in" }));
+
+    expect(await screen.findByText("Student portal")).toBeInTheDocument();
+    expect(wardsApi.loginAsWard).toHaveBeenCalledWith("s1");
+    expect(useAuthStore.getState().user?.role).toBe("STUDENT");
+    expect(useAuthStore.getState().impersonation?.kind).toBe("GUARDIAN");
+    expect(useAuthStore.getState().stashedSession?.user.role).toBe("GUARDIAN");
   });
 });

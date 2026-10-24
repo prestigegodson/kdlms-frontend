@@ -5,6 +5,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   FileCheck2,
+  Library,
   MessageSquare,
   MessagesSquare,
   NotebookPen,
@@ -90,6 +91,16 @@ const NAV_ITEMS: NavItem[] = [
     // for why. Gated on the school's take-home-quiz entitlement, the same full-lockout shape
     // viewTimetable/viewWardLessonNotes use - see auth/permissions.ts's viewWardTakeHomeQuizzes.
     visible: () => can.viewWardTakeHomeQuizzes("GUARDIAN", useFeatureStore.getState().takeHomeQuiz),
+  },
+  {
+    label: "Resources",
+    href: "/guardian/resources",
+    icon: Library,
+    // Overflow-only - see the Timetable item's comment above. The school's learning resources a
+    // ward's teachers published to their class, read-only with the ward's progress; gated on
+    // onDemandLearning alone - see auth/permissions.ts's viewWardLearningResources. (`BookOpen`
+    // is Class resources' icon, the creator-class equivalent.)
+    visible: () => can.viewWardLearningResources("GUARDIAN", useFeatureStore.getState().onDemandLearning),
   },
   {
     label: "Online classes",

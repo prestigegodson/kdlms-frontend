@@ -66,6 +66,8 @@ import { WardResultsPage } from "@/features/guardian/WardResultsPage";
 import { WardSessionsPage } from "@/features/guardian/WardSessionsPage";
 import { WardSessionTermsPage } from "@/features/guardian/WardSessionTermsPage";
 import { WardTermAttendancePage } from "@/features/guardian/WardTermAttendancePage";
+import { WardResourceDetailPage } from "@/features/guardian/WardResourceDetailPage";
+import { WardResourcesPage } from "@/features/guardian/WardResourcesPage";
 import { WardTakeHomeQuizzesPage } from "@/features/guardian/WardTakeHomeQuizzesPage";
 import { WardTermResultPage } from "@/features/guardian/WardTermResultPage";
 import { WardTimetablePage } from "@/features/guardian/WardTimetablePage";
@@ -444,6 +446,8 @@ export const routes: RouteObject[] = [
           { path: "timetable", element: <WardTimetablePage /> },
           { path: "lesson-notes", element: <WardLessonNotesRoute /> },
           { path: "take-home-quizzes", element: <WardTakeHomeQuizzesPage /> },
+          { path: "resources", element: <WardResourcesPage /> },
+          { path: "resources/:studentId/:resourceId", element: <WardResourceDetailPage /> },
           { path: "bills", element: <WardBillsPage /> },
           { path: "payments", element: <WardPaymentsPage /> },
           { path: "fees", element: <Navigate to="/guardian/bills" replace /> },

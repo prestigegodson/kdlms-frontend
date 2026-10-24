@@ -13,6 +13,9 @@ import { formatInstant } from "@/utils/date";
  * stacked sticky offsets isn't worth it for a bar whose job is "always
  * present on this page", not "always in the viewport while scrolling").
  * <p>
+ * A guardian "logged in as" their ward (`impersonation.kind === "GUARDIAN"`)
+ * gets the same strip in "Log in as" wording, returning to the guardian portal.
+ * <p>
  * Renders nothing when not impersonating - a plain school-admin/branch-
  * admin/teacher session never sets `impersonation`, so this is a no-op for
  * every ordinary sign-in.
@@ -34,10 +37,33 @@ export function ImpersonationBanner() {
   const schoolId = user.schoolId;
   // A creator tenant's id is a school id too, but its admin page lives under Creators.
   const returnBase = user.role === "CREATOR" ? "/admin/creators" : "/admin/schools";
+  const guardian = impersonation.kind === "GUARDIAN";
 
   async function handleStop() {
     await stopImpersonation();
-    navigate(schoolId ? `${returnBase}/${schoolId}` : "/admin", { replace: true });
+    if (guardian) {
+      navigate("/guardian", { replace: true });
+    } else {
+      navigate(schoolId ? `${returnBase}/${schoolId}` : "/admin", { replace: true });
+    }
+  }
+
+  if (guardian) {
+    return (
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 bg-amber-500 px-4 py-1.5 text-amber-950">
+        <UserCog className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span className="truncate text-xs font-medium sm:text-sm">
+          You're logged in as{" "}
+          <strong>
+            {user.firstName} {user.lastName}
+          </strong>{" "}
+          - ends {formatInstant(impersonation.expiresAt)}
+        </span>
+        <Button type="button" variant="secondary" size="sm" onClick={handleStop} className="shrink-0 py-0.5">
+          Back to my account
+        </Button>
+      </div>
+    );
   }
 
   return (

@@ -786,6 +786,15 @@ export const can = {
     return entitled && role === "GUARDIAN";
   },
 
+  /**
+   * A guardian's read-only view of a ward's learning resources - gated on the school's
+   * `onDemandLearning` alone (never `studentLogins`: a ward with no login still has their class's
+   * resources shown). Its own predicate, the `viewWardTakeHomeQuizzes` convention.
+   */
+  viewWardLearningResources(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && role === "GUARDIAN";
+  },
+
   /** Setting the platform's own support contact details - SYSTEM_ADMIN only, outside tenant scope entirely. */
   manageSupportContact(role: Role | undefined): boolean {
     return role === "SYSTEM_ADMIN";

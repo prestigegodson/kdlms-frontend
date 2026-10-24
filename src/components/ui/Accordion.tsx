@@ -4,6 +4,8 @@ import { useId, useState } from "react";
 
 interface AccordionProps {
   title: string;
+  /** A smaller line under the title (e.g. a count). */
+  subtitle?: string;
   /**
    * Starts expanded. With `collapsible="mobile"` this only matters below `md`, where the panel is
    * always expanded; with `collapsible="always"` it applies at every size.
@@ -34,6 +36,7 @@ interface AccordionProps {
  */
 export function Accordion({
   title,
+  subtitle,
   defaultOpen = false,
   collapsible = "mobile",
   actions,
@@ -56,7 +59,10 @@ export function Accordion({
             always ? "cursor-pointer" : "cursor-default pointer-events-none mobile:cursor-pointer mobile:pointer-events-auto"
           }`}
         >
-          <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+          <span className="min-w-0">
+            <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+            {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
+          </span>
           <ChevronDown
             className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${always ? "block" : "hidden mobile:block"} ${open ? "rotate-180" : ""}`}
             aria-hidden="true"

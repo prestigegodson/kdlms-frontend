@@ -32,6 +32,7 @@ function renderMenu(user: AuthenticatedUser = USER) {
       { path: "/login", element: <div>Login page</div> },
       { path: "/admin/schools/:schoolId", element: <div>School detail page</div> },
       { path: "/admin", element: <div>System admin home</div> },
+      { path: "/guardian", element: <div>Guardian home</div> },
       { path: "/menu", element: <UserMenu user={user} /> },
     ],
     { initialEntries: ["/menu"] },
@@ -176,6 +177,47 @@ describe("UserMenu", () => {
 
       expect(await screen.findByText("School detail page")).toBeInTheDocument();
       expect(useAuthStore.getState().user).toEqual(USER);
+      expect(useAuthStore.getState().impersonation).toBeNull();
+    });
+  });
+
+  describe("while logged in as a ward", () => {
+    const WARD: AuthenticatedUser = {
+      id: "ward-user-1",
+      email: "grace-kdl24001",
+      firstName: "Grace",
+      lastName: "Obi",
+      role: "STUDENT",
+    };
+    const GUARDIAN: AuthenticatedUser = {
+      id: "guardian-1",
+      email: "parent@example.com",
+      firstName: "Pat",
+      lastName: "Parent",
+      role: "GUARDIAN",
+    };
+
+    beforeEach(() => {
+      vi.mocked(authApi.stopImpersonation).mockResolvedValue(undefined);
+      useAuthStore.setState({
+        user: WARD,
+        accessToken: "ward-access",
+        refreshToken: null,
+        impersonation: { sessionId: "session-w", expiresAt: "2026-01-01T01:00:00Z", kind: "GUARDIAN" },
+        stashedSession: { user: GUARDIAN, accessToken: "guardian-access", refreshToken: "guardian-refresh" },
+      });
+    });
+
+    it("offers Back to my account, which restores the guardian and returns to the guardian portal", async () => {
+      const user = userEvent.setup();
+      renderMenu(WARD);
+
+      await user.click(screen.getByRole("button", { name: "Account menu" }));
+      expect(screen.queryByRole("menuitem", { name: "Stop impersonating" })).not.toBeInTheDocument();
+      await user.click(screen.getByRole("menuitem", { name: "Back to my account" }));
+
+      expect(await screen.findByText("Guardian home")).toBeInTheDocument();
+      expect(useAuthStore.getState().user).toEqual(GUARDIAN);
       expect(useAuthStore.getState().impersonation).toBeNull();
     });
   });

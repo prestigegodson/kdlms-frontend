@@ -56,8 +56,13 @@ export function UserMenu({ user }: UserMenuProps) {
     // user.schoolId is the school currently being impersonated - the stashed
     // (system-admin) session has none of its own, see AuthenticatedUser's Javadoc.
     const schoolId = user.schoolId;
+    const guardian = impersonation?.kind === "GUARDIAN";
     await stopImpersonation();
-    navigate(schoolId ? `/admin/schools/${schoolId}` : "/admin", { replace: true });
+    if (guardian) {
+      navigate("/guardian", { replace: true });
+    } else {
+      navigate(schoolId ? `/admin/schools/${schoolId}` : "/admin", { replace: true });
+    }
   }
 
   function handleChangePassword() {
@@ -143,7 +148,7 @@ export function UserMenu({ user }: UserMenuProps) {
                 className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
               >
                 <UserCog className="h-4 w-4 text-slate-400" aria-hidden="true" />
-                Stop impersonating
+                {impersonation.kind === "GUARDIAN" ? "Back to my account" : "Stop impersonating"}
               </button>
             ) : (
               <button

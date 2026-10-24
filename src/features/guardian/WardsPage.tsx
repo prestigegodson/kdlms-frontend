@@ -15,6 +15,7 @@ import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { StatTile } from "@/components/ui/StatTile";
+import { LogInAsWardDialog } from "@/features/guardian/components/LogInAsWardDialog";
 import { groupWardsBySchool } from "@/features/guardian/groupWardsBySchool";
 import { StudentMedicalPanel } from "@/features/students/components/StudentMedicalPanel";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
@@ -43,6 +44,7 @@ function WardCard({ ward, showSchool }: WardCardProps) {
   const select = useWardStore((state) => state.select);
   const [attendanceRate, setAttendanceRate] = useState<number | null>(null);
   const [showMedical, setShowMedical] = useState(false);
+  const [showLogInAs, setShowLogInAs] = useState(false);
   // Gated on photoFileId so a ward with no photo never fires a fetch that
   // can only 404 - downloadWardPhoto itself only takes the studentId.
   const photoUrl = useObjectUrl(ward.photoFileId ? ward.studentId : undefined, downloadWardPhoto);
@@ -108,9 +110,15 @@ function WardCard({ ward, showSchool }: WardCardProps) {
         <Button variant="secondary" size="sm" onClick={() => setShowMedical(true)}>
           Medical &amp; emergency
         </Button>
+        {ward.canLogInAs && (
+          <Button variant="secondary" size="sm" onClick={() => setShowLogInAs(true)}>
+            Log in as {ward.fullName.split(" ")[0]}
+          </Button>
+        )}
       </div>
 
       {showMedical && <WardMedicalModal ward={ward} onClose={() => setShowMedical(false)} />}
+      {showLogInAs && <LogInAsWardDialog ward={ward} onClose={() => setShowLogInAs(false)} />}
     </Card>
   );
 }

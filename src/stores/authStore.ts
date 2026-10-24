@@ -4,6 +4,7 @@ import * as authApi from "@/api/auth";
 import { setAccessTokenProvider, setRefreshHandler, setUnauthorizedHandler } from "@/api/client";
 import type { Role } from "@/api/types";
 import * as usersApi from "@/api/users";
+import * as wardsApi from "@/api/wards";
 import { useAcademicContextStore } from "@/stores/academicContextStore";
 import { useBranchStore } from "@/stores/branchStore";
 import { useClassMessagesUnreadStore } from "@/stores/classMessagesUnreadStore";
@@ -46,14 +47,23 @@ export interface AuthenticatedUser {
 
 type AuthStatus = "idle" | "authenticating";
 
+/**
+ * Who is acting as whom: `ADMIN` is a system admin impersonating a school
+ * admin/creator; `GUARDIAN` is a guardian "logged in as" one of their wards.
+ * Mirrors backend identity.domain.ImpersonationKind.
+ */
+export type ImpersonationKind = "ADMIN" | "GUARDIAN";
+
 /** What's shown on the impersonation banner/menu - see layouts/ImpersonationBanner.tsx. */
 export interface ImpersonationInfo {
   sessionId: string;
   expiresAt: string;
   schoolName?: string;
+  /** Undefined (a session persisted before guardians could log in as a ward) behaves as `ADMIN`. */
+  kind?: ImpersonationKind;
 }
 
-/** The system admin's own session, set aside while impersonating so Stop can restore it exactly. */
+/** The caller's own session, set aside while impersonating so Stop can restore it exactly. */
 interface StashedSession {
   user: AuthenticatedUser;
   accessToken: string;
@@ -102,6 +112,12 @@ interface AuthState {
    * `reason` is a mandatory support note - see api/users.ts's `impersonate`.
    */
   startImpersonation: (schoolId: string, userId: string, reason: string) => Promise<void>;
+  /**
+   * Signs the caller (a GUARDIAN) in to the student portal as their ward
+   * `studentId` ("Log in as") - the same stash-and-swap as
+   * `startImpersonation`, restored by the same `stopImpersonation`.
+   */
+  startWardLogin: (studentId: string) => Promise<void>;
   /**
    * Ends the current impersonation session and restores the stashed
    * system-admin session. Pass `{ expired: true }` when this is reacting to
@@ -221,21 +237,13 @@ export const useAuthStore = create<AuthState>()(
       setHydrated: () => set({ hydrated: true }),
 
       startImpersonation: async (schoolId, userId, reason) => {
-        const current = get();
         const session = await usersApi.impersonate(schoolId, userId, reason);
-        const stashedSession: StashedSession | null =
-          current.user && current.accessToken && current.refreshToken
-            ? { user: current.user, accessToken: current.accessToken, refreshToken: current.refreshToken }
-            : null;
-        set({
-          user: session.user,
-          accessToken: session.accessToken,
-          // Impersonation issues no refresh token - see api/users.ts's ImpersonationSession.
-          refreshToken: null,
-          stashedSession,
-          impersonation: { sessionId: session.sessionId, expiresAt: session.expiresAt, schoolName: session.schoolName },
-        });
-        resetSessionScopedStores();
+        beginImpersonation(session, "ADMIN");
+      },
+
+      startWardLogin: async (studentId) => {
+        const session = await wardsApi.loginAsWard(studentId);
+        beginImpersonation(session, "GUARDIAN");
       },
 
       stopImpersonation: async (options) => {
@@ -254,9 +262,7 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: stash?.refreshToken ?? null,
           impersonation: null,
           stashedSession: null,
-          sessionNotice: options?.expired
-            ? "Your impersonation session ended. You're back in your own account."
-            : null,
+          sessionNotice: options?.expired ? expiredNotice(get().impersonation, get().user) : null,
         });
         resetSessionScopedStores();
       },
@@ -276,6 +282,41 @@ export const useAuthStore = create<AuthState>()(
     },
   ),
 );
+
+/**
+ * Stashes the current session and swaps in `session` - shared by
+ * `startImpersonation` and `startWardLogin`.
+ */
+function beginImpersonation(session: usersApi.ImpersonationSession, kind: ImpersonationKind): void {
+  const current = useAuthStore.getState();
+  const stashedSession: StashedSession | null =
+    current.user && current.accessToken && current.refreshToken
+      ? { user: current.user, accessToken: current.accessToken, refreshToken: current.refreshToken }
+      : null;
+  useAuthStore.setState({
+    user: session.user,
+    accessToken: session.accessToken,
+    // Impersonation issues no refresh token - see api/users.ts's ImpersonationSession.
+    refreshToken: null,
+    stashedSession,
+    impersonation: {
+      sessionId: session.sessionId,
+      expiresAt: session.expiresAt,
+      schoolName: session.schoolName,
+      kind,
+    },
+  });
+  resetSessionScopedStores();
+}
+
+function expiredNotice(impersonation: ImpersonationInfo | null, user: AuthenticatedUser | null): string {
+  if (impersonation?.kind === "GUARDIAN") {
+    return user
+      ? `Your session as ${user.firstName} ${user.lastName} ended. You're back in your own account.`
+      : "Your session as your ward ended. You're back in your own account.";
+  }
+  return "Your impersonation session ended. You're back in your own account.";
+}
 
 /** Test helper: resets the store to its initial (logged-out, hydrated) state. */
 export function resetAuthStore(): void {

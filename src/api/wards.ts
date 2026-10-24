@@ -7,7 +7,9 @@ import type { StudentMedicalView } from "@/api/students";
 import type { ClassTimetableView } from "@/api/timetable";
 import type { LessonNoteView } from "@/api/lessonNotes";
 import type { BillView } from "@/api/billing";
+import type { MediaStreamUrlView, MyLearningResourceSummaryView, MyLearningResourceView } from "@/api/learning";
 import type { ResultScope } from "@/api/types";
+import type { ImpersonationSession } from "@/api/users";
 
 /**
  * Self-service views for the currently authenticated GUARDIAN - ward
@@ -18,7 +20,8 @@ import type { ResultScope } from "@/api/types";
  * attendance.adapter.in.web.MyWardAttendanceController,
  * reporting.adapter.in.web.MyWardReportsController,
  * timetable.adapter.in.web.MyWardTimetableController,
- * lessonnote.adapter.in.web.MyWardLessonNoteController, and
+ * lessonnote.adapter.in.web.MyWardLessonNoteController,
+ * learning.adapter.in.web.MyWardLearningResourcesController, and
  * billing.adapter.in.web.MyWardBillsController - all under `/api/v1/me/wards`.
  */
 const BASE = "/api/v1/me/wards";
@@ -44,6 +47,13 @@ export interface MyWardView {
   status: string;
   schoolId: string;
   schoolName: string;
+  /**
+   * Whether the guardian may "Log in as" this ward right now - an active ward
+   * with an enabled login, at a school whose package includes student logins.
+   * The start endpoint (`loginAsWard`) applies the same rule. Always sent by
+   * the backend; optional only for test fixtures - undefined behaves as false.
+   */
+  canLogInAs?: boolean;
 }
 
 /**
@@ -218,4 +228,50 @@ export function getWardBill(studentId: string, termId: string): Promise<BillView
 /** As {@link getWardBill}, rendered as a PDF. */
 export function downloadWardBillPdf(studentId: string, termId: string): Promise<Blob> {
   return apiFetchBlob(`${BASE}/${studentId}/bills/${termId}/pdf`);
+}
+
+/**
+ * The ward's published resources for their class+current term - exactly the student portal's own
+ * list, the ward's opened/done flags included (read-only). Shown whether or not the ward has a
+ * login; mirrors backend learning.application.port.in.MyWardLearningResourcesUseCase.
+ */
+export function listWardLearningResources(studentId: string): Promise<MyLearningResourceSummaryView[]> {
+  return apiFetch<MyLearningResourceSummaryView[]>(`${BASE}/${studentId}/learning-resources`);
+}
+
+export function getWardLearningResource(studentId: string, resourceId: string): Promise<MyLearningResourceView> {
+  return apiFetch<MyLearningResourceView>(`${BASE}/${studentId}/learning-resources/${resourceId}`);
+}
+
+/** The `useObjectUrl` key a PDF resource's bytes are fetched under - the resource's own narrow endpoint, never `/api/v1/files/{id}`. */
+export function wardLearningResourceFilePath(studentId: string, resourceId: string): string {
+  return `${BASE}/${studentId}/learning-resources/${resourceId}/file`;
+}
+
+/** The `useMediaStreamUrl` key an audio/video resource's presigned URL is fetched under. */
+export function wardLearningResourceMediaUrlPath(studentId: string, resourceId: string): string {
+  return `${BASE}/${studentId}/learning-resources/${resourceId}/media-url`;
+}
+
+/** The `useObjectUrl` key an embedded rich-text image is fetched under - served only if the body references it. */
+export function wardLearningResourceImagePath(studentId: string, resourceId: string, fileId: string): string {
+  return `${BASE}/${studentId}/learning-resources/${resourceId}/images/${fileId}`;
+}
+
+/** Module-level fetchers for the path keys above, so `useObjectUrl`/`useMediaStreamUrl` see a stable function. */
+export function downloadWardLearningResourceBlob(path: string): Promise<Blob> {
+  return apiFetchBlob(path);
+}
+
+export function getWardLearningResourceMediaUrl(path: string): Promise<MediaStreamUrlView> {
+  return apiFetch<MediaStreamUrlView>(path);
+}
+
+/**
+ * "Log in as" a ward - starts a session in the student portal as the ward's
+ * own login, with no refresh token (see authStore's `startWardLogin`). 404s
+ * for anyone who isn't an eligible ward (see `MyWardView.canLogInAs`).
+ */
+export function loginAsWard(studentId: string): Promise<ImpersonationSession> {
+  return apiFetch<ImpersonationSession>(`${BASE}/${studentId}/login-as`, { method: "POST" });
 }
