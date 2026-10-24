@@ -4,6 +4,7 @@ import {
   CreditCard,
   FileText,
   GraduationCap,
+  HardDrive,
   Inbox,
   LayoutDashboard,
   LifeBuoy,
@@ -16,7 +17,7 @@ import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useContactEnquiriesUnreadStore } from "@/stores/contactEnquiriesUnreadStore";
 
 // Only the first four are tab-bar primary (MobileTabBar caps at 4), so
-// Creators, Enquiries, Newsletters, Payments, Coupons, Support Contact and AI live in the drawer behind "More" below `lg`.
+// Creators, Enquiries, Newsletters, Payments, Coupons, Support Contact, AI and Storage live in the drawer behind "More" below `lg`.
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard, primary: ["SYSTEM_ADMIN"] },
   { label: "Schools", href: "/admin/schools", icon: Building2, primary: ["SYSTEM_ADMIN"] },
@@ -35,6 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Coupons", href: "/admin/coupons", icon: Ticket },
   { label: "Support Contact", href: "/admin/support", icon: LifeBuoy },
   { label: "AI", href: "/admin/ai", icon: Bot },
+  { label: "Storage", href: "/admin/storage", icon: HardDrive },
 ];
 
 export function SystemAdminLayout() {

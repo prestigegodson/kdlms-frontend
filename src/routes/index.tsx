@@ -19,6 +19,7 @@ import { SetInitialPasswordPage } from "@/features/auth/SetInitialPasswordPage";
 import { VerifyEmailPage } from "@/features/auth/VerifyEmailPage";
 import { BillingCallbackPage } from "@/features/subscriptionBilling/BillingCallbackPage";
 import { BillingHomeRedirect } from "@/features/subscriptionBilling/BillingHomeRedirect";
+import { AdminStoragePage } from "@/features/storage/AdminStoragePage";
 import { PaymentTransactionsPage } from "@/features/subscriptionBilling/PaymentTransactionsPage";
 import { PlanBillingPage } from "@/features/subscriptionBilling/PlanBillingPage";
 import { BranchesPage } from "@/features/branches/BranchesPage";
@@ -201,6 +202,7 @@ export const routes: RouteObject[] = [
           { path: "templates/:templateId", element: <TemplateDesignerRoute /> },
           { path: "support", element: <AdminSupportContactPage /> },
           { path: "ai", element: <AdminAiSettingsPage /> },
+          { path: "storage", element: <AdminStoragePage /> },
           { path: "payments", element: <PaymentTransactionsPage /> },
           { path: "coupons", element: <CouponsPage /> },
           { path: "enquiries", element: <EnquiriesPage /> },
