@@ -84,6 +84,7 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
     initial?.interactiveQuestions ?? false,
   );
   const [onDemandLearning, setOnDemandLearning] = useState(initial?.onDemandLearning ?? false);
+  const [interactiveVideo, setInteractiveVideo] = useState(initial?.interactiveVideo ?? false);
   const [communication, setCommunication] = useState(initial?.communication ?? false);
   const [timetable, setTimetable] = useState(initial?.timetable ?? false);
   const [lessonNotes, setLessonNotes] = useState(initial?.lessonNotes ?? false);
@@ -131,6 +132,7 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
         takeHomeQuiz,
         interactiveQuestions: takeHomeQuiz && interactiveQuestions,
         onDemandLearning,
+        interactiveVideo: !isCreator && onDemandLearning && interactiveVideo,
         communication,
         timetable: !isCreator && timetable,
         lessonNotes,
@@ -287,6 +289,15 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
           label="Learning media (mp3/mp4)"
           help="A second gate on top of On-demand learning for uploaded audio and video only - the storage-heavy media types."
         />
+        {!isCreator && (
+          <Flag
+            checked={onDemandLearning && interactiveVideo}
+            onChange={setInteractiveVideo}
+            disabled={!onDemandLearning}
+            label="Interactive video"
+            help="An add-on on top of On-demand learning for authoring videos with timed questions, text, images and hotspots. An uploaded-video source also needs Learning media. Published interactive videos keep playing after a downgrade."
+          />
+        )}
         {!isCreator && (
           <Flag
             checked={studentLogins}

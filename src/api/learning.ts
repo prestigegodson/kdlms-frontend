@@ -1,7 +1,7 @@
 import { apiFetch, apiFetchBlob } from "@/api/client";
 import type { Page } from "@/api/types";
 
-export type LearningResourceType = "PDF" | "RICH_TEXT" | "YOUTUBE" | "AUDIO" | "VIDEO";
+export type LearningResourceType = "PDF" | "RICH_TEXT" | "YOUTUBE" | "AUDIO" | "VIDEO" | "INTERACTIVE_VIDEO";
 export type LearningResourceStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 
 /** Mirrors backend learning.application.port.in.AuthorableSubjectView. */
@@ -102,6 +102,10 @@ export interface LearningResourceView {
   classes?: SharedClassView[];
   /** The chosen pupils a school resource is narrowed to - empty when it reaches its whole classrooms. */
   students?: EligibleStudentView[];
+  /** An `INTERACTIVE_VIDEO`'s overlay document, else null. Its source is `fileId` (an mp4) or `youtubeVideoId`. */
+  interactiveVideo?: InteractiveVideoDocument | null;
+  /** What keeps an interactive video from being published - drives the editor's per-item badges. Empty for every other type. */
+  interactiveVideoProblems?: InteractiveVideoProblem[];
 }
 
 /** Mirrors backend learning.adapter.in.web.LearningResourceController.CreateLearningResourceRequest. Exactly one of `bodyHtml`/`fileId`/`youtubeUrl` applies, matching `resourceType`; exactly one of `subjectId`/`subjectGroupId` (Phase 35M). */
@@ -125,6 +129,8 @@ export interface CreateLearningResourceRequest {
   classIds?: string[];
   /** Narrows the resource to these pupils of its classrooms (`getEligibleStudents`); omit or `[]` for everyone. */
   studentIds?: string[];
+  /** `INTERACTIVE_VIDEO` only - with exactly one of `fileId`/`youtubeUrl` as its source. */
+  interactiveVideo?: InteractiveVideoDocument | null;
 }
 
 /** Mirrors backend learning.adapter.in.web.LearningResourceController.UpdateLearningResourceRequest. `resourceType` isn't here - it's immutable once created. */
@@ -141,6 +147,8 @@ export interface UpdateLearningResourceRequest {
   classIds?: string[];
   /** Replaces the chosen pupils; `[]` reaches everyone again, omit to leave them unchanged. */
   studentIds?: string[];
+  /** Replaces an interactive video's overlay document; omit to leave it unchanged. */
+  interactiveVideo?: InteractiveVideoDocument | null;
 }
 
 /** Mirrors backend learning.application.port.in.MyLearningResourceSummaryView - one row of the calling STUDENT's own resource list, published only. `completed` (Phase 35H) is the caller's own interaction state, resolved in one batched query for the whole list. */
@@ -184,6 +192,106 @@ export interface MyLearningResourceView {
   commentsEnabled: boolean;
   completed: boolean;
   positionSeconds: number | null;
+  /** An `INTERACTIVE_VIDEO`'s overlay document, answer keys included (practice only) - the student's own read only; null for a guardian or learner, who get the plain video. The source is the uploaded file when `youtubeVideoId` is null. */
+  interactiveVideo?: InteractiveVideoDocument | null;
+}
+
+/** Mirrors backend learning.domain.InteractiveVideo.ItemType. */
+export type InteractiveItemType =
+  | "TEXT"
+  | "LABEL"
+  | "IMAGE"
+  | "SINGLE_CHOICE"
+  | "MULTIPLE_CHOICE"
+  | "TRUE_FALSE"
+  | "FILL_BLANKS"
+  | "FREE_TEXT"
+  | "LINK"
+  | "NAV_HOTSPOT"
+  | "CROSSROADS";
+
+export type InteractiveDisplayAs = "BUTTON" | "POSTER";
+/** `ANSWERED`: the video won't play past the item until it's answered; `CORRECT`: until it's answered correctly. */
+export type InteractiveMandatory = "NONE" | "ANSWERED" | "CORRECT";
+export type InteractiveSize = "S" | "M" | "L";
+
+export interface InteractiveItemStyle {
+  buttonLabel: string | null;
+  size: InteractiveSize;
+  /** A `#rrggbb` colour, or null for the default. */
+  background: string | null;
+  transparent: boolean;
+}
+
+export interface InteractiveGoTo {
+  kind: "TIME" | "URL";
+  seconds: number | null;
+  url: string | null;
+}
+
+export interface InteractiveOption {
+  id: string;
+  text: string | null;
+  correct: boolean;
+}
+
+export interface InteractiveChoice {
+  label: string | null;
+  targetSeconds: number | null;
+}
+
+/** Every type's own fields in one flat record (backend `InteractiveVideo.Content`) - only those its type uses are kept on save. */
+export interface InteractiveItemContent {
+  html: string | null;
+  text: string | null;
+  fileId: string | null;
+  alt: string | null;
+  question: string | null;
+  options: InteractiveOption[] | null;
+  answer: boolean | null;
+  caseSensitive: boolean | null;
+  prompt: string | null;
+  modelAnswer: string | null;
+  url: string | null;
+  targetSeconds: number | null;
+  shape: "RECTANGLE" | "CIRCLE" | null;
+  choices: InteractiveChoice[] | null;
+}
+
+/** One overlay item - `start`/`end` are seconds into the video; `x/y/w/h` are 0..1 of the stage. Mirrors backend `InteractiveVideo.Item`. */
+export interface InteractiveItem {
+  id: string;
+  type: InteractiveItemType;
+  start: number;
+  end: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  pause: boolean;
+  displayAs: InteractiveDisplayAs;
+  mandatory: InteractiveMandatory;
+  style: InteractiveItemStyle | null;
+  /** TEXT/LABEL/IMAGE only. */
+  goTo: InteractiveGoTo | null;
+  /** Graded types only - where the video jumps after a right/wrong answer. */
+  adaptivity: { onCorrectSeconds: number | null; onWrongSeconds: number | null } | null;
+  feedback: { correct: string | null; wrong: string | null } | null;
+  enableRetry: boolean;
+  enableSolution: boolean;
+  content: InteractiveItemContent;
+}
+
+/** Mirrors backend learning.domain.InteractiveVideo (V161's `interactive_video_json`). */
+export interface InteractiveVideoDocument {
+  schemaVersion: number;
+  items: InteractiveItem[];
+}
+
+/** One thing keeping an interactive video from being published - `itemId` null for the whole document. */
+export interface InteractiveVideoProblem {
+  itemId: string | null;
+  message: string;
 }
 
 /** Mirrors backend learning.application.port.in.LearningCommentView - one entry in a resource's discussion. `canEdit`/`canModerate`/`editableUntil` are server-computed per caller, never re-derived client-side. `body` is always plain text - render as a React text child, never with `RichContent`/`dangerouslySetInnerHTML`. */

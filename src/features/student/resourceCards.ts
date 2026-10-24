@@ -8,6 +8,7 @@ export const RESOURCE_TYPE_LABEL: Record<string, string> = {
   YOUTUBE: "YouTube",
   AUDIO: "Audio",
   VIDEO: "Video",
+  INTERACTIVE_VIDEO: "Interactive video",
 };
 
 /**

@@ -45,6 +45,7 @@ const STARTER_PACKAGE: PackageView = {
   studentLogins: false,
   guardianAccess: false,
   interactiveQuestions: false,
+  interactiveVideo: false,
   status: "ACTIVE",
 };
 
@@ -129,6 +130,7 @@ describe("PackagesPage", () => {
         maxClasses: null,
         guardianAccess: false,
         interactiveQuestions: false,
+        interactiveVideo: false,
       }),
     );
   });
@@ -199,6 +201,7 @@ describe("PackagesPage", () => {
         timetable: false,
         guardianAccess: true,
         interactiveQuestions: false,
+        interactiveVideo: false,
       }),
     );
   });

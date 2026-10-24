@@ -67,6 +67,8 @@ export interface PackageView extends CreatorPlanLimitFields {
   guardianAccess: boolean;
   /** An add-on on top of takeHomeQuiz: authoring the interactive question types. Taking and reviewing them are never gated. */
   interactiveQuestions: boolean;
+  /** SCHOOL packages only, layered on onDemandLearning: authoring interactive video resources. Playing them is never gated. */
+  interactiveVideo: boolean;
   status: PackageStatus;
 }
 
@@ -92,6 +94,7 @@ export interface SavePackageRequest extends CreatorPlanLimitFields {
   studentLogins: boolean;
   guardianAccess: boolean;
   interactiveQuestions: boolean;
+  interactiveVideo: boolean;
 }
 
 const BASE = "/api/v1/admin/packages";

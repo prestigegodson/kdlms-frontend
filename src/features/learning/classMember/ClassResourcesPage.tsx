@@ -38,6 +38,7 @@ const TYPE_LABEL: Record<string, string> = {
   YOUTUBE: "YouTube",
   AUDIO: "Audio",
   VIDEO: "Video",
+  INTERACTIVE_VIDEO: "Interactive video",
 };
 
 /** Where a resource row opens - the learner's own detail page, or the guardian's for that child. */

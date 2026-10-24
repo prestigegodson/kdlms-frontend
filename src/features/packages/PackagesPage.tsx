@@ -190,6 +190,7 @@ export function PackagesPage() {
                       {pkg.aiLessonNotes && <Badge variant="brand">AI lesson notes</Badge>}
                       {pkg.billing && <Badge variant="brand">Fees & bills</Badge>}
                       {pkg.learningMedia && <Badge variant="neutral">Learning media</Badge>}
+                      {pkg.interactiveVideo && <Badge variant="neutral">Interactive video</Badge>}
                       {pkg.studentLogins && <Badge variant="neutral">Student logins</Badge>}
                       {pkg.guardianAccess && <Badge variant="neutral">Guardian access</Badge>}
                     </div>

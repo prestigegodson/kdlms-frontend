@@ -1,4 +1,4 @@
-import { FileAudio, FileText, FileVideo } from "lucide-react";
+import { Clapperboard, FileAudio, FileText, FileVideo } from "lucide-react";
 import type { ReactNode } from "react";
 import { RESOURCE_TYPE_LABEL } from "@/features/student/resourceCards";
 
@@ -39,6 +39,7 @@ const TYPE_ICON: Record<string, { glyph: ReactNode; tile: string }> = {
   PDF: { glyph: <PdfGlyph />, tile: "bg-red-50 text-red-600" },
   AUDIO: { glyph: lucide(FileAudio), tile: "bg-indigo-50 text-indigo-600" },
   VIDEO: { glyph: lucide(FileVideo), tile: "bg-indigo-50 text-indigo-600" },
+  INTERACTIVE_VIDEO: { glyph: lucide(Clapperboard), tile: "bg-amber-50 text-amber-700" },
   RICH_TEXT: { glyph: lucide(FileText), tile: "bg-indigo-50 text-indigo-600" },
 };
 

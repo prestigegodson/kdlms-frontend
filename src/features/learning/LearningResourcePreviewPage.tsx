@@ -61,6 +61,8 @@ export function LearningResourcePreviewPage() {
   const entitled = useFeatureStore((state) => state.onDemandLearning);
   const learningMedia = useFeatureStore((state) => state.learningMedia);
   const canAuthorMedia = can.authorLearningMedia(role, entitled, learningMedia);
+  const interactiveVideo = useFeatureStore((state) => state.interactiveVideo);
+  const canAuthorInteractiveVideo = can.authorInteractiveVideo(role, entitled, interactiveVideo);
   const [resource, setResource] = useState<LearningResourceView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -99,7 +101,10 @@ export function LearningResourcePreviewPage() {
   }
 
   const pdfUrl = useObjectUrl(resource?.resourceType === "PDF" ? (resource.fileId ?? undefined) : undefined, downloadFile);
-  const isMedia = resource?.resourceType === "AUDIO" || resource?.resourceType === "VIDEO";
+  const isMedia =
+    resource?.resourceType === "AUDIO" ||
+    resource?.resourceType === "VIDEO" ||
+    (resource?.resourceType === "INTERACTIVE_VIDEO" && resource.fileId != null);
   const mediaState = useMediaStreamUrl(isMedia ? (resource?.fileId ?? undefined) : undefined, getFileMediaUrl);
 
   if (error) {
@@ -122,7 +127,8 @@ export function LearningResourcePreviewPage() {
   const duration = formatDuration(resource.durationSeconds);
   const subjectLabel = resource.subjectGroupId ? `${resource.subjectName} (subject group)` : resource.subjectName;
   const description = [resource.className, subjectLabel, duration].filter(Boolean).join(" · ");
-  const fileExtension = resource.resourceType === "AUDIO" ? "mp3" : resource.resourceType === "VIDEO" ? "mp4" : "pdf";
+  const fileExtension = resource.resourceType === "AUDIO" ? "mp3" : isMedia ? "mp4" : "pdf";
+  const publishProblems = resource.status === "DRAFT" ? (resource.interactiveVideoProblems ?? []) : [];
 
   return (
     <div className="space-y-6">
@@ -170,12 +176,23 @@ export function LearningResourcePreviewPage() {
       {actionError && <Alert variant="error">{actionError}</Alert>}
       {shareNotice && <Alert variant="success">{shareNotice}</Alert>}
       {resource.description && <p className="text-sm text-slate-600">{resource.description}</p>}
+      {publishProblems.length > 0 && (
+        <Alert variant="warning" title="This interactive video can't be published yet">
+          <ul className="list-disc space-y-0.5 pl-5">
+            {publishProblems.slice(0, 5).map((problem, index) => (
+              <li key={index}>{problem.message}</li>
+            ))}
+          </ul>
+          {publishProblems.length > 5 && <p className="mt-1">…and {publishProblems.length - 5} more. Open Edit to fix them.</p>}
+        </Alert>
+      )}
 
       <ResourceViewer
         resourceType={resource.resourceType}
         title={resource.title}
         bodyHtml={resource.bodyHtml}
         youtubeVideoId={resource.youtubeVideoId}
+        interactiveVideo={resource.interactiveVideo}
         renderImage={renderStaffImage}
         fileUrl={resource.resourceType === "PDF" ? pdfUrl : mediaState.url}
         fileError={mediaState.error}
@@ -191,6 +208,7 @@ export function LearningResourcePreviewPage() {
           termId={resource.termId}
           resource={resource}
           canAuthorMedia={canAuthorMedia}
+          canAuthorInteractiveVideo={canAuthorInteractiveVideo}
           onClose={() => setEditing(false)}
           onSaved={() => {
             setEditing(false);

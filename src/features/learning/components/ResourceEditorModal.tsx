@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import type { ClassLearningResourceView } from "@/api/classLearningResources";
 import { ApiError } from "@/api/client";
-import { uploadFile, uploadLimitFor, uploadLimitLabel, uploadMediaFile } from "@/api/files";
+import { getFileMediaUrl, uploadFile, uploadLimitFor, uploadLimitLabel, uploadMediaFile } from "@/api/files";
 import {
   type AuthorableSubjectGroupView,
   type AuthorableSubjectView,
@@ -9,6 +9,7 @@ import {
   type EligibleStudentView,
   getEligibleStudents,
   getShareableClasses,
+  type InteractiveVideoDocument,
   type LearningGalleryFileView,
   type LearningResourceType,
   type LearningResourceView,
@@ -25,11 +26,16 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { AuthenticatedRichImage } from "@/components/richText/AuthenticatedRichImage";
 import { RichTextField } from "@/components/richText/RichTextField";
 import { type GalleryLoader, GalleryPickerModal } from "@/features/learning/components/GalleryPickerModal";
 import { ClassroomArmsField } from "@/features/academics/components/ClassroomArmsField";
 import { SubjectTargetSelect } from "@/features/academics/components/SubjectTargetSelect";
 import { parseTargetKey, targetKeyOf } from "@/features/academics/subjectTarget";
+import { emptyDocument } from "@/features/learning/interactiveVideo/defaults";
+import { InteractiveVideoEditor } from "@/features/learning/interactiveVideo/editor/InteractiveVideoEditor";
+import { outOfRangeIds } from "@/features/learning/interactiveVideo/engine";
+import { useMediaStreamUrl } from "@/hooks/useMediaStreamUrl";
 import { formatDuration } from "@/utils/duration";
 import { localDateToEndInstant, splitInstant, toInstant } from "@/utils/date";
 
@@ -41,7 +47,21 @@ const FILE_CONTENT_TYPE: Record<string, string> = {
   PDF: "application/pdf",
   AUDIO: "audio/mpeg",
   VIDEO: "video/mp4",
+  INTERACTIVE_VIDEO: "video/mp4",
 };
+
+/**
+ * The bare 11-character id of a YouTube link, client-side - only so the interactive video editor
+ * can preview it before saving. The backend's own `YouTubeVideoId#parse` stays the authority.
+ */
+function youTubeIdOf(url: string): string | null {
+  const match = url
+    .trim()
+    .match(/^https:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return match ? match[1] : null;
+}
+
+const renderStaffImage = (fileId: string, alt: string) => <AuthenticatedRichImage fileId={fileId} alt={alt} />;
 
 const FILE_BACKED_TYPES: LearningResourceType[] = ["PDF", "AUDIO", "VIDEO"];
 
@@ -123,6 +143,8 @@ interface ResourceEditorModalProps {
   resource?: EditableLearningResource;
   /** Whether the caller may author an `AUDIO`/`VIDEO` resource - `can.authorLearningMedia` (Phase 35F), evaluated by the parent since it needs the `learningMedia` feature flag. */
   canAuthorMedia: boolean;
+  /** Whether to offer the `INTERACTIVE_VIDEO` type (V161) - `can.authorInteractiveVideo`, evaluated by the parent since it needs the `interactiveVideo` feature flag. An uploaded-mp4 source additionally needs `canAuthorMedia`. */
+  canAuthorInteractiveVideo?: boolean;
   /**
    * Overrides where the form saves (creators Phase C14: a creator's class resource) - when absent,
    * it creates/updates a school resource in `classId`/`subjectId`/`termId`.
@@ -158,6 +180,7 @@ export function ResourceEditorModal({
   subjectGroups = [],
   resource,
   canAuthorMedia,
+  canAuthorInteractiveVideo = false,
   save,
   loadGallery,
   audienceLabel = "Pupils",
@@ -177,7 +200,32 @@ export function ResourceEditorModal({
   const [fileId, setFileId] = useState<string | null>(resource?.fileId ?? null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [durationSeconds, setDurationSeconds] = useState<number | null>(resource?.durationSeconds ?? null);
-  const [youtubeUrl, setYoutubeUrl] = useState("");
+  // An interactive video's link is prefilled from its stored id - its source can't be left blank
+  // the way a plain YouTube resource's "keep the current video" field is.
+  const [youtubeUrl, setYoutubeUrl] = useState(
+    resource?.resourceType === "INTERACTIVE_VIDEO" && resource.youtubeVideoId
+      ? `https://www.youtube.com/watch?v=${resource.youtubeVideoId}`
+      : "",
+  );
+  // An interactive video plays over an uploaded mp4 or a YouTube video (V161).
+  const [videoSource, setVideoSource] = useState<"file" | "youtube">(
+    resource?.resourceType === "INTERACTIVE_VIDEO"
+      ? resource.youtubeVideoId
+        ? "youtube"
+        : "file"
+      : canAuthorMedia
+        ? "file"
+        : "youtube",
+  );
+  const [interactiveVideo, setInteractiveVideo] = useState<InteractiveVideoDocument>(
+    () => (resource && "interactiveVideo" in resource ? resource.interactiveVideo : null) ?? emptyDocument(),
+  );
+  const [interactiveEditorOpen, setInteractiveEditorOpen] = useState(false);
+  // A just-uploaded mp4 previews from the local file - no round trip to the bucket for the editor.
+  const [localVideoUrl, setLocalVideoUrl] = useState<string | null>(null);
+  useEffect(() => () => {
+    if (localVideoUrl) URL.revokeObjectURL(localVideoUrl);
+  }, [localVideoUrl]);
   const initialFrom = splitInstant(resource?.availableFrom);
   const initialUntil = splitAvailableUntil(resource?.availableUntil);
   const [availableFromDate, setAvailableFromDate] = useState(initialFrom.dateIso);
@@ -292,9 +340,20 @@ export function ResourceEditorModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isFileBacked = FILE_BACKED_TYPES.includes(resourceType);
-  const isMedia = resourceType === "AUDIO" || resourceType === "VIDEO";
+  const isInteractiveVideo = resourceType === "INTERACTIVE_VIDEO";
+  const interactiveFromFile = isInteractiveVideo && videoSource === "file";
+  const interactiveFromYouTube = isInteractiveVideo && videoSource === "youtube";
+  // `isFileBacked`/`isMedia` cover an interactive video over an uploaded mp4 too - it uploads,
+  // galleries and probes its duration exactly like a VIDEO resource.
+  const isFileBacked = FILE_BACKED_TYPES.includes(resourceType) || interactiveFromFile;
+  const isMedia = resourceType === "AUDIO" || resourceType === "VIDEO" || interactiveFromFile;
   const contentType = FILE_CONTENT_TYPE[resourceType];
+  const interactiveYouTubeId = interactiveFromYouTube ? youTubeIdOf(youtubeUrl) : null;
+  const savedMedia = useMediaStreamUrl(
+    interactiveFromFile && !localVideoUrl && fileId ? fileId : undefined,
+    getFileMediaUrl,
+  );
+  const outOfRangeCount = isInteractiveVideo ? outOfRangeIds(interactiveVideo.items, durationSeconds).size : 0;
 
   async function handleFileSelected(file: File | undefined) {
     if (!file || !contentType) return;
@@ -325,6 +384,9 @@ export function ResourceEditorModal({
       setFileId(stored.fileId);
       setFileName(stored.fileName);
       setDurationSeconds(null);
+      if (interactiveFromFile) {
+        setLocalVideoUrl(URL.createObjectURL(file));
+      }
       if (isMedia) {
         const probed = await probeMediaDuration(file, resourceType === "AUDIO" ? "audio" : "video");
         setDurationSeconds(probed);
@@ -359,6 +421,20 @@ export function ResourceEditorModal({
     setFileId(file.fileId);
     setFileName(file.fileName);
     setDurationSeconds(isMedia ? file.durationSeconds : null);
+    setLocalVideoUrl(null);
+  }
+
+  /** Switching an interactive video's source drops the other one - exactly one of the two is sent. */
+  function chooseVideoSource(next: "file" | "youtube") {
+    setVideoSource(next);
+    setDurationSeconds(null);
+    if (next === "youtube") {
+      setFileId(null);
+      setFileName(null);
+      setLocalVideoUrl(null);
+    } else {
+      setYoutubeUrl("");
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -371,8 +447,16 @@ export function ResourceEditorModal({
         description: description || null,
         bodyHtml: resourceType === "RICH_TEXT" ? bodyHtml : null,
         fileId: isFileBacked ? fileId : null,
-        youtubeUrl: resourceType === "YOUTUBE" ? (isEdit ? youtubeUrl || null : youtubeUrl) : null,
-        durationSeconds: isMedia ? durationSeconds : null,
+        youtubeUrl:
+          resourceType === "YOUTUBE"
+            ? isEdit
+              ? youtubeUrl || null
+              : youtubeUrl
+            : interactiveFromYouTube
+              ? youtubeUrl.trim()
+              : null,
+        durationSeconds: isMedia || isInteractiveVideo ? durationSeconds : null,
+        interactiveVideo: isInteractiveVideo ? interactiveVideo : undefined,
         availableFrom: availableFromInstant(availableFromDate, availableFromTime),
         availableUntil: availableUntilInstant(availableUntilDate, availableUntilTime),
       };
@@ -415,7 +499,8 @@ export function ResourceEditorModal({
     title.trim().length > 0 &&
     (resourceType !== "RICH_TEXT" || bodyHtml.trim().length > 0) &&
     (!isFileBacked || fileId != null) &&
-    (resourceType !== "YOUTUBE" || (isEdit ? true : youtubeUrl.trim().length > 0));
+    (resourceType !== "YOUTUBE" || (isEdit ? true : youtubeUrl.trim().length > 0)) &&
+    (!interactiveFromYouTube || youtubeUrl.trim().length > 0);
 
   return (
     <>
@@ -477,7 +562,37 @@ export function ResourceEditorModal({
                 <option value="YOUTUBE">YouTube video</option>
                 {canAuthorMedia && <option value="AUDIO">Audio (mp3)</option>}
                 {canAuthorMedia && <option value="VIDEO">Video (mp4)</option>}
+                {canAuthorInteractiveVideo && <option value="INTERACTIVE_VIDEO">Interactive video</option>}
               </Select>
+            </FormField>
+          )}
+
+          {isInteractiveVideo && (
+            <FormField label="Video" htmlFor="resource-video-source">
+              <div id="resource-video-source" role="radiogroup" className="flex flex-wrap gap-4 text-sm text-slate-800">
+                {(canAuthorMedia || videoSource === "file") && (
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="resource-video-source"
+                      checked={videoSource === "file"}
+                      onChange={() => chooseVideoSource("file")}
+                      className="h-4 w-4 text-brand-500"
+                    />
+                    Upload an mp4
+                  </label>
+                )}
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="resource-video-source"
+                    checked={videoSource === "youtube"}
+                    onChange={() => chooseVideoSource("youtube")}
+                    className="h-4 w-4 text-brand-500"
+                  />
+                  YouTube video
+                </label>
+              </div>
             </FormField>
           )}
 
@@ -580,12 +695,12 @@ export function ResourceEditorModal({
             </FormField>
           )}
 
-          {resourceType === "YOUTUBE" && (
+          {(resourceType === "YOUTUBE" || interactiveFromYouTube) && (
             <FormField
               label="YouTube URL"
               htmlFor="resource-youtube"
               description={
-                isEdit
+                isEdit && !isInteractiveVideo
                   ? "Leave blank to keep the current video."
                   : "A full youtube.com or youtu.be link."
               }
@@ -595,8 +710,44 @@ export function ResourceEditorModal({
                 type="url"
                 placeholder="https://www.youtube.com/watch?v=..."
                 value={youtubeUrl}
-                onChange={(event) => setYoutubeUrl(event.target.value)}
+                onChange={(event) => {
+                  setYoutubeUrl(event.target.value);
+                  // A different video has a different length - measured again when the editor opens.
+                  if (isInteractiveVideo) setDurationSeconds(null);
+                }}
               />
+            </FormField>
+          )}
+
+          {isInteractiveVideo && (
+            <FormField label="Interactions" htmlFor="resource-interactions">
+              {/* The id sits on the wrapper, not the button - a <label> would rename the button "Interactions". */}
+              <div id="resource-interactions" className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={uploading || (interactiveFromFile ? !fileId : !interactiveYouTubeId)}
+                  onClick={() => setInteractiveEditorOpen(true)}
+                >
+                  {interactiveVideo.items.length > 0 ? "Edit interactions" : "Add interactions"}
+                </Button>
+                <span className="text-sm text-slate-600">
+                  {interactiveVideo.items.length} item{interactiveVideo.items.length === 1 ? "" : "s"}
+                  {durationSeconds != null && ` · video ${formatDuration(durationSeconds)}`}
+                </span>
+              </div>
+              {(interactiveFromFile ? !fileId : !interactiveYouTubeId) && (
+                <p className="mt-2 text-xs text-slate-500">
+                  {interactiveFromFile ? "Upload or choose the video first." : "Enter the video's YouTube link first."}
+                </p>
+              )}
+              {outOfRangeCount > 0 && (
+                <Alert variant="warning" className="mt-3">
+                  {outOfRangeCount} item{outOfRangeCount === 1 ? "" : "s"} fall{outOfRangeCount === 1 ? "s" : ""} after
+                  the end of this video. They&apos;re kept, but the resource can&apos;t be published until they&apos;re
+                  moved inside it.
+                </Alert>
+              )}
             </FormField>
           )}
 
@@ -664,12 +815,33 @@ export function ResourceEditorModal({
           </div>
         </form>
       </Modal>
+      {interactiveEditorOpen && (
+        <InteractiveVideoEditor
+          initial={interactiveVideo}
+          title={title || "Interactive video"}
+          source={
+            interactiveFromFile
+              ? { kind: "file", url: localVideoUrl ?? savedMedia.url, error: savedMedia.error, onUrlExpired: savedMedia.refresh }
+              : { kind: "youtube", videoId: interactiveYouTubeId ?? "" }
+          }
+          durationSeconds={durationSeconds}
+          serverProblems={resource && "interactiveVideoProblems" in resource ? resource.interactiveVideoProblems : []}
+          renderImage={renderStaffImage}
+          onDuration={setDurationSeconds}
+          onDone={(document) => {
+            setInteractiveVideo(document);
+            setInteractiveEditorOpen(false);
+          }}
+          onCancel={() => setInteractiveEditorOpen(false)}
+        />
+      )}
       {galleryOpen && isFileBacked && (
         <GalleryPickerModal
           classId={classId}
           subjectId={target.subjectId}
           subjectGroupId={target.subjectGroupId}
-          resourceType={resourceType}
+          // An interactive video's mp4 comes from the same gallery as a VIDEO resource's.
+          resourceType={interactiveFromFile ? "VIDEO" : resourceType}
           selectedFileId={fileId}
           loadPage={loadGallery}
           onPick={handleGalleryPick}

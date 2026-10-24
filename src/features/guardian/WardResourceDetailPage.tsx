@@ -49,7 +49,11 @@ export function WardResourceDetailPage() {
 
   useEffect(load, [load]);
 
-  const isMedia = resource?.resourceType === "AUDIO" || resource?.resourceType === "VIDEO";
+  // A guardian gets an interactive video as its plain underlying video - an uploaded one streams like VIDEO.
+  const isMedia =
+    resource?.resourceType === "AUDIO" ||
+    resource?.resourceType === "VIDEO" ||
+    (resource?.resourceType === "INTERACTIVE_VIDEO" && resource.youtubeVideoId == null);
   const pdfUrl = useObjectUrl(
     resource?.resourceType === "PDF" ? wardLearningResourceFilePath(studentId, resourceId) : undefined,
     downloadWardLearningResourceBlob,
@@ -83,7 +87,7 @@ export function WardResourceDetailPage() {
   }
 
   const description = [resource.subjectName, formatDuration(resource.durationSeconds)].filter(Boolean).join(" · ");
-  const fileExtension = resource.resourceType === "AUDIO" ? "mp3" : resource.resourceType === "VIDEO" ? "mp4" : "pdf";
+  const fileExtension = resource.resourceType === "AUDIO" ? "mp3" : isMedia ? "mp4" : "pdf";
 
   return (
     <div className="space-y-6">

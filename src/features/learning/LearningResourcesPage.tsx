@@ -58,6 +58,7 @@ const TYPE_LABEL: Record<string, string> = {
   YOUTUBE: "YouTube",
   AUDIO: "Audio",
   VIDEO: "Video",
+  INTERACTIVE_VIDEO: "Interactive video",
 };
 
 /**
@@ -77,6 +78,8 @@ export function LearningResourcesPage() {
   const learningMedia = useFeatureStore((state) => state.learningMedia);
   const canAuthor = can.authorLearningResources(role, entitled);
   const canAuthorMedia = can.authorLearningMedia(role, entitled, learningMedia);
+  const interactiveVideo = useFeatureStore((state) => state.interactiveVideo);
+  const canAuthorInteractiveVideo = can.authorInteractiveVideo(role, entitled, interactiveVideo);
   const canViewCompletions = can.viewLearningCompletions(role, entitled);
   // A Head of Level uses the admin class list - the server unions their levels' classes with the ones they teach.
   const levelHead = useIsLevelHead();
@@ -413,6 +416,7 @@ export function LearningResourcesPage() {
           subjectGroups={subjectGroups}
           resourceId={editing.resourceId}
           canAuthorMedia={canAuthorMedia}
+          canAuthorInteractiveVideo={canAuthorInteractiveVideo}
           onClose={() => setEditing(null)}
           onSaved={refresh}
         />
@@ -481,6 +485,7 @@ function ResourceEditorEntry({
   subjectGroups,
   resourceId,
   canAuthorMedia,
+  canAuthorInteractiveVideo,
   onClose,
   onSaved,
 }: {
@@ -492,6 +497,7 @@ function ResourceEditorEntry({
   subjectGroups: AuthorableSubjectGroupView[];
   resourceId: string | null;
   canAuthorMedia: boolean;
+  canAuthorInteractiveVideo: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -527,6 +533,7 @@ function ResourceEditorEntry({
       subjectGroups={subjectGroups}
       resource={loaded.resource}
       canAuthorMedia={canAuthorMedia}
+      canAuthorInteractiveVideo={canAuthorInteractiveVideo}
       onClose={onClose}
       onSaved={onSaved}
     />

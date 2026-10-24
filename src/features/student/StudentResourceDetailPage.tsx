@@ -121,6 +121,19 @@ export function StudentResourceDetailPage() {
     loadComments();
   }
 
+  /** An interactive video played to its end with every required item answered marks itself done - never undone automatically. */
+  function handleInteractiveCompleted() {
+    if (!resourceId || completed) return;
+    recordMyLearningInteraction(resourceId, { completed: true })
+      .then((view) => {
+        setCompleted(view.completed);
+        setCompletedAt(view.completedAt);
+      })
+      .catch(() => {
+        // Best-effort - the student can still mark it done by hand below.
+      });
+  }
+
   async function handleToggleCompleted() {
     if (!resourceId) return;
     setCompletionError(null);
@@ -142,10 +155,11 @@ export function StudentResourceDetailPage() {
       resourceId ? <StudentResourceImage resourceId={resourceId} fileId={fileId} alt={alt} /> : null,
     [resourceId],
   );
-  const mediaState = useMediaStreamUrl(
-    resource?.resourceType === "AUDIO" || resource?.resourceType === "VIDEO" ? resourceId : undefined,
-    getMyLearningResourceMediaUrl,
-  );
+  const isMedia =
+    resource?.resourceType === "AUDIO" ||
+    resource?.resourceType === "VIDEO" ||
+    (resource?.resourceType === "INTERACTIVE_VIDEO" && resource.youtubeVideoId == null);
+  const mediaState = useMediaStreamUrl(isMedia ? resourceId : undefined, getMyLearningResourceMediaUrl);
 
   // Phase 35H: the resume-position autosave (~15s throttle) via `recordMyLearningInteraction` - a
   // `completed: null` (omitted) partial update, so a position ping can never flip the
@@ -183,7 +197,7 @@ export function StudentResourceDetailPage() {
 
   const duration = formatDuration(resource.durationSeconds);
   const description = duration ? `${resource.subjectName} · ${duration}` : resource.subjectName;
-  const fileExtension = resource.resourceType === "AUDIO" ? "mp3" : resource.resourceType === "VIDEO" ? "mp4" : "pdf";
+  const fileExtension = resource.resourceType === "AUDIO" ? "mp3" : isMedia ? "mp4" : "pdf";
 
   return (
     <div className="space-y-6">
@@ -202,6 +216,8 @@ export function StudentResourceDetailPage() {
         downloadName={`${resource.title}.${fileExtension}`}
         initialPositionSeconds={resource.positionSeconds}
         onTimeUpdate={schedulePosition}
+        interactiveVideo={resource.interactiveVideo}
+        onCompleted={handleInteractiveCompleted}
       />
 
       <div className="flex items-center justify-between gap-4 rounded-card border border-slate-200 bg-white p-5">

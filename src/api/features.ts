@@ -24,6 +24,8 @@ export interface MyFeaturesView {
   onlineClasses: boolean;
   /** interaction-quiz.md §12 - the caller's own tenant may author interactive quiz question types. */
   interactiveQuestions: boolean;
+  /** V161 - the caller's own school may author interactive video learning resources. */
+  interactiveVideo: boolean;
 }
 
 export function getMyFeatures(): Promise<MyFeaturesView> {

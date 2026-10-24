@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as filesApi from "@/api/files";
 import * as learningApi from "@/api/learning";
 import { ResourceEditorModal } from "@/features/learning/components/ResourceEditorModal";
+import { newItem } from "@/features/learning/interactiveVideo/defaults";
 
 vi.mock("@/api/files", async () => {
   const actual = await vi.importActual<typeof import("@/api/files")>("@/api/files");
@@ -260,6 +261,94 @@ describe("ResourceEditorModal", () => {
     renderModal(true);
     expect(screen.getByRole("option", { name: "Audio (mp3)" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Video (mp4)" })).toBeInTheDocument();
+  });
+
+  it("offers Interactive video only when the caller can author it", () => {
+    renderModal(true);
+    expect(screen.queryByRole("option", { name: "Interactive video" })).not.toBeInTheDocument();
+  });
+
+  it("creates a YouTube interactive video with its overlay document", async () => {
+    const user = userEvent.setup();
+    vi.mocked(learningApi.createLearningResource).mockResolvedValue({} as learningApi.LearningResourceView);
+    render(
+      <ResourceEditorModal
+        classId="class-1"
+        subjectId="subject-1"
+        termId="term-1"
+        subjects={SUBJECTS}
+        canAuthorMedia={false}
+        canAuthorInteractiveVideo
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await user.selectOptions(screen.getByLabelText("Type"), "INTERACTIVE_VIDEO");
+    // No LEARNING_MEDIA: an uploaded source isn't offered, YouTube is the only one.
+    expect(screen.queryByRole("radio", { name: "Upload an mp4" })).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "YouTube video" })).toBeChecked();
+    expect(screen.getByRole("button", { name: "Add interactions" })).toBeDisabled();
+
+    await user.type(screen.getByLabelText("Title"), "Photosynthesis");
+    await user.type(screen.getByLabelText("YouTube URL"), "https://youtu.be/dQw4w9WgXcQ");
+    expect(screen.getByRole("button", { name: "Add interactions" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Add resource" }));
+
+    expect(learningApi.createLearningResource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resourceType: "INTERACTIVE_VIDEO",
+        fileId: null,
+        youtubeUrl: "https://youtu.be/dQw4w9WgXcQ",
+        interactiveVideo: { schemaVersion: 1, items: [] },
+      }),
+    );
+  });
+
+  it("warns when an interactive video's items run past the end of its video", () => {
+    render(
+      <ResourceEditorModal
+        classId="class-1"
+        subjectId="subject-1"
+        termId="term-1"
+        subjects={SUBJECTS}
+        canAuthorMedia
+        canAuthorInteractiveVideo
+        resource={{
+          id: "resource-1",
+          classId: "class-1",
+          className: "Class 1",
+          subjectId: "subject-1",
+          subjectName: "Mathematics",
+          termId: "term-1",
+          title: "Watch",
+          description: null,
+          resourceType: "INTERACTIVE_VIDEO",
+          bodyHtml: null,
+          fileId: null,
+          youtubeVideoId: "dQw4w9WgXcQ",
+          durationSeconds: 30,
+          commentsEnabled: true,
+          status: "DRAFT",
+          position: 0,
+          availableFrom: null,
+          availableUntil: null,
+          actions: { canEdit: true, canPublish: true, canUnpublish: false, canArchive: true, canDelete: true },
+          updatedAt: "2026-01-01T00:00:00Z",
+          interactiveVideo: {
+            schemaVersion: 1,
+            items: [{ ...newItem("LABEL", 40, 0.1, 0.1), id: "late" }],
+          },
+        }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    // The stored id is prefilled as a link - an interactive video's source is never left blank.
+    expect(screen.getByLabelText("YouTube URL")).toHaveValue("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+    expect(screen.getByText(/1 item falls after the end of this video/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit interactions" })).toBeEnabled();
   });
 
   it("rejects an over-cap mp3 before ever uploading it", async () => {

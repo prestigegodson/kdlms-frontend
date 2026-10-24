@@ -2,13 +2,13 @@ import { X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 
-type Size = "md" | "lg" | "xl" | "xxl";
+type Size = "md" | "lg" | "xl" | "xxl" | "workspace";
 
 interface ModalProps {
   open: boolean;
   onClose: () => void;
   title?: string;
-  /** Panel width: md (default form), lg (wider form, e.g. a repeating term grid), xl (dense multi-column content), xxl (extra extra large). */
+  /** Panel width: md (default form), lg (wider form, e.g. a repeating term grid), xl (dense multi-column content), xxl (extra extra large), workspace (a near-full-width authoring surface, e.g. the interactive video editor). */
   size?: Size;
   /**
    * Below `md`, fill the whole viewport instead of the 92dvh bottom sheet - for a multi-step flow
@@ -25,6 +25,7 @@ const SIZE_CLASSES: Record<Size, string> = {
   lg: "max-w-lg",
   xl: "max-w-2xl",
   xxl: "max-w-3xl",
+  workspace: "max-w-7xl",
 };
 
 const FULL_SCREEN_MOBILE_CLASSES = "mobile:h-[100dvh] mobile:max-h-[100dvh] mobile:rounded-none";

@@ -2,7 +2,8 @@ import { useRef, useState, type ReactNode } from "react";
 import { RichContent } from "@/components/richText/RichContent";
 import { Spinner } from "@/components/ui/Spinner";
 import { usePauseWhenHidden } from "@/hooks/usePauseWhenHidden";
-import type { LearningResourceType } from "@/api/learning";
+import type { InteractiveVideoDocument, LearningResourceType } from "@/api/learning";
+import { InteractiveVideoPlayer } from "@/features/learning/interactiveVideo/player/InteractiveVideoPlayer";
 
 //const DOWNLOAD_LINK_CLASSES = "inline-flex items-center justify-center gap-1.5 rounded-control border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 mobile:min-h-11";
 
@@ -27,6 +28,11 @@ import type { LearningResourceType } from "@/api/learning";
  * caller wires resume-seek and a throttled position autosave onto them;
  * the staff preview passes neither, since a resource-interaction row is a
  * `STUDENT`'s own, never staff's.
+ *
+ * An `INTERACTIVE_VIDEO` plays through `InteractiveVideoPlayer` when the caller hands over its
+ * `interactiveVideo` document (the student, the staff preview) - over `fileUrl` when it has no
+ * `youtubeVideoId` - and as the plain underlying video otherwise (a guardian, who gets no document).
+ * `onCompleted` fires when the student reaches the end with every required item answered.
  */
 export function ResourceViewer({
   resourceType,
@@ -41,6 +47,8 @@ export function ResourceViewer({
   initialPositionSeconds,
   onLoadedMetadata,
   onTimeUpdate,
+  interactiveVideo,
+  onCompleted,
 }: {
   resourceType: LearningResourceType;
   title: string;
@@ -56,6 +64,8 @@ export function ResourceViewer({
   initialPositionSeconds?: number | null;
   onLoadedMetadata?: () => void;
   onTimeUpdate?: (positionSeconds: number) => void;
+  interactiveVideo?: InteractiveVideoDocument | null;
+  onCompleted?: () => void;
 }) {
   return (
     <>
@@ -92,6 +102,37 @@ export function ResourceViewer({
       )}
 
       {resourceType === "YOUTUBE" && youtubeVideoId && <YouTubeEmbed videoId={youtubeVideoId} title={title} />}
+
+      {resourceType === "INTERACTIVE_VIDEO" &&
+        (interactiveVideo ? (
+          <InteractiveVideoPlayer
+            document={interactiveVideo}
+            title={title}
+            source={
+              youtubeVideoId
+                ? { kind: "youtube", videoId: youtubeVideoId }
+                : { kind: "file", url: fileUrl, error: fileError, onUrlExpired: onMediaUrlExpired }
+            }
+            renderImage={renderImage}
+            initialPositionSeconds={initialPositionSeconds}
+            onTimeUpdate={onTimeUpdate}
+            onCompleted={onCompleted}
+          />
+        ) : youtubeVideoId ? (
+          <YouTubeEmbed videoId={youtubeVideoId} title={title} />
+        ) : (
+          <MediaPlayer
+            resourceType="VIDEO"
+            title={title}
+            url={fileUrl}
+            error={fileError}
+            downloadName={downloadName}
+            onUrlExpired={onMediaUrlExpired}
+            initialPositionSeconds={initialPositionSeconds ?? null}
+            onLoadedMetadata={onLoadedMetadata}
+            onTimeUpdate={onTimeUpdate}
+          />
+        ))}
     </>
   );
 }

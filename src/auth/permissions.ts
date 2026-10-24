@@ -726,6 +726,16 @@ export const can = {
   },
 
   /**
+   * Authoring an interactive video resource (V161) - the `interactiveVideo` add-on layered on
+   * `onDemandLearning`/`authorLearningResources`, the `authorLearningMedia` shape. A school feature
+   * only: a CREATOR never holds the flag. Its uploaded-mp4 source also needs `authorLearningMedia`;
+   * a YouTube source doesn't. Playing one is never gated by this.
+   */
+  authorInteractiveVideo(role: Role | undefined, onDemandLearning: boolean, interactiveVideo: boolean): boolean {
+    return can.authorLearningResources(role, onDemandLearning) && interactiveVideo;
+  },
+
+  /**
    * Posting and replying in a learning resource's class-wide discussion (Phase 35G) - a STUDENT,
    * or a TEACHER; admins moderate but never post (`moderateLearningComments` below). Whether this
    * teacher may read the resource at all, and per-comment `canEdit`, still come from the server -

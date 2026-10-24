@@ -48,6 +48,7 @@ const TYPE_LABEL: Record<string, string> = {
   YOUTUBE: "YouTube",
   AUDIO: "Audio",
   VIDEO: "Video",
+  INTERACTIVE_VIDEO: "Interactive video",
 };
 
 type Confirming = { kind: "archive" | "delete"; resource: LearningResourceSummaryView };
