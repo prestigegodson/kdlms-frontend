@@ -5,6 +5,7 @@ import {
   type AllocationStatus,
   PAYMENT_METHOD_LABELS,
   type PaymentMethod,
+  type PaymentPurpose,
 } from "@/api/feePayments";
 import {
   type CollectionSummaryView,
@@ -59,6 +60,7 @@ export function PaymentsTab() {
   const [termId, setTermId] = useState("");
   const [status, setStatus] = useState<AllocationStatus | "">("PENDING");
   const [method, setMethod] = useState<PaymentMethod | "">("");
+  const [purpose, setPurpose] = useState<PaymentPurpose | "">("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [q, setQ] = useState("");
@@ -83,6 +85,7 @@ export function PaymentsTab() {
     levelId: levelId || undefined,
     status: status || undefined,
     method: method || undefined,
+    purpose: purpose || undefined,
     from: from || undefined,
     to: to || undefined,
     // The backend ignores a 1-character search; so does the queue, rather than flashing every row.
@@ -176,7 +179,18 @@ export function PaymentsTab() {
         </StickySubHeader>
       )}
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5 lg:gap-4">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6 lg:gap-4">
+        <FormField label="Type" htmlFor="payments-purpose">
+          <Select
+            id="payments-purpose"
+            value={purpose}
+            onChange={(event) => setPurpose(event.target.value as PaymentPurpose | "")}
+          >
+            <option value="">All payments</option>
+            <option value="FEES">School fees</option>
+            <option value="OTHER">Other payments</option>
+          </Select>
+        </FormField>
         <FormField label="Status" htmlFor="payments-status">
           <Select
             id="payments-status"

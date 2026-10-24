@@ -131,9 +131,15 @@ export function StudentPaymentsSection({
                       </span>
                       <AllocationStatusBadge
                         status={allocation.status}
-                        settlement={allocation.settlement}
+                        settlement={entry.purpose === "OTHER" ? null : allocation.settlement}
                       />
                     </div>
+                    {entry.purpose === "OTHER" && (
+                      <p className="break-words text-sm text-slate-700">
+                        Other payment: {entry.purposeLabel}{" "}
+                        <span className="text-xs text-slate-500">(not counted toward the term's fees)</span>
+                      </p>
+                    )}
                     <p className="text-xs text-slate-500">
                       {formatLongDate(entry.paymentDate)} · {PAYMENT_METHOD_LABELS[entry.method]} ·{" "}
                       {entry.payerName}
@@ -149,7 +155,9 @@ export function StudentPaymentsSection({
                         <Button
                           variant="secondary"
                           size="sm"
-                          onClick={() => actions.openCorrect(allocation, ledger.currency)}
+                          onClick={() =>
+                            actions.openCorrect(allocation, ledger.currency, entry.purpose === "OTHER")
+                          }
                         >
                           Correct amount
                         </Button>

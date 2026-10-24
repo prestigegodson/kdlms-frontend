@@ -78,6 +78,10 @@ export function recordSuggestion(option: RecordChildOption, drafts: ChildDrafts)
   );
 }
 
+/**
+ * `other` set: an "other" payment (D24) - no term (the backend tags it with the current one), no
+ * optional fees, and no settlement (always confirmed in full).
+ */
 export function buildStaffRequest(
   termId: string,
   options: RecordChildOption[],
@@ -85,10 +89,29 @@ export function buildStaffRequest(
   details: PaymentDetails,
   confirmNow: boolean,
   settlements: Record<string, Settlement>,
+  other: { otherItemId: string | null; purposeLabel: string | null } | null = null,
 ): StaffPaymentRequest {
   const byId = new Map(
     selectedOptions(options, drafts).map((option) => [option.studentId, option]),
   );
+  if (other) {
+    return {
+      termId: null,
+      purpose: "OTHER",
+      ...other,
+      payerName: details.payerName.trim(),
+      paymentDate: details.paymentDate,
+      method: details.method ?? "OTHER",
+      note: details.note.trim() === "" ? null : details.note.trim(),
+      totalAmount: totalMinor(options, drafts) / 100,
+      confirmNow,
+      children: childRequests(options, drafts).map((child) => ({
+        ...child,
+        optionalFeeIds: [],
+        settlement: null,
+      })),
+    };
+  }
   return {
     termId,
     payerName: details.payerName.trim(),

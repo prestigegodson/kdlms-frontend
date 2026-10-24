@@ -181,6 +181,12 @@ function ReviewFlow({
             </div>
           </div>
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+            {view.purpose === "OTHER" && (
+              <>
+                <dt className="text-slate-500">For</dt>
+                <dd className="break-words font-medium text-slate-800">{view.purposeLabel}</dd>
+              </>
+            )}
             <dt className="text-slate-500">Term</dt>
             <dd className="text-slate-800">{view.termName}</dd>
             <dt className="text-slate-500">Payer</dt>
@@ -215,10 +221,11 @@ function ReviewFlow({
               key={allocation.id}
               allocation={allocation}
               currency={view.currency}
+              otherPayment={view.purpose === "OTHER"}
               draft={drafts[allocation.id]}
               onDraftChange={(patch) => patchDraft(allocation.id, patch)}
               onVoid={() => actions.openVoid(allocation)}
-              onCorrect={() => actions.openCorrect(allocation, view.currency)}
+              onCorrect={() => actions.openCorrect(allocation, view.currency, view.purpose === "OTHER")}
               disabled={submitting}
             />
           ))}

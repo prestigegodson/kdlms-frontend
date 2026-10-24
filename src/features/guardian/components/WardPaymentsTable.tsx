@@ -6,11 +6,15 @@ import { PaymentFileLinks, PaymentStatusBadge } from "@/features/guardian/compon
 import { formatMoney } from "@/utils/currency";
 import { formatLongDate } from "@/utils/date";
 
-/** One ward's share of one fee-payment submission, with the ward and term it belongs to. */
+/**
+ * One ward's share of one fee-payment submission, with the ward it belongs to. `term` is the ward's
+ * card for a school-fees payment; an "other" payment (D24) has none, since it settles no bill.
+ */
 export interface WardPaymentRowData {
   ward: MyWardView;
-  term: WardFeeTermView;
+  term: WardFeeTermView | null;
   payment: WardFeePaymentView;
+  currency: string;
 }
 
 interface WardPaymentsTableProps {
@@ -36,7 +40,7 @@ export function WardPaymentsTable({ rows, showSchool, onEdit, onWithdraw, onResu
         <tr>
           <TableHeaderCell>Date</TableHeaderCell>
           <TableHeaderCell>Child</TableHeaderCell>
-          <TableHeaderCell>Term</TableHeaderCell>
+          <TableHeaderCell>For</TableHeaderCell>
           <TableHeaderCell numeric>Amount</TableHeaderCell>
           <TableHeaderCell>Method</TableHeaderCell>
           <TableHeaderCell>Status</TableHeaderCell>
@@ -48,8 +52,7 @@ export function WardPaymentsTable({ rows, showSchool, onEdit, onWithdraw, onResu
       </TableHead>
       <TableBody>
         {rows.map((row) => {
-          const { ward, term, payment } = row;
-          const currency = term.currency;
+          const { ward, term, payment, currency } = row;
           const adjusted = payment.confirmedAmount != null && payment.confirmedAmount !== payment.claimedAmount;
           const shownAmount = adjusted ? payment.confirmedAmount : payment.claimedAmount;
           const canResubmit = payment.status === "REJECTED" && payment.submittedByMe;
@@ -64,9 +67,18 @@ export function WardPaymentsTable({ rows, showSchool, onEdit, onWithdraw, onResu
                 <span className="font-medium text-slate-900">{ward.fullName}</span>
                 {showSchool && <span className="block text-xs text-slate-500">{ward.schoolName}</span>}
               </TableCell>
-              <TableCell label="Term">
-                {term.termName}
-                <span className="block text-xs text-slate-500">{term.sessionName}</span>
+              <TableCell label="For">
+                {term ? (
+                  <>
+                    {term.termName}
+                    <span className="block text-xs text-slate-500">{term.sessionName}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="break-words">{payment.purposeLabel}</span>
+                    <span className="block text-xs text-slate-500">Other payment · {payment.termName}</span>
+                  </>
+                )}
               </TableCell>
               <TableCell label="Amount" numeric>
                 <span className="font-semibold text-slate-900">{formatMoney(shownAmount, currency)}</span>

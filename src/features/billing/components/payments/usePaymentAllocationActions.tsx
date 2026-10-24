@@ -14,6 +14,7 @@ export function usePaymentAllocationActions(onDone: (view: StaffFeePaymentView) 
   const [correcting, setCorrecting] = useState<{
     allocation: AllocationView;
     currency: string;
+    otherPayment: boolean;
   } | null>(null);
   const refreshPending = usePendingFeePaymentsStore((state) => state.refresh);
 
@@ -37,6 +38,7 @@ export function usePaymentAllocationActions(onDone: (view: StaffFeePaymentView) 
         <CorrectAmountDialog
           allocation={correcting.allocation}
           currency={correcting.currency}
+          otherPayment={correcting.otherPayment}
           onConfirm={async (body) => {
             const view = await correctConfirmedAmount(correcting.allocation.id, body);
             setCorrecting(null);
@@ -50,8 +52,9 @@ export function usePaymentAllocationActions(onDone: (view: StaffFeePaymentView) 
 
   return {
     openVoid: (allocation: AllocationView) => setVoiding(allocation),
-    openCorrect: (allocation: AllocationView, currency: string) =>
-      setCorrecting({ allocation, currency }),
+    /** `otherPayment`: an OTHER payment's child (D24) - no settlement to choose. */
+    openCorrect: (allocation: AllocationView, currency: string, otherPayment = false) =>
+      setCorrecting({ allocation, currency, otherPayment }),
     dialogs,
   };
 }

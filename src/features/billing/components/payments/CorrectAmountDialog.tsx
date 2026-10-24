@@ -20,6 +20,8 @@ import { formatMoney } from "@/utils/currency";
 interface CorrectAmountDialogProps {
   allocation: AllocationView;
   currency: string;
+  /** An OTHER payment (D24) settles no bill - the settlement toggle is hidden and FULL is sent. */
+  otherPayment?: boolean;
   onConfirm: (body: { amount: number; settlement: Settlement; reason: string }) => Promise<void>;
   onClose: () => void;
 }
@@ -31,6 +33,7 @@ interface CorrectAmountDialogProps {
 export function CorrectAmountDialog({
   allocation,
   currency,
+  otherPayment = false,
   onConfirm,
   onClose,
 }: CorrectAmountDialogProps) {
@@ -49,7 +52,7 @@ export function CorrectAmountDialog({
     toMinorUnits(allocation.termStatus.confirmedPaid) -
     toMinorUnits(allocation.confirmedAmount ?? 0);
   const suggested = suggestSettlement(billMinor, otherConfirmed + (amountMinor ?? 0));
-  const settlement = chosen ?? suggested;
+  const settlement: Settlement = otherPayment ? "FULL" : (chosen ?? suggested);
   const valid = amountMinor !== null && reason.trim() !== "";
 
   async function confirm() {
@@ -81,12 +84,14 @@ export function CorrectAmountDialog({
             onChange={(event) => setAmountText(event.target.value)}
           />
         </FormField>
-        <SettlementToggle
-          value={settlement}
-          onChange={setChosen}
-          suggested={suggested}
-          hasBill={billMinor !== null}
-        />
+        {!otherPayment && (
+          <SettlementToggle
+            value={settlement}
+            onChange={setChosen}
+            suggested={suggested}
+            hasBill={billMinor !== null}
+          />
+        )}
         <FormField label="Reason" htmlFor={`${id}-reason`}>
           <Textarea
             id={`${id}-reason`}

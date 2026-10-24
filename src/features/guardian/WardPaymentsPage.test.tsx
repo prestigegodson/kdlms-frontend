@@ -22,6 +22,8 @@ vi.mock("@/api/feePayments", async () => {
   return {
     ...actual,
     getWardFees: vi.fn(),
+    getWardOtherPayments: vi.fn(),
+    getWardOtherPaymentItems: vi.fn(),
     withdrawFeePayment: vi.fn(),
     downloadFeeReceiptPdf: vi.fn(),
     downloadFeePaymentAttachment: vi.fn(),
@@ -48,6 +50,11 @@ function payment(overrides: Partial<WardFeePaymentView> = {}): WardFeePaymentVie
   return {
     paymentId: "p1",
     allocationId: "a1",
+    purpose: "FEES",
+    otherItemId: null,
+    purposeLabel: null,
+    termId: "term-1",
+    termName: "First Term",
     status: "PENDING",
     claimedAmount: 20000,
     confirmedAmount: null,
@@ -126,6 +133,8 @@ describe("WardPaymentsPage", () => {
     resetFeatureStore();
     useFeatureStore.setState({ billing: true });
     vi.mocked(wardsApi.listMyWards).mockResolvedValue([ADA, BEN]);
+    vi.mocked(feePaymentsApi.getWardOtherPayments).mockResolvedValue({ currency: "NGN", payments: [] });
+    vi.mocked(feePaymentsApi.getWardOtherPaymentItems).mockResolvedValue([]);
     vi.mocked(feePaymentsApi.getWardFees).mockImplementation((studentId) =>
       Promise.resolve(
         studentId === "s1"
@@ -163,6 +172,36 @@ describe("WardPaymentsPage", () => {
     expect(within(rows[2]).getByText("Second Term")).toBeInTheDocument();
     expect(feePaymentsApi.getWardFees).toHaveBeenCalledWith("s1");
     expect(feePaymentsApi.getWardFees).toHaveBeenCalledWith("s2");
+  });
+
+  it("lists an other payment with what it was for, and opens the other-payment sheet to edit it", async () => {
+    const user = userEvent.setup();
+    vi.mocked(wardsApi.listMyWards).mockResolvedValue([ADA]);
+    vi.mocked(feePaymentsApi.getWardFees).mockResolvedValue([]);
+    vi.mocked(feePaymentsApi.getWardOtherPayments).mockResolvedValue({
+      currency: "NGN",
+      payments: [
+        payment({
+          paymentId: "p9",
+          allocationId: "a9",
+          purpose: "OTHER",
+          purposeLabel: "Christmas party",
+          termName: "First Term",
+          claimedAmount: 5000,
+          totalAmount: 5000,
+        }),
+      ],
+    });
+    renderPage();
+
+    await screen.findByRole("table", { name: "Payments" });
+    const [row] = bodyRows();
+    expect(within(row).getByText("Christmas party")).toBeInTheDocument();
+    expect(within(row).getByText("Other payment · First Term")).toBeInTheDocument();
+
+    await user.click(within(row).getByRole("button", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit payment" });
+    expect(await within(dialog).findByLabelText("Describe what you paid for")).toHaveValue("Christmas party");
   });
 
   it("filters by child and by status", async () => {
@@ -230,6 +269,7 @@ describe("WardPaymentsPage", () => {
     await waitFor(() => expect(feePaymentsApi.withdrawFeePayment).toHaveBeenCalledWith("p1"));
     expect(await screen.findByText("Payment withdrawn.")).toBeInTheDocument();
     await waitFor(() => expect(feePaymentsApi.getWardFees).toHaveBeenCalledTimes(4));
+    expect(feePaymentsApi.getWardOtherPayments).toHaveBeenCalledTimes(4);
   });
 
   it("shows a rejection's reason and opens Resubmit for its submitter", async () => {

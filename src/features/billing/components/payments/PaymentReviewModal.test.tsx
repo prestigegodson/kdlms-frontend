@@ -90,6 +90,19 @@ describe("PaymentReviewModal", () => {
     expect(api.getPendingPaymentCount).toHaveBeenCalled();
   });
 
+  it("shows an other payment's purpose and confirms it with no bill or settlement", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getFeePayment).mockResolvedValue(
+      paymentView({ purpose: "OTHER", purposeLabel: "Christmas party", allocations: [allocation({ bill: null })] }),
+    );
+    renderModal();
+
+    expect(await screen.findByText("Christmas party")).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "Confirm" }));
+    expect(screen.queryByRole("radio", { name: "Paid in full" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Balance")).not.toBeInTheDocument();
+  });
+
   it("requires a reason before a rejection can be submitted", async () => {
     const user = userEvent.setup();
     vi.mocked(api.getFeePayment).mockResolvedValue(paymentView());

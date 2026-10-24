@@ -83,13 +83,17 @@ export function PaymentQueueTable({ items, showBranch, onOpen }: PaymentQueueTab
                         claimed {formatMoney(allocation.claimedAmount, item.currency)}
                       </span>
                     )}
+                  {item.purpose === "OTHER" && (
+                    <span className="block break-words text-xs text-slate-500">For {item.purposeLabel}</span>
+                  )}
                 </TableCell>
                 <TableCell label="Status">
                   <div className="flex flex-wrap gap-1">
                     <AllocationStatusBadge
                       status={allocation.status}
-                      settlement={allocation.settlement}
+                      settlement={item.purpose === "OTHER" ? null : allocation.settlement}
                     />
+                    {item.purpose === "OTHER" && <Badge variant="neutral">Other payment</Badge>}
                     {allocation.possibleDuplicate && (
                       <Badge variant="warning">Possible duplicate</Badge>
                     )}

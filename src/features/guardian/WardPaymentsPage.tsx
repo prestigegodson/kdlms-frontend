@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Wallet } from "lucide-react";
-import { getWardFees, withdrawFeePayment, type AllocationStatus } from "@/api/feePayments";
+import { Receipt, Wallet } from "lucide-react";
+import {
+  getWardFees,
+  getWardOtherPayments,
+  withdrawFeePayment,
+  type AllocationStatus,
+  type WardFeePaymentView,
+} from "@/api/feePayments";
 import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -13,6 +19,10 @@ import { Pagination } from "@/components/ui/Pagination";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
+import {
+  LogOtherPaymentSheet,
+  type LogOtherPaymentIntent,
+} from "@/features/guardian/components/LogOtherPaymentSheet";
 import { LogPaymentSheet, type LogPaymentIntent } from "@/features/guardian/components/LogPaymentSheet";
 import { PAYMENT_STATUS_BADGES } from "@/features/guardian/components/paymentStatus";
 import { WardPaymentsTable, type WardPaymentRowData } from "@/features/guardian/components/WardPaymentsTable";
@@ -31,8 +41,9 @@ const STATUS_FILTERS: AllocationStatus[] = ["PENDING", "CONFIRMED", "REJECTED", 
  * Every fee payment across all of the guardian's wards, in one table (split out of Phase 45G's
  * merged Fees page; the bills themselves stay on `WardBillsPage`). There's no guardian-wide
  * payments endpoint - each ward's `GET /api/v1/me/wards/{id}/fees` already carries its payments
- * and the term a payment's Edit/Resubmit needs - so this fetches every ward in parallel and
- * flattens. `allSettled`, so one ward whose school isn't entitled to Billing (or a transient
+ * and the term a payment's Edit/Resubmit needs, and `.../other-payments` its "other" payments
+ * (D24: an excursion, the Christmas party - no term card, since they settle no bill) - so this
+ * fetches both for every ward in parallel and flattens. `allSettled`, so one ward whose school isn't entitled to Billing (or a transient
  * failure) never blanks the rest, just raises a warning. The merged, filtered rows are paged
  * client-side (`paginate`, `?page=` via `usePageParam`) since they already arrive whole.
  */
@@ -47,25 +58,36 @@ export function WardPaymentsPage() {
 
   const [rows, setRows] = useState<WardPaymentRowData[] | null>(null);
   const [failedWards, setFailedWards] = useState<string[]>([]);
+  // What the log-other-payment sheet reads: each ward's own other payments, and each school's currency.
+  const [otherByStudent, setOtherByStudent] = useState<Map<string, WardFeePaymentView[]>>(new Map());
+  const [currencyBySchool, setCurrencyBySchool] = useState<Map<string, string>>(new Map());
   // Guards against an older refetch resolving after a newer one.
   const requestId = useRef(0);
 
   const loadPayments = useCallback(() => {
     if (status !== "loaded" || wards.length === 0) return;
     const id = ++requestId.current;
-    Promise.allSettled(wards.map((ward) => getWardFees(ward.studentId))).then((results) => {
+    Promise.allSettled(
+      wards.map((ward) => Promise.all([getWardFees(ward.studentId), getWardOtherPayments(ward.studentId)])),
+    ).then((results) => {
       if (id !== requestId.current) return;
       const loaded: WardPaymentRowData[] = [];
       const failed: string[] = [];
+      const others = new Map<string, WardFeePaymentView[]>();
+      const currencies = new Map<string, string>();
       results.forEach((result, index) => {
         const ward = wards[index];
         if (result.status === "rejected") {
           failed.push(ward.fullName);
           return;
         }
-        for (const term of result.value) {
-          for (const payment of term.payments) loaded.push({ ward, term, payment });
+        const [terms, other] = result.value;
+        currencies.set(ward.schoolId, other.currency);
+        for (const term of terms) {
+          for (const payment of term.payments) loaded.push({ ward, term, payment, currency: term.currency });
         }
+        others.set(ward.studentId, other.payments);
+        for (const payment of other.payments) loaded.push({ ward, term: null, payment, currency: other.currency });
       });
       loaded.sort(
         (a, b) =>
@@ -74,6 +96,8 @@ export function WardPaymentsPage() {
       );
       setRows(loaded);
       setFailedWards(failed);
+      setOtherByStudent(others);
+      setCurrencyBySchool(currencies);
     });
   }, [status, wards]);
 
@@ -98,6 +122,7 @@ export function WardPaymentsPage() {
 
   // ----- Log / edit / resubmit / withdraw -----
   const [formIntent, setFormIntent] = useState<LogPaymentIntent | null>(null);
+  const [otherIntent, setOtherIntent] = useState<LogOtherPaymentIntent | null>(null);
   const [withdrawing, setWithdrawing] = useState<WardPaymentRowData | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -115,18 +140,29 @@ export function WardPaymentsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Payments"
-        description="Every fee payment logged for your wards, and its status."
+        description="Every payment logged for your wards - school fees and anything else - and its status."
         actions={
           hasWards &&
           canLog && (
-            <Button
-              onClick={() => {
-                setNotice(null);
-                setFormIntent({ kind: "open" });
-              }}
-            >
-              <Wallet className="h-4 w-4" aria-hidden="true" /> Log payment
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setNotice(null);
+                  setOtherIntent({ kind: "new" });
+                }}
+              >
+                <Receipt className="h-4 w-4" aria-hidden="true" /> Log other payment
+              </Button>
+              <Button
+                onClick={() => {
+                  setNotice(null);
+                  setFormIntent({ kind: "open" });
+                }}
+              >
+                <Wallet className="h-4 w-4" aria-hidden="true" /> Log payment
+              </Button>
+            </>
           )
         }
       />
@@ -193,7 +229,7 @@ export function WardPaymentsPage() {
         <EmptyState
           icon={Wallet}
           title="No payments yet"
-          description="Payments you log for your wards' fees appear here, with their receipts once confirmed."
+          description="Payments you log for your wards' fees, excursions and other school costs appear here, with their receipts once confirmed."
         />
       )}
 
@@ -207,7 +243,11 @@ export function WardPaymentsPage() {
           showSchool={multiSchool}
           onEdit={(row) => {
             setNotice(null);
-            setFormIntent({ kind: "edit", studentId: row.ward.studentId, term: row.term, payment: row.payment });
+            if (row.term) {
+              setFormIntent({ kind: "edit", studentId: row.ward.studentId, term: row.term, payment: row.payment });
+            } else {
+              setOtherIntent({ kind: "edit", studentId: row.ward.studentId, payment: row.payment });
+            }
           }}
           onWithdraw={(row) => {
             setNotice(null);
@@ -215,7 +255,11 @@ export function WardPaymentsPage() {
           }}
           onResubmit={(row) => {
             setNotice(null);
-            setFormIntent({ kind: "resubmit", studentId: row.ward.studentId, term: row.term, payment: row.payment });
+            if (row.term) {
+              setFormIntent({ kind: "resubmit", studentId: row.ward.studentId, term: row.term, payment: row.payment });
+            } else {
+              setOtherIntent({ kind: "resubmit", studentId: row.ward.studentId, payment: row.payment });
+            }
           }}
         />
       )}
@@ -232,12 +276,25 @@ export function WardPaymentsPage() {
         }}
       />
 
+      <LogOtherPaymentSheet
+        intent={otherIntent}
+        wards={wards}
+        paymentsByStudent={otherByStudent}
+        currencyBySchool={currencyBySchool}
+        onClose={() => setOtherIntent(null)}
+        onSubmitted={(message) => {
+          setOtherIntent(null);
+          setNotice(message);
+          loadPayments();
+        }}
+      />
+
       {withdrawing && (
         <ConfirmDialog
           title="Withdraw payment"
           message={
             <>
-              Withdraw your {formatMoney(withdrawing.payment.totalAmount, withdrawing.term.currency)} payment of{" "}
+              Withdraw your {formatMoney(withdrawing.payment.totalAmount, withdrawing.currency)} payment of{" "}
               {formatLongDate(withdrawing.payment.paymentDate)}? The proof you attached will be deleted
               {withdrawing.payment.childCount > 1
                 ? `, and it's withdrawn for all ${withdrawing.payment.childCount} children`

@@ -26,6 +26,11 @@ import { formatMoney } from "@/utils/currency";
 interface AllocationReviewCardProps {
   allocation: AllocationView;
   currency: string;
+  /**
+   * A child of an OTHER payment (D24): no bill, balance or settlement to show - it never counts
+   * toward the term's fees, and is always confirmed in full.
+   */
+  otherPayment?: boolean;
   /** Present only for a PENDING child. */
   draft?: AllocationDraft;
   onDraftChange: (patch: Partial<AllocationDraft>) => void;
@@ -52,6 +57,7 @@ function Figure({ label, value }: { label: string; value: string }) {
 export function AllocationReviewCard({
   allocation,
   currency,
+  otherPayment = false,
   draft,
   onDraftChange,
   onVoid,
@@ -63,7 +69,7 @@ export function AllocationReviewCard({
   const money = (amount: number | null) => formatMoney(amount, currency);
 
   let overpaying = false;
-  if (draft?.action === "CONFIRM") {
+  if (draft?.action === "CONFIRM" && !otherPayment) {
     const amountMinor = parseAmount(draft.amountText);
     const billMinor = effectiveBillMinor(allocation, draft.optionalFeeIds);
     overpaying =
@@ -91,30 +97,44 @@ export function AllocationReviewCard({
           </p>
         </div>
         <div className="flex flex-wrap gap-1">
-          <AllocationStatusBadge status={allocation.status} settlement={allocation.settlement} />
-          <TermPaymentStatusBadge
-            status={status.state}
-            hasPending={status.hasPending}
-            inCredit={status.inCredit}
+          <AllocationStatusBadge
+            status={allocation.status}
+            settlement={otherPayment ? null : allocation.settlement}
           />
+          {!otherPayment && (
+            <TermPaymentStatusBadge
+              status={status.state}
+              hasPending={status.hasPending}
+              inCredit={status.inCredit}
+            />
+          )}
         </div>
       </header>
 
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Figure
-          label={allocation.bill ? `Bill ${allocation.bill.billReference}` : "Bill"}
-          value={allocation.bill ? money(allocation.bill.total) : "No bill"}
-        />
-        <Figure label="Paid so far" value={money(status.confirmedPaid)} />
-        <Figure
-          label={status.balance !== null && status.balance < 0 ? "Credit" : "Balance"}
-          value={status.balance === null ? "—" : money(Math.abs(status.balance))}
-        />
-        <Figure
-          label={allocation.status === "CONFIRMED" ? "Confirmed" : "Claimed"}
-          value={money(allocation.confirmedAmount ?? allocation.claimedAmount)}
-        />
-      </dl>
+      {otherPayment ? (
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Figure
+            label={allocation.status === "CONFIRMED" ? "Confirmed" : "Claimed"}
+            value={money(allocation.confirmedAmount ?? allocation.claimedAmount)}
+          />
+        </dl>
+      ) : (
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Figure
+            label={allocation.bill ? `Bill ${allocation.bill.billReference}` : "Bill"}
+            value={allocation.bill ? money(allocation.bill.total) : "No bill"}
+          />
+          <Figure label="Paid so far" value={money(status.confirmedPaid)} />
+          <Figure
+            label={status.balance !== null && status.balance < 0 ? "Credit" : "Balance"}
+            value={status.balance === null ? "—" : money(Math.abs(status.balance))}
+          />
+          <Figure
+            label={allocation.status === "CONFIRMED" ? "Confirmed" : "Claimed"}
+            value={money(allocation.confirmedAmount ?? allocation.claimedAmount)}
+          />
+        </dl>
+      )}
       {allocation.bill && !allocation.bill.published && (
         <p className="text-xs text-amber-700">This bill isn't published to guardians yet.</p>
       )}
@@ -224,13 +244,15 @@ export function AllocationReviewCard({
                   ))}
                 </fieldset>
               )}
-              <SettlementToggle
-                value={draftSettlement(allocation, draft)}
-                onChange={(settlement) => onDraftChange({ settlement, settlementTouched: true })}
-                suggested={draftSuggestion(allocation, draft)}
-                hasBill={allocation.bill !== null}
-                disabled={disabled}
-              />
+              {!otherPayment && (
+                <SettlementToggle
+                  value={draftSettlement(allocation, draft)}
+                  onChange={(settlement) => onDraftChange({ settlement, settlementTouched: true })}
+                  suggested={draftSuggestion(allocation, draft)}
+                  hasBill={allocation.bill !== null}
+                  disabled={disabled}
+                />
+              )}
             </div>
           )}
 

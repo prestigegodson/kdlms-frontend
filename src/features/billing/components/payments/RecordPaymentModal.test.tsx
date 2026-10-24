@@ -21,6 +21,7 @@ vi.mock("@/api/staffFeePayments", async () => {
   return {
     ...actual,
     getStudentPaymentLedger: vi.fn(),
+    listOtherPaymentItems: vi.fn(),
     recordFeePayment: vi.fn(),
     getPendingPaymentCount: vi.fn(),
   };
@@ -150,6 +151,50 @@ describe("RecordPaymentModal", () => {
       undefined,
     );
     expect(onRecorded).toHaveBeenCalledWith("Payment saved as pending.");
+  });
+
+  it("records an other payment against a school item - no optional fees, no settlement", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.listOtherPaymentItems).mockResolvedValue([
+      {
+        id: "item-1",
+        name: "Christmas party",
+        amount: 5000,
+        active: true,
+        position: 0,
+        createdAt: "2026-10-01T00:00:00Z",
+        updatedAt: "2026-10-01T00:00:00Z",
+      },
+    ]);
+    const onRecorded = renderModal();
+
+    expect(await screen.findByLabelText("Amount for Ada Obi")).toHaveValue("30000");
+    await user.click(screen.getByRole("radio", { name: "Other payment" }));
+    expect(screen.getByLabelText("Amount for Ada Obi")).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+    await user.click(await screen.findByRole("radio", { name: /Christmas party/ }));
+    expect(screen.getByLabelText("Amount for Ada Obi")).toHaveValue("5000");
+    // No optional-fees step for an other payment, and no settlement to choose.
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await fillDetails(user);
+    expect(screen.queryByRole("region", { name: "Settlement if confirming now" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Record & confirm" }));
+
+    expect(api.recordFeePayment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        termId: null,
+        purpose: "OTHER",
+        otherItemId: "item-1",
+        purposeLabel: null,
+        totalAmount: 5000,
+        confirmNow: true,
+        children: [{ studentId: "student-1", amount: 5000, optionalFeeIds: [], settlement: null }],
+      }),
+      [],
+      undefined,
+    );
+    expect(onRecorded).toHaveBeenCalled();
   });
 
   it("records and confirms several students with a settlement each", async () => {

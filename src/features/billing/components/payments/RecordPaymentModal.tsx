@@ -1,9 +1,13 @@
 import { X } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { getStudentBill } from "@/api/billing";
 import { getErrorMessage } from "@/api/client";
-import type { Settlement } from "@/api/feePayments";
-import { getStudentPaymentLedger, recordFeePayment } from "@/api/staffFeePayments";
+import type { OtherPaymentItemView, Settlement } from "@/api/feePayments";
+import {
+  getStudentPaymentLedger,
+  listOtherPaymentItems,
+  recordFeePayment,
+} from "@/api/staffFeePayments";
 import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -13,6 +17,16 @@ import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { ChildrenAmountsStep } from "@/features/billing/components/paymentForm/ChildrenAmountsStep";
 import { OptionalFeesStep } from "@/features/billing/components/paymentForm/OptionalFeesStep";
+import { OtherPurposeStep } from "@/features/billing/components/paymentForm/OtherPurposeStep";
+import {
+  chosenItem,
+  EMPTY_PURPOSE,
+  purposeFields,
+  purposeLabelOf,
+  type PurposeDraft,
+  purposeValid,
+} from "@/features/billing/components/paymentForm/otherPurpose";
+import { formatAmountInput } from "@/features/billing/components/paymentForm/paymentAmounts";
 import {
   type ChildDrafts,
   childrenStepValid,
@@ -79,6 +93,9 @@ const STEP_TITLES: Record<StepKey, string> = {
  * and form pieces, with students picked by search instead of from a ward list (siblings across
  * branches allowed, D3), proof optional, a paid-in-full term flagged rather than refused (D6), and
  * a choice between "Save as pending" and "Record & confirm" (each child then needs a settlement).
+ * The first step can switch it to an "other" payment (D24) - an excursion, the Christmas party:
+ * then no bill, balance, optional fees or settlement apply, and it is logged against the current
+ * term rather than the one the form was opened for.
  */
 export function RecordPaymentModal({ target, onClose, onRecorded }: RecordPaymentModalProps) {
   const [busy, setBusy] = useState(false);
@@ -151,6 +168,41 @@ function RecordFlow({ target, onCancel, onBusyChange, onRecorded }: RecordFlowPr
   const [files, setFiles] = useState<File[]>([]);
   const [settlements, setSettlements] = useState<Record<string, Settlement>>({});
 
+  const [kind, setKind] = useState<"FEES" | "OTHER">("FEES");
+  const [purpose, setPurpose] = useState<PurposeDraft>(EMPTY_PURPOSE);
+  const [items, setItems] = useState<OtherPaymentItemView[] | null>(null);
+  const [itemsError, setItemsError] = useState<string | null>(null);
+  const other = kind === "OTHER";
+  const suggestedMinor = (() => {
+    const amount = chosenItem(purpose, items ?? [])?.amount;
+    return amount == null ? null : Math.round(amount * 100);
+  })();
+  // A student whose fees load after the purpose was picked prefills from the purpose as it is then.
+  const prefillRef = useRef<{ other: boolean; suggestedMinor: number | null }>({
+    other,
+    suggestedMinor,
+  });
+  useEffect(() => {
+    prefillRef.current = { other, suggestedMinor };
+  }, [other, suggestedMinor]);
+
+  useEffect(() => {
+    if (!other || items !== null) return;
+    let cancelled = false;
+    listOtherPaymentItems().then(
+      (all) => {
+        if (!cancelled) setItems(all.filter((item) => item.active));
+      },
+      (error: unknown) => {
+        if (!cancelled)
+          setItemsError(getErrorMessage(error, "Couldn't load the school's payment items"));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [other, items]);
+
   const [stepKey, setStepKey] = useState<StepKey>("children");
   const [submitting, setSubmitting] = useState<"pending" | "confirm" | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
@@ -162,11 +214,67 @@ function RecordFlow({ target, onCancel, onBusyChange, onRecorded }: RecordFlowPr
         ? current
         : [...current, option],
     );
+    const prefill = prefillRef.current;
     setDrafts((current) => ({
       ...current,
-      [option.studentId]: { selected: true, amountText: prefillAmount(option), optionalFeeIds: [] },
+      [option.studentId]: {
+        selected: true,
+        amountText: prefill.other
+          ? prefill.suggestedMinor === null
+            ? ""
+            : formatAmountInput(prefill.suggestedMinor / 100)
+          : prefillAmount(option),
+        optionalFeeIds: [],
+      },
     }));
   }
+
+  /**
+   * Switching between fees and an other payment re-prefills every pupil's amount: the fee balance,
+   * or the picked item's suggested amount (blank without one).
+   */
+  function refill(nextOther: boolean, nextSuggestedMinor: number | null) {
+    setDrafts((current) => {
+      const next: ChildDrafts = {};
+      for (const option of options) {
+        const draft = current[option.studentId];
+        if (!draft) continue;
+        next[option.studentId] = {
+          ...draft,
+          amountText: nextOther
+            ? nextSuggestedMinor === null
+              ? ""
+              : formatAmountInput(nextSuggestedMinor / 100)
+            : prefillAmount(option),
+          optionalFeeIds: nextOther ? [] : draft.optionalFeeIds,
+        };
+      }
+      return next;
+    });
+  }
+
+  function changeKind(next: "FEES" | "OTHER") {
+    setKind(next);
+    refill(next === "OTHER", next === "OTHER" ? suggestedMinor : null);
+  }
+
+  /** Picking an item with a suggested amount applies it to every pupil (still editable). */
+  function changePurpose(next: PurposeDraft) {
+    setPurpose(next);
+    const amount = chosenItem(next, items ?? [])?.amount;
+    if (amount != null && next.choice !== purpose.choice) refill(true, Math.round(amount * 100));
+  }
+
+  /** An other payment's rows show no bill, balance, warning or optional fees - none apply (D24). */
+  const shownOptions: RecordChildOption[] = other
+    ? options.map((option) => ({
+        ...option,
+        balance: null,
+        outstandingMinor: null,
+        warning: null,
+        optionalFees: [],
+      }))
+    : options;
 
   function load(student: StudentSearchSelection) {
     fetchChildOption(student, termId)
@@ -190,16 +298,20 @@ function RecordFlow({ target, onCancel, onBusyChange, onRecorded }: RecordFlowPr
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on open
   }, []);
 
-  const selected = selectedOptions(options, drafts);
-  const steps: StepKey[] = hasOptionalFees(options, drafts)
+  const selected = selectedOptions(shownOptions, drafts);
+  const steps: StepKey[] = hasOptionalFees(shownOptions, drafts)
     ? ["children", "optional", "details", "proof"]
     : ["children", "details", "proof"];
   const stepIndex = Math.max(steps.indexOf(stepKey), 0);
   const currentStep = steps[stepIndex];
   const isLast = stepIndex === steps.length - 1;
-  const total = totalMinor(options, drafts);
+  const total = totalMinor(shownOptions, drafts);
+  const headingLabel = other
+    ? `${purposeLabelOf(purpose, items ?? []) || "Other payment"} · logged against the current term`
+    : termLabel;
   const stepValid: Record<StepKey, boolean> = {
-    children: adding === 0 && childrenStepValid(options, drafts),
+    children:
+      adding === 0 && childrenStepValid(shownOptions, drafts) && (!other || purposeValid(purpose)),
     optional: true,
     details: paymentDetailsValid(details),
     proof: true,
@@ -223,7 +335,15 @@ function RecordFlow({ target, onCancel, onBusyChange, onRecorded }: RecordFlowPr
     setProgress(files.length > 0 ? 0 : null);
     try {
       await recordFeePayment(
-        buildStaffRequest(termId, options, drafts, details, confirmNow, settlements),
+        buildStaffRequest(
+          termId,
+          shownOptions,
+          drafts,
+          details,
+          confirmNow,
+          settlements,
+          other ? purposeFields(purpose) : null,
+        ),
         files,
         files.length > 0
           ? ({ loadedBytes, totalBytes }) =>
@@ -253,7 +373,7 @@ function RecordFlow({ target, onCancel, onBusyChange, onRecorded }: RecordFlowPr
   return (
     <div className="flex flex-1 flex-col">
       <div className="mb-4 space-y-2">
-        <p className="text-sm text-slate-500">{termLabel}</p>
+        <p className="break-words text-sm text-slate-500">{headingLabel}</p>
         <p className="text-xs font-medium uppercase tracking-wide text-brand-700">
           Step {stepIndex + 1} of {steps.length} · {STEP_TITLES[currentStep]}
         </p>
@@ -275,6 +395,52 @@ function RecordFlow({ target, onCancel, onBusyChange, onRecorded }: RecordFlowPr
       <div className="space-y-4 pb-4">
         {currentStep === "children" && (
           <>
+            <fieldset>
+              <legend className="block text-sm font-medium text-slate-700">Payment for</legend>
+              <div className="mt-1 grid grid-cols-2 gap-2">
+                {(
+                  [
+                    ["FEES", `School fees - ${termLabel}`],
+                    ["OTHER", "Other payment"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <label
+                    key={value}
+                    className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-control border px-3 py-2 text-sm transition-colors ${
+                      kind === value
+                        ? "border-brand-500 bg-brand-50 font-medium text-brand-800"
+                        : "border-slate-300 text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name={`${id}-kind`}
+                      value={value}
+                      checked={kind === value}
+                      onChange={() => changeKind(value)}
+                      className="h-4 w-4 border-slate-300 text-brand-500"
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            {other &&
+              (itemsError ? (
+                <Alert variant="error">{itemsError}</Alert>
+              ) : items === null ? (
+                <p className="flex items-center gap-2 text-sm text-slate-500">
+                  <Spinner /> Loading…
+                </p>
+              ) : (
+                <OtherPurposeStep
+                  items={items}
+                  value={purpose}
+                  currency={currency}
+                  onChange={changePurpose}
+                  legend="What was it for?"
+                />
+              ))}
             <div className="grid gap-2 sm:grid-cols-2">
               {selectsBranch && (
                 <FormField label="Branch" htmlFor={`${id}-branch`}>
@@ -320,11 +486,15 @@ function RecordFlow({ target, onCancel, onBusyChange, onRecorded }: RecordFlowPr
             ) : (
               <>
                 <ChildrenAmountsStep
-                  options={options}
+                  options={shownOptions}
                   drafts={drafts}
                   currency={currency}
                   intro="Untick a pupil to leave them off, and enter how much of the payment was for each."
-                  noBillHint="No bill this term - enter the amount received"
+                  noBillHint={
+                    other
+                      ? "Enter how much of the payment was for them"
+                      : "No bill this term - enter the amount received"
+                  }
                   onToggle={(option) => setDrafts((current) => toggleChild(current, option))}
                   onAmountChange={(studentId, amountText) =>
                     setDrafts((current) => ({
@@ -387,41 +557,45 @@ function RecordFlow({ target, onCancel, onBusyChange, onRecorded }: RecordFlowPr
               disabled={submitting !== null}
             />
             <ReviewSummary
-              termLabel={termLabel}
+              termLabel={headingLabel}
               options={selected}
               drafts={drafts}
               details={details}
               totalMinor={total}
               currency={currency}
             />
-            <section aria-label="Settlement if confirming now" className="space-y-3">
-              <div>
-                <h3 className="text-sm font-medium text-slate-900">If you record & confirm now</h3>
-                <p className="text-xs text-slate-500">
-                  Each pupil's receipt is issued straight away as a part payment or paid in full.
-                </p>
-              </div>
-              {selected.map((option) => {
-                const suggested = recordSuggestion(option, drafts);
-                return (
-                  <div key={option.studentId} className="space-y-1">
-                    <p className="text-sm text-slate-800">{option.name}</p>
-                    <SettlementToggle
-                      value={settlements[option.studentId] ?? suggested}
-                      onChange={(settlement) =>
-                        setSettlements((current) => ({
-                          ...current,
-                          [option.studentId]: settlement,
-                        }))
-                      }
-                      suggested={suggested}
-                      hasBill={option.billedMinor !== null}
-                      disabled={submitting !== null}
-                    />
-                  </div>
-                );
-              })}
-            </section>
+            {!other && (
+              <section aria-label="Settlement if confirming now" className="space-y-3">
+                <div>
+                  <h3 className="text-sm font-medium text-slate-900">
+                    If you record & confirm now
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Each pupil's receipt is issued straight away as a part payment or paid in full.
+                  </p>
+                </div>
+                {selected.map((option) => {
+                  const suggested = recordSuggestion(option, drafts);
+                  return (
+                    <div key={option.studentId} className="space-y-1">
+                      <p className="text-sm text-slate-800">{option.name}</p>
+                      <SettlementToggle
+                        value={settlements[option.studentId] ?? suggested}
+                        onChange={(settlement) =>
+                          setSettlements((current) => ({
+                            ...current,
+                            [option.studentId]: settlement,
+                          }))
+                        }
+                        suggested={suggested}
+                        hasBill={option.billedMinor !== null}
+                        disabled={submitting !== null}
+                      />
+                    </div>
+                  );
+                })}
+              </section>
+            )}
           </>
         )}
         {submitError && <Alert variant="error">{submitError}</Alert>}

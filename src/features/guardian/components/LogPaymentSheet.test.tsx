@@ -44,6 +44,11 @@ function payment(overrides: Partial<WardFeePaymentView> = {}): WardFeePaymentVie
   return {
     paymentId: "p1",
     allocationId: "a1",
+    purpose: "FEES",
+    otherItemId: null,
+    purposeLabel: null,
+    termId: "term-1",
+    termName: "First Term",
     status: "PENDING",
     claimedAmount: 20000,
     confirmedAmount: null,
@@ -93,6 +98,8 @@ function term(overrides: Partial<WardFeeTermView> = {}): WardFeeTermView {
 
 const SAVED: FeePaymentView = {
   id: "p-new",
+  purpose: "FEES",
+  purposeLabel: null,
   termId: "term-1",
   payerName: "Gina G",
   paymentDate: "2020-01-15",

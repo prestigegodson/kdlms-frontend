@@ -70,6 +70,8 @@ const LEVEL: LevelView = {
 
 const ITEM: QueueItem = {
   paymentId: "payment-1",
+  purpose: "FEES",
+  purposeLabel: null,
   termId: "term-1",
   termName: "First Term",
   source: "GUARDIAN",

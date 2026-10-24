@@ -18,6 +18,13 @@ export type Settlement = "PARTIAL" | "FULL";
 /** Mirrors backend billing.domain.PaymentMethod. */
 export type PaymentMethod = "BANK_TRANSFER" | "BANK_DEPOSIT" | "POS" | "CASH" | "CHEQUE" | "OTHER";
 
+/**
+ * Mirrors backend billing.domain.PaymentPurpose - `FEES` is a term's school fees; `OTHER` is money
+ * no bill carries (an excursion, the Christmas party), receipted the same way but never counted
+ * toward a term's balance.
+ */
+export type PaymentPurpose = "FEES" | "OTHER";
+
 /** Mirrors backend billing.domain.PaymentSource - who logged the payment. */
 export type PaymentSource = "GUARDIAN" | "STAFF";
 
@@ -91,6 +98,32 @@ export interface WardFeePaymentView {
   optionalFees: OptionalFeeView[];
   attachments: PaymentAttachmentView[];
   receipts: FeeReceiptView[];
+  purpose: PaymentPurpose;
+  otherItemId: string | null;
+  /** What an OTHER payment was for; null for school fees. */
+  purposeLabel: string | null;
+  termId: string;
+  termName: string | null;
+}
+
+/** Mirrors backend WardOtherPaymentsView - a ward's OTHER payments, newest first. */
+export interface WardOtherPaymentsView {
+  currency: string;
+  payments: WardFeePaymentView[];
+}
+
+/**
+ * Mirrors backend OtherPaymentItemView - something the school collects money for outside any bill.
+ * `amount` is a suggestion the form pre-fills; null when the payer always enters their own.
+ */
+export interface OtherPaymentItemView {
+  id: string;
+  name: string;
+  amount: number | null;
+  active: boolean;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**
@@ -128,9 +161,16 @@ export interface PaymentChildRequest {
   optionalFeeIds: string[];
 }
 
-/** Mirrors backend MyFeePaymentsController.PaymentRequest. `keepAttachmentFileIds` is read on edit only. */
+/**
+ * Mirrors backend MyFeePaymentsController.PaymentRequest. `keepAttachmentFileIds` is read on edit
+ * only. An OTHER payment sends no `termId` (it is logged against the current term) and names what
+ * it is for with `otherItemId`, else `purposeLabel`.
+ */
 export interface PaymentRequest {
-  termId: string;
+  termId: string | null;
+  purpose?: PaymentPurpose;
+  otherItemId?: string | null;
+  purposeLabel?: string | null;
   payerName: string;
   paymentDate: string;
   method: PaymentMethod;
@@ -159,6 +199,8 @@ export interface FeePaymentView {
     status: AllocationStatus;
     optionalFeeIds: string[];
   }[];
+  purpose: PaymentPurpose;
+  purposeLabel: string | null;
 }
 
 const ME = "/api/v1/me";
@@ -166,6 +208,16 @@ const ME = "/api/v1/me";
 /** One card per eligible term for a ward, newest first. */
 export function getWardFees(studentId: string): Promise<WardFeeTermView[]> {
   return apiFetch<WardFeeTermView[]>(`${ME}/wards/${studentId}/fees`);
+}
+
+/** A ward's OTHER payments - kept off the term cards, since none of them settles a bill. */
+export function getWardOtherPayments(studentId: string): Promise<WardOtherPaymentsView> {
+  return apiFetch<WardOtherPaymentsView>(`${ME}/wards/${studentId}/other-payments`);
+}
+
+/** The active "other payment" items of a ward's school - the log-other-payment picker. */
+export function getWardOtherPaymentItems(studentId: string): Promise<OtherPaymentItemView[]> {
+  return apiFetch<OtherPaymentItemView[]>(`${ME}/wards/${studentId}/other-payment-items`);
 }
 
 /**

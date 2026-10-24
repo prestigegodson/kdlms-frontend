@@ -11,10 +11,14 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { FeeFormModal } from "@/features/billing/components/FeeFormModal";
+import { OtherPaymentItemsSection } from "@/features/billing/components/OtherPaymentItemsSection";
 import { useAuthStore } from "@/stores/authStore";
 import { useFeatureStore } from "@/stores/featureStore";
 
-/** The fee catalogue - a definition list, no amounts. SCHOOL_ADMIN writes; BRANCH_ADMIN reads only. */
+/**
+ * The fee catalogue - a definition list, no amounts - and, below it, the "other payment" items
+ * guardians can pay for outside any bill (D24). SCHOOL_ADMIN writes both; BRANCH_ADMIN reads only.
+ */
 export function FeesTab() {
   const role = useAuthStore((state) => state.user?.role);
   const entitled = useFeatureStore((state) => state.billing);
@@ -155,6 +159,10 @@ export function FeesTab() {
           onClose={() => setDeletingFee(null)}
         />
       )}
+
+      <div className="border-t border-slate-200 pt-6">
+        <OtherPaymentItemsSection canManage={canManage} />
+      </div>
     </div>
   );
 }

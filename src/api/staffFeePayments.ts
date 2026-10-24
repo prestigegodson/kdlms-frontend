@@ -2,7 +2,9 @@ import { apiFetch, apiFetchBlob, apiUploadWithProgress, type UploadProgress } fr
 import {
   type AllocationStatus,
   type CombinedPaymentStatus,
+  type OtherPaymentItemView,
   type PaymentMethod,
+  type PaymentPurpose,
   type PaymentSource,
   paymentFormData,
   type ReceiptStatus,
@@ -113,6 +115,10 @@ export interface StaffFeePaymentView {
   /** Allocations in branches the caller can't see (BRANCH_ADMIN) - left out of `allocations`. */
   hiddenAllocationCount: number;
   allocations: AllocationView[];
+  /** An OTHER payment (D24) carries no bill on its children and is always confirmed FULL. */
+  purpose: PaymentPurpose;
+  otherItemId: string | null;
+  purposeLabel: string | null;
 }
 
 export interface QueueAllocation {
@@ -150,6 +156,8 @@ export interface QueueItem {
   attachmentCount: number;
   hiddenAllocationCount: number;
   allocations: QueueAllocation[];
+  purpose: PaymentPurpose;
+  purposeLabel: string | null;
 }
 
 /** Paged over payments (never splitting one across pages), newest first. */
@@ -169,6 +177,8 @@ export interface LedgerEntry {
   source: PaymentSource;
   childCount: number;
   allocation: AllocationView;
+  purpose: PaymentPurpose;
+  purposeLabel: string | null;
 }
 
 export interface TermLedger {
@@ -215,8 +225,12 @@ export interface StaffChildRequest {
   settlement: Settlement | null;
 }
 
+/** As the guardian's PaymentRequest: an OTHER payment sends no `termId` and names its purpose. */
 export interface StaffPaymentRequest {
-  termId: string;
+  termId: string | null;
+  purpose?: PaymentPurpose;
+  otherItemId?: string | null;
+  purposeLabel?: string | null;
   payerName: string;
   paymentDate: string;
   method: PaymentMethod;
@@ -249,6 +263,7 @@ export interface PaymentQueueFilters {
   from?: string;
   to?: string;
   q?: string;
+  purpose?: PaymentPurpose;
 }
 
 const BASE = "/api/v1/billing";
@@ -370,6 +385,34 @@ export function getCollectionSummary(
 export function exportFeePaymentsCsv(filters: PaymentQueueFilters): Promise<Blob> {
   const query = filterParams(filters).toString();
   return apiFetchBlob(`${BASE}/payments/export.csv${query ? `?${query}` : ""}`);
+}
+
+/** The school's "other payment" items (D24), active and retired, ordered by position then name. */
+export function listOtherPaymentItems(): Promise<OtherPaymentItemView[]> {
+  return apiFetch<OtherPaymentItemView[]>(`${BASE}/other-payment-items`);
+}
+
+export interface SaveOtherPaymentItemRequest {
+  name: string;
+  amount: number | null;
+  active: boolean;
+  position: number;
+}
+
+/** SCHOOL_ADMIN only. */
+export function createOtherPaymentItem(request: SaveOtherPaymentItemRequest): Promise<OtherPaymentItemView> {
+  return apiFetch<OtherPaymentItemView>(`${BASE}/other-payment-items`, { method: "POST", body: JSON.stringify(request) });
+}
+
+/** SCHOOL_ADMIN only - retire an item with `active: false`; there is no delete. */
+export function updateOtherPaymentItem(
+  itemId: string,
+  request: SaveOtherPaymentItemRequest,
+): Promise<OtherPaymentItemView> {
+  return apiFetch<OtherPaymentItemView>(`${BASE}/other-payment-items/${itemId}`, {
+    method: "PUT",
+    body: JSON.stringify(request),
+  });
 }
 
 export function downloadStaffPaymentAttachment(paymentId: string, fileId: string): Promise<Blob> {

@@ -53,6 +53,9 @@ export function allocation(overrides: Partial<AllocationView> = {}): AllocationV
 export function paymentView(overrides: Partial<StaffFeePaymentView> = {}): StaffFeePaymentView {
   return {
     id: "payment-1",
+    purpose: "FEES",
+    otherItemId: null,
+    purposeLabel: null,
     termId: "term-1",
     termName: "First Term",
     sessionId: "session-1",
@@ -95,6 +98,8 @@ export function ledger(
         payments: [
           {
             paymentId: "payment-1",
+            purpose: "FEES",
+            purposeLabel: null,
             paymentDate: "2026-09-20",
             method: "BANK_TRANSFER",
             payerName: "Gina Obi",
