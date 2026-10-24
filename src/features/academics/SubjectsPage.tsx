@@ -376,6 +376,8 @@ function AdminSubjects() {
   const [groups, setGroups] = useState<SubjectGroupView[]>([]);
   // "" means all; UNGROUPED_FILTER means subjects with no group.
   const [selectedGroupFilter, setSelectedGroupFilter] = useState("");
+  // "" means all; a period matches only graded subjects assessed in exactly that period.
+  const [gradedFilter, setGradedFilter] = useState<"" | SubjectAssessmentPeriods>("");
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<SubjectView | null>(null);
   const [deleting, setDeleting] = useState<SubjectView | null>(null);
@@ -441,11 +443,12 @@ function AdminSubjects() {
       groups.some((group) => group.id === selectedGroupFilter))
       ? selectedGroupFilter
       : "";
-  const visibleSubjects = !groupFilter
-    ? subjects
-    : subjects.filter((subject) =>
-        groupFilter === UNGROUPED_FILTER ? !subject.subjectGroupId : subject.subjectGroupId === groupFilter,
-      );
+  const visibleSubjects = subjects.filter(
+    (subject) =>
+      (!groupFilter ||
+        (groupFilter === UNGROUPED_FILTER ? !subject.subjectGroupId : subject.subjectGroupId === groupFilter)) &&
+      (!gradedFilter || (subject.graded && subject.assessmentPeriods === gradedFilter)),
+  );
   const sections: SubjectSection[] = groupsEnabled
     ? sectionByGroup(visibleSubjects, terms.ungrouped)
     : [{ label: "", subjects: visibleSubjects }];
@@ -525,6 +528,27 @@ function AdminSubjects() {
               </Select>
             </FormField>
           )}
+          {subjects.length > 0 && (
+            <FormField
+              label="Graded in"
+              htmlFor="subject-graded-filter"
+              className="min-w-0 flex-1 lg:max-w-xs"
+              labelClassName="sr-only lg:not-sr-only"
+            >
+              <Select
+                id="subject-graded-filter"
+                value={gradedFilter}
+                onChange={(event) => setGradedFilter(event.target.value as "" | SubjectAssessmentPeriods)}
+              >
+                <option value="">All</option>
+                {(Object.keys(GRADED_FILTER_LABELS) as SubjectAssessmentPeriods[]).map((periods) => (
+                  <option key={periods} value={periods}>
+                    {GRADED_FILTER_LABELS[periods]}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          )}
         </StickySubHeader>
       )}
 
@@ -544,7 +568,10 @@ function AdminSubjects() {
         />
       )}
       {state.kind === "loaded" && state.subjects.length > 0 && visibleSubjects.length === 0 && (
-        <EmptyState icon={BookOpen} title={`No ${terms.items} in this ${terms.group}`} />
+        <EmptyState
+          icon={BookOpen}
+          title={gradedFilter ? `No ${terms.items} match these filters` : `No ${terms.items} in this ${terms.group}`}
+        />
       )}
       {visibleSubjects.length > 0 && (
         <div className="space-y-6">
@@ -785,6 +812,13 @@ const ASSESSMENT_PERIOD_LABELS: Record<SubjectAssessmentPeriods, string> = {
   BOTH: "Midterm and exam",
   MIDTERM_ONLY: "Midterm only",
   EXAM_ONLY: "Exam only",
+};
+
+/** The "Graded in" filter's options, in menu order. */
+const GRADED_FILTER_LABELS: Record<SubjectAssessmentPeriods, string> = {
+  MIDTERM_ONLY: "Midterm only",
+  EXAM_ONLY: "Exam only",
+  BOTH: "Midterm and exam",
 };
 
 interface SubjectFormModalProps {

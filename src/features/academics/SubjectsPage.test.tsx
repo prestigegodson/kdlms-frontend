@@ -491,6 +491,53 @@ describe("SubjectsPage", () => {
     expect(screen.getByText("Midterm only", { selector: "span" })).toBeInTheDocument();
   });
 
+  it("filters subjects by the period they're graded in, showing non-graded ones only under All", async () => {
+    mockSubjects([
+      UNGROUPED_SUBJECT,
+      { ...TERM_THREE_ONLY_SUBJECT, assessmentPeriods: "MIDTERM_ONLY" },
+      { ...GROUPED_SUBJECT, subjectGroupId: undefined, subjectGroupName: undefined, assessmentPeriods: "EXAM_ONLY" },
+      { ...SOURCE_PHYSICS, levelId: "level-1", graded: false },
+    ]);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Mathematics");
+    const filter = screen.getByLabelText("Graded in");
+
+    await user.selectOptions(filter, "Midterm only");
+    expect(screen.getByText("Project Work")).toBeInTheDocument();
+    expect(screen.queryByText("Mathematics")).not.toBeInTheDocument();
+    expect(screen.queryByText("Basic Science")).not.toBeInTheDocument();
+    expect(screen.queryByText("Physics")).not.toBeInTheDocument();
+
+    await user.selectOptions(filter, "Exam only");
+    expect(screen.getByText("Basic Science")).toBeInTheDocument();
+    expect(screen.queryByText("Project Work")).not.toBeInTheDocument();
+    expect(screen.queryByText("Physics")).not.toBeInTheDocument();
+
+    await user.selectOptions(filter, "Midterm and exam");
+    expect(screen.getByText("Mathematics")).toBeInTheDocument();
+    expect(screen.queryByText("Basic Science")).not.toBeInTheDocument();
+    expect(screen.queryByText("Physics")).not.toBeInTheDocument();
+
+    await user.selectOptions(filter, "All");
+    for (const name of ["Mathematics", "Project Work", "Basic Science", "Physics"]) {
+      expect(screen.getByText(name)).toBeInTheDocument();
+    }
+  });
+
+  it("shows a no-match state when no subject is graded in the chosen period", async () => {
+    mockSubjects([UNGROUPED_SUBJECT]);
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByText("Mathematics");
+
+    await user.selectOptions(screen.getByLabelText("Graded in"), "Exam only");
+    expect(screen.getByText("No subjects match these filters")).toBeInTheDocument();
+    expect(screen.queryByText("Mathematics")).not.toBeInTheDocument();
+  });
+
   it("badges a selective subject in the list", async () => {
     mockSubjects([{ ...UNGROUPED_SUBJECT, selective: true }]);
 
