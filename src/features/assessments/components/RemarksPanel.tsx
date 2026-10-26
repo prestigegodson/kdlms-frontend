@@ -6,9 +6,11 @@ import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
+import type { ResultScope } from "@/api/types";
 import { ClassTermPicker } from "@/features/assessments/components/ClassTermPicker";
 import { RemarksEntryGrid } from "@/features/assessments/components/RemarksEntryGrid";
 import { SaveOutcomeList } from "@/features/assessments/components/SaveOutcomeList";
+import { ScopeToggle } from "@/features/assessments/components/ScopeToggle";
 import { NotebookPen } from "lucide-react";
 
 interface RemarksPanelProps {
@@ -23,12 +25,15 @@ interface RemarksPanelProps {
  * broader than write: any of the caller's classes (class-teach ∪
  * subject-teach, via `listMyClasses`) shows a sheet, but only a class
  * teacher's own class comes back with `classTeacherEditable: true` -
- * `RemarksEntryGrid` renders read-only text for everyone else.
+ * `RemarksEntryGrid` renders read-only text for everyone else. Mid-term and
+ * end-of-term remarks are separate sheets, switched by `ScopeToggle`;
+ * behavioural-trait ratings are per term, so both sheets share them.
  */
 export function RemarksPanel({ initialClassId }: RemarksPanelProps = {}) {
   const [classes, setClasses] = useState<TeacherClassView[] | null>(null);
   const [classId, setClassId] = useState(initialClassId ?? "");
   const [termId, setTermId] = useState("");
+  const [scope, setScope] = useState<ResultScope>("TERM");
 
   const [sheet, setSheet] = useState<RemarksSheetView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -42,7 +47,7 @@ export function RemarksPanel({ initialClassId }: RemarksPanelProps = {}) {
 
   // Selection resets downstream state during render (see ScoreEntryGrid's comment on this
   // pattern) rather than in an effect; the effect below only fetches.
-  const sheetKey = `${classId}|${termId}`;
+  const sheetKey = `${classId}|${termId}|${scope}`;
   const [lastSheetKey, setLastSheetKey] = useState(sheetKey);
   if (sheetKey !== lastSheetKey) {
     setLastSheetKey(sheetKey);
@@ -53,14 +58,14 @@ export function RemarksPanel({ initialClassId }: RemarksPanelProps = {}) {
 
   useEffect(() => {
     if (!classId || !termId) return;
-    getRemarksSheet(classId, termId)
+    getRemarksSheet(classId, termId, scope)
       .then(setSheet)
       .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load the remarks sheet"));
-  }, [classId, termId]);
+  }, [classId, termId, scope]);
 
   function reload() {
     if (!classId || !termId) return;
-    getRemarksSheet(classId, termId).then(setSheet).catch(() => undefined);
+    getRemarksSheet(classId, termId, scope).then(setSheet).catch(() => undefined);
   }
 
   function handleSaved(rowOutcomes: RowOutcome[]) {
@@ -88,6 +93,7 @@ export function RemarksPanel({ initialClassId }: RemarksPanelProps = {}) {
       {classes !== null && classes.length > 0 && (
         <StickySubHeader collapsible>
           <ClassTermPicker classes={classOptions} classId={classId} onClassChange={setClassId} termId={termId} onTermChange={setTermId} />
+          <ScopeToggle scope={scope} onChange={setScope} />
         </StickySubHeader>
       )}
 

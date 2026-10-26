@@ -59,6 +59,7 @@ const EDITABLE_SHEET: RemarksSheetView = {
   classId: "class-1",
   className: "JSS 1A",
   termId: "term-1",
+  scope: "TERM",
   classTeacherEditable: true,
   principalRemarkEditable: false,
   headRemarkTitle: "Principal",
@@ -110,14 +111,14 @@ describe("RemarksPanel", () => {
     await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
 
     expect(await screen.findByLabelText("Class teacher's remark for Zara Bello")).toBeInTheDocument();
-    expect(assessmentsApi.getRemarksSheet).toHaveBeenCalledWith("class-1", "term-1");
+    expect(assessmentsApi.getRemarksSheet).toHaveBeenCalledWith("class-1", "term-1", "TERM");
 
     await user.type(screen.getByLabelText("Class teacher's remark for Zara Bello"), "A hardworking student.");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     expect(assessmentsApi.saveTeacherRemarks).toHaveBeenCalledWith("class-1", "term-1", [
       { enrollmentId: "enrollment-1", remark: "A hardworking student." },
-    ]);
+    ], "TERM");
   });
 
   it("shows a trait tab per enabled category and includes a rating in the save payload", async () => {
@@ -174,7 +175,7 @@ describe("RemarksPanel", () => {
 
     expect(assessmentsApi.saveTeacherRemarks).toHaveBeenCalledWith("class-1", "term-1", [
       { enrollmentId: "enrollment-1", remark: null, traits: [{ traitId: "trait-1", scaleOptionId: "option-2" }] },
-    ]);
+    ], "TERM");
   });
 
   it("keeps a remark and a trait rating edit together across tab switches, in one save", async () => {
@@ -218,7 +219,7 @@ describe("RemarksPanel", () => {
         remark: "A hardworking student.",
         traits: [{ traitId: "trait-1", scaleOptionId: "option-2" }],
       },
-    ]);
+    ], "TERM");
   });
 
   it("renders remarks read-only, with a warning, when the caller isn't this class's class teacher", async () => {
@@ -236,5 +237,33 @@ describe("RemarksPanel", () => {
     expect(await screen.findByText("Already on file.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Class teacher's remark for Zara Bello")).not.toBeInTheDocument();
     expect(screen.getByText(/Only this class's class teacher can write remarks/)).toBeInTheDocument();
+  });
+
+  it("switches to the mid-term sheet and saves a remark against that scope", async () => {
+    const user = userEvent.setup();
+    vi.mocked(meApi.listMyClasses).mockResolvedValue([CLASS]);
+    vi.mocked(assessmentsApi.getRemarksSheet).mockImplementation(async (_classId, _termId, scope) => ({
+      ...EDITABLE_SHEET,
+      scope: scope ?? "TERM",
+    }));
+    vi.mocked(assessmentsApi.saveTeacherRemarks).mockResolvedValue({
+      outcomes: [{ enrollmentId: "enrollment-1", success: true }],
+    });
+    renderPanel();
+
+    await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
+    await screen.findByLabelText("Class teacher's remark for Zara Bello");
+    await user.click(screen.getByRole("radio", { name: "Mid-term" }));
+
+    expect(assessmentsApi.getRemarksSheet).toHaveBeenLastCalledWith("class-1", "term-1", "MIDTERM");
+    await user.type(await screen.findByLabelText("Class teacher's remark for Zara Bello"), "A strong start.");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(assessmentsApi.saveTeacherRemarks).toHaveBeenCalledWith(
+      "class-1",
+      "term-1",
+      [{ enrollmentId: "enrollment-1", remark: "A strong start." }],
+      "MIDTERM",
+    );
   });
 });

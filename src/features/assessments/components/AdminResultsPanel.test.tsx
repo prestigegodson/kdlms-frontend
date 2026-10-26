@@ -143,6 +143,7 @@ describe("AdminResultsPanel", () => {
       classId: "class-1",
       className: "Primary 1A",
       termId: "term-1",
+      scope: "TERM",
       classTeacherEditable: false,
       principalRemarkEditable: true,
       headRemarkTitle: "Principal",
@@ -158,6 +159,7 @@ describe("AdminResultsPanel", () => {
       classId: "class-1",
       className: "Primary 1A",
       termId: "term-1",
+      scope: "TERM",
       classTeacherEditable: false,
       principalRemarkEditable: true,
       headRemarkTitle: "Head of Primary",
@@ -168,7 +170,7 @@ describe("AdminResultsPanel", () => {
     renderPanel();
     await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
 
-    expect(await screen.findByText("Head of Primary's remarks")).toBeInTheDocument();
+    expect(await screen.findByText("Head of Primary's end-of-term remarks")).toBeInTheDocument();
   });
 
   it("offers CSV download and print once the broadsheet has rows", async () => {

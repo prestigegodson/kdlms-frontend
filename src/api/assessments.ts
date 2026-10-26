@@ -203,6 +203,8 @@ export interface RemarksSheetView {
   classId: string;
   className: string;
   termId: string;
+  /** Which remark pair this sheet carries - mid-term and end-of-term remarks are recorded separately. */
+  scope: ResultScope;
   classTeacherEditable: boolean;
   principalRemarkEditable: boolean;
   /** The class's live commenter title - "Principal" unless a level/branch commenter is configured. Never blank. */
@@ -363,19 +365,29 @@ export function unpublishResults(classId: string, termId: string, scope: ResultS
   });
 }
 
-export function getRemarksSheet(classId: string, termId: string): Promise<RemarksSheetView> {
-  return apiFetch<RemarksSheetView>(`/api/v1/classes/${classId}/terms/${termId}/remarks`);
+export function getRemarksSheet(classId: string, termId: string, scope: ResultScope = "TERM"): Promise<RemarksSheetView> {
+  return apiFetch<RemarksSheetView>(`/api/v1/classes/${classId}/terms/${termId}/remarks?scope=${scope}`);
 }
 
-export function saveTeacherRemarks(classId: string, termId: string, entries: RemarkEntry[]): Promise<SaveOutcome> {
-  return apiFetch<SaveOutcome>(`/api/v1/classes/${classId}/terms/${termId}/remarks`, {
+export function saveTeacherRemarks(
+  classId: string,
+  termId: string,
+  entries: RemarkEntry[],
+  scope: ResultScope = "TERM",
+): Promise<SaveOutcome> {
+  return apiFetch<SaveOutcome>(`/api/v1/classes/${classId}/terms/${termId}/remarks?scope=${scope}`, {
     method: "PUT",
     body: JSON.stringify({ entries }),
   });
 }
 
-export function savePrincipalRemarks(classId: string, termId: string, entries: RemarkEntry[]): Promise<SaveOutcome> {
-  return apiFetch<SaveOutcome>(`/api/v1/classes/${classId}/terms/${termId}/principal-remarks`, {
+export function savePrincipalRemarks(
+  classId: string,
+  termId: string,
+  entries: RemarkEntry[],
+  scope: ResultScope = "TERM",
+): Promise<SaveOutcome> {
+  return apiFetch<SaveOutcome>(`/api/v1/classes/${classId}/terms/${termId}/principal-remarks?scope=${scope}`, {
     method: "PUT",
     body: JSON.stringify({ entries }),
   });

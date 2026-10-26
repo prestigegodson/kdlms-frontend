@@ -154,8 +154,8 @@ export function RemarksEntryGrid({ sheet, field, onSaved }: RemarksEntryGridProp
       });
       const outcome =
         field === "classTeacher"
-          ? await saveTeacherRemarks(sheet.classId, sheet.termId, entries)
-          : await savePrincipalRemarks(sheet.classId, sheet.termId, entries);
+          ? await saveTeacherRemarks(sheet.classId, sheet.termId, entries, sheet.scope)
+          : await savePrincipalRemarks(sheet.classId, sheet.termId, entries, sheet.scope);
       setDirty(new Set());
       onSaved(outcome.outcomes);
     } catch (err) {

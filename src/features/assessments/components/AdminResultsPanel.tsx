@@ -113,7 +113,7 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
         .catch(() => undefined);
     }
     if (canRecordPrincipalRemark) {
-      getRemarksSheet(classId, termId)
+      getRemarksSheet(classId, termId, scope)
         .then(setRemarksSheet)
         .catch(() => setRemarksSheet(null));
     }
@@ -122,7 +122,7 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
 
   function reloadRemarksSheet() {
     if (!classId || !termId) return;
-    getRemarksSheet(classId, termId).then(setRemarksSheet).catch(() => undefined);
+    getRemarksSheet(classId, termId, scope).then(setRemarksSheet).catch(() => undefined);
   }
 
   function handleRemarksSaved(outcomes: RowOutcome[]) {
@@ -223,7 +223,7 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
       {canRecordPrincipalRemark && remarksSheet && (
         <div className="space-y-4">
           <h2 className="font-display text-lg font-medium text-slate-900">
-            {possessive(remarksSheet.headRemarkTitle)} remarks
+            {possessive(remarksSheet.headRemarkTitle)} {scope === "MIDTERM" ? "mid-term" : "end-of-term"} remarks
           </h2>
           <RemarksEntryGrid sheet={remarksSheet} field="principal" onSaved={handleRemarksSaved} />
           {remarkOutcomes && (
