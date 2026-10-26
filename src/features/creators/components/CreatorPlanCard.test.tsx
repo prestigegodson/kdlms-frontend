@@ -34,6 +34,7 @@ const FREE_PLAN: CreatorPlanView = {
   interactiveQuestions: false,
   autoRenew: false,
   graceUntil: null,
+  platformVideo: true,
 };
 
 function renderCard() {
@@ -71,6 +72,7 @@ describe("CreatorPlanCard", () => {
       endDate: "2026-11-05",
       autoRenew: true,
       graceUntil: "2026-11-08",
+      platformVideo: true,
     });
 
     renderCard();

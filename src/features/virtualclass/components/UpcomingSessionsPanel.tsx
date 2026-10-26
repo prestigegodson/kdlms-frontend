@@ -20,6 +20,8 @@ export interface UpcomingItem {
   scheduledEnd: string;
   status: OccurrenceStatus;
   joinable: boolean;
+  /** Where it's held, when worth saying - see `meetingNote`. */
+  meeting?: { text: string; warning: boolean } | null;
 }
 
 export interface UpcomingSessions {
@@ -105,6 +107,7 @@ export function UpcomingSessionsPanel({ load, joinLabel, hideWhenEmpty = false }
                         {session.className}
                       </p>
                       {session.detail && <p className="text-xs text-slate-500">{session.detail}</p>}
+                      <MeetingNote meeting={session.meeting} />
                     </div>
                     <div className="flex items-center gap-2">
                       {session.status === "RESCHEDULED" && <Badge variant="info">Moved</Badge>}
@@ -125,5 +128,13 @@ export function UpcomingSessionsPanel({ load, joinLabel, hideWhenEmpty = false }
         </div>
       )}
     </Card>
+  );
+}
+
+/** A session row's meeting note - the provider of an external link, or a warning while there's no link. */
+export function MeetingNote({ meeting }: { meeting?: UpcomingItem["meeting"] }) {
+  if (!meeting) return null;
+  return (
+    <p className={`text-xs ${meeting.warning ? "font-medium text-amber-800" : "text-slate-500"}`}>{meeting.text}</p>
   );
 }

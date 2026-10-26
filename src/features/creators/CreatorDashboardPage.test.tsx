@@ -24,6 +24,11 @@ const occurrence: Occurrence = {
   joinable: true,
   startedAt: null,
   endedAt: null,
+  meetingMode: "PLATFORM",
+  meetingUrl: null,
+  meetingProvider: null,
+  meetingOverridden: false,
+  meetingUnavailable: false,
 };
 
 describe("CreatorDashboardPage", () => {

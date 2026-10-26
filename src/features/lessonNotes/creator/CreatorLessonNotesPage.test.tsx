@@ -36,6 +36,7 @@ const PLAN = {
   interactiveQuestions: false,
   autoRenew: false,
   graceUntil: null,
+  platformVideo: true,
 } satisfies CreatorPlanView;
 
 function renderAt(path: string) {
@@ -63,11 +64,16 @@ describe("CreatorLessonNotesPage", () => {
           overLimit: false,
           slots: [],
           createdAt: "2026-10-01T00:00:00Z",
+          meetingMode: "PLATFORM",
+          meetingUrl: null,
+          meetingProvider: null,
+          meetingUnavailable: false,
         },
       ],
       maxClasses: 5,
       activeCount: 1,
       timezone: "Africa/Lagos",
+      platformVideo: true,
     });
     vi.mocked(lessonNotesApi.listClassLessonNotes).mockResolvedValue({
       classId: "c1",

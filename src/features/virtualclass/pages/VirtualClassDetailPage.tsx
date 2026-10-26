@@ -25,6 +25,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { ClassFormModal } from "../components/ClassFormModal";
+import { meetingLabel, PLATFORM_VIDEO_LABEL } from "../meeting/meetingLink";
 import { ClassRosterCard } from "../components/ClassRosterCard";
 import { ScheduleEditor } from "../components/ScheduleEditor";
 import { SessionList } from "../components/SessionList";
@@ -59,6 +60,7 @@ export function VirtualClassDetailPage() {
   const lessonNotesIncluded = useCreatorPlanStore((state) => state.plan?.lessonNotes ?? false);
   const quizzesIncluded = useCreatorPlanStore((state) => state.plan?.takeHomeQuiz ?? false);
   const resourcesIncluded = useCreatorPlanStore((state) => state.plan?.onDemandLearning ?? false);
+  const planPlatformVideo = useCreatorPlanStore((state) => state.plan?.platformVideo);
   const [virtualClass, setVirtualClass] = useState<VirtualClass | null>(null);
   const [timezone, setTimezone] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -125,6 +127,9 @@ export function VirtualClassDetailPage() {
 
   const archived = virtualClass.status === "ARCHIVED";
   const writable = !archived && !virtualClass.overLimit;
+  // Until the plan loads, a class still on the built-in room says the plan has it.
+  const platformVideo =
+    planPlatformVideo ?? (virtualClass.meetingMode === "PLATFORM" && !virtualClass.meetingUnavailable);
   const today = dateInZone(new Date(), timezone);
 
   async function runAction(action: () => Promise<VirtualClass>, fallback: string) {
@@ -241,9 +246,32 @@ export function VirtualClassDetailPage() {
           plan to use it again.
         </Alert>
       )}
+      {!archived && virtualClass.meetingUnavailable && (
+        <Alert variant="warning" title="This class needs a meeting link">
+          Your plan no longer includes {PLATFORM_VIDEO_LABEL}, so its sessions can't be joined.{" "}
+          {writable ? "Edit the class to add a Google Meet or Zoom link, or upgrade your plan." : "Upgrade your plan."}
+        </Alert>
+      )}
       {virtualClass.description && (
         <p className="text-sm whitespace-pre-line text-slate-700">{virtualClass.description}</p>
       )}
+      <p className="text-sm text-slate-600">
+        <span className="font-medium text-slate-700">Sessions are held on: </span>
+        {meetingLabel(virtualClass.meetingMode, virtualClass.meetingProvider)}
+        {virtualClass.meetingUrl && (
+          <>
+            {" · "}
+            <a
+              className="break-all text-brand-500 hover:text-brand-600"
+              href={virtualClass.meetingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {virtualClass.meetingUrl}
+            </a>
+          </>
+        )}
+      </p>
 
       <Card>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -333,6 +361,7 @@ export function VirtualClassDetailPage() {
         <ClassFormModal
           existing={virtualClass}
           defaultStartDate={today}
+          platformVideo={platformVideo}
           onClose={() => setEditing(false)}
           onSubmit={async (input) => {
             const updated = await updateVirtualClass(virtualClass.id, input);

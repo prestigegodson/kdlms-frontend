@@ -60,11 +60,16 @@ describe("LearnersPage", () => {
           overLimit: false,
           slots: [],
           createdAt: "2026-10-01T08:00:00Z",
+          meetingMode: "PLATFORM",
+          meetingUrl: null,
+          meetingProvider: null,
+          meetingUnavailable: false,
         },
       ],
       maxClasses: 1,
       activeCount: 1,
       timezone: "Africa/Lagos",
+      platformVideo: true,
     });
   });
 

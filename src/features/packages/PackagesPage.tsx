@@ -193,6 +193,7 @@ export function PackagesPage() {
                       {pkg.interactiveVideo && <Badge variant="neutral">Interactive video</Badge>}
                       {pkg.studentLogins && <Badge variant="neutral">Student logins</Badge>}
                       {pkg.guardianAccess && <Badge variant="neutral">Guardian access</Badge>}
+                      {pkg.platformVideo && <Badge variant="neutral">Platform Video Conferencing</Badge>}
                     </div>
                   </TableCell>
                   <TableCell label="Status">

@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton } from "@/components/ui/Skeleton";
-import type { UpcomingItem, UpcomingSessions } from "@/features/virtualclass/components/UpcomingSessionsPanel";
+import {
+  MeetingNote,
+  type UpcomingItem,
+  type UpcomingSessions,
+} from "@/features/virtualclass/components/UpcomingSessionsPanel";
 import {
   dateInZone,
   dayParts,
@@ -212,6 +216,7 @@ function SessionCard({ session, zone, highlighted, onJoin, onView }: SessionCard
             <span className="text-slate-400"> · {durationLabel(minutesBetween(session.scheduledStart, session.scheduledEnd))}</span>
           </p>
           {session.detail && <p className="truncate text-xs text-slate-500">{session.detail}</p>}
+          <MeetingNote meeting={session.meeting} />
         </div>
       </div>
       <div className="flex items-center gap-2">

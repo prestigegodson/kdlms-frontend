@@ -8,8 +8,10 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { meetingNote } from "../meeting/meetingLink";
 import { dateInZone, longDate, scheduleSummary, timeInZone } from "../scheduleUtils";
 import { AttendanceHistoryModal } from "./AttendanceModals";
+import { MeetingNote } from "./UpcomingSessionsPanel";
 
 const UPCOMING_SHOWN = 5;
 
@@ -135,6 +137,9 @@ function SessionRow({ session, zone, joinLabel }: { session: OnlineSession; zone
           {timeInZone(session.scheduledEnd, zone)}
         </p>
         {cancelled && session.cancelReason && <p className="text-xs text-slate-500">{session.cancelReason}</p>}
+        {!cancelled && (
+          <MeetingNote meeting={meetingNote(session.meetingMode, session.meetingProvider, session.linkMissing)} />
+        )}
       </div>
       {cancelled && <Badge variant="danger">Cancelled</Badge>}
       {session.status === "RESCHEDULED" && <Badge variant="info">Moved</Badge>}

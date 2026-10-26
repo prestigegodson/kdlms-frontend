@@ -77,8 +77,9 @@ export function LiveSessionPage() {
     const video = canPublish && choices?.videoEnabled ? { deviceId: choices.videoDeviceId || undefined } : false;
     return (
       <LiveKitRoom
-        serverUrl={session.serverUrl}
-        token={session.token}
+        // Always set for a Platform Video Conferencing session - the only kind that reaches this page.
+        serverUrl={session.serverUrl ?? undefined}
+        token={session.token ?? undefined}
         connect
         audio={audio}
         video={video}

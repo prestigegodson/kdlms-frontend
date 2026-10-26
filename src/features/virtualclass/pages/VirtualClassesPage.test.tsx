@@ -23,6 +23,10 @@ function klass(overrides: Partial<VirtualClass>): VirtualClass {
     overLimit: false,
     slots: [{ id: "s1", dayOfWeek: 1, startTime: "09:00:00", durationMinutes: 60 }],
     createdAt: "2026-10-01T08:00:00Z",
+    meetingMode: "PLATFORM",
+    meetingUrl: null,
+    meetingProvider: null,
+    meetingUnavailable: false,
     ...overrides,
   };
 }
@@ -48,6 +52,7 @@ describe("VirtualClassesPage", () => {
       maxClasses: 1,
       activeCount: 2,
       timezone: "Africa/Lagos",
+      platformVideo: true,
     };
     vi.mocked(virtualClassesApi.listVirtualClasses).mockResolvedValue(list);
 
@@ -67,6 +72,7 @@ describe("VirtualClassesPage", () => {
       maxClasses: null,
       activeCount: 0,
       timezone: "Africa/Lagos",
+      platformVideo: true,
     });
 
     renderPage();

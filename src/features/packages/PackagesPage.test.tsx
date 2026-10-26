@@ -46,6 +46,7 @@ const STARTER_PACKAGE: PackageView = {
   guardianAccess: false,
   interactiveQuestions: false,
   interactiveVideo: false,
+  platformVideo: false,
   status: "ACTIVE",
 };
 
@@ -131,6 +132,7 @@ describe("PackagesPage", () => {
         guardianAccess: false,
         interactiveQuestions: false,
         interactiveVideo: false,
+        platformVideo: false,
       }),
     );
   });
@@ -202,7 +204,34 @@ describe("PackagesPage", () => {
         guardianAccess: true,
         interactiveQuestions: false,
         interactiveVideo: false,
+        platformVideo: false,
       }),
+    );
+  });
+
+  it("gates the live-room limits behind Platform Video Conferencing on a creator plan", async () => {
+    mockList([]);
+    vi.mocked(packagesApi.createPackage).mockResolvedValue(FREE_PLAN);
+    const user = userEvent.setup();
+
+    render(<PackagesPage />);
+    await screen.findByText(/No packages yet/);
+    await user.click(screen.getByRole("tab", { name: "Creator" }));
+    await user.click(await screen.findByRole("button", { name: "Add creator plan" }));
+    const dialog = await screen.findByRole("dialog");
+
+    expect(within(dialog).getByLabelText("Max session length (minutes)")).toBeDisabled();
+    expect(within(dialog).getByLabelText("Max classes")).toBeEnabled();
+    await user.click(within(dialog).getByLabelText("Platform Video Conferencing"));
+    expect(within(dialog).getByLabelText("Max session length (minutes)")).toBeEnabled();
+
+    await user.type(within(dialog).getByLabelText("Name"), "Pro");
+    await user.type(within(dialog).getByLabelText("NGN"), "5000");
+    await user.type(within(dialog).getByLabelText("Max session length (minutes)"), "90");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(packagesApi.createPackage).toHaveBeenCalledWith(
+      expect.objectContaining({ audience: "CREATOR", platformVideo: true, maxSessionMinutes: 90 }),
     );
   });
 });

@@ -69,6 +69,12 @@ export interface PackageView extends CreatorPlanLimitFields {
   interactiveQuestions: boolean;
   /** SCHOOL packages only, layered on onDemandLearning: authoring interactive video resources. Playing them is never gated. */
   interactiveVideo: boolean;
+  /**
+   * CREATOR plans only: the built-in LiveKit video room, shown to creators as "Platform Video
+   * Conferencing". Without it every session runs on the creator's own Google Meet/Zoom link, and the
+   * session-length/participant/monthly-hours limits don't apply.
+   */
+  platformVideo: boolean;
   status: PackageStatus;
 }
 
@@ -95,6 +101,7 @@ export interface SavePackageRequest extends CreatorPlanLimitFields {
   guardianAccess: boolean;
   interactiveQuestions: boolean;
   interactiveVideo: boolean;
+  platformVideo: boolean;
 }
 
 const BASE = "/api/v1/admin/packages";

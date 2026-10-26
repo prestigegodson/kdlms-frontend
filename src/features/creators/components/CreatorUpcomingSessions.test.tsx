@@ -28,6 +28,11 @@ function occurrence(id: string, date: string, overrides: Partial<Occurrence> = {
     joinable: false,
     startedAt: null,
     endedAt: null,
+    meetingMode: "PLATFORM",
+    meetingUrl: null,
+    meetingProvider: null,
+    meetingOverridden: false,
+    meetingUnavailable: false,
     ...overrides,
   };
 }

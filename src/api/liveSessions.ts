@@ -1,5 +1,5 @@
 import { apiFetch } from "@/api/client";
-import type { OccurrenceStatus } from "@/api/virtualClasses";
+import type { MeetingMode, MeetingProvider, OccurrenceStatus } from "@/api/virtualClasses";
 
 /**
  * Live sessions over LiveKit (creators.md Phase C6) - mirrors backend
@@ -9,19 +9,29 @@ import type { OccurrenceStatus } from "@/api/virtualClasses";
 
 export type ParticipantRole = "CREATOR" | "LEARNER" | "GUARDIAN";
 
+/**
+ * `meetingMode` says which half is set: PLATFORM fills `serverUrl`/`token`/`roomName`/`expiresAt`,
+ * EXTERNAL fills `meetingUrl`/`meetingProvider` - the only place a learner ever gets the link.
+ */
 export interface JoinView {
   occurrenceId: string;
   className: string;
   scheduledStart: string;
   scheduledEnd: string;
   /** The LiveKit `wss://` URL to connect to with `token`. */
-  serverUrl: string;
-  token: string;
-  roomName: string;
+  serverUrl: string | null;
+  token: string | null;
+  roomName: string | null;
   role: ParticipantRole;
   /** When `token` stops admitting the caller - the session's remaining allowed time. */
-  expiresAt: string;
+  expiresAt: string | null;
+  meetingMode: MeetingMode;
+  meetingUrl: string | null;
+  meetingProvider: MeetingProvider | null;
 }
+
+/** A LiveKit-room session whose creator's plan no longer includes Platform Video Conferencing. */
+export const MEETING_LINK_REQUIRED_PROBLEM = "https://kdlms.com/problems/meeting-link-required";
 
 export interface LearnerAttendanceRow {
   learnerId: string;
@@ -32,6 +42,8 @@ export interface LearnerAttendanceRow {
   present: boolean;
   minutes: number;
   firstJoinedAt: string | null;
+  /** Joined through the session's external Google Meet/Zoom link - present, but no minutes tracked. */
+  viaLink: boolean;
 }
 
 export interface ObserverRow {
@@ -39,6 +51,7 @@ export interface ObserverRow {
   name: string;
   minutes: number;
   firstJoinedAt: string | null;
+  viaLink: boolean;
 }
 
 export interface OccurrenceAttendance {
@@ -62,6 +75,7 @@ export interface SessionAttendanceRow {
   present: boolean;
   minutes: number;
   firstJoinedAt: string | null;
+  viaLink: boolean;
 }
 
 export interface AttendanceHistory {

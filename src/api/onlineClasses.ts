@@ -1,5 +1,10 @@
 import { apiFetch } from "@/api/client";
-import type { OccurrenceStatus, ScheduleSlot } from "@/api/virtualClasses";
+import type {
+  MeetingMode,
+  MeetingProvider,
+  OccurrenceStatus,
+  ScheduleSlot,
+} from "@/api/virtualClasses";
 
 /**
  * A learner's own online classes and a guardian's learners' classes, across every creator
@@ -13,8 +18,13 @@ export interface OnlineSession {
   scheduledEnd: string;
   status: OccurrenceStatus;
   cancelReason: string | null;
-  /** The live room can be entered right now (Phase C6). */
+  /** The session can be entered right now (Phase C6). */
   joinable: boolean;
+  /** Where it is held - never the link itself, which only the join call hands out. */
+  meetingMode: MeetingMode;
+  meetingProvider: MeetingProvider | null;
+  /** The creator hasn't given this session a meeting link yet. */
+  linkMissing: boolean;
 }
 
 export interface OnlineClass {
@@ -64,6 +74,9 @@ export interface UpcomingSession {
   scheduledEnd: string;
   status: OccurrenceStatus;
   joinable: boolean;
+  meetingMode: MeetingMode;
+  meetingProvider: MeetingProvider | null;
+  linkMissing: boolean;
 }
 
 export interface ReminderPreference {

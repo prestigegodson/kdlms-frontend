@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { getErrorMessage } from "@/api/client";
-import type { VirtualClass, VirtualClassInput } from "@/api/virtualClasses";
+import type { MeetingMode, VirtualClass, VirtualClassInput } from "@/api/virtualClasses";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { DateInput } from "@/components/ui/DateInput";
@@ -8,19 +8,27 @@ import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Textarea } from "@/components/ui/Textarea";
+import { MeetingFields } from "../meeting/MeetingFields";
+import { meetingLinkError } from "../meeting/meetingLink";
 
 interface ClassFormModalProps {
   /** The class being edited, or `null` to create one. */
   existing: VirtualClass | null;
   defaultStartDate: string;
+  /** Whether the plan includes Platform Video Conferencing - a new class defaults to it when it does. */
+  platformVideo: boolean;
   onSubmit: (input: VirtualClassInput) => Promise<void>;
   onClose: () => void;
 }
 
-/** Create or edit a virtual class's details - its schedule is edited on the class page. */
+/**
+ * Create or edit a virtual class's details and where its sessions are held - its schedule is edited
+ * on the class page.
+ */
 export function ClassFormModal({
   existing,
   defaultStartDate,
+  platformVideo,
   onSubmit,
   onClose,
 }: ClassFormModalProps) {
@@ -29,11 +37,19 @@ export function ClassFormModal({
   const [description, setDescription] = useState(existing?.description ?? "");
   const [startDate, setStartDate] = useState(existing?.startDate ?? defaultStartDate);
   const [endDate, setEndDate] = useState(existing?.endDate ?? "");
+  const [meetingMode, setMeetingMode] = useState<MeetingMode>(
+    existing?.meetingMode ?? (platformVideo ? "PLATFORM" : "EXTERNAL"),
+  );
+  const [meetingUrl, setMeetingUrl] = useState(existing?.meetingUrl ?? "");
+  const [urlError, setUrlError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const linkError = meetingMode === "EXTERNAL" ? meetingLinkError(meetingUrl) : null;
+    setUrlError(linkError);
+    if (linkError) return;
     setSaving(true);
     setError(null);
     try {
@@ -43,6 +59,8 @@ export function ClassFormModal({
         description: description.trim() || null,
         startDate,
         endDate: endDate || null,
+        meetingMode,
+        meetingUrl: meetingMode === "EXTERNAL" ? meetingUrl.trim() : null,
       });
     } catch (submitError) {
       setError(getErrorMessage(submitError, "Failed to save the class."));
@@ -96,6 +114,19 @@ export function ClassFormModal({
             <DateInput id="class-end" value={endDate} min={startDate} onChange={setEndDate} />
           </FormField>
         </div>
+        <MeetingFields
+          idPrefix="class"
+          legend="Where sessions are held"
+          mode={meetingMode}
+          url={meetingUrl}
+          onModeChange={(mode) => {
+            setMeetingMode(mode);
+            setUrlError(null);
+          }}
+          onUrlChange={setMeetingUrl}
+          platformVideo={platformVideo}
+          urlError={urlError}
+        />
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
             Cancel

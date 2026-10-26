@@ -29,6 +29,9 @@ const algebra: OnlineClass = {
       status: "CANCELLED",
       cancelReason: "Tutor unwell",
       joinable: false,
+      meetingMode: "PLATFORM",
+      meetingProvider: null,
+      linkMissing: false,
     },
   ],
   remindersEnabled: true,
@@ -46,6 +49,9 @@ const live: OnlineClass = {
       status: "LIVE",
       cancelReason: null,
       joinable: true,
+      meetingMode: "PLATFORM",
+      meetingProvider: null,
+      linkMissing: false,
     },
   ],
 };
@@ -142,6 +148,7 @@ describe("online classes views", () => {
           present: true,
           minutes: 52,
           firstJoinedAt: "2026-09-28T08:01:00Z",
+          viaLink: false,
         },
       ],
     });
@@ -169,6 +176,9 @@ describe("online classes views", () => {
         scheduledEnd: "2026-10-05T11:00:00Z",
         status: "SCHEDULED",
         joinable: true,
+        meetingMode: "PLATFORM",
+        meetingProvider: null,
+        linkMissing: false,
       },
     ]);
 

@@ -1,6 +1,7 @@
 import { listMyUpcomingSessions, listWardUpcomingSessions, type UpcomingSession } from "@/api/onlineClasses";
 import { listUpcomingOccurrences } from "@/api/virtualClasses";
 import type { UpcomingItem, UpcomingSessions } from "./components/UpcomingSessionsPanel";
+import { meetingNote } from "./meeting/meetingLink";
 
 /** Loaders feeding `UpcomingSessionsPanel` for each portal (creators.md Phase C7). */
 
@@ -15,6 +16,7 @@ export async function loadCreatorUpcoming(): Promise<UpcomingSessions> {
       scheduledEnd: occurrence.scheduledEnd,
       status: occurrence.status,
       joinable: occurrence.joinable,
+      meeting: meetingNote(occurrence.meetingMode, occurrence.meetingProvider, occurrence.meetingUnavailable),
     })),
   };
 }
@@ -40,5 +42,6 @@ function toItem(session: UpcomingSession, detail: string | null): UpcomingItem {
     scheduledEnd: session.scheduledEnd,
     status: session.status,
     joinable: session.joinable,
+    meeting: meetingNote(session.meetingMode, session.meetingProvider, session.linkMissing),
   };
 }

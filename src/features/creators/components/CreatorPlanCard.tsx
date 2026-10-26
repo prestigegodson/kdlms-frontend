@@ -67,14 +67,20 @@ export function CreatorPlanCard() {
     );
   }
 
+  // Session length, participants and live hours are the built-in video room's limits - meaningless without it.
   const limits: Array<{ label: string; value: string }> = [
     { label: "Classes", value: limitText(plan.maxClasses) },
     { label: "Learners per class", value: limitText(plan.maxStudentsPerClass) },
-    { label: "Session length", value: limitText(plan.maxSessionMinutes, "min") },
-    { label: "Participants per session", value: limitText(plan.maxParticipantsPerSession) },
-    { label: "Live hours per month", value: limitText(plan.maxMonthlySessionHours) },
+    ...(plan.platformVideo
+      ? [
+          { label: "Session length", value: limitText(plan.maxSessionMinutes, "min") },
+          { label: "Participants per session", value: limitText(plan.maxParticipantsPerSession) },
+          { label: "Live hours per month", value: limitText(plan.maxMonthlySessionHours) },
+        ]
+      : []),
   ];
   const features: Array<{ label: string; included: boolean }> = [
+    { label: "Platform Video Conferencing", included: plan.platformVideo },
     { label: "Class messaging", included: plan.communication },
     { label: "Lesson notes", included: plan.lessonNotes },
     {

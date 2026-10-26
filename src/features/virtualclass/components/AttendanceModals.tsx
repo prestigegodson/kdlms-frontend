@@ -41,6 +41,11 @@ function PresentBadge({ present }: { present: boolean }) {
   return present ? <Badge variant="success">Present</Badge> : <Badge variant="neutral">Absent</Badge>;
 }
 
+/** Connected minutes - or, for a join through an external Google Meet/Zoom link, that nothing could be timed. */
+function minutesText(row: { minutes: number; viaLink: boolean }): string {
+  return row.viaLink ? "Joined via link" : String(row.minutes);
+}
+
 /**
  * Who attended one live session (creators.md Phase C6) - every enrolled learner present or absent,
  * with connected minutes and when they first joined, plus any guardians who watched. Derived by the
@@ -93,7 +98,7 @@ export function OccurrenceAttendanceModal({
                       <PresentBadge present={row.present} />
                     </TableCell>
                     <TableCell label="Minutes" numeric>
-                      {row.minutes}
+                      {minutesText(row)}
                     </TableCell>
                     <TableCell label="First joined">
                       {row.firstJoinedAt ? timeInZone(row.firstJoinedAt, timezone) : "—"}
@@ -109,7 +114,7 @@ export function OccurrenceAttendanceModal({
               <ul className="mt-2 space-y-1 text-sm text-slate-700">
                 {data.observers.map((observer) => (
                   <li key={observer.userId}>
-                    {observer.name} · {observer.minutes} min
+                    {observer.name} · {observer.viaLink ? "joined via link" : `${observer.minutes} min`}
                   </li>
                 ))}
               </ul>
@@ -168,7 +173,7 @@ export function AttendanceHistoryModal({
                       <PresentBadge present={row.present} />
                     </TableCell>
                     <TableCell label="Minutes" numeric>
-                      {row.minutes}
+                      {minutesText(row)}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -69,6 +69,9 @@ function joinView(role: ParticipantRole): JoinView {
     roomName: "vc-o1",
     role,
     expiresAt: "2026-10-05T09:15:00Z",
+    meetingMode: "PLATFORM",
+    meetingUrl: null,
+    meetingProvider: null,
   };
 }
 

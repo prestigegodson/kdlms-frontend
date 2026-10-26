@@ -24,6 +24,11 @@ function occurrence(overrides: Partial<Occurrence>): Occurrence {
     joinable: false,
     startedAt: null,
     endedAt: null,
+    meetingMode: "PLATFORM",
+    meetingUrl: null,
+    meetingProvider: null,
+    meetingOverridden: false,
+    meetingUnavailable: false,
     ...overrides,
   };
 }
@@ -87,6 +92,7 @@ describe("SessionList live sessions", () => {
           present: true,
           minutes: 50,
           firstJoinedAt: "2026-10-05T08:02:00Z",
+          viaLink: false,
         },
         {
           learnerId: "l2",
@@ -96,9 +102,12 @@ describe("SessionList live sessions", () => {
           present: false,
           minutes: 0,
           firstJoinedAt: null,
+          viaLink: false,
         },
       ],
-      observers: [{ userId: "g1", name: "Pat Parent", minutes: 20, firstJoinedAt: "2026-10-05T08:05:00Z" }],
+      observers: [
+        { userId: "g1", name: "Pat Parent", minutes: 20, firstJoinedAt: "2026-10-05T08:05:00Z", viaLink: false },
+      ],
     });
     renderList([
       occurrence({

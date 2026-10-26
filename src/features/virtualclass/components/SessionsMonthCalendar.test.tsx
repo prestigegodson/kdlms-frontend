@@ -21,6 +21,11 @@ function occurrence(overrides: Partial<Occurrence>): Occurrence {
     joinable: false,
     startedAt: null,
     endedAt: null,
+    meetingMode: "PLATFORM",
+    meetingUrl: null,
+    meetingProvider: null,
+    meetingOverridden: false,
+    meetingUnavailable: false,
     ...overrides,
   };
 }

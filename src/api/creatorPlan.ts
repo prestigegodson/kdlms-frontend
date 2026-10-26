@@ -35,6 +35,8 @@ export interface CreatorPlanView {
   autoRenew: boolean;
   /** Set while a failed renewal is being retried - the plan stays active until this day. */
   graceUntil: string | null;
+  /** The built-in LiveKit room ("Platform Video Conferencing"); without it every session needs a Meet/Zoom link. */
+  platformVideo: boolean;
 }
 
 export function getMyCreatorPlan(): Promise<CreatorPlanView> {

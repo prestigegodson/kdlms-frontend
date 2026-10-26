@@ -47,13 +47,15 @@ function highlights(plan: PackageView): string[] {
       `${plan.branchLimit} ${plan.branchLimit === 1 ? "branch" : "branches"}`,
     ];
   }
-  const items = [
-    limit(plan.maxClasses, "classes"),
-    limit(plan.maxStudentsPerClass, "learners per class"),
-    plan.maxSessionMinutes == null
-      ? "Unlimited session length"
-      : `${plan.maxSessionMinutes}-minute sessions`,
-  ];
+  const items = [limit(plan.maxClasses, "classes"), limit(plan.maxStudentsPerClass, "learners per class")];
+  if (plan.platformVideo) {
+    items.push("Platform Video Conferencing");
+    items.push(
+      plan.maxSessionMinutes == null ? "Unlimited session length" : `${plan.maxSessionMinutes}-minute sessions`,
+    );
+  } else {
+    items.push("Sessions on your own Google Meet or Zoom link");
+  }
   if (plan.guardianAccess) items.push("Guardian access");
   if (plan.lessonNotes) items.push("Lesson notes");
   if (plan.takeHomeQuiz) items.push("Quizzes");

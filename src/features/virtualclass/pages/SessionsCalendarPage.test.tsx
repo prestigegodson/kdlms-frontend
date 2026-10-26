@@ -25,11 +25,16 @@ const CLASSES: VirtualClassList = {
       overLimit: false,
       slots: [],
       createdAt: "2026-09-01T08:00:00Z",
+      meetingMode: "PLATFORM",
+      meetingUrl: null,
+      meetingProvider: null,
+      meetingUnavailable: false,
     },
   ],
   maxClasses: null,
   activeCount: 1,
   timezone: "Africa/Lagos",
+  platformVideo: true,
 };
 
 function occurrence(id: string, start: string, overrides: Partial<Occurrence> = {}): Occurrence {
@@ -49,6 +54,11 @@ function occurrence(id: string, start: string, overrides: Partial<Occurrence> = 
     joinable: false,
     startedAt: null,
     endedAt: null,
+    meetingMode: "PLATFORM",
+    meetingUrl: null,
+    meetingProvider: null,
+    meetingOverridden: false,
+    meetingUnavailable: false,
     ...overrides,
   };
 }

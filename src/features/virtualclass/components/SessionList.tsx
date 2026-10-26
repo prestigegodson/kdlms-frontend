@@ -1,4 +1,4 @@
-import { CalendarClock, ClipboardList, Video, XCircle } from "lucide-react";
+import { CalendarClock, ClipboardList, Link2, Video, XCircle } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import {
@@ -12,6 +12,9 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Textarea } from "@/components/ui/Textarea";
+import { useCreatorPlanStore } from "@/stores/creatorPlanStore";
+import { meetingLabel } from "../meeting/meetingLink";
+import { SessionMeetingModal } from "../meeting/SessionMeetingModal";
 import { dateInZone, longDate, minutesBetween, timeInZone } from "../scheduleUtils";
 import { OccurrenceAttendanceModal } from "./AttendanceModals";
 import { SessionTimeModal } from "./SessionTimeModal";
@@ -42,7 +45,9 @@ interface SessionListProps {
  * Sessions grouped by local date in the creator's timezone, each with reschedule/cancel actions
  * while it is still upcoming (creators.md §7.1). Either marks the session overridden, so later
  * schedule edits leave it alone. A session inside its join window gets a Start/Join button into
- * the live room, and one that has started or is past offers its attendance (Phase C6).
+ * the live room, and one that has started or is past offers its attendance (Phase C6). A session
+ * that hasn't finished can also be moved to its own meeting - another Google Meet/Zoom link, or the
+ * built-in room - without counting as a schedule override.
  */
 export function SessionList({
   occurrences,
@@ -56,6 +61,9 @@ export function SessionList({
   const [cancelling, setCancelling] = useState<Occurrence | null>(null);
   const [reason, setReason] = useState("");
   const [attendanceFor, setAttendanceFor] = useState<Occurrence | null>(null);
+  const [meetingFor, setMeetingFor] = useState<Occurrence | null>(null);
+  // Loaded by CreatorLayout; until then, a session still on the built-in room says the plan has it.
+  const planPlatformVideo = useCreatorPlanStore((state) => state.plan?.platformVideo);
   const navigate = useNavigate();
   // Fixed per mount - the list reloads after every change anyway.
   const [now] = useState(() => Date.now());
@@ -72,6 +80,10 @@ export function SessionList({
   const today = dateInZone(new Date(), timezone);
   const hasAttendance = (session: Occurrence) =>
     session.status !== "CANCELLED" && (session.startedAt !== null || Date.parse(session.scheduledStart) <= now);
+  const meetingEditable = (session: Occurrence) =>
+    (session.status === "SCHEDULED" || session.status === "RESCHEDULED") && Date.parse(session.scheduledEnd) > now;
+  const platformVideoFor = (session: Occurrence) =>
+    planPlatformVideo ?? (session.meetingMode === "PLATFORM" && !session.meetingUnavailable);
 
   return (
     <div className="space-y-5">
@@ -108,6 +120,14 @@ export function SessionList({
                     {session.slotId === null && !cancelled && session.status !== "RESCHEDULED" && (
                       <p className="text-xs text-slate-500">One-off session</p>
                     )}
+                    {!cancelled && session.meetingUnavailable && (
+                      <p className="text-xs font-medium text-amber-800">Needs a meeting link</p>
+                    )}
+                    {!cancelled && !session.meetingUnavailable && session.meetingOverridden && (
+                      <p className="text-xs text-slate-500">
+                        On {meetingLabel(session.meetingMode, session.meetingProvider)} - this session only
+                      </p>
+                    )}
                   </div>
                   <Badge variant={badge.variant}>{badge.label}</Badge>
                   {session.joinable && (
@@ -116,7 +136,7 @@ export function SessionList({
                       {session.status === "LIVE" ? "Join" : "Start"}
                     </Button>
                   )}
-                  {(session.editable || hasAttendance(session)) && (
+                  {(session.editable || hasAttendance(session) || meetingEditable(session)) && (
                     <ActionMenu
                       ariaLabel={`Actions for the ${timeInZone(session.scheduledStart, timezone)} session`}
                       items={[
@@ -126,6 +146,15 @@ export function SessionList({
                                 label: "Attendance",
                                 icon: ClipboardList,
                                 onSelect: () => setAttendanceFor(session),
+                              },
+                            ]
+                          : []),
+                        ...(meetingEditable(session)
+                          ? [
+                              {
+                                label: session.meetingUnavailable ? "Add meeting link" : "Meeting",
+                                icon: Link2,
+                                onSelect: () => setMeetingFor(session),
                               },
                             ]
                           : []),
@@ -172,6 +201,18 @@ export function SessionList({
           onSubmit={async (input) => {
             await rescheduleSession(rescheduling.id, input);
             setRescheduling(null);
+            onChanged();
+          }}
+        />
+      )}
+
+      {meetingFor && (
+        <SessionMeetingModal
+          session={meetingFor}
+          platformVideo={platformVideoFor(meetingFor)}
+          onClose={() => setMeetingFor(null)}
+          onSaved={() => {
+            setMeetingFor(null);
             onChanged();
           }}
         />

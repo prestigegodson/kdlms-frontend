@@ -39,6 +39,7 @@ const PLAN = {
   interactiveQuestions: false,
   autoRenew: false,
   graceUntil: null,
+  platformVideo: true,
 } satisfies CreatorPlanView;
 
 const DRAFT: ClassLessonNoteView = {
@@ -82,6 +83,10 @@ describe("CreatorLessonNoteEditorPage", () => {
       overLimit: false,
       slots: [],
       createdAt: "2026-10-01T00:00:00Z",
+      meetingMode: "PLATFORM",
+      meetingUrl: null,
+      meetingProvider: null,
+      meetingUnavailable: false,
     });
   });
 

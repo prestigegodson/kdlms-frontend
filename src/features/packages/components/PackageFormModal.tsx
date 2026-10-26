@@ -31,6 +31,10 @@ type LimitKey =
 const CREATOR_LIMITS: { key: LimitKey; label: string }[] = [
   { key: "maxClasses", label: "Max classes" },
   { key: "maxStudentsPerClass", label: "Max learners per class" },
+];
+
+/** The LiveKit room's own costs - they only apply to sessions held in Platform Video Conferencing. */
+const PLATFORM_VIDEO_LIMITS: { key: LimitKey; label: string }[] = [
   { key: "maxSessionMinutes", label: "Max session length (minutes)" },
   { key: "maxParticipantsPerSession", label: "Max participants per session" },
   { key: "maxMonthlySessionHours", label: "Max live hours per month" },
@@ -96,6 +100,7 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
   const [learningMedia, setLearningMedia] = useState(initial?.learningMedia ?? false);
   const [studentLogins, setStudentLogins] = useState(initial?.studentLogins ?? false);
   const [guardianAccess, setGuardianAccess] = useState(initial?.guardianAccess ?? false);
+  const [platformVideo, setPlatformVideo] = useState(initial?.platformVideo ?? false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -142,6 +147,7 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
         learningMedia,
         studentLogins: !isCreator && studentLogins,
         guardianAccess: isCreator && guardianAccess,
+        platformVideo: isCreator && platformVideo,
       });
       onSaved();
     } catch (err) {
@@ -213,24 +219,47 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
         )}
 
         {isCreator ? (
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium text-slate-700">Limits</legend>
-            <p className="text-xs text-slate-500">Leave a limit blank for unlimited.</p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {CREATOR_LIMITS.map(({ key, label }) => (
-                <FormField key={key} label={label} htmlFor={`package-${key}`}>
-                  <Input
-                    id={`package-${key}`}
-                    type="number"
-                    min="1"
-                    placeholder="Unlimited"
+          <>
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium text-slate-700">Limits</legend>
+              <p className="text-xs text-slate-500">Leave a limit blank for unlimited.</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {CREATOR_LIMITS.map(({ key, label }) => (
+                  <LimitField
+                    key={key}
+                    limitKey={key}
+                    label={label}
                     value={limits[key]}
-                    onChange={(event) => setLimits((current) => ({ ...current, [key]: event.target.value }))}
+                    onChange={(value) => setLimits((current) => ({ ...current, [key]: value }))}
                   />
-                </FormField>
-              ))}
-            </div>
-          </fieldset>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset className="space-y-2">
+              <legend className="sr-only">Platform Video Conferencing</legend>
+              <Flag
+                checked={platformVideo}
+                onChange={setPlatformVideo}
+                label="Platform Video Conferencing"
+                help="Sessions can run in the built-in video room. Without it, the creator holds every session on their own Google Meet or Zoom link."
+              />
+              <p className="text-xs text-slate-500">
+                Platform Video limits apply only to sessions held in the built-in video room. Leave blank for unlimited.
+              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {PLATFORM_VIDEO_LIMITS.map(({ key, label }) => (
+                  <LimitField
+                    key={key}
+                    limitKey={key}
+                    label={label}
+                    value={limits[key]}
+                    disabled={!platformVideo}
+                    onChange={(value) => setLimits((current) => ({ ...current, [key]: value }))}
+                  />
+                ))}
+              </div>
+            </fieldset>
+          </>
         ) : (
           <>
             <Flag checked={multiBranch} onChange={setMultiBranch} label="Allow multiple branches" />
@@ -377,6 +406,30 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
         </div>
       </form>
     </Modal>
+  );
+}
+
+interface LimitFieldProps {
+  limitKey: LimitKey;
+  label: string;
+  value: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+}
+
+function LimitField({ limitKey, label, value, disabled, onChange }: LimitFieldProps) {
+  return (
+    <FormField label={label} htmlFor={`package-${limitKey}`}>
+      <Input
+        id={`package-${limitKey}`}
+        type="number"
+        min="1"
+        placeholder="Unlimited"
+        disabled={disabled}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </FormField>
   );
 }
 

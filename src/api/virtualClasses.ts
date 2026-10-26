@@ -9,6 +9,14 @@ import { apiFetch } from "@/api/client";
 export type VirtualClassStatus = "ACTIVE" | "ARCHIVED";
 export type OccurrenceStatus = "SCHEDULED" | "RESCHEDULED" | "CANCELLED" | "LIVE" | "ENDED";
 
+/**
+ * Where sessions are held: the built-in LiveKit room ("Platform Video Conferencing", only on a plan
+ * that includes it) or the creator's own Google Meet/Zoom link.
+ */
+export type MeetingMode = "PLATFORM" | "EXTERNAL";
+/** Derived by the server from an EXTERNAL link's host; `null` for PLATFORM. */
+export type MeetingProvider = "GOOGLE_MEET" | "ZOOM";
+
 /** 1 = Monday .. 7 = Sunday (java.time.DayOfWeek). */
 export type DayOfWeek = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
@@ -32,6 +40,12 @@ export interface VirtualClass {
   overLimit: boolean;
   slots: ScheduleSlot[];
   createdAt: string;
+  /** Where the class's sessions are held unless one overrides it. */
+  meetingMode: MeetingMode;
+  meetingUrl: string | null;
+  meetingProvider: MeetingProvider | null;
+  /** On the LiveKit room, but the plan no longer includes Platform Video Conferencing - needs a link. */
+  meetingUnavailable: boolean;
 }
 
 export interface VirtualClassList {
@@ -40,9 +54,17 @@ export interface VirtualClassList {
   maxClasses: number | null;
   activeCount: number;
   timezone: string | null;
+  /** Whether the plan includes the built-in LiveKit room ("Platform Video Conferencing"). */
+  platformVideo: boolean;
 }
 
-export interface VirtualClassInput {
+export interface MeetingInput {
+  meetingMode: MeetingMode;
+  /** Required for EXTERNAL: an https Google Meet or Zoom link. */
+  meetingUrl: string | null;
+}
+
+export interface VirtualClassInput extends MeetingInput {
   name: string;
   description: string | null;
   subjectLabel: string | null;
@@ -90,6 +112,14 @@ export interface Occurrence {
   /** When the live room actually started/finished, or null. */
   startedAt: string | null;
   endedAt: string | null;
+  /** Where this session is actually held - its own override, or its class's meeting. */
+  meetingMode: MeetingMode;
+  meetingUrl: string | null;
+  meetingProvider: MeetingProvider | null;
+  /** The session has its own meeting rather than its class's. */
+  meetingOverridden: boolean;
+  /** On the LiveKit room, but the plan no longer includes Platform Video Conferencing - needs a link. */
+  meetingUnavailable: boolean;
 }
 
 export interface OccurrenceCalendar {
@@ -107,6 +137,7 @@ const BASE = "/api/v1/virtual-classes";
 
 export const PLAN_LIMIT_REACHED_PROBLEM = "https://kdlms.com/problems/plan-limit-reached";
 export const CLASS_OVER_LIMIT_PROBLEM = "https://kdlms.com/problems/class-over-limit";
+export const FEATURE_NOT_INCLUDED_PROBLEM = "https://kdlms.com/problems/feature-not-included";
 
 export function listVirtualClasses(): Promise<VirtualClassList> {
   return apiFetch<VirtualClassList>(BASE);
@@ -158,11 +189,29 @@ export function listUpcomingOccurrences(): Promise<OccurrenceCalendar> {
   return apiFetch<OccurrenceCalendar>(`${BASE}/occurrences/upcoming`);
 }
 
-export function addOneOffSession(classId: string, input: SessionTimeInput): Promise<Occurrence> {
+/** `meeting` omitted: the session is held in its class's meeting. */
+export function addOneOffSession(
+  classId: string,
+  input: SessionTimeInput,
+  meeting?: MeetingInput | null,
+): Promise<Occurrence> {
   return apiFetch<Occurrence>(`${BASE}/${classId}/occurrences`, {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify({ ...input, ...(meeting ?? {}) }),
   });
+}
+
+/** Holds one session in its own meeting instead of its class's. */
+export function setSessionMeeting(id: string, meeting: MeetingInput): Promise<Occurrence> {
+  return apiFetch<Occurrence>(`${BASE}/occurrences/${id}/meeting`, {
+    method: "PUT",
+    body: JSON.stringify(meeting),
+  });
+}
+
+/** Back to the class's meeting. */
+export function clearSessionMeeting(id: string): Promise<Occurrence> {
+  return apiFetch<Occurrence>(`${BASE}/occurrences/${id}/meeting`, { method: "DELETE" });
 }
 
 export function rescheduleSession(id: string, input: SessionTimeInput): Promise<Occurrence> {

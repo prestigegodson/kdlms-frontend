@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/Table";
 import { Tabs } from "@/components/ui/Tabs";
 import { ClassFormModal } from "../components/ClassFormModal";
+import { PLATFORM_VIDEO_LABEL } from "../meeting/meetingLink";
 import { dateInZone, scheduleSummary } from "../scheduleUtils";
 
 type Filter = "ACTIVE" | "ARCHIVED";
@@ -51,6 +52,8 @@ export function VirtualClassesPage() {
   const timezone = data?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const atLimit = data !== null && data.maxClasses !== null && data.activeCount >= data.maxClasses;
   const anyOverLimit = data?.classes.some((c) => c.overLimit) ?? false;
+  const needLinks =
+    data?.classes.filter((c) => c.status === "ACTIVE" && c.meetingUnavailable).length ?? 0;
   const shown = data?.classes.filter((c) => c.status === filter) ?? [];
   const archivedCount = data?.classes.filter((c) => c.status === "ARCHIVED").length ?? 0;
 
@@ -85,6 +88,13 @@ export function VirtualClassesPage() {
               Classes marked “Over plan limit” are read-only and can't hold sessions. Your oldest
               classes stay live; archive one you no longer need to free its place, or upgrade your
               plan.
+            </Alert>
+          )}
+          {needLinks > 0 && (
+            <Alert variant="warning" title="Some classes need a meeting link">
+              Your plan no longer includes {PLATFORM_VIDEO_LABEL}, so{" "}
+              {needLinks === 1 ? "one class's sessions" : `${needLinks} classes' sessions`} can't be joined. Open each
+              class marked “Needs a meeting link” and add a Google Meet or Zoom link, or upgrade your plan.
             </Alert>
           )}
           {archivedCount > 0 && (
@@ -143,6 +153,8 @@ export function VirtualClassesPage() {
                         <Badge>Archived</Badge>
                       ) : virtualClass.overLimit ? (
                         <Badge variant="warning">Over plan limit</Badge>
+                      ) : virtualClass.meetingUnavailable ? (
+                        <Badge variant="warning">Needs a meeting link</Badge>
                       ) : (
                         <Badge variant="success">Active</Badge>
                       )}
@@ -158,6 +170,7 @@ export function VirtualClassesPage() {
         <ClassFormModal
           existing={null}
           defaultStartDate={dateInZone(new Date(), timezone)}
+          platformVideo={data?.platformVideo ?? false}
           onClose={() => setCreating(false)}
           onSubmit={async (input) => {
             const created = await createVirtualClass(input);
