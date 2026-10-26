@@ -72,11 +72,9 @@ export function ClassDetailPage() {
   const currentUserId = useAuthStore((state) => state.user?.id);
   const teacherCapabilities = useTeacherScopeStore((state) => state.capabilities);
   const canManage = can.manageAcademics(role, teacherCapabilities);
-  const canManageSubjectRegistrations = can.manageStudentSubjects(role, teacherCapabilities);
   const showAttendanceLink = can.viewAttendance(role, teacherCapabilities);
   const showResultsLink = can.viewResults(role);
   const studentLoginsEntitled = useFeatureStore((state) => state.studentLogins);
-  const canProvisionLogins = can.manageStudentLogins(role, teacherCapabilities, studentLoginsEntitled);
   // Branch name is only fetched for a SCHOOL_ADMIN (the one role that spans
   // branches) - a BRANCH_ADMIN/TEACHER already knows they're confined to a
   // single branch, the same reasoning StudentsPage hides the branch filter
@@ -240,6 +238,12 @@ export function ClassDetailPage() {
     currentUserId !== undefined &&
     (schoolClass.classTeacherId === currentUserId || schoolClass.assistantTeacherId === currentUserId);
   const showBirthdays = can.viewClassBirthdays(role, isClassTeacherOfThisClass);
+  // A TEACHER (a Head of Level included - their headship is read-only over students) gets these
+  // writes only on a class they class-teach/assist.
+  const classTeacherWrites = role !== "TEACHER" || isClassTeacherOfThisClass;
+  const canManageSubjectRegistrations = can.manageStudentSubjects(role, teacherCapabilities) && classTeacherWrites;
+  const canProvisionLogins =
+    can.manageStudentLogins(role, teacherCapabilities, studentLoginsEntitled) && classTeacherWrites;
   // A class/assistant teacher lands straight on their Broadsheet tab; an admin's Assessments page is the broadsheet already.
   const resultsHref =
     role === "TEACHER" && isClassTeacherOfThisClass
@@ -374,7 +378,7 @@ export function ClassDetailPage() {
 
       {showBirthdays && (
         <Accordion title="Upcoming birthdays">
-          <UpcomingBirthdaysCard classId={schoolClass.id} linkable={can.manageStudents(role, teacherCapabilities)} showHeader={false} />
+          <UpcomingBirthdaysCard classId={schoolClass.id} linkable={can.viewStudentProfile(role, teacherCapabilities)} showHeader={false} />
         </Accordion>
       )}
 

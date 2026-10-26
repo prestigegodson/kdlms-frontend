@@ -91,9 +91,11 @@ export function StudentDetailPage() {
   const { studentId } = useParams<{ studentId: string }>();
   const role = useAuthStore((state) => state.user?.role);
   const teacherCapabilities = useTeacherScopeStore((state) => state.capabilities);
-  const canManage = can.manageStudents(role, teacherCapabilities);
+  // A Head of Level reaches this page read-only - every write below is admin-only.
+  const canManage = can.manageStudents(role);
   const studentLoginsEntitled = useFeatureStore((state) => state.studentLogins);
-  const canManageLogins = can.manageStudentLogins(role, teacherCapabilities, studentLoginsEntitled);
+  // A class teacher (a Head of Level who teaches included) manages logins from their class page instead.
+  const canManageLogins = canManage && can.manageStudentLogins(role, teacherCapabilities, studentLoginsEntitled);
   const canDelete = can.deleteStudents(role);
   const navigate = useNavigate();
 

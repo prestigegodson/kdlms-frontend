@@ -73,9 +73,11 @@ function initialBranchParam(param: string | null): string | null {
 function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
   const role = useAuthStore((state) => state.user?.role);
   const capabilities = useTeacherScopeStore((state) => state.capabilities);
-  const canManage = can.manageStudents(role, capabilities);
+  const canManage = can.manageStudents(role);
+  // A Head of Level opens their levels' pupils read-only.
+  const canOpenProfile = can.viewStudentProfile(role, capabilities);
   const studentLoginsEntitled = useFeatureStore((state) => state.studentLogins);
-  const canPromote = can.managePromotions(role, capabilities);
+  const canPromote = can.managePromotions(role);
   // Only the admins who can restore a soft-deleted pupil may filter for them.
   const canViewDeleted = can.deleteStudents(role);
   const navigate = useNavigate();
@@ -344,11 +346,11 @@ function AdminStudents({ isBranchScoped }: { isBranchScoped: boolean }) {
               </TableHead>
               <TableBody>
                 {state.page.content.map((student) => (
-                  // Row link is admin-only - an INVENTORY_MANAGER's read-only registry has no
+                  // Row link is admins + a Head of Level only - an INVENTORY_MANAGER's read-only registry has no
                   // detail screen to open (StudentDetailPage fetches medical/guardians/subjects,
                   // all of which 403 for this role), so `to` is omitted rather than navigating
                   // into a page that would just fail to load.
-                  <TableRow key={student.id} to={canManage ? `/school/students/${student.id}` : undefined}>
+                  <TableRow key={student.id} to={canOpenProfile ? `/school/students/${student.id}` : undefined}>
                     <TableCell label="Name" className="font-medium text-slate-900">
                       {student.fullName}
                     </TableCell>

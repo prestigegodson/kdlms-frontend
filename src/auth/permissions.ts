@@ -130,10 +130,19 @@ export const can = {
   },
 
   /**
-   * Register/edit/graduate/withdraw students, and same-session transfer - SCHOOL_ADMIN and
-   * BRANCH_ADMIN, plus a Head of Level for their own levels' students.
+   * Register/edit/graduate/withdraw students, photo, same-session transfer, and selective-subject
+   * edits on the profile - SCHOOL_ADMIN and BRANCH_ADMIN only. A Head of Level's student access is
+   * read-only (see `viewStudentProfile`).
    */
-  manageStudents(role: Role | undefined, scope: TeacherScope | null = null): boolean {
+  manageStudents(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
+  },
+
+  /**
+   * Opening a student's full profile (StudentDetailPage) - SCHOOL_ADMIN, BRANCH_ADMIN, and a Head
+   * of Level for their own levels' students, read-only for the head (every write is `manageStudents`).
+   */
+  viewStudentProfile(role: Role | undefined, scope: TeacherScope | null = null): boolean {
     return isAcademicAdmin(role, scope);
   },
 
@@ -157,7 +166,7 @@ export const can = {
    * read-only class roster instead, via `GET /api/v1/me/classes/{id}/students`.
    * An INVENTORY_MANAGER gets the same read-only registry browsing as a
    * TEACHER - the only student access that role has (see `manageStudents`,
-   * which stays SCHOOL_ADMIN/BRANCH_ADMIN-only, so registration/edit/medical/
+   * which is SCHOOL_ADMIN/BRANCH_ADMIN-only, so registration/edit/medical/
    * guardians/transfer stay hidden).
    */
   viewStudents(role: Role | undefined): boolean {
@@ -166,9 +175,9 @@ export const can = {
     );
   },
 
-  /** Bulk promotion and search-and-place - SCHOOL_ADMIN and BRANCH_ADMIN, plus a Head of Level between levels they head. */
-  managePromotions(role: Role | undefined, scope: TeacherScope | null = null): boolean {
-    return isAcademicAdmin(role, scope);
+  /** Bulk promotion and search-and-place - SCHOOL_ADMIN and BRANCH_ADMIN only, never a Head of Level. */
+  managePromotions(role: Role | undefined): boolean {
+    return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN";
   },
 
   /** Guardian provisioning and ward linking - not TEACHER-visible. */
@@ -188,12 +197,13 @@ export const can = {
   /**
    * Registering students for a selective subject - both admin roles plus a
    * TEACHER who class-teaches at least one class (mirrors `markAttendance`'s
-   * scoping; a subject-teacher-only account gets nothing). The real
+   * scoping; a subject-teacher-only account gets nothing). A Head of Level's
+   * headship never counts - only their own class-teacher assignment does. The real
    * per-student/per-class scoping is still enforced server-side - this only
    * gates whether the UI offers the control at all.
    */
   manageStudentSubjects(role: Role | undefined, scope: TeacherScope | null): boolean {
-    if (isAcademicAdmin(role, scope)) {
+    if (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN") {
       return true;
     }
     return role === "TEACHER" && (scope?.isClassTeacher ?? false);
@@ -202,7 +212,8 @@ export const can = {
   /**
    * Provision/reset/revoke a student's portal login, individually or in bulk for a whole
    * class - SCHOOL_ADMIN, BRANCH_ADMIN, and a TEACHER who class-teaches at least one class
-   * (the `manageStudentSubjects` scoping; a subject-teacher-only account gets nothing). Gated
+   * (the `manageStudentSubjects` scoping; a subject-teacher-only account gets nothing, and a Head
+   * of Level's headship never counts). Gated
    * on the school's Student logins entitlement, the same full-lockout shape
    * Messages/Timetable/Lesson notes use. The real per-student/per-class scoping is still
    * enforced server-side - this only gates whether the UI offers the control at all.
@@ -211,7 +222,7 @@ export const can = {
     if (!entitled) {
       return false;
     }
-    if (isAcademicAdmin(role, scope)) {
+    if (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN") {
       return true;
     }
     return role === "TEACHER" && (scope?.isClassTeacher ?? false);

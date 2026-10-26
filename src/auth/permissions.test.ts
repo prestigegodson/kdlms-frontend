@@ -18,8 +18,7 @@ describe("Head of Level", () => {
   it("gets BRANCH_ADMIN-equivalent academic controls", () => {
     expect(can.manageAcademics("TEACHER", head)).toBe(true);
     expect(can.viewSubjectCatalogue("TEACHER", head)).toBe(true);
-    expect(can.manageStudents("TEACHER", head)).toBe(true);
-    expect(can.managePromotions("TEACHER", head)).toBe(true);
+    expect(can.viewStudentProfile("TEACHER", head)).toBe(true);
     expect(can.publishResults("TEACHER", head)).toBe(true);
     expect(can.recordPrincipalRemark("TEACHER", head)).toBe(true);
     expect(can.viewTeachers("TEACHER", head)).toBe(true);
@@ -34,6 +33,13 @@ describe("Head of Level", () => {
     expect(can.manageLevelHeads("TEACHER")).toBe(false);
     expect(can.manageSessions("TEACHER")).toBe(false);
     expect(can.manageStudentMedical("TEACHER")).toBe(false);
+    // Student records are read-only for a head - no register/edit/promote, and no subject or
+    // login management beyond what their own class-teacher assignment gives them.
+    expect(can.manageStudents("TEACHER")).toBe(false);
+    expect(can.managePromotions("TEACHER")).toBe(false);
+    expect(can.manageStudentSubjects("TEACHER", head)).toBe(false);
+    expect(can.manageStudentLogins("TEACHER", head, true)).toBe(false);
+    expect(can.manageStudentLogins("TEACHER", { ...head, isClassTeacher: true }, true)).toBe(true);
     expect(can.deleteStudents("TEACHER")).toBe(false);
     expect(can.manageGuardians("TEACHER")).toBe(false);
     expect(can.deleteSubjects("TEACHER")).toBe(false);
@@ -47,7 +53,7 @@ describe("Head of Level", () => {
 
   it("leaves an ordinary teacher's academic admin controls closed", () => {
     expect(can.manageAcademics("TEACHER", plainTeacher)).toBe(false);
-    expect(can.manageStudents("TEACHER", plainTeacher)).toBe(false);
+    expect(can.viewStudentProfile("TEACHER", plainTeacher)).toBe(false);
     expect(can.publishResults("TEACHER", plainTeacher)).toBe(false);
     expect(can.viewTeachers("TEACHER", plainTeacher)).toBe(false);
     expect(can.reviewLessonNotes("TEACHER", true, plainTeacher)).toBe(false);
@@ -756,6 +762,7 @@ describe("can - a STUDENT is denied every staff/guardian capability", () => {
     viewAttendance: () => can.viewAttendance("STUDENT", classTeacherScope),
     markAttendance: () => can.markAttendance("STUDENT", classTeacherScope),
     manageStudents: () => can.manageStudents("STUDENT"),
+    viewStudentProfile: () => can.viewStudentProfile("STUDENT"),
     viewStudents: () => can.viewStudents("STUDENT"),
     managePromotions: () => can.managePromotions("STUDENT"),
     manageGuardians: () => can.manageGuardians("STUDENT"),

@@ -329,7 +329,7 @@ export const routes: RouteObject[] = [
           {
             path: "students/promotion",
             element: (
-              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]} allowLevelHead>
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
                 <PromotionPage />
               </RequireRole>
             ),

@@ -182,7 +182,7 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-1 lg:grid-cols-2">
         <NeedsAttentionCard setupGaps={admin.setupGaps} />
 
-        {!levelHead && <UpcomingBirthdaysCard linkable={can.manageStudents(role)} />}
+        {!levelHead && <UpcomingBirthdaysCard linkable={can.viewStudentProfile(role)} />}
       </div>
 
       {!levelHead && <AgeDistributionCard />}
