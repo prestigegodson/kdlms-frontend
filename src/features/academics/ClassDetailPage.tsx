@@ -245,6 +245,7 @@ export function ClassDetailPage() {
     role === "TEACHER" && isClassTeacherOfThisClass
       ? `/school/assessments?classId=${schoolClass.id}&tab=broadsheet`
       : `/school/assessments?classId=${schoolClass.id}`;
+  const showReportsLink = can.viewClassReports(role, teacherCapabilities, isClassTeacherOfThisClass);
 
   return (
     <div className="space-y-6">
@@ -283,7 +284,7 @@ export function ClassDetailPage() {
         />
       </div>
 
-      {(showAttendanceLink || showResultsLink || canProvisionLogins) && (
+      {(showAttendanceLink || showResultsLink || showReportsLink || canProvisionLogins) && (
         <div className="flex flex-wrap justify-end gap-2">
           {showAttendanceLink && (
             <Button
@@ -301,6 +302,15 @@ export function ClassDetailPage() {
               onClick={() => navigate(resultsHref)}
             >
               Results & broadsheet
+            </Button>
+          )}
+          {showReportsLink && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => navigate(`/school/reports?classId=${schoolClass.id}&branchId=${schoolClass.branchId}`)}
+            >
+              See all reports
             </Button>
           )}
           {canProvisionLogins && (

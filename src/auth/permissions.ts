@@ -275,6 +275,15 @@ export const can = {
   },
 
   /**
+   * ClassDetailPage's "See all reports" - academic admins, or the class/assistant
+   * teacher of that class. Mirrors viewBroadsheet per class, since the Reports
+   * page's roster is the broadsheet (a subject-only teacher couldn't load it).
+   */
+  viewClassReports(role: Role | undefined, scope: TeacherScope | null, isClassTeacherOfThisClass: boolean): boolean {
+    return isAcademicAdmin(role, scope) || (role === "TEACHER" && isClassTeacherOfThisClass);
+  },
+
+  /**
    * Writing a class's holistic term remark - the class teacher only, not
    * every recordAssessments-eligible teacher: a remark is the class
    * teacher's alone, narrower than recordAssessments' class-teach ∪

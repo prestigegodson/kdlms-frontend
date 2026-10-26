@@ -948,3 +948,26 @@ describe("class learning resources (creators Phase C14)", () => {
     expect(can.trackClassResources("CREATOR")).toBe(false);
   });
 });
+
+describe("can.viewClassReports", () => {
+  const head: TeacherScope = { isClassTeacher: false, headOfLevelIds: ["level-primary"] };
+  const subjectTeacher: TeacherScope = { isClassTeacher: false, headOfLevelIds: [] };
+
+  it("admits academic admins regardless of the class assignment", () => {
+    expect(can.viewClassReports("SCHOOL_ADMIN", null, false)).toBe(true);
+    expect(can.viewClassReports("BRANCH_ADMIN", null, false)).toBe(true);
+    expect(can.viewClassReports("TEACHER", head, false)).toBe(true);
+  });
+
+  it("admits a teacher only for a class they class-teach or assist", () => {
+    expect(can.viewClassReports("TEACHER", subjectTeacher, true)).toBe(true);
+    expect(can.viewClassReports("TEACHER", subjectTeacher, false)).toBe(false);
+  });
+
+  it("refuses every other role", () => {
+    const others: Role[] = ["INVENTORY_MANAGER", "GUARDIAN", "STUDENT"];
+    for (const role of others) {
+      expect(can.viewClassReports(role, null, true)).toBe(false);
+    }
+  });
+});

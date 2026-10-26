@@ -1,14 +1,14 @@
-import { FileText } from "lucide-react";
+import { Eye, FileText } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 import { getBroadsheet } from "@/api/assessments";
 import { ApiError } from "@/api/client";
 import { listClasses, type SchoolClassView } from "@/api/classes";
-import { previewStudentReport } from "@/api/reports";
 import type { ResultScope } from "@/api/types";
 import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
@@ -17,9 +17,10 @@ import { ScopeToggle } from "@/features/assessments/components/ScopeToggle";
 import { BranchFilter } from "@/features/branches/components/BranchFilter";
 import { useBranchScope } from "@/features/branches/useBranchScope";
 import { ClassReportExportCard } from "@/features/reporting/components/ClassReportExportCard";
-import { ReportPreviewFrame } from "@/features/reporting/components/ReportPreviewFrame";
+import { ReportPreviewNavigator } from "@/features/reporting/components/ReportPreviewNavigator";
 import { type ReportStudentRow, StudentReportList } from "@/features/reporting/components/StudentReportList";
 import { useAuthStore } from "@/stores/authStore";
+import { useBranchStore } from "@/stores/branchStore";
 
 /**
  * Term result reports for a class: pick a class and term, then preview or
@@ -34,14 +35,14 @@ export function ReportsPage() {
   const { ready: branchReady, branchId } = useBranchScope();
 
   const [classes, setClasses] = useState<SchoolClassView[] | null>(null);
-  const [classId, setClassId] = useState("");
+  // ClassDetailPage's "See all reports" deep-links ?classId; ClassTermPicker then lands on the current term.
+  const [searchParams] = useSearchParams();
+  const [classId, setClassId] = useState(searchParams.get("classId") ?? "");
   const [termId, setTermId] = useState("");
   const [scope, setScope] = useState<ResultScope>("TERM");
   const [students, setStudents] = useState<ReportStudentRow[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [previewStudentId, setPreviewStudentId] = useState<string | null>(null);
-  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
-  const [previewError, setPreviewError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!branchReady) return;
@@ -50,12 +51,22 @@ export function ReportsPage() {
       .catch(() => setClasses([]));
   }, [branchReady, branchId]);
 
+  // A deep link's ?branchId (a SCHOOL_ADMIN's branch filter only) is switched to once the branch
+  // list loads, so the linked class shows in the Class select; cleared once reached.
+  const [pendingBranchId, setPendingBranchId] = useState(showsBranchFilter ? searchParams.get("branchId") : null);
+  const selectBranch = useBranchStore((state) => state.select);
+  useEffect(() => {
+    if (branchReady && pendingBranchId && branchId !== pendingBranchId) selectBranch(pendingBranchId);
+  }, [branchReady, branchId, pendingBranchId, selectBranch]);
+
   // A branch change clears the class selection during render (same idiom as below) - a class
-  // from the previous branch would otherwise 404 once the class list has re-fetched.
+  // from the previous branch would otherwise 404 once the class list has re-fetched. The first
+  // resolution (undefined -> the auto-selected branch) and the deep link's own switch don't count.
   const [lastBranchId, setLastBranchId] = useState(branchId);
   if (branchId !== lastBranchId) {
     setLastBranchId(branchId);
-    setClassId("");
+    if (pendingBranchId && branchId === pendingBranchId) setPendingBranchId(null);
+    else if (lastBranchId !== undefined && !pendingBranchId) setClassId("");
   }
 
   // Selection resets downstream state during render (the pattern `AdminResultsPanel`
@@ -66,6 +77,7 @@ export function ReportsPage() {
     setLastSelectionKey(selectionKey);
     setStudents(null);
     setLoadError(null);
+    setPreviewStudentId(null);
   }
 
   useEffect(() => {
@@ -82,18 +94,6 @@ export function ReportsPage() {
       )
       .catch((error: unknown) => setLoadError(error instanceof ApiError ? error.message : "Failed to load results"));
   }, [classId, termId, scope]);
-
-  async function handlePreview(studentId: string) {
-    setPreviewStudentId(studentId);
-    setPreviewHtml(null);
-    setPreviewError(null);
-    try {
-      const html = await previewStudentReport(studentId, termId, scope);
-      setPreviewHtml(html);
-    } catch (error) {
-      setPreviewError(error instanceof ApiError ? error.message : "Failed to render this report");
-    }
-  }
 
   const classOptions = (classes ?? []).map((schoolClass) => ({ id: schoolClass.id, name: schoolClass.name }));
 
@@ -139,20 +139,24 @@ export function ReportsPage() {
       {students && students.length > 0 && (
         <>
           <ClassReportExportCard classId={classId} termId={termId} scope={scope} />
-          <StudentReportList students={students} termId={termId} scope={scope} onPreview={handlePreview} />
+          <div className="flex justify-end">
+            <Button size="sm" onClick={() => setPreviewStudentId(students[0].studentId)}>
+              <Eye className="h-4 w-4" aria-hidden="true" /> View reports
+            </Button>
+          </div>
+          <StudentReportList students={students} termId={termId} scope={scope} onPreview={setPreviewStudentId} />
         </>
       )}
 
-      {previewStudentId && (
-        <Modal open onClose={() => setPreviewStudentId(null)} title="Report preview" size="xl">
-          {previewError && <Alert variant="error">{previewError}</Alert>}
-          {!previewError && !previewHtml && (
-            <div className="flex items-center gap-2 text-sm text-slate-500">
-              <Spinner /> Rendering…
-            </div>
-          )}
-          {previewHtml && <ReportPreviewFrame html={previewHtml} />}
-        </Modal>
+      {previewStudentId && students && students.length > 0 && (
+        <ReportPreviewNavigator
+          students={students}
+          termId={termId}
+          scope={scope}
+          studentId={previewStudentId}
+          onStudentChange={setPreviewStudentId}
+          onClose={() => setPreviewStudentId(null)}
+        />
       )}
     </div>
   );

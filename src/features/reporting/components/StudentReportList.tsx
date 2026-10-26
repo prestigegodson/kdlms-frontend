@@ -1,11 +1,10 @@
 import { Download, Eye } from "lucide-react";
 import { useState } from "react";
 import { ApiError } from "@/api/client";
-import { downloadStudentReportPdf } from "@/api/reports";
 import type { ResultScope } from "@/api/types";
 import { Alert } from "@/components/ui/Alert";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
-import { downloadBlob } from "@/utils/download";
+import { downloadStudentReport } from "@/features/reporting/downloadStudentReport";
 
 export interface ReportStudentRow {
   studentId: string;
@@ -30,9 +29,7 @@ export function StudentReportList({ students, termId, scope = "TERM", onPreview 
     setDownloadingId(student.studentId);
     setError(null);
     try {
-      const blob = await downloadStudentReportPdf(student.studentId, termId, scope);
-      const stem = student.admissionNumber || student.studentName;
-      downloadBlob(blob, scope === "MIDTERM" ? `${stem}-result-midterm.pdf` : `${stem}-result.pdf`);
+      await downloadStudentReport(student, termId, scope);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to download the report");
     } finally {
