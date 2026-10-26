@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -226,6 +226,7 @@ describe("PlanBillingPage", () => {
 
     expect(billingApi.setAutoRenew).toHaveBeenCalledWith(false);
     expect(await screen.findByText("Ends 5 November, 2026")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
   it("warns while a failed renewal is being retried and lists past payments", async () => {

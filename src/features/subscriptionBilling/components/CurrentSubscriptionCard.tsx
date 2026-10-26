@@ -181,6 +181,7 @@ export function CurrentSubscriptionCard({
           confirmLabel="Turn off"
           onConfirm={async () => {
             onChange(await setAutoRenew(false));
+            setConfirmingStop(false);
           }}
           onClose={() => setConfirmingStop(false)}
         />
