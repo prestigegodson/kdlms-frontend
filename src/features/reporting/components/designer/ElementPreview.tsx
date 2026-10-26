@@ -1,6 +1,14 @@
 import { ImageIcon } from "lucide-react";
 import { downloadFile } from "@/api/files";
-import { BLOCK_DEFAULT_SIZE, BLOCK_LABELS, type LayoutElement } from "@/features/reporting/components/designer/layout";
+import {
+  BANDED_TABLE_BLOCKS,
+  BLOCK_DEFAULT_SIZE,
+  BLOCK_LABELS,
+  type LayoutElement,
+  type PageStyle,
+  TABLE_HEADER_BLOCKS,
+  resolveHeaderColors,
+} from "@/features/reporting/components/designer/layout";
 import { REPORT_BLOCKS } from "@/features/reporting/components/reportBlocks";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
 
@@ -17,7 +25,7 @@ const BLOCK_DESCRIPTIONS = Object.fromEntries(REPORT_BLOCKS.map((block) => [bloc
  * against real sample data is the only source of truth for what a report
  * will actually look like.
  */
-export function ElementPreview({ element }: { element: Exclude<LayoutElement, { type: "BOX" | "TABLE" }> }) {
+export function ElementPreview({ element, page }: { element: Exclude<LayoutElement, { type: "BOX" | "TABLE" }>; page: PageStyle }) {
   switch (element.type) {
     case "BLOCK": {
       const defaultSize = BLOCK_DEFAULT_SIZE[element.block];
@@ -34,6 +42,23 @@ export function ElementPreview({ element }: { element: Exclude<LayoutElement, { 
               <ImageIcon className="h-4 w-4 text-slate-300" aria-hidden="true" />
               {defaultSize.caption}
             </div>
+          </div>
+        );
+      }
+      if (TABLE_HEADER_BLOCKS.has(element.block)) {
+        // A hint of the header scheme only - the server Preview shows the real table.
+        const colors = resolveHeaderColors(page, element.style?.headerColors);
+        return (
+          <div className="overflow-hidden rounded-control border border-dashed border-slate-400 bg-slate-50 text-center text-xs text-slate-600">
+            {BANDED_TABLE_BLOCKS.has(element.block) && (
+              <div className="px-3 py-1 font-semibold" style={{ backgroundColor: colors.bandBackground, color: colors.bandText }}>
+                {BLOCK_LABELS[element.block]}
+              </div>
+            )}
+            <div className="px-3 py-1 font-semibold" style={{ backgroundColor: colors.headerBackground, color: colors.headerText }}>
+              {BANDED_TABLE_BLOCKS.has(element.block) ? "Header row" : BLOCK_LABELS[element.block]}
+            </div>
+            <div className="px-3 py-2 text-slate-500">{BLOCK_DESCRIPTIONS[element.block]}</div>
           </div>
         );
       }

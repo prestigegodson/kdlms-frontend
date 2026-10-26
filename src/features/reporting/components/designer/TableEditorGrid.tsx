@@ -1,7 +1,7 @@
 import { type DragEvent, useRef, useState } from "react";
 import { ElementList } from "@/features/reporting/components/designer/ElementList";
 import { getCurrentDrag } from "@/features/reporting/components/designer/dragTypes";
-import type { LayoutElement, TableElement } from "@/features/reporting/components/designer/layout";
+import { type LayoutElement, type TableElement, resolveHeaderColors } from "@/features/reporting/components/designer/layout";
 import { canPlace, cellContainerId, findElementLocation } from "@/features/reporting/components/designer/layoutOps";
 import { setCell } from "@/features/reporting/components/designer/tableOps";
 import type { LayoutEditor } from "@/features/reporting/components/designer/useLayoutEditor";
@@ -32,6 +32,12 @@ interface TableEditorGridProps {
  */
 export function TableEditorGrid({ element, editor, onInlineEditingChange }: TableEditorGridProps) {
   const { table } = element;
+  // Same precedence as LayoutHtmlEmitter: the element's own colours, then the legacy
+  // table.headerBackgroundColor, then the page default.
+  const headerColors = resolveHeaderColors(editor.layout.page, {
+    headerBackground: table.headerBackgroundColor,
+    ...element.style?.headerColors,
+  });
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const discardOnBlurRef = useRef<Record<string, boolean>>({});
 
@@ -124,7 +130,8 @@ export function TableEditorGrid({ element, editor, onInlineEditingChange }: Tabl
                     verticalAlign: "top",
                     textAlign: cell.align,
                     fontWeight: isHeader || cell.bold ? 700 : 400,
-                    backgroundColor: isHeader ? (table.headerBackgroundColor ?? "#f2f2f2") : cell.backgroundColor,
+                    backgroundColor: isHeader ? (cell.backgroundColor ?? headerColors.headerBackground) : cell.backgroundColor,
+                    color: isHeader ? headerColors.headerText : undefined,
                   }}
                   onDragOver={(event) => {
                     event.preventDefault();

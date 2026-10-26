@@ -64,6 +64,56 @@ export interface ElementStyle {
   paddingPx?: number;
   backgroundColor?: string;
   border?: boolean;
+  /** Per-table override of `PageStyle.headerColors` - only accepted on a `TABLE_HEADER_BLOCKS` block or a TABLE element (and a TABLE has no band). */
+  headerColors?: HeaderColors;
+}
+
+/**
+ * Background/text colours for a table's two header levels - the main column
+ * `header` row, and the `band`: the subject-group row on a score/rating table,
+ * or the title row on an affective/psychomotor table. Mirrors backend
+ * `ReportLayout.HeaderColors`. Every field is optional and resolves on its own:
+ * element override, then the page default, then the platform grey (background)
+ * or inherited text colour.
+ */
+export interface HeaderColors {
+  headerBackground?: string;
+  headerText?: string;
+  bandBackground?: string;
+  bandText?: string;
+}
+
+/** The platform's own header colours when nothing is set - mirrors backend `TemplateRenderer`'s defaults. */
+export const DEFAULT_HEADER_BACKGROUND = "#f2f2f2";
+export const DEFAULT_BAND_BACKGROUND = "#e8e8e8";
+
+/** Field-by-field `override ?? fallback` - an all-unset result collapses to `undefined`. */
+export function mergeHeaderColors(override?: HeaderColors, fallback?: HeaderColors): HeaderColors | undefined {
+  const merged: HeaderColors = {
+    headerBackground: override?.headerBackground ?? fallback?.headerBackground,
+    headerText: override?.headerText ?? fallback?.headerText,
+    bandBackground: override?.bandBackground ?? fallback?.bandBackground,
+    bandText: override?.bandText ?? fallback?.bandText,
+  };
+  return compactHeaderColors(merged);
+}
+
+/** The colours a table header actually renders with: `override`, then the page default, then the platform default - mirrors backend `LayoutHtmlEmitter`/`TemplateRenderer`. Text falls back to the page's own text colour, which is what it inherits. */
+export function resolveHeaderColors(page: PageStyle, override?: HeaderColors): Required<HeaderColors> {
+  const merged = mergeHeaderColors(override, page.headerColors);
+  return {
+    headerBackground: merged?.headerBackground ?? DEFAULT_HEADER_BACKGROUND,
+    headerText: merged?.headerText ?? page.color,
+    bandBackground: merged?.bandBackground ?? DEFAULT_BAND_BACKGROUND,
+    bandText: merged?.bandText ?? page.color,
+  };
+}
+
+/** Drops unset fields, returning `undefined` when none remain - so a cleared override leaves no empty object in the saved layout. */
+export function compactHeaderColors(colors?: HeaderColors): HeaderColors | undefined {
+  if (!colors) return undefined;
+  const entries = Object.entries(colors).filter(([, value]) => value !== undefined && value !== "");
+  return entries.length > 0 ? (Object.fromEntries(entries) as HeaderColors) : undefined;
 }
 
 interface BaseElement {
@@ -254,6 +304,8 @@ export interface PageStyle {
   logoBackground?: boolean;
   /** 1-100. Required when `logoBackground` is true - mirrors backend `ReportLayoutValidator`. */
   logoBackgroundOpacity?: number;
+  /** Template-wide default table header colours - see `HeaderColors`. Absent means the platform grey. */
+  headerColors?: HeaderColors;
 }
 
 export interface ReportLayout {
@@ -356,6 +408,25 @@ export function blockFitsMode(block: ReportBlockName, mode: "NUMERIC" | "QUALITA
 
 /** The only two blocks whose interior sizing the designer controls - mirrors backend `ReportLayoutValidator`'s `SIZABLE_BLOCKS`. Every other block rejects `maxWidthPx`/`maxHeightPx` at save time. */
 export const SIZABLE_BLOCKS: ReadonlySet<ReportBlockName> = new Set(["STUDENT_PHOTO", "SCHOOL_LOGO"]);
+
+/** Blocks that render a platform-owned table with a header row, and so accept `ElementStyle.headerColors` - mirrors backend `ReportBlock#hasTableHeader`. */
+export const TABLE_HEADER_BLOCKS: ReadonlySet<ReportBlockName> = new Set([
+  "SCORE_TABLE",
+  "RATING_TABLE",
+  "GRADE_KEY",
+  "RATING_LEGEND",
+  "AFFECTIVE_TRAITS",
+  "PSYCHOMOTOR_TRAITS",
+  "TRAIT_LEGEND",
+]);
+
+/** Of `TABLE_HEADER_BLOCKS`, the ones that also print a band row (subject group or trait title) - the keys/legends have only a header row. */
+export const BANDED_TABLE_BLOCKS: ReadonlySet<ReportBlockName> = new Set([
+  "SCORE_TABLE",
+  "RATING_TABLE",
+  "AFFECTIVE_TRAITS",
+  "PSYCHOMOTOR_TRAITS",
+]);
 
 /** Seeded default size/caption for a new `SIZABLE_BLOCKS` instance - mirrors backend `TemplateRenderer`'s `DEFAULT_PHOTO_*`/`DEFAULT_LOGO_*` constants and placeholder captions. */
 export const BLOCK_DEFAULT_SIZE: Partial<Record<ReportBlockName, { maxWidthPx: number; maxHeightPx: number; caption: string }>> = {

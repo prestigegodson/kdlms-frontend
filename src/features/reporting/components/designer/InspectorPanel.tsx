@@ -6,6 +6,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import {
   ALLOWED_FONT_FAMILIES,
+  BANDED_TABLE_BLOCKS,
   CONDITION_FLAG_LABELS,
   type ConditionMatch,
   type ConditionRule,
@@ -17,13 +18,21 @@ import {
   SELECTABLE_CONDITION_FLAGS,
   SIZABLE_BLOCKS,
   TABLE_BORDER_STYLES,
+  TABLE_HEADER_BLOCKS,
   conditionRulePolarityLabel,
   type ElementStyle,
+  type HeaderColors,
+  type PageStyle,
+  type ReportBlockName,
+  resolveHeaderColors,
   type LayoutElement,
   type TableCell,
   type TableSpec,
 } from "@/features/reporting/components/designer/layout";
+import { ColorField } from "@/features/reporting/components/designer/ColorField";
+import { HeaderColorsFields } from "@/features/reporting/components/designer/HeaderColorsFields";
 import { findElementLocation } from "@/features/reporting/components/designer/layoutOps";
+import { DEFAULT_PAGE_COLOR } from "@/features/reporting/components/designer/starterLayouts";
 import {
   distributeWidthsEvenly,
   mergeCellWithNext,
@@ -34,6 +43,12 @@ import {
 } from "@/features/reporting/components/designer/tableOps";
 import type { LayoutEditor } from "@/features/reporting/components/designer/useLayoutEditor";
 import { BLOCK_LABELS } from "@/features/reporting/components/designer/layout";
+
+/** What a table block calls its second header level - the band row it prints, if any. */
+function bandLabelFor(block: ReportBlockName): string | undefined {
+  if (!BANDED_TABLE_BLOCKS.has(block)) return undefined;
+  return block === "SCORE_TABLE" || block === "RATING_TABLE" ? "Subject group row" : "Title row";
+}
 
 function numberOrUndefined(value: string): number | undefined {
   if (value === "") return undefined;
@@ -102,9 +117,27 @@ function PageInspector({ editor }: { editor: LayoutEditor }) {
           onChange={(e) => editor.updatePage({ ...page, paddingPx: Number(e.target.value) })}
         />
       </FormField>
-      <FormField label="Text color" htmlFor="page-color">
-        <Input id="page-color" type="color" value={page.color} onChange={(e) => editor.updatePage({ ...page, color: e.target.value })} />
-      </FormField>
+      {/* page.color is required, so "unset" here means "still the starter default". */}
+      <ColorField
+        id="page-color"
+        label="Text color"
+        value={page.color === DEFAULT_PAGE_COLOR ? undefined : page.color}
+        fallback={DEFAULT_PAGE_COLOR}
+        onChange={(color) => editor.updatePage({ ...page, color: color ?? DEFAULT_PAGE_COLOR })}
+      />
+      <div className="space-y-2 border-t border-slate-100 pt-3">
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Table header colors</span>
+        <p className="text-xs text-slate-500">
+          The default for every table on the report: score/rating, affective, psychomotor, keys and custom tables. Each table can override it.
+        </p>
+        <HeaderColorsFields
+          idPrefix="page-header-colors"
+          value={page.headerColors}
+          inherited={resolveHeaderColors({ ...page, headerColors: undefined })}
+          onChange={(headerColors) => editor.updatePage({ ...page, headerColors })}
+          bandLabel="Group/title row"
+        />
+      </div>
       <div className="space-y-1">
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <Checkbox
@@ -181,21 +214,13 @@ function RowInspector({ editor, rowId }: { editor: LayoutEditor; rowId: string }
           onChange={(e) => set({ paddingPx: numberOrUndefined(e.target.value) })}
         />
       </FormField>
-      <FormField label="Background color" htmlFor="row-background">
-        <div className="flex items-center gap-2">
-          <Input
-            id="row-background"
-            type="color"
-            value={style.backgroundColor ?? "#ffffff"}
-            onChange={(e) => set({ backgroundColor: e.target.value })}
-          />
-          {style.backgroundColor && (
-            <button type="button" className="text-xs text-slate-500 hover:text-slate-700" onClick={() => set({ backgroundColor: undefined })}>
-              Clear
-            </button>
-          )}
-        </div>
-      </FormField>
+      <ColorField
+        id="row-background"
+        label="Background color"
+        value={style.backgroundColor}
+        fallback="#ffffff"
+        onChange={(backgroundColor) => set({ backgroundColor })}
+      />
       <label className="flex items-center gap-2 text-sm text-slate-700">
         <Checkbox checked={style.borderTop ?? false} onChange={(e) => set({ borderTop: e.target.checked })} />
         Border above
@@ -369,16 +394,19 @@ function ElementInspector({ editor, elementId }: { editor: LayoutEditor; element
               onChange={(e) => setStyle({ fontSizePx: numberOrUndefined(e.target.value) })}
             />
           </FormField>
-          <FormField label="Text color" htmlFor="element-color">
-            <Input id="element-color" type="color" value={style.color ?? "#1a1a1a"} onChange={(e) => setStyle({ color: e.target.value })} />
-          </FormField>
+          <ColorField
+            id="element-color"
+            label="Text color"
+            value={style.color}
+            fallback={editor.layout.page.color}
+            onChange={(color) => setStyle({ color })}
+            clearLabel="Use page text color"
+          />
         </>
       )}
 
       {element.type === "DIVIDER" && (
-        <FormField label="Line color" htmlFor="divider-color">
-          <Input id="divider-color" type="color" value={style.color ?? "#cccccc"} onChange={(e) => setStyle({ color: e.target.value })} />
-        </FormField>
+        <ColorField id="divider-color" label="Line color" value={style.color} fallback="#cccccc" onChange={(color) => setStyle({ color })} />
       )}
 
       {element.type === "SPACER" && (
@@ -428,21 +456,13 @@ function ElementInspector({ editor, elementId }: { editor: LayoutEditor; element
 
       {element.type === "BOX" && (
         <>
-          <FormField label="Background color" htmlFor="box-background">
-            <div className="flex items-center gap-2">
-              <Input
-                id="box-background"
-                type="color"
-                value={style.backgroundColor ?? "#ffffff"}
-                onChange={(e) => setStyle({ backgroundColor: e.target.value })}
-              />
-              {style.backgroundColor && (
-                <button type="button" className="text-xs text-slate-500 hover:text-slate-700" onClick={() => setStyle({ backgroundColor: undefined })}>
-                  Clear
-                </button>
-              )}
-            </div>
-          </FormField>
+          <ColorField
+            id="box-background"
+            label="Background color"
+            value={style.backgroundColor}
+            fallback="#ffffff"
+            onChange={(backgroundColor) => setStyle({ backgroundColor })}
+          />
           <FormField label="Padding (px)" htmlFor="box-padding">
             <Input
               id="box-padding"
@@ -461,7 +481,7 @@ function ElementInspector({ editor, elementId }: { editor: LayoutEditor; element
       )}
 
       {element.type === "TABLE" && (
-        <TableInspector editor={editor} elementId={elementId} table={element.table} />
+        <TableInspector editor={editor} elementId={elementId} table={element.table} style={style} page={editor.layout.page} />
       )}
 
       {element.type === "BLOCK" && SIZABLE_BLOCKS.has(element.block) && (
@@ -498,7 +518,25 @@ function ElementInspector({ editor, elementId }: { editor: LayoutEditor; element
         </>
       )}
 
-      {element.type === "BLOCK" && <p className="text-xs text-slate-500">Filled automatically at render time - only its position is yours to arrange.</p>}
+      {element.type === "BLOCK" && TABLE_HEADER_BLOCKS.has(element.block) && (
+        <div className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Header colors</span>
+          <HeaderColorsFields
+            idPrefix="block-header-colors"
+            value={style.headerColors}
+            inherited={resolveHeaderColors(editor.layout.page)}
+            onChange={(headerColors) => setStyle({ headerColors })}
+            bandLabel={bandLabelFor(element.block)}
+            clearLabel="Use template default"
+          />
+        </div>
+      )}
+
+      {element.type === "BLOCK" && (
+        <p className="text-xs text-slate-500">
+          Filled automatically at render time - its position{TABLE_HEADER_BLOCKS.has(element.block) ? " and header colors are" : " is"} yours to arrange.
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-2 border-t border-slate-100 pt-3">
         <FormField label="Margin top (px)" htmlFor="element-margin-top">
@@ -530,14 +568,23 @@ function TableInspector({
   editor,
   elementId,
   table,
+  style,
+  page,
 }: {
   editor: LayoutEditor;
   elementId: string;
   table: TableSpec;
+  style: ElementStyle;
+  page: PageStyle;
 }) {
   function set(next: typeof table) {
     editor.updateElement(elementId, { table: next } as Partial<LayoutElement>);
   }
+
+  const tableHeaderColors: HeaderColors | undefined =
+    table.headerBackgroundColor && !style.headerColors?.headerBackground
+      ? { ...style.headerColors, headerBackground: table.headerBackgroundColor }
+      : style.headerColors;
 
   const widthSum = table.columnWidthsPercent?.reduce((a, b) => a + b, 0);
 
@@ -571,21 +618,20 @@ function TableInspector({
         First row is a header
       </label>
       {table.headerRow && (
-        <FormField label="Header background" htmlFor="table-header-bg">
-          <div className="flex items-center gap-2">
-            <Input
-              id="table-header-bg"
-              type="color"
-              value={table.headerBackgroundColor ?? "#f2f2f2"}
-              onChange={(e) => set({ ...table, headerBackgroundColor: e.target.value })}
-            />
-            {table.headerBackgroundColor && (
-              <button type="button" className="text-xs text-slate-500 hover:text-slate-700" onClick={() => set({ ...table, headerBackgroundColor: undefined })}>
-                Clear
-              </button>
-            )}
-          </div>
-        </FormField>
+        <HeaderColorsFields
+          idPrefix="table-header-colors"
+          value={tableHeaderColors}
+          inherited={resolveHeaderColors(page)}
+          // The legacy table.headerBackgroundColor is folded into the element's own
+          // headerColors on first edit, so the two can never disagree afterwards.
+          onChange={(headerColors) =>
+            editor.updateElement(elementId, {
+              table: { ...table, headerBackgroundColor: undefined },
+              style: { ...style, headerColors },
+            } as Partial<LayoutElement>)
+          }
+          clearLabel="Use template default"
+        />
       )}
 
       <div className="grid grid-cols-2 gap-2">
@@ -613,21 +659,13 @@ function TableInspector({
           </Select>
         </FormField>
       </div>
-      <FormField label="Border color" htmlFor="table-border-color">
-        <div className="flex items-center gap-2">
-          <Input
-            id="table-border-color"
-            type="color"
-            value={table.borderColor ?? "#cccccc"}
-            onChange={(e) => set({ ...table, borderColor: e.target.value })}
-          />
-          {table.borderColor && (
-            <button type="button" className="text-xs text-slate-500 hover:text-slate-700" onClick={() => set({ ...table, borderColor: undefined })}>
-              Clear
-            </button>
-          )}
-        </div>
-      </FormField>
+      <ColorField
+        id="table-border-color"
+        label="Border color"
+        value={table.borderColor}
+        fallback="#cccccc"
+        onChange={(borderColor) => set({ ...table, borderColor })}
+      />
       <FormField label="Cell padding (px)" htmlFor="table-cell-padding">
         <Input
           id="table-cell-padding"
@@ -718,21 +756,13 @@ function SelectedCellInspector({
         <Checkbox checked={cell.bold ?? false} onChange={(e) => setCellPatch({ bold: e.target.checked })} />
         Bold
       </label>
-      <FormField label="Background color" htmlFor="table-cell-bg">
-        <div className="flex items-center gap-2">
-          <Input
-            id="table-cell-bg"
-            type="color"
-            value={cell.backgroundColor ?? "#ffffff"}
-            onChange={(e) => setCellPatch({ backgroundColor: e.target.value })}
-          />
-          {cell.backgroundColor && (
-            <button type="button" className="text-xs text-slate-500 hover:text-slate-700" onClick={() => setCellPatch({ backgroundColor: undefined })}>
-              Clear
-            </button>
-          )}
-        </div>
-      </FormField>
+      <ColorField
+        id="table-cell-bg"
+        label="Background color"
+        value={cell.backgroundColor}
+        fallback="#ffffff"
+        onChange={(backgroundColor) => setCellPatch({ backgroundColor })}
+      />
       <div className="flex gap-2">
         {colSpan > 1 && (
           <button

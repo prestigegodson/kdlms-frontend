@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { InspectorPanel } from "@/features/reporting/components/designer/InspectorPanel";
@@ -99,5 +99,107 @@ describe("InspectorPanel row Visibility section", () => {
 
     expect(screen.getByLabelText("Condition")).toHaveValue("IS_MIDTERM");
     expect(screen.getByLabelText("is / is not")).toHaveValue("false");
+  });
+});
+
+function TableBlockHarness({ onLayout }: { onLayout: (layout: ReportLayout) => void }) {
+  const layout = blankLayout();
+  layout.page.headerColors = { headerBackground: "#003366" };
+  layout.rows[0].columns[0].elements = [{ id: "el-1", type: "BLOCK", block: "RATING_TABLE" }];
+  const editor = useLayoutEditor(layout);
+  if (editor.selection === null) editor.setSelection({ type: "element", elementId: "el-1" });
+  onLayout(editor.layout);
+  return <InspectorPanel editor={editor} />;
+}
+
+describe("InspectorPanel table header colors", () => {
+  it("a table block shows the template default and can override then reset it", async () => {
+    const user = userEvent.setup();
+    let latest: ReportLayout | undefined;
+    render(<TableBlockHarness onLayout={(layout) => (latest = layout)} />);
+
+    const headerBackground = screen.getByLabelText("Header background");
+    expect(headerBackground).toHaveValue("#003366");
+    expect(screen.getByLabelText("Subject group row background")).toHaveValue("#e8e8e8");
+    expect(screen.queryByText("Use template default")).not.toBeInTheDocument();
+
+    fireEvent.input(headerBackground, { target: { value: "#8b0000" } });
+    const block = () => latest!.rows[0].columns[0].elements[0];
+    expect(block().style?.headerColors).toEqual({ headerBackground: "#8b0000" });
+
+    await user.click(screen.getByText("Use template default"));
+    expect(block().style?.headerColors).toBeUndefined();
+    expect(screen.getByLabelText("Header background")).toHaveValue("#003366");
+  });
+});
+
+function SelectionHarness({
+  selectElement,
+  elements = [],
+  onLayout,
+}: {
+  selectElement?: string;
+  elements?: ReportLayout["rows"][number]["columns"][number]["elements"];
+  onLayout: (layout: ReportLayout) => void;
+}) {
+  const layout = blankLayout();
+  layout.page.color = "#224466";
+  layout.rows[0].columns[0].elements = elements;
+  const editor = useLayoutEditor(layout);
+  if (editor.selection === null) editor.setSelection(selectElement ? { type: "element", elementId: selectElement } : { type: "page" });
+  onLayout(editor.layout);
+  return <InspectorPanel editor={editor} />;
+}
+
+describe("InspectorPanel color reset", () => {
+  it("page text color can be reset to the starter default", async () => {
+    const user = userEvent.setup();
+    let latest: ReportLayout | undefined;
+    render(<SelectionHarness onLayout={(layout) => (latest = layout)} />);
+
+    expect(screen.getByLabelText("Text color")).toHaveValue("#224466");
+    await user.click(screen.getByText("Reset to default"));
+
+    expect(latest!.page.color).toBe("#1a1a1a");
+    expect(screen.queryByText("Reset to default")).not.toBeInTheDocument();
+  });
+
+  it("element text color falls back to the page color and can be reset to it", async () => {
+    const user = userEvent.setup();
+    let latest: ReportLayout | undefined;
+    render(
+      <SelectionHarness
+        selectElement="el-1"
+        elements={[{ id: "el-1", type: "TEXT", text: "Hi" }]}
+        onLayout={(layout) => (latest = layout)}
+      />,
+    );
+
+    const picker = screen.getByLabelText("Text color");
+    expect(picker).toHaveValue("#224466");
+    expect(screen.queryByText("Use page text color")).not.toBeInTheDocument();
+
+    fireEvent.input(picker, { target: { value: "#8b0000" } });
+    const element = () => latest!.rows[0].columns[0].elements[0];
+    expect(element().style?.color).toBe("#8b0000");
+
+    await user.click(screen.getByText("Use page text color"));
+    expect(element().style?.color).toBeUndefined();
+  });
+
+  it("divider line color can be reset to its default", async () => {
+    const user = userEvent.setup();
+    let latest: ReportLayout | undefined;
+    render(
+      <SelectionHarness selectElement="el-1" elements={[{ id: "el-1", type: "DIVIDER" }]} onLayout={(layout) => (latest = layout)} />,
+    );
+
+    const picker = screen.getByLabelText("Line color");
+    expect(picker).toHaveValue("#cccccc");
+    fireEvent.input(picker, { target: { value: "#8b0000" } });
+    await user.click(screen.getByText("Reset to default"));
+
+    expect(latest!.rows[0].columns[0].elements[0].style?.color).toBeUndefined();
+    expect(screen.getByLabelText("Line color")).toHaveValue("#cccccc");
   });
 });

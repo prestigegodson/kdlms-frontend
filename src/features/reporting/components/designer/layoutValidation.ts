@@ -2,6 +2,7 @@ import {
   ALLOWED_FONT_FAMILIES,
   CELL_FORBIDDEN_TYPES,
   CONDITION_MATCHES,
+  type HeaderColors,
   LAYOUT_VERSION,
   type LayoutColumn,
   type LayoutElement,
@@ -17,6 +18,7 @@ import {
   type RowCondition,
   SIZABLE_BLOCKS,
   TABLE_BORDER_STYLES,
+  TABLE_HEADER_BLOCKS,
   type TableCell,
   type TableSpec,
   blockFitsMode,
@@ -85,6 +87,30 @@ function validatePage(layout: ReportLayout, errors: string[]) {
   if (page.logoBackground && page.logoBackgroundOpacity === undefined) {
     errors.push("Page background opacity is required when the school logo background is enabled.");
   }
+  validateHeaderColors(page.headerColors, "Page", errors);
+}
+
+function validateHeaderColors(colors: HeaderColors | undefined, owner: string, errors: string[]) {
+  if (!colors) return;
+  if (colors.headerBackground !== undefined) requireColor(colors.headerBackground, `${owner} header background color`, errors);
+  if (colors.headerText !== undefined) requireColor(colors.headerText, `${owner} header text color`, errors);
+  if (colors.bandBackground !== undefined) requireColor(colors.bandBackground, `${owner} band background color`, errors);
+  if (colors.bandText !== undefined) requireColor(colors.bandText, `${owner} band text color`, errors);
+}
+
+/** Mirrors backend `ReportLayoutValidator#validateElementHeaderColors` - header colours only on a table block or a TABLE, and never a band on a TABLE. */
+function validateElementHeaderColors(element: LayoutElement, errors: string[]) {
+  const colors = element.style?.headerColors;
+  if (!colors) return;
+  const tableBlock = element.type === "BLOCK" && TABLE_HEADER_BLOCKS.has(element.block);
+  if (!tableBlock && element.type !== "TABLE") {
+    errors.push("Only a table block or a TABLE element may specify header colors.");
+    return;
+  }
+  if (element.type === "TABLE" && (colors.bandBackground !== undefined || colors.bandText !== undefined)) {
+    errors.push("A TABLE element may not specify band colors.");
+  }
+  validateHeaderColors(colors, "Element", errors);
 }
 
 function validateRows(rows: LayoutRow[], mode: AssessmentMode, errors: string[]) {
@@ -346,6 +372,7 @@ function validateElementStyle(element: LayoutElement, errors: string[]) {
   if (style.backgroundColor !== undefined) {
     requireColor(style.backgroundColor, "Element background color", errors);
   }
+  validateElementHeaderColors(element, errors);
 }
 
 function requireRange(value: number | undefined, min: number, max: number, field: string, errors: string[]) {

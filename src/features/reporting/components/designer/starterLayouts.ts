@@ -17,11 +17,14 @@ import {
  * drifted from what it was supposed to render.
  */
 
+/** The page text colour a new template starts with - also what the page inspector's reset restores. */
+export const DEFAULT_PAGE_COLOR = "#1a1a1a";
+
 const DEFAULT_PAGE = {
   paddingPx: 24,
   fontFamily: "Helvetica, Arial, sans-serif" as const,
   fontSizePx: 12,
-  color: "#1a1a1a",
+  color: DEFAULT_PAGE_COLOR,
 };
 
 function blockElement(block: ReportBlockName): LayoutElement {

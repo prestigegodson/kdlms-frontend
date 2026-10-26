@@ -434,3 +434,36 @@ describe("validateLayout", () => {
     });
   });
 });
+
+describe("validateLayout header colors", () => {
+  function single(element: LayoutElement): ReportLayout {
+    return layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [element] }] }]);
+  }
+
+  it("accepts header colors on the page and on a table block", () => {
+    const layout = single({ id: "el-1", type: "BLOCK", block: "RATING_TABLE", style: { headerColors: { headerBackground: "#8b0000", bandText: "#ffffff" } } });
+    layout.page.headerColors = { headerBackground: "#003366", headerText: "#ffffff", bandBackground: "#ffcc00", bandText: "#000000" };
+
+    expect(validateLayout(layout, "QUALITATIVE")).toEqual([]);
+  });
+
+  it("rejects a malformed page header color", () => {
+    const layout = layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [] }] }]);
+    layout.page.headerColors = { bandBackground: "yellow" };
+
+    expect(validateLayout(layout, "NUMERIC").some((e) => e.includes("Page band background color"))).toBe(true);
+  });
+
+  it("rejects header colors on a block without a table header", () => {
+    const layout = single({ id: "el-1", type: "BLOCK", block: "STUDENT_BIO", style: { headerColors: { headerBackground: "#003366" } } });
+
+    expect(validateLayout(layout, "NUMERIC").some((e) => e.includes("header colors"))).toBe(true);
+  });
+
+  it("rejects band colors on a TABLE element", () => {
+    const table: TableSpec = { columnCount: 1, headerRow: true, rows: [{ id: "r1", cells: [{ text: "Head" }] }] };
+    const layout = single({ id: "t-1", type: "TABLE", table, style: { headerColors: { headerText: "#ffffff", bandBackground: "#ffcc00" } } });
+
+    expect(validateLayout(layout, "NUMERIC").some((e) => e.includes("band colors"))).toBe(true);
+  });
+});

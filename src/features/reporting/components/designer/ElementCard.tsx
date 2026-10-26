@@ -107,7 +107,7 @@ export function ElementCard({ element, index, siblingCount, editor }: ElementCar
       ) : element.type === "TABLE" ? (
         <TableEditorGrid element={element} editor={editor} onInlineEditingChange={setInlineEditing} />
       ) : (
-        <ElementPreview element={element} />
+        <ElementPreview element={element} page={editor.layout.page} />
       )}
     </div>
   );
