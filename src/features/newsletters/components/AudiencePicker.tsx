@@ -234,8 +234,8 @@ export function AudiencePicker({ value, onChange, onPreview, disabled }: Audienc
       <Switch
         checked={value.creators}
         onChange={(checked) => update({ creators: checked })}
-        label="Education creators"
-        hint="Every active creator account."
+        label="Tutors"
+        hint="Every active tutor account."
         disabled={disabled}
       />
 
@@ -301,7 +301,7 @@ export function AudiencePicker({ value, onChange, onPreview, disabled }: Audienc
             <p className="mt-0.5 text-xs text-slate-500">
               {[
                 value.schoolAdmins && `${preview.schoolAdmins} school admins`,
-                value.creators && `${preview.creators} creators`,
+                value.creators && `${preview.creators} tutors`,
                 preview.customEmails > 0 && `${preview.customEmails} other addresses`,
                 preview.duplicates > 0 && `${preview.duplicates} duplicates removed`,
                 preview.suppressed > 0 && `${preview.suppressed} unsubscribed, left out`,

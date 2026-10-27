@@ -108,6 +108,13 @@ describe("router", () => {
     expect(await screen.findByText("Page not found")).toBeInTheDocument();
   });
 
+  it("redirects pre-rename creator URLs to their tutor equivalents, keeping the query", async () => {
+    const router = renderAt("/creators/signup?ref=old");
+
+    await waitFor(() => expect(router.state.location.pathname).toBe("/tutors/signup"));
+    expect(router.state.location.search).toBe("?ref=old");
+  });
+
   describe("as a TEACHER", () => {
     beforeEach(() => {
       useAuthStore.setState({
@@ -432,8 +439,8 @@ describe("router", () => {
       expect(await screen.findByText("No classes yet")).toBeInTheDocument();
     });
 
-    it("is redirected away from /creator to its own portal home", async () => {
-      renderAt("/creator");
+    it("is redirected away from /tutor to its own portal home", async () => {
+      renderAt("/tutor");
 
       expect(await screen.findByRole("heading", { name: "My classes" })).toBeInTheDocument();
     });

@@ -165,7 +165,7 @@ export function CreatorResourcesPage() {
           description="Upgrade to a plan with on-demand learning to share notes, PDFs and videos with your classes."
           action={
             <Link
-              to="/creator/billing"
+              to="/tutor/billing"
               className="inline-flex min-h-11 items-center rounded-control bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600"
             >
               See plans
@@ -198,7 +198,7 @@ export function CreatorResourcesPage() {
 
   function resourceActions(resources: LearningResourceSummaryView[], index: number) {
     const resource = resources[index];
-    const preview = { label: "Preview", icon: Eye, onSelect: () => navigate(`/creator/resources/${classId}/${resource.id}`) };
+    const preview = { label: "Preview", icon: Eye, onSelect: () => navigate(`/tutor/resources/${classId}/${resource.id}`) };
     const completions = {
       label: "Completions",
       icon: CircleCheck,
@@ -329,7 +329,7 @@ export function CreatorResourcesPage() {
                     resource.availableUntil,
                   );
                   return (
-                    <TableRow key={resource.id} to={`/creator/resources/${list.classId}/${resource.id}`}>
+                    <TableRow key={resource.id} to={`/tutor/resources/${list.classId}/${resource.id}`}>
                       <TableCell label="Title">
                         <span className="font-medium text-slate-900">{resource.title}</span>
                       </TableCell>

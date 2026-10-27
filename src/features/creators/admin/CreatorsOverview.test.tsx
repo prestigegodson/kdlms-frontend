@@ -93,7 +93,7 @@ function renderOverview() {
   const router = createMemoryRouter(
     [
       { path: "/", element: <CreatorsOverview /> },
-      { path: "/admin/creators/:schoolId", element: <div>Creator detail page</div> },
+      { path: "/admin/tutors/:schoolId", element: <div>Tutor detail page</div> },
     ],
     { initialEntries: ["/"] },
   );
@@ -109,7 +109,7 @@ describe("CreatorsOverview", () => {
   it("shows the headline totals", async () => {
     renderOverview();
 
-    expect(await screen.findByText("Total creators")).toBeInTheDocument();
+    expect(await screen.findByText("Total tutors")).toBeInTheDocument();
     expect(screen.getByText("Classes created")).toBeInTheDocument();
     expect(screen.getByText("410")).toBeInTheDocument();
     expect(screen.getByText("152.5 h")).toBeInTheDocument();
@@ -123,25 +123,25 @@ describe("CreatorsOverview", () => {
     renderOverview();
 
     expect(await screen.findByText("₦500,000.00")).toBeInTheDocument();
-    expect(screen.getByText("Top creators by payments (NGN)")).toBeInTheDocument();
+    expect(screen.getByText("Top tutors by payments (NGN)")).toBeInTheDocument();
     expect(screen.queryByText("Dollar Tutors")).not.toBeInTheDocument();
 
     await user.click(within(screen.getByRole("tablist", { name: "Currency" })).getByRole("tab", { name: "USD" }));
 
-    expect(screen.getByText("Top creators by payments (USD)")).toBeInTheDocument();
+    expect(screen.getByText("Top tutors by payments (USD)")).toBeInTheDocument();
     expect(screen.getByText("Dollar Tutors")).toBeInTheDocument();
   });
 
-  it("links a top creator to their detail page", async () => {
+  it("links a top tutor to their detail page", async () => {
     const user = userEvent.setup();
     renderOverview();
 
     await user.click(await screen.findByRole("link", { name: /Bola Lessons/ }));
 
-    expect(await screen.findByText("Creator detail page")).toBeInTheDocument();
+    expect(await screen.findByText("Tutor detail page")).toBeInTheDocument();
   });
 
-  it("says so when no creator has paid yet", async () => {
+  it("says so when no tutor has paid yet", async () => {
     vi.mocked(dashboardApi.getCreatorDashboard).mockResolvedValue({
       ...VIEW,
       revenue: [],
@@ -149,7 +149,7 @@ describe("CreatorsOverview", () => {
     });
     renderOverview();
 
-    expect(await screen.findByText("No creator has paid for a plan yet.")).toBeInTheDocument();
+    expect(await screen.findByText("No tutor has paid for a plan yet.")).toBeInTheDocument();
   });
 
   it("shows an error with a retry", async () => {
@@ -157,9 +157,9 @@ describe("CreatorsOverview", () => {
     const user = userEvent.setup();
     renderOverview();
 
-    expect(await screen.findByText("Failed to load the creators overview")).toBeInTheDocument();
+    expect(await screen.findByText("Failed to load the tutors overview")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /try again/i }));
 
-    expect(await screen.findByText("Total creators")).toBeInTheDocument();
+    expect(await screen.findByText("Total tutors")).toBeInTheDocument();
   });
 });

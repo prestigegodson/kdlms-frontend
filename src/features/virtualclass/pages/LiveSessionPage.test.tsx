@@ -124,7 +124,7 @@ describe("LiveSessionPage", () => {
     expect(screen.getByText("Watching")).toBeInTheDocument();
   });
 
-  it("lets only the creator end the session for everyone, after confirming", async () => {
+  it("lets only the tutor end the session for everyone, after confirming", async () => {
     vi.mocked(liveSessionsApi.joinLiveSession).mockResolvedValue(joinView("CREATOR"));
     vi.mocked(liveSessionsApi.endLiveSession).mockResolvedValue(undefined);
     renderAs("CREATOR");

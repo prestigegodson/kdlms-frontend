@@ -33,9 +33,9 @@ function klass(overrides: Partial<VirtualClass>): VirtualClass {
 
 function renderPage() {
   const router = createMemoryRouter(
-    [{ path: "/creator/classes", element: <VirtualClassesPage /> }],
+    [{ path: "/tutor/classes", element: <VirtualClassesPage /> }],
     {
-      initialEntries: ["/creator/classes"],
+      initialEntries: ["/tutor/classes"],
     },
   );
   render(<RouterProvider router={router} />);
@@ -66,7 +66,7 @@ describe("VirtualClassesPage", () => {
     expect(screen.getByRole("button", { name: /new class/i })).toBeDisabled();
   });
 
-  it("invites the creator to create their first class", async () => {
+  it("invites the tutor to create their first class", async () => {
     vi.mocked(virtualClassesApi.listVirtualClasses).mockResolvedValue({
       classes: [],
       maxClasses: null,

@@ -17,10 +17,10 @@ vi.mock("@/api/creators", async () => {
 function renderPage() {
   const router = createMemoryRouter(
     [
-      { path: "/creators/signup", element: <CreatorSignupPage /> },
-      { path: "/creator", element: <div>Creator portal</div> },
+      { path: "/tutors/signup", element: <CreatorSignupPage /> },
+      { path: "/tutor", element: <div>Tutor portal</div> },
     ],
-    { initialEntries: ["/creators/signup"] },
+    { initialEntries: ["/tutors/signup"] },
   );
   render(<RouterProvider router={router} />);
 }
@@ -55,7 +55,7 @@ describe("CreatorSignupPage", () => {
     delete window.turnstile;
   });
 
-  it("registers, signs in at the root domain, and lands in the creator portal", async () => {
+  it("registers, signs in at the root domain, and lands in the tutor portal", async () => {
     vi.mocked(creatorsApi.registerCreator).mockResolvedValue({ schoolId: "tenant-1", userId: "user-1" });
     vi.mocked(authApi.login).mockResolvedValue({
       accessToken: "a",
@@ -76,7 +76,7 @@ describe("CreatorSignupPage", () => {
     await fillForm(user);
     await user.click(screen.getByRole("button", { name: "Create account" }));
 
-    expect(await screen.findByText("Creator portal")).toBeInTheDocument();
+    expect(await screen.findByText("Tutor portal")).toBeInTheDocument();
     expect(creatorsApi.registerCreator).toHaveBeenCalledWith(
       expect.objectContaining({
         email: "ada@creator.example",

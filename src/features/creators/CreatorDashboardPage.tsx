@@ -25,7 +25,7 @@ export function CreatorDashboardPage() {
         action={
           <Link
             className="text-sm font-medium text-brand-500 hover:text-brand-600"
-            to="/creator/classes"
+            to="/tutor/classes"
           >
             Go to Classes
           </Link>

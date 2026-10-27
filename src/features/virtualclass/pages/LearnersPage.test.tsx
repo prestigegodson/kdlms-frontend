@@ -38,8 +38,8 @@ function roster(learners: Learner[], guardianAccess = false): LearnerRoster {
 }
 
 function renderPage() {
-  const router = createMemoryRouter([{ path: "/creator/learners", element: <LearnersPage /> }], {
-    initialEntries: ["/creator/learners"],
+  const router = createMemoryRouter([{ path: "/tutor/learners", element: <LearnersPage /> }], {
+    initialEntries: ["/tutor/learners"],
   });
   render(<RouterProvider router={router} />);
 }

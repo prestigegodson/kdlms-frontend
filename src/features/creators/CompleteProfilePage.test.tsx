@@ -28,11 +28,11 @@ const INCOMPLETE_CREATOR = {
 function renderPage() {
   const router = createMemoryRouter(
     [
-      { path: "/creator/complete-profile", element: <CompleteProfilePage /> },
-      { path: "/creator", element: <div>Creator portal</div> },
+      { path: "/tutor/complete-profile", element: <CompleteProfilePage /> },
+      { path: "/tutor", element: <div>Tutor portal</div> },
       { path: "/login", element: <div>Login page</div> },
     ],
-    { initialEntries: ["/creator/complete-profile"] },
+    { initialEntries: ["/tutor/complete-profile"] },
   );
   render(<RouterProvider router={router} />);
 }
@@ -61,7 +61,7 @@ describe("CompleteProfilePage", () => {
     await user.type(screen.getByLabelText("Mobile number"), "+2348000000000");
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    expect(await screen.findByText("Creator portal")).toBeInTheDocument();
+    expect(await screen.findByText("Tutor portal")).toBeInTheDocument();
     expect(creatorsApi.updateMyCreatorProfile).toHaveBeenCalledWith(
       expect.objectContaining({ firstName: "Ada", businessName: "Analytical Tutors" }),
     );
@@ -85,11 +85,11 @@ describe("CompleteProfilePage", () => {
     expect(authApi.refresh).not.toHaveBeenCalled();
   });
 
-  it("sends a creator whose profile is already complete straight to the portal", async () => {
+  it("sends a tutor whose profile is already complete straight to the portal", async () => {
     useAuthStore.setState({ user: { ...INCOMPLETE_CREATOR, profileIncomplete: false } });
 
     renderPage();
 
-    expect(await screen.findByText("Creator portal")).toBeInTheDocument();
+    expect(await screen.findByText("Tutor portal")).toBeInTheDocument();
   });
 });

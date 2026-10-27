@@ -44,7 +44,7 @@ function toTableRow(row: LearnerResultRowView): StudentResultRowView {
 
 /**
  * A creator's results for one class quiz (creators Phase C13) at
- * `/creator/quizzes/:classId/:quizId/results`: every member's attempt, their answers, score
+ * `/tutor/quizzes/:classId/:quizId/results`: every member's attempt, their answers, score
  * adjustments and resets, and publishing results - the school `TakeHomeQuizResultsPage` without the
  * midterm write-back. The creator is the class's only teacher, so every action is theirs while the
  * class is writable.
@@ -113,7 +113,7 @@ export function CreatorQuizResultsPage() {
       <PageHeader
         title={quiz.title}
         description={`${quiz.className} · ${results.totalPoints} points`}
-        backTo={`/creator/quizzes/${classId}/${quiz.id}`}
+        backTo={`/tutor/quizzes/${classId}/${quiz.id}`}
         backLabel="Back to quiz"
         actions={
           <div className="flex flex-wrap items-center gap-2">

@@ -57,7 +57,7 @@ function resource(overrides: Partial<LearningResourceSummaryView>): LearningReso
 }
 
 function renderAt(path: string) {
-  const router = createMemoryRouter([{ path: "/creator/resources", element: <CreatorResourcesPage /> }], {
+  const router = createMemoryRouter([{ path: "/tutor/resources", element: <CreatorResourcesPage /> }], {
     initialEntries: [path],
   });
   render(<RouterProvider router={router} />);
@@ -105,7 +105,7 @@ describe("CreatorResourcesPage", () => {
   });
 
   it("lists the first class's resources in order and offers Add resource", async () => {
-    renderAt("/creator/resources");
+    renderAt("/tutor/resources");
 
     expect(await screen.findByText("Reading notes")).toBeInTheDocument();
     expect(screen.getByText("Phonics")).toBeInTheDocument();
@@ -116,7 +116,7 @@ describe("CreatorResourcesPage", () => {
 
   it("publishes a draft from its action menu", async () => {
     const user = userEvent.setup();
-    renderAt("/creator/resources?classId=c1");
+    renderAt("/tutor/resources?classId=c1");
 
     await user.click(await screen.findByRole("button", { name: "Actions for Reading notes" }));
     await user.click(await screen.findByRole("menuitem", { name: /Publish/ }));
@@ -132,7 +132,7 @@ describe("CreatorResourcesPage", () => {
       mediaIncluded: false,
       resources: [],
     });
-    renderAt("/creator/resources?classId=c1");
+    renderAt("/tutor/resources?classId=c1");
 
     expect(await screen.findByText(/so its resources are read-only/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add resource" })).not.toBeInTheDocument();
@@ -140,7 +140,7 @@ describe("CreatorResourcesPage", () => {
 
   it("shows an upgrade notice when the plan has no on-demand learning", async () => {
     vi.mocked(creatorPlanApi.getMyCreatorPlan).mockResolvedValue({ ...PLAN, onDemandLearning: false });
-    renderAt("/creator/resources");
+    renderAt("/tutor/resources");
 
     expect(await screen.findByText("Resources aren't in your plan")).toBeInTheDocument();
     expect(virtualClassesApi.listVirtualClasses).not.toHaveBeenCalled();

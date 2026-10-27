@@ -50,7 +50,7 @@ type Dialog =
   | { kind: "delete"; coupon: CouponView };
 
 const AUDIENCE_LABEL: Record<CouponView["audience"], string> = {
-  CREATOR: "Creators",
+  CREATOR: "Tutors",
   SCHOOL: "Schools",
   ANY: "Everyone",
 };
@@ -129,7 +129,7 @@ export function CouponsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Coupons"
-        description="Discounts creators and schools can apply when they pay for a plan."
+        description="Discounts tutors and schools can apply when they pay for a plan."
         actions={
           <Button onClick={() => setDialog({ kind: "create" })}>
             <Plus className="h-4 w-4" aria-hidden /> New coupon

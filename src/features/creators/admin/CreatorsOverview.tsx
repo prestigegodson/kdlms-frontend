@@ -70,7 +70,7 @@ export function CreatorsOverview() {
       .catch((error: unknown) =>
         setState({
           kind: "error",
-          message: error instanceof ApiError ? error.message : "Failed to load the creators overview",
+          message: error instanceof ApiError ? error.message : "Failed to load the tutors overview",
         }),
       );
   }, []);
@@ -86,7 +86,7 @@ export function CreatorsOverview() {
 
   if (state.kind === "loading") {
     return (
-      <section aria-label="Creators overview loading" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section aria-label="Tutors overview loading" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 8 }, (_, index) => (
           <StatTileSkeleton key={index} />
         ))}
@@ -117,7 +117,7 @@ function Overview({ view }: { view: CreatorDashboardView }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatTile
             icon={Users}
-            label="Total creators"
+            label="Total tutors"
             value={n(creators.total)}
             hint={`${n(creators.active)} active · ${n(creators.suspended)} suspended`}
           />
@@ -145,7 +145,7 @@ function Overview({ view }: { view: CreatorDashboardView }) {
       <RevenueSection revenue={view.revenue ?? []} topByRevenue={view.top?.byRevenue ?? []} />
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-900">Creators</h2>
+        <h2 className="text-sm font-semibold text-slate-900">Tutors</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatTile icon={CheckCircle2} label="Active" value={n(creators.active)} />
           <StatTile icon={PauseCircle} label="Suspended" value={n(creators.suspended)} />
@@ -170,9 +170,9 @@ function Overview({ view }: { view: CreatorDashboardView }) {
                 {percent(plans.onPaidPlan, liveCreators)} on a paid plan
               </p>
             </div>
-            <p className="text-xs text-slate-500">Creators on each plan today</p>
+            <p className="text-xs text-slate-500">Tutors on each plan today</p>
             <HorizontalBars
-              ariaLabel="Creators per plan"
+              ariaLabel="Tutors per plan"
               rows={[
                 ...(plans.plans ?? []).map((plan) => ({
                   key: plan.packageId,
@@ -183,7 +183,7 @@ function Overview({ view }: { view: CreatorDashboardView }) {
                   ? [{ key: "none", label: "No plan", value: plans.withoutPlan, muted: true }]
                   : []),
               ]}
-              empty="No creator is on a plan yet."
+              empty="No tutor is on a plan yet."
             />
             <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 text-sm">
               <div className="flex items-center gap-2">
@@ -241,7 +241,7 @@ function Overview({ view }: { view: CreatorDashboardView }) {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-900">Top creators</h2>
+        <h2 className="text-sm font-semibold text-slate-900">Top tutors</h2>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <TopList title="Most classes" rows={view.top?.byClasses ?? []} unit="classes" />
           <TopList title="Most learners" rows={view.top?.byLearners ?? []} unit="learners" />
@@ -276,7 +276,7 @@ function RevenueSection({ revenue, topByRevenue }: RevenueSectionProps) {
       </div>
       {!current ? (
         <Card>
-          <p className="text-sm text-slate-500">No creator has paid for a plan yet.</p>
+          <p className="text-sm text-slate-500">No tutor has paid for a plan yet.</p>
         </Card>
       ) : (
         <>
@@ -305,7 +305,7 @@ function RevenueSection({ revenue, topByRevenue }: RevenueSectionProps) {
             />
           </div>
           <TopList
-            title={`Top creators by payments (${current.currency})`}
+            title={`Top tutors by payments (${current.currency})`}
             rows={topByRevenue
               .filter((row) => row.currency === current.currency)
               .map((row) => ({ schoolId: row.schoolId, name: row.name, count: row.amountMinor }))}
@@ -335,7 +335,7 @@ function TopList({ title, rows, unit, format }: TopListProps) {
           {rows.map((row, index) => (
             <li key={row.schoolId}>
               <Link
-                to={`/admin/creators/${row.schoolId}`}
+                to={`/admin/tutors/${row.schoolId}`}
                 className="flex items-center gap-3 py-2 text-sm hover:text-brand-600 mobile:min-h-11"
               >
                 <span className="w-4 shrink-0 text-xs tabular-nums text-slate-400">{index + 1}</span>

@@ -61,7 +61,7 @@ describe("CreatorPlanCard", () => {
     expect(screen.getByText("Unlimited")).toBeInTheDocument();
     expect(screen.getByText("Class messaging")).toBeInTheDocument();
     expect(screen.getByText("No lesson notes")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Upgrade" })).toHaveAttribute("href", "/creator/billing");
+    expect(screen.getByRole("link", { name: "Upgrade" })).toHaveAttribute("href", "/tutor/billing");
   });
 
   it("says when a paid plan renews and warns while a failed renewal is retried", async () => {

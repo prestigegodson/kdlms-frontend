@@ -55,7 +55,7 @@ describe("scheduleSummary", () => {
 });
 
 describe("date helpers", () => {
-  it("reads an instant's local date and time in the creator's zone", () => {
+  it("reads an instant's local date and time in the tutor's zone", () => {
     expect(dateInZone("2026-10-04T23:30:00Z", "Africa/Lagos")).toBe("2026-10-05");
     expect(timeInZone("2026-10-04T23:30:00Z", "Africa/Lagos")).toBe("00:30");
   });

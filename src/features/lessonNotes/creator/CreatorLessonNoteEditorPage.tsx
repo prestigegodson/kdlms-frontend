@@ -53,7 +53,7 @@ function snapshotOf(sessionDate: string, topic: string, content: LessonNoteConte
 
 /**
  * Author or edit one of a creator's class lesson notes (creators Phase C12), addressed by
- * `/creator/lesson-notes/:classId/:noteId` - or `new` for a note not yet saved. There is no review
+ * `/tutor/lesson-notes/:classId/:noteId` - or `new` for a note not yet saved. There is no review
  * step: Publish shares the note with the class's learners at once, a published note stays editable
  * (learners see each saved change), and Unpublish takes it back to a draft. The server's `actions`
  * flags decide which buttons show and whether the form is editable, so an archived or over-limit
@@ -86,7 +86,7 @@ export function CreatorLessonNoteEditorPage() {
   const readOnly = note ? !note.actions.canEdit : false;
   const showReadView = readOnly || (previewMode && content.mode === "STRUCTURED");
   const dirty = snapshotOf(sessionDate, topic, content) !== snapshot;
-  const listPath = `/creator/lesson-notes?classId=${classId}`;
+  const listPath = `/tutor/lesson-notes?classId=${classId}`;
 
   useEffect(() => {
     fetchPlan();
@@ -148,7 +148,7 @@ export function CreatorLessonNoteEditorPage() {
         : await createClassLessonNote(classId, request);
       applyNote(saved);
       if (isNew) {
-        navigate(`/creator/lesson-notes/${classId}/${saved.id}`, { replace: true });
+        navigate(`/tutor/lesson-notes/${classId}/${saved.id}`, { replace: true });
       }
       return saved;
     } catch (err) {

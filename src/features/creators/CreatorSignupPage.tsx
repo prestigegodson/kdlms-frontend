@@ -44,7 +44,7 @@ export function CreatorSignupPage() {
       await registerCreator({ email, password, profile, captchaToken });
       // Creators always sign in on the platform's own host - never a school subdomain.
       await login(email, password, null);
-      navigate("/creator", { replace: true });
+      navigate("/tutor", { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "We couldn't create your account. Please try again.");
       setSubmitting(false);
@@ -59,7 +59,7 @@ export function CreatorSignupPage() {
     try {
       const user = await loginWithGoogle(idToken, "CREATOR_SIGNUP", null);
       // An existing creator is simply signed in; a new one is sent on to complete their profile.
-      navigate(user.profileIncomplete ? "/creator/complete-profile" : "/creator", { replace: true });
+      navigate(user.profileIncomplete ? "/tutor/complete-profile" : "/tutor", { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "We couldn't sign you up with Google. Please try again.");
       setSubmitting(false);
@@ -67,7 +67,7 @@ export function CreatorSignupPage() {
   }
 
   return (
-    <AuthLayout title="Teach on KDLMS" description="Create your creator account to run online classes.">
+    <AuthLayout title="Teach on KDLMS" description="Create your tutor account to run online classes.">
       <div className="mt-6">
         <GoogleSignInButton mode="signup" onCredential={handleGoogleCredential} after={<OrDivider />} />
       </div>

@@ -21,7 +21,7 @@ function renderAs(role: Role) {
     <MemoryRouter initialEntries={["/billing"]}>
       <Routes>
         <Route path="/billing" element={<BillingHomeRedirect />} />
-        <Route path="/creator/billing" element={<p>creator billing</p>} />
+        <Route path="/tutor/billing" element={<p>tutor billing</p>} />
         <Route path="/school/subscription" element={<p>school billing</p>} />
         <Route path="*" element={<p>somewhere else</p>} />
       </Routes>
@@ -34,9 +34,9 @@ describe("BillingHomeRedirect", () => {
     resetAuthStore();
   });
 
-  it("sends a creator to Plan & billing", () => {
+  it("sends a tutor to Plan & billing", () => {
     renderAs("CREATOR");
-    expect(screen.getByText("creator billing")).toBeInTheDocument();
+    expect(screen.getByText("tutor billing")).toBeInTheDocument();
   });
 
   it("sends a school admin to Subscription & billing", () => {

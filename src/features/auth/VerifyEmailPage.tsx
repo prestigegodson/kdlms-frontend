@@ -70,8 +70,8 @@ export function VerifyEmailPage() {
           </Button>
         )}
         {!user && status.kind === "error" && (
-          <Link to="/creators/signup" className="block text-center text-sm font-medium text-brand-500 hover:text-brand-600">
-            Create a creator account
+          <Link to="/tutors/signup" className="block text-center text-sm font-medium text-brand-500 hover:text-brand-600">
+            Create a tutor account
           </Link>
         )}
       </div>

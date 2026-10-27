@@ -54,7 +54,7 @@ export function RequireRole({ roles, allowLevelHead = false, children }: Require
   // A Google sign-up creator has no business profile yet - the server refuses their writes
   // (403 profile-incomplete) until they fill it in, so send them straight to the form.
   if (user.profileIncomplete) {
-    return <Navigate to="/creator/complete-profile" replace />;
+    return <Navigate to="/tutor/complete-profile" replace />;
   }
 
   if (!roles.includes(user.role)) {

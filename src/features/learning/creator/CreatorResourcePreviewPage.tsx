@@ -37,7 +37,7 @@ export function CreatorResourcePreviewPage() {
   const [resource, setResource] = useState<ClassLearningResourceView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const backTo = `/creator/resources?classId=${classId}`;
+  const backTo = `/tutor/resources?classId=${classId}`;
 
   const load = useCallback(() => {
     getClassResource(classId, resourceId)

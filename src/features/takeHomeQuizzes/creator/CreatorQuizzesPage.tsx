@@ -101,7 +101,7 @@ export function CreatorQuizzesPage() {
           description="Upgrade to a plan with CBT/Quizzes to set auto-marked quizzes for your classes."
           action={
             <Link
-              to="/creator/billing"
+              to="/tutor/billing"
               className="inline-flex min-h-11 items-center rounded-control bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600"
             >
               See plans
@@ -121,7 +121,7 @@ export function CreatorQuizzesPage() {
         description="Set auto-marked quizzes for a class. Learners take them in their own portal once published."
         actions={
           canAdd && classId ? (
-            <Button onClick={() => navigate(`/creator/quizzes/${classId}/new`)}>
+            <Button onClick={() => navigate(`/tutor/quizzes/${classId}/new`)}>
               <Plus className="h-4 w-4" aria-hidden="true" />
               New quiz
             </Button>
@@ -182,7 +182,7 @@ export function CreatorQuizzesPage() {
               </TableHead>
               <TableBody>
                 {quizzes.quizzes.map((quiz) => (
-                  <TableRow key={quiz.id} to={`/creator/quizzes/${quizzes.classId}/${quiz.id}`}>
+                  <TableRow key={quiz.id} to={`/tutor/quizzes/${quizzes.classId}/${quiz.id}`}>
                     <TableCell label="Title">
                       <span className="font-medium text-slate-900">{quiz.title}</span>
                     </TableCell>

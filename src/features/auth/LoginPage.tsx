@@ -88,8 +88,8 @@ export function LoginPage() {
             {googleAccountMissing && !subdomain && (
               <>
                 {" "}
-                <Link to="/creators/signup" className="font-medium underline">
-                  Create a creator account
+                <Link to="/tutors/signup" className="font-medium underline">
+                  Create a tutor account
                 </Link>
                 .
               </>
@@ -131,8 +131,8 @@ export function LoginPage() {
       {!subdomain && (
         <p className="mt-2 text-center text-sm text-slate-500">
           Teach online?{" "}
-          <Link to="/creators/signup" className="font-medium text-brand-500 hover:text-brand-600">
-            Sign up as a creator
+          <Link to="/tutors/signup" className="font-medium text-brand-500 hover:text-brand-600">
+            Sign up as a tutor
           </Link>
         </p>
       )}

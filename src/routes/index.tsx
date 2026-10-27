@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, useParams, type RouteObject } from "react-router";
+import { createBrowserRouter, Navigate, useLocation, useParams, type RouteObject } from "react-router";
 import { NotFoundPage } from "@/components/ui/NotFoundPage";
 import { RouteErrorBoundary } from "@/components/ui/RouteErrorBoundary";
 import { ClassDetailPage } from "@/features/academics/ClassDetailPage";
@@ -142,6 +142,16 @@ function RedirectOldClassDetailUrl() {
   return <Navigate to={`/school/academics/classrooms/${classId}`} replace />;
 }
 
+/** Creator URLs (`/creator/*`, `/creators/signup`, `/admin/creators/*`, pre-rename to "tutor") redirect to their `/tutor` equivalents, keeping the rest of the path and query. */
+function RedirectOldCreatorUrl() {
+  const { pathname, search, hash } = useLocation();
+  const to = pathname
+    .replace(/^\/admin\/creators/, "/admin/tutors")
+    .replace(/^\/creators\//, "/tutors/")
+    .replace(/^\/creator(?=\/|$)/, "/tutor");
+  return <Navigate to={`${to}${search}${hash}`} replace />;
+}
+
 export const routes: RouteObject[] = [
   {
     element: <RootLayout />,
@@ -153,8 +163,10 @@ export const routes: RouteObject[] = [
       { path: "forgot-password", element: <ForgotPasswordPage /> },
       { path: "reset-password", element: <ResetPasswordPage /> },
       { path: "set-password", element: <SetInitialPasswordPage /> },
-      { path: "creators/signup", element: <CreatorSignupPage /> },
-      { path: "creator/complete-profile", element: <CompleteProfilePage /> },
+      { path: "tutors/signup", element: <CreatorSignupPage /> },
+      { path: "tutor/complete-profile", element: <CompleteProfilePage /> },
+      { path: "creators/signup", element: <RedirectOldCreatorUrl /> },
+      { path: "creator/*", element: <RedirectOldCreatorUrl /> },
       { path: "verify-email", element: <VerifyEmailPage /> },
       { path: "unsubscribe", element: <UnsubscribePage /> },
       { path: "invite/:token", element: <InviteAcceptPage /> },
@@ -195,8 +207,9 @@ export const routes: RouteObject[] = [
           { index: true, element: <AdminDashboardPage /> },
           { path: "schools", element: <SchoolsPage /> },
           { path: "schools/:schoolId", element: <SchoolDetailPage /> },
-          { path: "creators", element: <CreatorsPage /> },
-          { path: "creators/:schoolId", element: <CreatorDetailPage /> },
+          { path: "tutors", element: <CreatorsPage /> },
+          { path: "tutors/:schoolId", element: <CreatorDetailPage /> },
+          { path: "creators/*", element: <RedirectOldCreatorUrl /> },
           { path: "packages", element: <PackagesPage /> },
           { path: "templates", element: <ResultTemplatesPage /> },
           { path: "templates/:templateId", element: <TemplateDesignerRoute /> },
@@ -485,7 +498,7 @@ export const routes: RouteObject[] = [
         ],
       },
       {
-        path: "creator",
+        path: "tutor",
         element: (
           <RequireRole roles={["CREATOR"]}>
             <CreatorLayout />

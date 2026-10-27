@@ -14,7 +14,7 @@ function renderGuarded(roles: Role[], allowLevelHead = false) {
       { path: "/school", element: <div>School home</div> },
       { path: "/student", element: <div>Student home</div> },
       { path: "/set-password", element: <div>Set password page</div> },
-      { path: "/creator/complete-profile", element: <div>Complete profile page</div> },
+      { path: "/tutor/complete-profile", element: <div>Complete profile page</div> },
       {
         path: "/protected",
         element: (
@@ -182,7 +182,7 @@ describe("RequireRole", () => {
     expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
   });
 
-  it("redirects a Google sign-up creator with no business profile to the completion step", async () => {
+  it("redirects a Google sign-up tutor with no business profile to the completion step", async () => {
     useAuthStore.setState({
       user: {
         id: "1",

@@ -191,7 +191,7 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
             help={
               initial
                 ? "Whether a plan is the free plan can't be changed once it exists."
-                : "The plan every creator falls back to when they have no paid plan. It has no price, and only one free plan can be active."
+                : "The plan every tutor falls back to when they have no paid plan. It has no price, and only one free plan can be active."
             }
           />
         )}
@@ -241,7 +241,7 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
                 checked={platformVideo}
                 onChange={setPlatformVideo}
                 label="Platform Video Conferencing"
-                help="Sessions can run in the built-in video room. Without it, the creator holds every session on their own Google Meet or Zoom link."
+                help="Sessions can run in the built-in video room. Without it, the tutor holds every session on their own Google Meet or Zoom link."
               />
               <p className="text-xs text-slate-500">
                 Platform Video limits apply only to sessions held in the built-in video room. Leave blank for unlimited.
@@ -295,7 +295,7 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
           label="CBT/Quizzes"
           help={
             isCreator
-              ? "Quizzes the creator sets and learners take in their portal."
+              ? "Quizzes the tutor sets and learners take in their portal."
               : "Entitlement for the teacher-authored CBT/Quiz module - does not affect midterm quiz recording, which is available on every package."
           }
         />
@@ -341,7 +341,7 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
           label={isCreator ? "Class messaging" : "Home-school messaging"}
           help={
             isCreator
-              ? "Messages between the creator and their learners or guardians."
+              ? "Messages between the tutor and their learners or guardians."
               : "A school without it loses the Messages screen entirely, for both staff and guardians."
           }
         />
@@ -385,7 +385,7 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
             checked={guardianAccess}
             onChange={setGuardianAccess}
             label="Guardian access"
-            help="A minor learner's guardian gets the invite and can follow their classes. Without it, the creator issues the minor their own login."
+            help="A minor learner's guardian gets the invite and can follow their classes. Without it, the tutor issues the minor their own login."
           />
         ) : (
           <Flag

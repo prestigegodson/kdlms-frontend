@@ -72,8 +72,8 @@ function mockOccurrences(lookahead: Occurrence[], month: Occurrence[]) {
 
 function renderPage() {
   const router = createMemoryRouter(
-    [{ path: "/creator/sessions", element: <SessionsCalendarPage /> }],
-    { initialEntries: ["/creator/sessions"] },
+    [{ path: "/tutor/sessions", element: <SessionsCalendarPage /> }],
+    { initialEntries: ["/tutor/sessions"] },
   );
   render(<RouterProvider router={router} />);
 }

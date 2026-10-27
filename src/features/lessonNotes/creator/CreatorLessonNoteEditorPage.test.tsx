@@ -59,8 +59,8 @@ const DRAFT: ClassLessonNoteView = {
 function renderAt(path: string) {
   const router = createMemoryRouter(
     [
-      { path: "/creator/lesson-notes/:classId/:noteId", element: <CreatorLessonNoteEditorPage /> },
-      { path: "/creator/lesson-notes", element: <p>List page</p> },
+      { path: "/tutor/lesson-notes/:classId/:noteId", element: <CreatorLessonNoteEditorPage /> },
+      { path: "/tutor/lesson-notes", element: <p>List page</p> },
     ],
     { initialEntries: [path] },
   );
@@ -93,7 +93,7 @@ describe("CreatorLessonNoteEditorPage", () => {
   it("creates a new note in the class", async () => {
     vi.mocked(lessonNotesApi.createClassLessonNote).mockResolvedValue(DRAFT);
     vi.mocked(lessonNotesApi.getClassLessonNote).mockResolvedValue(DRAFT);
-    renderAt("/creator/lesson-notes/c1/new");
+    renderAt("/tutor/lesson-notes/c1/new");
     const user = userEvent.setup();
 
     await user.type(await screen.findByLabelText("Topic"), "Fractions");
@@ -115,7 +115,7 @@ describe("CreatorLessonNoteEditorPage", () => {
       publishedAt: "2026-10-05T09:00:00Z",
       actions: { canEdit: true, canPublish: false, canUnpublish: true, canDelete: true },
     });
-    renderAt("/creator/lesson-notes/c1/n1");
+    renderAt("/tutor/lesson-notes/c1/n1");
     const user = userEvent.setup();
 
     await user.click(await screen.findByRole("button", { name: "Publish" }));
@@ -128,7 +128,7 @@ describe("CreatorLessonNoteEditorPage", () => {
   it("offers AI generation when the plan includes it", async () => {
     vi.mocked(creatorPlanApi.getMyCreatorPlan).mockResolvedValue({ ...PLAN, aiLessonNotes: true });
     vi.mocked(lessonNotesApi.getClassLessonNote).mockResolvedValue(DRAFT);
-    renderAt("/creator/lesson-notes/c1/n1");
+    renderAt("/tutor/lesson-notes/c1/n1");
 
     expect(await screen.findByRole("button", { name: /Generate with AI/ })).toBeInTheDocument();
   });

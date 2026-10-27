@@ -21,7 +21,7 @@ describe("VerifyEmailPage", () => {
     vi.clearAllMocks();
   });
 
-  it("confirms the token and refreshes a signed-in creator's session", async () => {
+  it("confirms the token and refreshes a signed-in tutor's session", async () => {
     useAuthStore.setState({
       user: {
         id: "user-1",

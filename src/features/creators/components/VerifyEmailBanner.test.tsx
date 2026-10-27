@@ -27,7 +27,7 @@ describe("VerifyEmailBanner", () => {
     resetAuthStore();
   });
 
-  it("renders nothing once the creator's email is verified", () => {
+  it("renders nothing once the tutor's email is verified", () => {
     useAuthStore.setState({ user: { ...CREATOR, emailVerified: true } });
 
     const { container } = render(<VerifyEmailBanner />);
@@ -35,7 +35,7 @@ describe("VerifyEmailBanner", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("asks an unverified creator to verify and resends on request", async () => {
+  it("asks an unverified tutor to verify and resends on request", async () => {
     useAuthStore.setState({ user: CREATOR });
     vi.mocked(authApi.resendEmailVerification).mockResolvedValue({});
     const user = userEvent.setup();

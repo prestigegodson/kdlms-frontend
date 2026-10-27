@@ -112,7 +112,7 @@ export function VirtualClassDetailPage() {
   if (loadError) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Class" backTo="/creator/classes" />
+        <PageHeader title="Class" backTo="/tutor/classes" />
         <Alert variant="error">{loadError}</Alert>
       </div>
     );
@@ -176,7 +176,7 @@ export function VirtualClassDetailPage() {
       <PageHeader
         title={virtualClass.name}
         description={[virtualClass.subjectLabel, dates].filter(Boolean).join(" · ")}
-        backTo="/creator/classes"
+        backTo="/tutor/classes"
         actions={
           <ActionMenu
             ariaLabel="Actions for this class"
@@ -189,7 +189,7 @@ export function VirtualClassDetailPage() {
                     {
                       label: "Lesson notes",
                       icon: NotebookPen,
-                      onSelect: () => navigate(`/creator/lesson-notes?classId=${virtualClass.id}`),
+                      onSelect: () => navigate(`/tutor/lesson-notes?classId=${virtualClass.id}`),
                     },
                   ]
                 : []),
@@ -198,7 +198,7 @@ export function VirtualClassDetailPage() {
                     {
                       label: "Quizzes",
                       icon: ClipboardCheck,
-                      onSelect: () => navigate(`/creator/quizzes?classId=${virtualClass.id}`),
+                      onSelect: () => navigate(`/tutor/quizzes?classId=${virtualClass.id}`),
                     },
                   ]
                 : []),
@@ -207,7 +207,7 @@ export function VirtualClassDetailPage() {
                     {
                       label: "Resources",
                       icon: BookOpen,
-                      onSelect: () => navigate(`/creator/resources?classId=${virtualClass.id}`),
+                      onSelect: () => navigate(`/tutor/resources?classId=${virtualClass.id}`),
                     },
                   ]
                 : []),
@@ -410,7 +410,7 @@ export function VirtualClassDetailPage() {
           onClose={() => setConfirming(null)}
           onConfirm={async () => {
             await deleteVirtualClass(virtualClass.id);
-            navigate("/creator/classes");
+            navigate("/tutor/classes");
           }}
         />
       )}

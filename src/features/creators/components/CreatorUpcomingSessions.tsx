@@ -25,7 +25,7 @@ import { loadCreatorUpcoming } from "@/features/virtualclass/upcomingSessions";
 import { initialsOfFullName } from "@/utils/initials";
 import { UpcomingMiniCalendar } from "./UpcomingMiniCalendar";
 
-const SESSIONS_PATH = "/creator/sessions";
+const SESSIONS_PATH = "/tutor/sessions";
 
 /** "45 min", "1 h", "1 h 30 min". */
 function durationLabel(minutes: number): string {
@@ -128,7 +128,7 @@ export function CreatorUpcomingSessions() {
         ) : groups.length === 0 ? (
           <p className="mt-4 text-sm text-slate-500">
             No sessions in the next 7 days.{" "}
-            <Link to="/creator/classes" className="font-medium text-brand-500 hover:text-brand-600">
+            <Link to="/tutor/classes" className="font-medium text-brand-500 hover:text-brand-600">
               Manage your classes
             </Link>
           </p>

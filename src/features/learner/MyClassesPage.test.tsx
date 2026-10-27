@@ -74,7 +74,7 @@ describe("online classes views", () => {
     vi.mocked(onlineClassesApi.listMyUpcomingSessions).mockResolvedValue([]);
   });
 
-  it("shows a learner their classes with the creator, weekly schedule and upcoming sessions", async () => {
+  it("shows a learner their classes with the tutor, weekly schedule and upcoming sessions", async () => {
     vi.mocked(onlineClassesApi.listMyOnlineClasses).mockResolvedValue([algebra]);
 
     renderAt(<MyClassesPage />);

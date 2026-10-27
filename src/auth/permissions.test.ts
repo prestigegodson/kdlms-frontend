@@ -865,7 +865,7 @@ describe("can.manageFeePayments", () => {
     });
   });
 
-  describe("creator learners (Phase C5)", () => {
+  describe("tutor learners (Phase C5)", () => {
     it("lets only a CREATOR manage learners", () => {
       expect(can.manageLearners("CREATOR")).toBe(true);
       expect(can.manageLearners("SCHOOL_ADMIN")).toBe(false);
@@ -877,13 +877,13 @@ describe("can.manageFeePayments", () => {
       expect(can.viewLearnerPortal("STUDENT")).toBe(false);
     });
 
-    it("shows a guardian Online classes only when they follow a creator's learner", () => {
+    it("shows a guardian Online classes only when they follow a tutor's learner", () => {
       expect(can.viewOnlineClasses("GUARDIAN", true)).toBe(true);
       expect(can.viewOnlineClasses("GUARDIAN", false)).toBe(false);
       expect(can.viewOnlineClasses("LEARNER", true)).toBe(false);
     });
 
-    it("lets a creator, learner or guardian into a live session, but only the first two publish", () => {
+    it("lets a tutor, learner or guardian into a live session, but only the first two publish", () => {
       for (const role of ["CREATOR", "LEARNER", "GUARDIAN"] as const) {
         expect(can.joinLiveSession(role)).toBe(true);
       }
@@ -896,7 +896,7 @@ describe("can.manageFeePayments", () => {
   });
 
   describe("class lesson notes (Phase C12)", () => {
-    it("shows class lesson notes to an entitled creator or guardian, and to every learner", () => {
+    it("shows class lesson notes to an entitled tutor or guardian, and to every learner", () => {
       expect(can.viewClassLessonNotes("CREATOR", true)).toBe(true);
       expect(can.viewClassLessonNotes("CREATOR", false)).toBe(false);
       expect(can.viewClassLessonNotes("GUARDIAN", true)).toBe(true);
@@ -905,7 +905,7 @@ describe("can.manageFeePayments", () => {
       expect(can.viewClassLessonNotes("TEACHER", true)).toBe(false);
     });
 
-    it("lets only an entitled creator write them", () => {
+    it("lets only an entitled tutor write them", () => {
       expect(can.authorClassLessonNotes("CREATOR", true)).toBe(true);
       expect(can.authorClassLessonNotes("CREATOR", false)).toBe(false);
       expect(can.authorClassLessonNotes("LEARNER", true)).toBe(false);
@@ -914,8 +914,8 @@ describe("can.manageFeePayments", () => {
   });
 });
 
-describe("class quizzes (creators Phase C13)", () => {
-  it("lets a learner always look, and a creator or guardian only while entitled", () => {
+describe("class quizzes (tutors Phase C13)", () => {
+  it("lets a learner always look, and a tutor or guardian only while entitled", () => {
     expect(can.viewClassQuizzes("LEARNER", false)).toBe(true);
     expect(can.viewClassQuizzes("CREATOR", true)).toBe(true);
     expect(can.viewClassQuizzes("CREATOR", false)).toBe(false);
@@ -924,7 +924,7 @@ describe("class quizzes (creators Phase C13)", () => {
     expect(can.viewClassQuizzes("TEACHER", true)).toBe(false);
   });
 
-  it("leaves authoring to the entitled creator and taking to the learner", () => {
+  it("leaves authoring to the entitled tutor and taking to the learner", () => {
     expect(can.authorClassQuizzes("CREATOR", true)).toBe(true);
     expect(can.authorClassQuizzes("CREATOR", false)).toBe(false);
     expect(can.authorClassQuizzes("TEACHER", true)).toBe(false);
@@ -934,8 +934,8 @@ describe("class quizzes (creators Phase C13)", () => {
   });
 });
 
-describe("class learning resources (creators Phase C14)", () => {
-  it("lets a learner always look, and a creator or guardian only while entitled", () => {
+describe("class learning resources (tutors Phase C14)", () => {
+  it("lets a learner always look, and a tutor or guardian only while entitled", () => {
     expect(can.viewClassResources("LEARNER", false)).toBe(true);
     expect(can.viewClassResources("CREATOR", true)).toBe(true);
     expect(can.viewClassResources("CREATOR", false)).toBe(false);
@@ -944,7 +944,7 @@ describe("class learning resources (creators Phase C14)", () => {
     expect(can.viewClassResources("STUDENT", true)).toBe(false);
   });
 
-  it("leaves authoring to the entitled creator and progress to the learner", () => {
+  it("leaves authoring to the entitled tutor and progress to the learner", () => {
     expect(can.authorClassResources("CREATOR", true)).toBe(true);
     expect(can.authorClassResources("CREATOR", false)).toBe(false);
     expect(can.authorClassResources("TEACHER", true)).toBe(false);

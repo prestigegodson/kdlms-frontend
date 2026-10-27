@@ -37,7 +37,7 @@ function renderPage() {
   const router = createMemoryRouter(
     [
       { path: "/", element: <CreatorsPage /> },
-      { path: "/admin/creators/:schoolId", element: <div>Creator detail page</div> },
+      { path: "/admin/tutors/:schoolId", element: <div>Tutor detail page</div> },
     ],
     { initialEntries: ["/"] },
   );
@@ -57,7 +57,7 @@ describe("CreatorsPage", () => {
     });
   });
 
-  it("lists creators with their email, verification and status", async () => {
+  it("lists tutors with their email, verification and status", async () => {
     renderPage();
 
     expect(await screen.findByText("Analytical Tutors")).toBeInTheDocument();
@@ -66,11 +66,11 @@ describe("CreatorsPage", () => {
     expect(screen.getByText("ACTIVE")).toBeInTheDocument();
   });
 
-  it("still lists creators when the overview fails to load", async () => {
+  it("still lists tutors when the overview fails to load", async () => {
     vi.mocked(dashboardApi.getCreatorDashboard).mockRejectedValue(new Error("boom"));
     renderPage();
 
-    expect(await screen.findByText("Failed to load the creators overview")).toBeInTheDocument();
+    expect(await screen.findByText("Failed to load the tutors overview")).toBeInTheDocument();
     expect(await screen.findByText("Analytical Tutors")).toBeInTheDocument();
   });
 
@@ -84,12 +84,12 @@ describe("CreatorsPage", () => {
     await vi.waitFor(() => expect(creatorsApi.listCreators).toHaveBeenLastCalledWith("ada", 0, 20));
   });
 
-  it("opens the creator's detail page when a row is tapped", async () => {
+  it("opens the tutor's detail page when a row is tapped", async () => {
     const user = userEvent.setup();
     renderPage();
 
     await user.click((await screen.findByText("Analytical Tutors")).closest("tr")!);
 
-    expect(await screen.findByText("Creator detail page")).toBeInTheDocument();
+    expect(await screen.findByText("Tutor detail page")).toBeInTheDocument();
   });
 });

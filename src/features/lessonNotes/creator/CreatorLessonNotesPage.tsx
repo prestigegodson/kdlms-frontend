@@ -102,7 +102,7 @@ export function CreatorLessonNotesPage() {
           description="Upgrade to a plan with lesson notes to prepare and share notes for each of your classes."
           action={
             <Link
-              to="/creator/billing"
+              to="/tutor/billing"
               className="inline-flex min-h-11 items-center rounded-control bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600"
             >
               See plans
@@ -122,7 +122,7 @@ export function CreatorLessonNotesPage() {
         description="Prepare a note for each session. Publishing shares it with the class's learners straight away."
         actions={
           canAdd && classId ? (
-            <Button onClick={() => navigate(`/creator/lesson-notes/${classId}/new`)}>
+            <Button onClick={() => navigate(`/tutor/lesson-notes/${classId}/new`)}>
               <Plus className="h-4 w-4" aria-hidden="true" />
               New note
             </Button>
@@ -185,7 +185,7 @@ export function CreatorLessonNotesPage() {
               </TableHead>
               <TableBody>
                 {notes.notes.map((note) => (
-                  <TableRow key={note.id} to={`/creator/lesson-notes/${notes.classId}/${note.id}`}>
+                  <TableRow key={note.id} to={`/tutor/lesson-notes/${notes.classId}/${note.id}`}>
                     <TableCell label="Session">{note.sessionDate ? formatLongDate(note.sessionDate) : "Any session"}</TableCell>
                     <TableCell label="Topic">
                       <span className="font-medium text-slate-900">

@@ -77,7 +77,7 @@ describe("LiveSessionRoute", () => {
     expect(await screen.findByText("LiveKit room")).toBeInTheDocument();
   });
 
-  it("says when the creator hasn't provided a meeting link yet", async () => {
+  it("says when the tutor hasn't provided a meeting link yet", async () => {
     vi.mocked(liveSessionsApi.joinLiveSession).mockRejectedValue(
       new ApiError(409, "The meeting link for this session hasn't been provided yet.", {
         type: liveSessionsApi.MEETING_LINK_REQUIRED_PROBLEM,

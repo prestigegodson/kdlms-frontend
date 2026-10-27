@@ -46,7 +46,7 @@ export function CreatorsPage() {
     listCreators(query, pageIndex, PAGE_SIZE)
       .then((page) => setState({ kind: "loaded", page }))
       .catch((error: unknown) =>
-        setState({ kind: "error", message: error instanceof ApiError ? error.message : "Failed to load creators" }),
+        setState({ kind: "error", message: error instanceof ApiError ? error.message : "Failed to load tutors" }),
       );
   }
 
@@ -55,9 +55,9 @@ export function CreatorsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Creators"
-        description="Every education creator on the platform."
-        actions={<Button onClick={() => setOnboardOpen(true)}>Onboard creator</Button>}
+        title="Tutors"
+        description="Every tutor on the platform."
+        actions={<Button onClick={() => setOnboardOpen(true)}>Onboard tutor</Button>}
       />
 
       <CreatorsOverview />
@@ -91,8 +91,8 @@ export function CreatorsPage() {
       {state.kind === "loaded" && state.page.content.length === 0 && (
         <EmptyState
           icon={GraduationCap}
-          title={query ? "No matching creators" : "No creators yet"}
-          description={query ? "Try a different search." : "Creators appear here once they sign up or are onboarded."}
+          title={query ? "No matching tutors" : "No tutors yet"}
+          description={query ? "Try a different search." : "Tutors appear here once they sign up or are onboarded."}
         />
       )}
       {state.kind === "loaded" && state.page.content.length > 0 && (
@@ -102,18 +102,18 @@ export function CreatorsPage() {
               <TableHead>
                 <TableRow>
                   <TableHeaderCell>Business</TableHeaderCell>
-                  <TableHeaderCell>Creator</TableHeaderCell>
+                  <TableHeaderCell>Tutor</TableHeaderCell>
                   <TableHeaderCell>Email</TableHeaderCell>
                   <TableHeaderCell>Status</TableHeaderCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {state.page.content.map((creator) => (
-                  <TableRow key={creator.schoolId} to={`/admin/creators/${creator.schoolId}`}>
+                  <TableRow key={creator.schoolId} to={`/admin/tutors/${creator.schoolId}`}>
                     <TableCell label="Business" className="font-medium text-slate-900">
                       {creator.businessName}
                     </TableCell>
-                    <TableCell label="Creator">
+                    <TableCell label="Tutor">
                       {creator.firstName} {creator.lastName}
                     </TableCell>
                     <TableCell label="Email">
@@ -170,7 +170,7 @@ function OnboardCreatorModal({ onClose, onOnboarded }: OnboardCreatorModalProps)
       setResult(await onboardCreator(email, profile));
       onOnboarded();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to onboard creator");
+      setError(err instanceof ApiError ? err.message : "Failed to onboard tutor");
     } finally {
       setSubmitting(false);
     }
@@ -178,7 +178,7 @@ function OnboardCreatorModal({ onClose, onOnboarded }: OnboardCreatorModalProps)
 
   if (result) {
     return (
-      <Modal open onClose={onClose} title="Creator onboarded">
+      <Modal open onClose={onClose} title="Tutor onboarded">
         <div className="space-y-4">
           <Alert variant="success">
             {result.creator.businessName} can now sign in. Their login details have been emailed to them.
@@ -193,7 +193,7 @@ function OnboardCreatorModal({ onClose, onOnboarded }: OnboardCreatorModalProps)
   }
 
   return (
-    <Modal open onClose={onClose} title="Onboard a creator">
+    <Modal open onClose={onClose} title="Onboard a tutor">
       <form className="space-y-4" onSubmit={handleSubmit}>
         {error && <Alert variant="error">{error}</Alert>}
         <FormField label="Login email" htmlFor="onboard-email">
@@ -213,7 +213,7 @@ function OnboardCreatorModal({ onClose, onOnboarded }: OnboardCreatorModalProps)
             Cancel
           </Button>
           <Button type="submit" loading={submitting}>
-            {submitting ? "Creating…" : "Onboard creator"}
+            {submitting ? "Creating…" : "Onboard tutor"}
           </Button>
         </div>
       </form>

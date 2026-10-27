@@ -86,7 +86,7 @@ export function describeAudience(audience: NewsletterAudience): string {
       audience.schoolIds.length > 0;
     parts.push(narrowed ? "School admins (filtered)" : "All school admins");
   }
-  if (audience.creators) parts.push("Creators");
+  if (audience.creators) parts.push("Tutors");
   if (audience.customEmails.length > 0) {
     parts.push(
       `${audience.customEmails.length} custom ${audience.customEmails.length === 1 ? "email" : "emails"}`,

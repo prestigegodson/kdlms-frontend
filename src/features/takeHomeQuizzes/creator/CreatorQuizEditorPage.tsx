@@ -112,7 +112,7 @@ function snapshotOf(form: FormState): string {
 }
 
 /**
- * Author/edit one class quiz (creators Phase C13) at `/creator/quizzes/:classId/:quizId`, where
+ * Author/edit one class quiz (creators Phase C13) at `/tutor/quizzes/:classId/:quizId`, where
  * `quizId` is `"new"` for a quiz not yet created. The school editor's own form, minus what a class
  * quiz doesn't have: no subject/term, no quiz type (always normal), and no student links - learners
  * take it in their portal. Save is one action across the metadata and question-set endpoints, as in
@@ -123,7 +123,7 @@ export function CreatorQuizEditorPage() {
   const { classId = "", quizId } = useParams<{ classId: string; quizId: string }>();
   const navigate = useNavigate();
   const isNew = !quizId || quizId === "new";
-  const listPath = `/creator/quizzes?classId=${classId}`;
+  const listPath = `/tutor/quizzes?classId=${classId}`;
 
   const [quiz, setQuiz] = useState<ClassQuizView | null>(null);
   const [form, setForm] = useState<FormState>(blankForm());
@@ -260,7 +260,7 @@ export function CreatorQuizEditorPage() {
       }
       applyQuiz(saved);
       if (isNew) {
-        navigate(`/creator/quizzes/${classId}/${saved.id}`, { replace: true });
+        navigate(`/tutor/quizzes/${classId}/${saved.id}`, { replace: true });
       }
     } catch (error) {
       // A failed correction is shown in its dialog, which stays open.
@@ -308,7 +308,7 @@ export function CreatorQuizEditorPage() {
                 </Button>
               )}
               {quiz.status !== "DRAFT" && (
-                <Button variant="secondary" onClick={() => navigate(`/creator/quizzes/${classId}/${quiz.id}/results`)}>
+                <Button variant="secondary" onClick={() => navigate(`/tutor/quizzes/${classId}/${quiz.id}/results`)}>
                   Results
                 </Button>
               )}

@@ -36,7 +36,7 @@ type ListState =
 
 const AUDIENCE_TABS: Array<{ value: PackageAudience; label: string }> = [
   { value: "SCHOOL", label: "School" },
-  { value: "CREATOR", label: "Creator" },
+  { value: "CREATOR", label: "Tutor" },
 ];
 
 /** A limit cell: `null` is unlimited. */
@@ -101,8 +101,8 @@ export function PackagesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Packages"
-        description="Plans schools and education creators can subscribe to."
-        actions={<Button onClick={() => setCreateOpen(true)}>{isCreator ? "Add creator plan" : "Add package"}</Button>}
+        description="Plans schools and tutors can subscribe to."
+        actions={<Button onClick={() => setCreateOpen(true)}>{isCreator ? "Add tutor plan" : "Add package"}</Button>}
       />
 
       <Tabs ariaLabel="Package audience" value={audience} onChange={switchAudience} items={AUDIENCE_TABS} />
@@ -118,7 +118,7 @@ export function PackagesPage() {
       {state.kind === "loaded" && state.packages.length === 0 && (
         <EmptyState
           icon={Package}
-          title={isCreator ? "No creator plans yet" : "No packages yet"}
+          title={isCreator ? "No tutor plans yet" : "No packages yet"}
           description="Create one to get started."
         />
       )}
@@ -228,7 +228,7 @@ export function PackagesPage() {
           mount picks up `initial` naturally, with no reset-on-open effect required. */}
       {createOpen && (
         <PackageFormModal
-          title={isCreator ? "Add creator plan" : "Add package"}
+          title={isCreator ? "Add tutor plan" : "Add package"}
           audience={audience}
           onClose={() => setCreateOpen(false)}
           onSubmit={async (values) => {
@@ -243,7 +243,7 @@ export function PackagesPage() {
       {editing && (
         <PackageFormModal
           key={editing.id}
-          title={editing.audience === "CREATOR" ? "Edit creator plan" : "Edit package"}
+          title={editing.audience === "CREATOR" ? "Edit tutor plan" : "Edit package"}
           audience={editing.audience}
           initial={editing}
           onClose={() => setEditing(null)}

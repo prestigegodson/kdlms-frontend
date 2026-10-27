@@ -34,10 +34,10 @@ const CREATOR: CreatorAdminView = {
 function renderPage() {
   const router = createMemoryRouter(
     [
-      { path: "/admin/creators/:schoolId", element: <CreatorDetailPage /> },
-      { path: "/admin/creators", element: <div>Creators list</div> },
+      { path: "/admin/tutors/:schoolId", element: <CreatorDetailPage /> },
+      { path: "/admin/tutors", element: <div>Tutors list</div> },
     ],
-    { initialEntries: ["/admin/creators/tenant-1"] },
+    { initialEntries: ["/admin/tutors/tenant-1"] },
   );
   render(<RouterProvider router={router} />);
 }
@@ -48,27 +48,27 @@ describe("CreatorDetailPage", () => {
     vi.mocked(creatorsApi.deleteCreator).mockResolvedValue(undefined);
   });
 
-  it("deletes a creator only after the admin types their email, then returns to the list", async () => {
+  it("deletes a tutor only after the admin types their email, then returns to the list", async () => {
     vi.mocked(creatorsApi.getCreator).mockResolvedValue(CREATOR);
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(await screen.findByRole("button", { name: "Delete creator" }));
-    const confirm = screen.getAllByRole("button", { name: "Delete creator" }).at(-1)!;
+    await user.click(await screen.findByRole("button", { name: "Delete tutor" }));
+    const confirm = screen.getAllByRole("button", { name: "Delete tutor" }).at(-1)!;
     expect(confirm).toBeDisabled();
 
     await user.type(screen.getByLabelText(/to confirm/), "ada@creator.example");
     await user.click(confirm);
 
     expect(creatorsApi.deleteCreator).toHaveBeenCalledWith("tenant-1");
-    expect(await screen.findByText("Creators list")).toBeInTheDocument();
+    expect(await screen.findByText("Tutors list")).toBeInTheDocument();
   });
 
-  it("shows a deleted creator as DELETED with no delete action", async () => {
+  it("shows a deleted tutor as DELETED with no delete action", async () => {
     vi.mocked(creatorsApi.getCreator).mockResolvedValue({ ...CREATOR, status: "ARCHIVED" });
     renderPage();
 
     expect(await screen.findByText("DELETED")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Delete creator" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete tutor" })).not.toBeInTheDocument();
   });
 });

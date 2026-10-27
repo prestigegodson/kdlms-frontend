@@ -40,7 +40,7 @@ const PLAN = {
 } satisfies CreatorPlanView;
 
 function renderAt(path: string) {
-  const router = createMemoryRouter([{ path: "/creator/lesson-notes", element: <CreatorLessonNotesPage /> }], {
+  const router = createMemoryRouter([{ path: "/tutor/lesson-notes", element: <CreatorLessonNotesPage /> }], {
     initialEntries: [path],
   });
   render(<RouterProvider router={router} />);
@@ -94,7 +94,7 @@ describe("CreatorLessonNotesPage", () => {
   });
 
   it("lists the first class's notes with their status and offers a new note", async () => {
-    renderAt("/creator/lesson-notes");
+    renderAt("/tutor/lesson-notes");
 
     expect(await screen.findByText("Fractions")).toBeInTheDocument();
     expect(screen.getByText("Published")).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe("CreatorLessonNotesPage", () => {
 
   it("shows an upgrade notice when the plan has no lesson notes", async () => {
     vi.mocked(creatorPlanApi.getMyCreatorPlan).mockResolvedValue({ ...PLAN, lessonNotes: false });
-    renderAt("/creator/lesson-notes");
+    renderAt("/tutor/lesson-notes");
 
     expect(await screen.findByText("Lesson notes aren't in your plan")).toBeInTheDocument();
     expect(virtualClassesApi.listVirtualClasses).not.toHaveBeenCalled();

@@ -62,7 +62,7 @@ export function PaymentTransactionsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Payments"
-        description="Plan payments made through Paystack, across every school and creator."
+        description="Plan payments made through Paystack, across every school and tutor."
       />
 
       <StickySubHeader>

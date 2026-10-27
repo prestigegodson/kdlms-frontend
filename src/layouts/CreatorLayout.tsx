@@ -26,30 +26,30 @@ import { useCreatorPlanStore } from "@/stores/creatorPlanStore";
  * in the More drawer.
  */
 const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/creator", icon: Home, primary: ["CREATOR"] },
+  { label: "Dashboard", href: "/tutor", icon: Home, primary: ["CREATOR"] },
   {
     label: "Classes",
-    href: "/creator/classes",
+    href: "/tutor/classes",
     icon: Presentation,
     primary: ["CREATOR"],
     visible: () => can.manageVirtualClasses("CREATOR"),
   },
   {
     label: "Sessions",
-    href: "/creator/sessions",
+    href: "/tutor/sessions",
     icon: CalendarDays,
     primary: ["CREATOR"],
     visible: () => can.manageVirtualClasses("CREATOR"),
   },
   {
     label: "Learners",
-    href: "/creator/learners",
+    href: "/tutor/learners",
     icon: Users,
     visible: () => can.manageLearners("CREATOR"),
   },
   {
     label: "Messages",
-    href: "/creator/messages",
+    href: "/tutor/messages",
     icon: MessageSquare,
     // Gated on the creator's own plan (creators.md Phase C11) - see auth/permissions.ts's
     // viewClassMessages.
@@ -58,7 +58,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     label: "Lesson notes",
-    href: "/creator/lesson-notes",
+    href: "/tutor/lesson-notes",
     icon: NotebookPen,
     // Gated on the creator's own plan (creators.md Phase C12) - see auth/permissions.ts's
     // viewClassLessonNotes.
@@ -66,7 +66,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     label: "Quizzes",
-    href: "/creator/quizzes",
+    href: "/tutor/quizzes",
     icon: ClipboardCheck,
     // Gated on the creator's own plan (creators.md Phase C13) - see auth/permissions.ts's
     // viewClassQuizzes.
@@ -74,7 +74,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     label: "Resources",
-    href: "/creator/resources",
+    href: "/tutor/resources",
     icon: BookOpen,
     // Gated on the creator's own plan (creators.md Phase C14) - see auth/permissions.ts's
     // viewClassResources.
@@ -83,13 +83,13 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     label: "Plan & billing",
-    href: "/creator/billing",
+    href: "/tutor/billing",
     icon: CreditCard,
     visible: () => can.manageSubscriptionBilling("CREATOR"),
   },
   {
     label: "Profile",
-    href: "/creator/profile",
+    href: "/tutor/profile",
     icon: UserRound,
     primary: ["CREATOR"],
     visible: () => can.manageCreatorProfile("CREATOR"),
@@ -116,7 +116,7 @@ export function CreatorLayout() {
 
   return (
     <ParticipantNounProvider noun="learner">
-      <PortalShell portalName="Creator" navItems={NAV_ITEMS} banner={<VerifyEmailBanner />} />
+      <PortalShell portalName="Tutor" navItems={NAV_ITEMS} banner={<VerifyEmailBanner />} />
     </ParticipantNounProvider>
   );
 }

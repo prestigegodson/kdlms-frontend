@@ -87,7 +87,7 @@ export function ClassRosterCard({ classId, writable, timezone }: ClassRosterCard
         <Spinner />
       ) : roster && roster.learners.length === 0 ? (
         <p className="py-6 text-center text-sm text-slate-500">
-          No learners yet. Enroll learners from your <Link className="text-brand-500" to="/creator/learners">roster</Link>.
+          No learners yet. Enroll learners from your <Link className="text-brand-500" to="/tutor/learners">roster</Link>.
         </p>
       ) : (
         roster && (
@@ -111,7 +111,7 @@ export function ClassRosterCard({ classId, writable, timezone }: ClassRosterCard
                 </Button>
                 {canMessage && (
                   <Link
-                    to={`/creator/messages?classId=${classId}&learnerId=${entry.learnerId}`}
+                    to={`/tutor/messages?classId=${classId}&learnerId=${entry.learnerId}`}
                     aria-label={`Message ${entry.firstName} ${entry.lastName}`}
                     className="inline-flex items-center rounded-control px-3 py-1.5 text-slate-600 hover:bg-slate-100 mobile:min-h-11"
                   >
@@ -206,7 +206,7 @@ function EnrollModal({
         {learners && learners.length === 0 && (
           <p className="text-sm text-slate-600">
             Everyone on your roster is already in this class. Add new learners on the{" "}
-            <Link className="text-brand-500" to="/creator/learners">
+            <Link className="text-brand-500" to="/tutor/learners">
               Learners
             </Link>{" "}
             page.

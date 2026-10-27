@@ -199,7 +199,7 @@ describe("LoginPage", () => {
     expect(screen.getByRole("link", { name: "Sign in at the main site instead" })).toBeInTheDocument();
   });
 
-  it("offers creator sign-up when Google finds no account to sign in to", async () => {
+  it("offers tutor sign-up when Google finds no account to sign in to", async () => {
     let googleCallback: ((response: { credential?: string }) => void) | undefined;
     window.google = {
       accounts: {
@@ -228,7 +228,7 @@ describe("LoginPage", () => {
     expect(
       await screen.findByText("We couldn't find an account you can sign in to with this Google account."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Create a creator account" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create a tutor account" })).toBeInTheDocument();
     expect(authApi.googleSignIn).toHaveBeenCalledWith("google-id-token", "LOGIN", { subdomain: null });
     delete window.google;
   });

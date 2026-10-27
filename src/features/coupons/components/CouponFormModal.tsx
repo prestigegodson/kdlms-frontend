@@ -28,9 +28,9 @@ interface CouponFormModalProps {
 }
 
 const AUDIENCE_LABEL: Record<CouponAudience, string> = {
-  CREATOR: "Creators",
+  CREATOR: "Tutors",
   SCHOOL: "Schools",
-  ANY: "Creators and schools",
+  ANY: "Tutors and schools",
 };
 
 function optionalInt(value: string): number | null {

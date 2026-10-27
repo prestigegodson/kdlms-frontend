@@ -40,7 +40,7 @@ const PLAN = {
 } satisfies CreatorPlanView;
 
 function renderAt(path: string) {
-  const router = createMemoryRouter([{ path: "/creator/quizzes", element: <CreatorQuizzesPage /> }], {
+  const router = createMemoryRouter([{ path: "/tutor/quizzes", element: <CreatorQuizzesPage /> }], {
     initialEntries: [path],
   });
   render(<RouterProvider router={router} />);
@@ -96,7 +96,7 @@ describe("CreatorQuizzesPage", () => {
   });
 
   it("lists the first class's quizzes with their availability and offers a new quiz", async () => {
-    renderAt("/creator/quizzes");
+    renderAt("/tutor/quizzes");
 
     expect(await screen.findByText("Fractions check")).toBeInTheDocument();
     expect(screen.getByText("Open")).toBeInTheDocument();
@@ -111,7 +111,7 @@ describe("CreatorQuizzesPage", () => {
       writable: false,
       quizzes: [],
     });
-    renderAt("/creator/quizzes?classId=c1");
+    renderAt("/tutor/quizzes?classId=c1");
 
     expect(await screen.findByText(/so its quizzes are read-only/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /New quiz/ })).not.toBeInTheDocument();
@@ -119,7 +119,7 @@ describe("CreatorQuizzesPage", () => {
 
   it("shows an upgrade notice when the plan has no quizzes", async () => {
     vi.mocked(creatorPlanApi.getMyCreatorPlan).mockResolvedValue({ ...PLAN, takeHomeQuiz: false });
-    renderAt("/creator/quizzes");
+    renderAt("/tutor/quizzes");
 
     expect(await screen.findByText("Quizzes aren't in your plan")).toBeInTheDocument();
     expect(virtualClassesApi.listVirtualClasses).not.toHaveBeenCalled();

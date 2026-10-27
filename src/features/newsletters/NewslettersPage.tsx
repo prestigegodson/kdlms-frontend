@@ -85,7 +85,7 @@ export function NewslettersPage() {
     <div className="space-y-6">
       <PageHeader
         title="Newsletters"
-        description="Email school admins, education creators and anyone else on your list."
+        description="Email school admins, tutors and anyone else on your list."
         actions={
           <div className="flex flex-wrap gap-2">
             <Link

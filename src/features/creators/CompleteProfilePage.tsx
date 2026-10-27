@@ -52,7 +52,7 @@ export function CompleteProfilePage() {
     try {
       await updateMyCreatorProfile(profile);
       await refreshSession();
-      navigate("/creator", { replace: true });
+      navigate("/tutor", { replace: true });
     } catch (error) {
       setStatus({
         kind: "error",

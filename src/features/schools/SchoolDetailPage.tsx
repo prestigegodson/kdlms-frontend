@@ -800,7 +800,7 @@ export function SubscriptionCard({ schoolId, audience = "SCHOOL" }: { schoolId: 
         <>
           <p className="mt-1 text-sm text-slate-500">
             {audience === "CREATOR"
-              ? "No subscription has been assigned yet - this creator is on the Free plan until one is."
+              ? "No subscription has been assigned yet - this tutor is on the Free plan until one is."
               : "No subscription has been assigned yet - this school's portal is read-only until one is."}
           </p>
           <Button className="mt-3" onClick={() => setAssignOpen(true)}>

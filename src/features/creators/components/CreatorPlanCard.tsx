@@ -104,7 +104,7 @@ export function CreatorPlanCard() {
         </div>
         <div className="flex items-center gap-3">
           {plan.free && <Badge variant="success">Free</Badge>}
-          <Link className="text-sm font-medium text-brand-500 hover:text-brand-600" to="/creator/billing">
+          <Link className="text-sm font-medium text-brand-500 hover:text-brand-600" to="/tutor/billing">
             {plan.free || plan.source === "FREE_FALLBACK" ? "Upgrade" : "Manage plan"}
           </Link>
         </div>

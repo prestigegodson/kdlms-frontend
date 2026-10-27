@@ -36,7 +36,7 @@ export function ImpersonationBanner() {
   // applies - a `function` declaration doesn't inherit it.
   const schoolId = user.schoolId;
   // A creator tenant's id is a school id too, but its admin page lives under Creators.
-  const returnBase = user.role === "CREATOR" ? "/admin/creators" : "/admin/schools";
+  const returnBase = user.role === "CREATOR" ? "/admin/tutors" : "/admin/schools";
   const guardian = impersonation.kind === "GUARDIAN";
 
   async function handleStop() {

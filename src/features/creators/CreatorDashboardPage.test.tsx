@@ -37,7 +37,7 @@ describe("CreatorDashboardPage", () => {
     vi.mocked(creatorPlanApi.getMyCreatorPlan).mockReturnValue(new Promise(() => undefined));
   });
 
-  it("shows the creator's upcoming sessions in their own timezone with a Start button", async () => {
+  it("shows the tutor's upcoming sessions in their own timezone with a Start button", async () => {
     vi.mocked(virtualClassesApi.listUpcomingOccurrences).mockResolvedValue({
       timezone: "Africa/Lagos",
       occurrences: [occurrence],

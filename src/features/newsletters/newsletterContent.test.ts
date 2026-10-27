@@ -46,6 +46,6 @@ describe("describeAudience", () => {
         creators: true,
         customEmails: ["a@example.com"],
       }),
-    ).toBe("School admins (filtered) · Creators · 1 custom email");
+    ).toBe("School admins (filtered) · Tutors · 1 custom email");
   });
 });

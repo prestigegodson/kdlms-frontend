@@ -140,7 +140,7 @@ export function CreatorMessagesPage() {
           description="Upgrade to a plan with messaging to talk with your learners and their guardians."
           action={
             <Link
-              to="/creator/billing"
+              to="/tutor/billing"
               className="inline-flex min-h-11 items-center rounded-control bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600"
             >
               See plans
@@ -253,7 +253,7 @@ export function CreatorMessagesPage() {
                 {
                   label: "View class",
                   icon: Presentation,
-                  onSelect: () => navigate(`/creator/classes/${board.classId}`),
+                  onSelect: () => navigate(`/tutor/classes/${board.classId}`),
                 },
                 ...(canAnnounce
                   ? [{ label: "Announce to class", icon: Megaphone, onSelect: () => setAnnouncing(true) }]

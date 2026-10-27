@@ -39,7 +39,7 @@ export function CreatorDetailPage() {
     getCreator(schoolId)
       .then((creator) => setState({ kind: "loaded", creator }))
       .catch((error: unknown) =>
-        setState({ kind: "error", message: error instanceof ApiError ? error.message : "Failed to load creator" }),
+        setState({ kind: "error", message: error instanceof ApiError ? error.message : "Failed to load tutor" }),
       );
   }
 
@@ -64,7 +64,7 @@ export function CreatorDetailPage() {
   if (state.kind !== "loaded") {
     return (
       <div className="space-y-6">
-        <PageHeader title="Creator" backTo="/admin/creators" />
+        <PageHeader title="Tutor" backTo="/admin/tutors" />
         {state.kind === "loading" ? (
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <Spinner /> Loading…
@@ -83,7 +83,7 @@ export function CreatorDetailPage() {
       <PageHeader
         title={creator.businessName}
         description={`${creator.firstName} ${creator.lastName}`}
-        backTo="/admin/creators"
+        backTo="/admin/tutors"
         actions={<Badge variant={CREATOR_STATUS_VARIANT[creator.status]}>{CREATOR_STATUS_LABEL[creator.status]}</Badge>}
       />
 
@@ -130,7 +130,7 @@ export function CreatorDetailPage() {
           )}
           {creator.status !== "ARCHIVED" && (
             <Button variant="danger" onClick={() => setConfirmDelete(true)}>
-              Delete creator
+              Delete tutor
             </Button>
           )}
         </div>
@@ -140,10 +140,10 @@ export function CreatorDetailPage() {
 
       {confirmSuspend && (
         <ConfirmDialog
-          title="Suspend this creator?"
+          title="Suspend this tutor?"
           message={
             <>
-              <strong>{creator.businessName}</strong> will lose access to the creator portal until resumed. This
+              <strong>{creator.businessName}</strong> will lose access to the tutor portal until resumed. This
               does not affect their data.
             </>
           }
@@ -159,7 +159,7 @@ export function CreatorDetailPage() {
 
       {confirmDelete && (
         <ConfirmDialog
-          title="Delete this creator?"
+          title="Delete this tutor?"
           message={
             <>
               <strong>{creator.businessName}</strong> will be permanently deleted. Their login is removed, their
@@ -167,12 +167,12 @@ export function CreatorDetailPage() {
               their plan stops renewing. Payment records are kept. This cannot be undone.
             </>
           }
-          confirmLabel="Delete creator"
+          confirmLabel="Delete tutor"
           variant="danger"
           confirmationText={creator.email ?? creator.businessName}
           onConfirm={async () => {
             await deleteCreator(creator.schoolId);
-            navigate("/admin/creators");
+            navigate("/admin/tutors");
           }}
           onClose={() => setConfirmDelete(false)}
         />
@@ -187,7 +187,7 @@ export function CreatorDetailPage() {
             lastName: creator.lastName,
             email: creator.email,
           }}
-          portalLabel="creator portal"
+          portalLabel="tutor portal"
           onClose={() => setImpersonating(false)}
         />
       )}

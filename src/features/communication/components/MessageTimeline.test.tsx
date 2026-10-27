@@ -16,7 +16,7 @@ const base: MessageView = {
 };
 
 describe("MessageRow", () => {
-  it("labels a creator as the tutor and marks an announcement copy", () => {
+  it("labels a tutor as the tutor and marks an announcement copy", () => {
     render(<MessageRow message={{ ...base, announcement: true }} indented={false} onEdit={async () => {}} />);
 
     expect(screen.getByText("Tutor")).toBeInTheDocument();

@@ -99,7 +99,7 @@ const CONVERSATION: ClassConversation = {
 };
 
 function renderAt(path: string) {
-  const router = createMemoryRouter([{ path: "/creator/messages", element: <CreatorMessagesPage /> }], {
+  const router = createMemoryRouter([{ path: "/tutor/messages", element: <CreatorMessagesPage /> }], {
     initialEntries: [path],
   });
   render(<RouterProvider router={router} />);
@@ -142,7 +142,7 @@ describe("CreatorMessagesPage", () => {
   });
 
   it("lists the first class's learners and opens a conversation, marking it read", async () => {
-    renderAt("/creator/messages");
+    renderAt("/tutor/messages");
 
     expect(await screen.findByText("Ada Lovelace")).toBeInTheDocument();
     expect(screen.getByText("Bo Brown")).toBeInTheDocument();
@@ -157,7 +157,7 @@ describe("CreatorMessagesPage", () => {
 
   it("sends a message into the open conversation", async () => {
     vi.mocked(classMessagesApi.sendCreatorMessage).mockResolvedValue(CONVERSATION.messages[0]);
-    renderAt("/creator/messages?classId=c1&learnerId=l1");
+    renderAt("/tutor/messages?classId=c1&learnerId=l1");
     const user = userEvent.setup();
 
     await user.type(await screen.findByPlaceholderText("Write a message…"), "Yes, 8am works");
@@ -170,7 +170,7 @@ describe("CreatorMessagesPage", () => {
 
   it("announces to the whole class", async () => {
     vi.mocked(classMessagesApi.announceToClass).mockResolvedValue({ delivered: 2, emailed: 1 });
-    renderAt("/creator/messages?classId=c1");
+    renderAt("/tutor/messages?classId=c1");
     const user = userEvent.setup();
 
     await user.click(await screen.findByRole("button", { name: /Announce to class/ }));
@@ -183,10 +183,10 @@ describe("CreatorMessagesPage", () => {
 
   it("shows an upgrade notice when the plan has no messaging", async () => {
     vi.mocked(creatorPlanApi.getMyCreatorPlan).mockResolvedValue({ ...PLAN, communication: false });
-    renderAt("/creator/messages");
+    renderAt("/tutor/messages");
 
     expect(await screen.findByText("Messaging isn't in your plan")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/creator/billing");
+    expect(screen.getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/tutor/billing");
     expect(virtualClassesApi.listVirtualClasses).not.toHaveBeenCalled();
   });
 });

@@ -154,7 +154,7 @@ describe("PackagesPage", () => {
     expect(packagesApi.createPackage).not.toHaveBeenCalled();
   });
 
-  it("shows creator plans on their own tab, with the free plan badged", async () => {
+  it("shows tutor plans on their own tab, with the free plan badged", async () => {
     mockList([STARTER_PACKAGE]);
     const user = userEvent.setup();
 
@@ -162,7 +162,7 @@ describe("PackagesPage", () => {
     await screen.findByText("Starter");
 
     mockList([FREE_PLAN]);
-    await user.click(screen.getByRole("tab", { name: "Creator" }));
+    await user.click(screen.getByRole("tab", { name: "Tutor" }));
 
     // Both the plan's name and its price cell's badge read "Free".
     expect(await screen.findAllByText("Free")).toHaveLength(2);
@@ -170,17 +170,17 @@ describe("PackagesPage", () => {
     expect(screen.getByRole("columnheader", { name: "Learners per class" })).toBeInTheDocument();
   });
 
-  it("creates a free creator plan with no prices and blank limits as unlimited", async () => {
+  it("creates a free tutor plan with no prices and blank limits as unlimited", async () => {
     mockList([]);
     vi.mocked(packagesApi.createPackage).mockResolvedValue(FREE_PLAN);
     const user = userEvent.setup();
 
     render(<PackagesPage />);
     await screen.findByText(/No packages yet/);
-    await user.click(screen.getByRole("tab", { name: "Creator" }));
-    await screen.findByText(/No creator plans yet/);
+    await user.click(screen.getByRole("tab", { name: "Tutor" }));
+    await screen.findByText(/No tutor plans yet/);
 
-    await user.click(screen.getByRole("button", { name: "Add creator plan" }));
+    await user.click(screen.getByRole("button", { name: "Add tutor plan" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).queryByLabelText("Active student limit")).not.toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Timetables")).not.toBeInTheDocument();
@@ -209,15 +209,15 @@ describe("PackagesPage", () => {
     );
   });
 
-  it("gates the live-room limits behind Platform Video Conferencing on a creator plan", async () => {
+  it("gates the live-room limits behind Platform Video Conferencing on a tutor plan", async () => {
     mockList([]);
     vi.mocked(packagesApi.createPackage).mockResolvedValue(FREE_PLAN);
     const user = userEvent.setup();
 
     render(<PackagesPage />);
     await screen.findByText(/No packages yet/);
-    await user.click(screen.getByRole("tab", { name: "Creator" }));
-    await user.click(await screen.findByRole("button", { name: "Add creator plan" }));
+    await user.click(screen.getByRole("tab", { name: "Tutor" }));
+    await user.click(await screen.findByRole("button", { name: "Add tutor plan" }));
     const dialog = await screen.findByRole("dialog");
 
     expect(within(dialog).getByLabelText("Max session length (minutes)")).toBeDisabled();

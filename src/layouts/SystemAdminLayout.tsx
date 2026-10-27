@@ -23,7 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Schools", href: "/admin/schools", icon: Building2, primary: ["SYSTEM_ADMIN"] },
   { label: "Packages", href: "/admin/packages", icon: Package, primary: ["SYSTEM_ADMIN"] },
   { label: "Result Templates", href: "/admin/templates", icon: FileText, primary: ["SYSTEM_ADMIN"] },
-  { label: "Creators", href: "/admin/creators", icon: GraduationCap },
+  { label: "Tutors", href: "/admin/tutors", icon: GraduationCap },
   {
     label: "Enquiries",
     href: "/admin/enquiries",

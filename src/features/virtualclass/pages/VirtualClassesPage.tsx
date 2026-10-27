@@ -136,7 +136,7 @@ export function VirtualClassesPage() {
               </TableHead>
               <TableBody>
                 {shown.map((virtualClass) => (
-                  <TableRow key={virtualClass.id} to={`/creator/classes/${virtualClass.id}`}>
+                  <TableRow key={virtualClass.id} to={`/tutor/classes/${virtualClass.id}`}>
                     <TableCell label="Class">
                       <div className="font-medium text-slate-900">{virtualClass.name}</div>
                       {virtualClass.subjectLabel && (
@@ -174,7 +174,7 @@ export function VirtualClassesPage() {
           onClose={() => setCreating(false)}
           onSubmit={async (input) => {
             const created = await createVirtualClass(input);
-            navigate(`/creator/classes/${created.id}`);
+            navigate(`/tutor/classes/${created.id}`);
           }}
         />
       )}

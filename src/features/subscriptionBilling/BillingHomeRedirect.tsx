@@ -10,7 +10,7 @@ import { useAuthStore } from "@/stores/authStore";
 export function BillingHomeRedirect() {
   const role = useAuthStore((state) => state.user?.role);
   if (role === "CREATOR") {
-    return <Navigate to="/creator/billing" replace />;
+    return <Navigate to="/tutor/billing" replace />;
   }
   if (role === "SCHOOL_ADMIN") {
     return <Navigate to="/school/subscription" replace />;
