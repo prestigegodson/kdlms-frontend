@@ -54,6 +54,32 @@ describe("broadsheetToCsv", () => {
     ]);
   });
 
+  it("marks a special-needs pupil (SN) and sorts them, unranked, after the ranked pupils", () => {
+    const withSpecialNeeds: BroadsheetView = {
+      ...NUMERIC_BROADSHEET,
+      rows: [
+        {
+          enrollmentId: "e-3",
+          studentId: "s-3",
+          studentName: "Chidi Okafor",
+          admissionNumber: "SCH/3",
+          subjectResults: [{ subjectId: "math", finalScore: 95, grade: "A" }],
+          total: 95,
+          average: 95,
+          specialNeeds: true,
+        },
+        ...NUMERIC_BROADSHEET.rows,
+      ],
+    };
+
+    expect(csvLines(broadsheetToCsv(withSpecialNeeds, "TERM"))).toEqual([
+      "Pupil,Admission no.,MTH,English,Total,Average,Position",
+      "Ada Obi,SCH/1,90 (A),80 (A),170,85,1",
+      "Bola Eze,SCH/2,60 (B),—,60,60,2",
+      "Chidi Okafor (SN),SCH/3,95 (A),—,95,95,—",
+    ]);
+  });
+
   it("writes a MIDTERM broadsheet with the score max in the header and no aggregates", () => {
     const midterm: BroadsheetView = {
       ...NUMERIC_BROADSHEET,

@@ -64,7 +64,7 @@ export function broadsheetToCsv(broadsheet: BroadsheetView, scope: ResultScope =
   for (const row of rows) {
     const resultBySubject = new Map(row.subjectResults.map((result) => [result.subjectId, result]));
     lines.push([
-      row.studentName,
+      row.specialNeeds ? `${row.studentName} (SN)` : row.studentName,
       row.admissionNumber,
       ...broadsheet.subjects.map((subject) =>
         subjectCellText(resultBySubject.get(subject.subjectId), isNumeric, scoreMaxFor(subject.subjectId)),

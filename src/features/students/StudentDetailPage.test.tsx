@@ -47,6 +47,7 @@ vi.mock("@/api/students", async () => {
     deleteStudent: vi.fn(),
     softDeleteStudent: vi.fn(),
     restoreStudent: vi.fn(),
+    updateStudentSpecialNeeds: vi.fn(),
   };
 });
 
@@ -357,6 +358,28 @@ describe("StudentDetailPage", () => {
       expect.objectContaining({ bloodGroup: "O_POSITIVE" }),
     );
     expect(await screen.findByText("O+")).toBeInTheDocument();
+  });
+
+  it("flags a pupil as special-needs and badges them in the header", async () => {
+    vi.mocked(studentsApi.getStudent).mockResolvedValue(STUDENT_VIEW);
+    vi.mocked(studentsApi.listStudentEnrollments).mockResolvedValue([]);
+    vi.mocked(studentsApi.listStudentGuardians).mockResolvedValue([]);
+    vi.mocked(studentsApi.updateStudentSpecialNeeds).mockResolvedValue({ ...STUDENT_VIEW, specialNeeds: true });
+    const user = userEvent.setup();
+
+    renderAsSchoolAdmin();
+    await screen.findByRole("heading", { name: "Ada Obi" });
+    expect(screen.queryByText("Special needs", { selector: "span" })).not.toBeInTheDocument();
+    const toggle = screen.getByRole("switch", { name: "Special-needs pupil" });
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+
+    await user.click(toggle);
+
+    expect(studentsApi.updateStudentSpecialNeeds).toHaveBeenCalledWith("student-1", true);
+    await waitFor(() =>
+      expect(screen.getByRole("switch", { name: "Special-needs pupil" })).toHaveAttribute("aria-checked", "true"),
+    );
+    expect(screen.getByText("Special needs", { selector: "span" })).toBeInTheDocument();
   });
 
   it("shows mandatory and selective subjects, and saves a changed registration", async () => {

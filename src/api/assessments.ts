@@ -120,6 +120,8 @@ export interface BroadsheetView {
     total?: number;
     average?: number;
     position?: number;
+    /** Special-needs pupil - `subjectResults` holds only their scored/rated subjects, and `position` is always absent. */
+    specialNeeds?: boolean;
   }>;
 }
 
@@ -151,6 +153,8 @@ export interface StudentTermResultView {
   principalRemarkTitle: string;
   /** Empty when the level has neither behavioural-trait category enabled, or this student hasn't been rated yet. */
   traits: TraitRatingView[];
+  /** Special-needs pupil - only scored/rated subjects, no position, and no `classAverage` on any subject. */
+  specialNeeds?: boolean;
 }
 
 /** Mirrors backend assessment.application.port.in.RemarksSheetView.TraitDefinitionSheet/ScaleOptionSheet. */

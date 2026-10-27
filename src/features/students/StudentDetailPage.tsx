@@ -37,6 +37,7 @@ import {
   transferStudentClass,
   updateStudent,
   updateStudentPhoto,
+  updateStudentSpecialNeeds,
   withdrawStudent,
   type StudentView,
 } from "@/api/students";
@@ -66,6 +67,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
+import { Switch } from "@/components/ui/Switch";
 import {
   Table,
   TableBody,
@@ -234,6 +236,7 @@ export function StudentDetailPage() {
             >
               {student.status}
             </Badge>
+            {student.specialNeeds && <Badge variant="info">Special needs</Badge>}
             {canEdit && (
               <Button variant="secondary" onClick={() => setEditing(true)}>
                 Edit
@@ -348,6 +351,13 @@ export function StudentDetailPage() {
       />
 
       <SubjectsCard student={student} canManage={canEdit} onActionError={setActionError} />
+
+      <SpecialNeedsCard
+        student={student}
+        canManage={canEdit}
+        onUpdated={(updated) => setState({ kind: "loaded", student: updated })}
+        onActionError={setActionError}
+      />
 
       {studentLoginsEntitled && canManageLogins && !isDeleted && (
         <PortalAccessCard studentId={student.id} studentFirstName={student.firstName} onActionError={setActionError} />
@@ -887,6 +897,53 @@ function MedicalCard({ studentId, canManage, onActionError }: MedicalCardProps) 
         />
       )}
     </>
+  );
+}
+
+interface SpecialNeedsCardProps {
+  student: StudentView;
+  canManage: boolean;
+  onUpdated: (student: StudentView) => void;
+  onActionError: (message: string) => void;
+}
+
+/**
+ * The pupil's special-needs flag - admin-only to change, read-only for a Head of Level. A
+ * flagged pupil's results (report card, result views, broadsheet) show only the subjects
+ * they were scored in, with no position and no class average.
+ */
+function SpecialNeedsCard({ student, canManage, onUpdated, onActionError }: SpecialNeedsCardProps) {
+  const [saving, setSaving] = useState(false);
+  const hint = "Results show only the subjects they were scored in, with no position or class average.";
+
+  async function toggle(specialNeeds: boolean) {
+    setSaving(true);
+    try {
+      onUpdated(await updateStudentSpecialNeeds(student.id, specialNeeds));
+    } catch (error: unknown) {
+      onActionError(error instanceof ApiError ? error.message : "Failed to update special needs");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Accordion title="Special needs">
+      {canManage ? (
+        <Switch
+          checked={student.specialNeeds ?? false}
+          onChange={toggle}
+          label="Special-needs pupil"
+          hint={hint}
+          disabled={saving}
+        />
+      ) : (
+        <div>
+          <p className="text-sm font-medium text-slate-900">{student.specialNeeds ? "Yes" : "No"}</p>
+          <p className="text-xs text-slate-500">{hint}</p>
+        </div>
+      )}
+    </Accordion>
   );
 }
 

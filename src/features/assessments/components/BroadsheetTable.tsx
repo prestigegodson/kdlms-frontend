@@ -2,6 +2,7 @@ import type { BroadsheetView } from "@/api/assessments";
 import type { ResultScope } from "@/api/types";
 import { broadsheetLayout } from "@/features/assessments/broadsheet";
 import { classAverageCellText, scoreCellText, scoreHeader } from "@/features/assessments/finalScore";
+import { Badge } from "@/components/ui/Badge";
 
 interface BroadsheetTableProps {
   broadsheet: BroadsheetView;
@@ -79,6 +80,13 @@ export function BroadsheetTable({ broadsheet, scope = "TERM" }: BroadsheetTableP
                 <tr key={row.enrollmentId} className="hover:bg-slate-50">
                   <td className="sticky left-0 z-10 bg-white px-4 py-3 font-medium text-slate-900 after:absolute after:inset-y-0 after:-right-2 after:w-2 after:bg-gradient-to-r after:from-slate-900/10 after:to-transparent">
                     {row.studentName}
+                    {row.specialNeeds && (
+                      <abbr title="Special needs - only scored subjects shown, not ranked" className="no-underline">
+                        <Badge variant="info" className="ml-2">
+                          SN
+                        </Badge>
+                      </abbr>
+                    )}
                     <span className="block text-xs font-normal text-slate-500">{row.admissionNumber}</span>
                   </td>
                   {broadsheet.subjects.map((subject) => {
@@ -130,6 +138,12 @@ export function BroadsheetTable({ broadsheet, scope = "TERM" }: BroadsheetTableP
           )}
         </table>
       </div>
+      {rows.some((row) => row.specialNeeds) && (
+        <p className="text-xs text-slate-500">
+          SN = special needs: only the subjects they were scored in are shown, they are not ranked, and their
+          scores are left out of the class average.
+        </p>
+      )}
     </div>
   );
 }

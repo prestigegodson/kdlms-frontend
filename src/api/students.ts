@@ -34,6 +34,8 @@ export interface StudentView {
   lastLoginAt?: string;
   /** When the pupil was soft-deleted; absent unless `status` is `DELETED`. */
   deletedAt?: string | null;
+  /** Special-needs pupil: their results show only scored subjects, with no position or class average. */
+  specialNeeds?: boolean;
 }
 
 /** Mirrors backend student.domain.StudentLoginStatus. PENDING = provisioned but never signed in. */
@@ -222,6 +224,14 @@ export function updateStudentPhoto(studentId: string, photoFileId: string | null
   return apiFetch<StudentView>(`${BASE}/${studentId}/photo`, {
     method: "PATCH",
     body: JSON.stringify({ photoFileId }),
+  });
+}
+
+/** Turns the pupil's special-needs flag on or off - SCHOOL_ADMIN/BRANCH_ADMIN only. */
+export function updateStudentSpecialNeeds(studentId: string, specialNeeds: boolean): Promise<StudentView> {
+  return apiFetch<StudentView>(`${BASE}/${studentId}/special-needs`, {
+    method: "PUT",
+    body: JSON.stringify({ specialNeeds }),
   });
 }
 

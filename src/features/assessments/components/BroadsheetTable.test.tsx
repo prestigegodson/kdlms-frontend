@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { BroadsheetView } from "@/api/assessments";
 import { BroadsheetTable } from "@/features/assessments/components/BroadsheetTable";
@@ -144,5 +144,37 @@ describe("BroadsheetTable", () => {
 
     const studentHeader = screen.getByRole("columnheader", { name: "Pupil" });
     expect(studentHeader).toHaveClass("after:absolute", "after:bg-gradient-to-r");
+  });
+
+  it("tags a special-needs pupil SN, shows no position for them, and explains the tag", () => {
+    const withSpecialNeeds: BroadsheetView = {
+      ...NUMERIC_BROADSHEET,
+      rows: [
+        ...NUMERIC_BROADSHEET.rows,
+        {
+          enrollmentId: "enrollment-3",
+          studentId: "student-3",
+          studentName: "Chidi Okafor",
+          admissionNumber: "SCH/2026/0003",
+          subjectResults: [],
+          total: 0,
+          average: 0,
+          specialNeeds: true,
+        },
+      ],
+    };
+    render(<BroadsheetTable broadsheet={withSpecialNeeds} />);
+
+    const specialNeedsRow = screen.getByText("Chidi Okafor").closest("tr") as HTMLElement;
+    expect(within(specialNeedsRow).getByText("SN")).toBeInTheDocument();
+    expect(within(specialNeedsRow).getAllByRole("cell").at(-1)).toHaveTextContent("—");
+    expect(within(screen.getByText("Ada Obi").closest("tr") as HTMLElement).queryByText("SN")).not.toBeInTheDocument();
+    expect(screen.getByText(/SN = special needs/)).toBeInTheDocument();
+  });
+
+  it("shows no SN legend when nobody is flagged", () => {
+    render(<BroadsheetTable broadsheet={NUMERIC_BROADSHEET} />);
+
+    expect(screen.queryByText(/SN = special needs/)).not.toBeInTheDocument();
   });
 });
