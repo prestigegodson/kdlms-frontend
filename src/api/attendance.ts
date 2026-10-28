@@ -140,6 +140,17 @@ export function saveRegister(
   });
 }
 
+/** Unmarks a whole register - every pupil's entry for this class, date and session. Allowed exactly when the register is `editable`. */
+export function clearRegister(
+  classId: string,
+  date: string,
+  session: AttendanceSession,
+): Promise<void> {
+  return apiFetch<void>(`${BASE}/register?classId=${classId}&date=${date}&session=${session}`, {
+    method: "DELETE",
+  });
+}
+
 /** `session` narrows the totals to one register of the day; omitted, every session counts. */
 export function getClassTermSummary(
   classId: string,

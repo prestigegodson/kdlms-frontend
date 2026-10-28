@@ -2,12 +2,15 @@ import { useEffect, useState } from "react";
 import {
   type AttendanceRegisterView,
   type AttendanceSession,
+  clearRegister,
   getRegister,
   type RowOutcome,
 } from "@/api/attendance";
 import { ApiError } from "@/api/client";
 import { listMyClasses, type TeacherClassView } from "@/api/me";
 import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
@@ -34,7 +37,8 @@ interface TeacherRegisterPanelProps {
  * recent weekday, if the school hasn't opted in to weekend attendance and
  * today is a Saturday/Sunday - on the first class-taught class. A school that
  * takes two registers a day also picks Morning or Afternoon; each is its own
- * register.
+ * register. A teacher can also unmark a whole saved register (e.g. one
+ * taken on the wrong day) while it's still editable.
  */
 export function TeacherRegisterPanel({ initialClassId }: TeacherRegisterPanelProps = {}) {
   // Fetched by SchoolLayout's mount effect (same pattern as teacherScopeStore/
@@ -56,6 +60,8 @@ export function TeacherRegisterPanel({ initialClassId }: TeacherRegisterPanelPro
   const [register, setRegister] = useState<AttendanceRegisterView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [outcomes, setOutcomes] = useState<RowOutcome[] | null>(null);
+  const [confirmingClear, setConfirmingClear] = useState(false);
+  const [cleared, setCleared] = useState(false);
 
   useEffect(() => {
     listMyClasses()
@@ -77,6 +83,7 @@ export function TeacherRegisterPanel({ initialClassId }: TeacherRegisterPanelPro
     setRegister(null);
     setOutcomes(null);
     setLoadError(null);
+    setCleared(false);
   }
 
   function load() {
@@ -92,8 +99,22 @@ export function TeacherRegisterPanel({ initialClassId }: TeacherRegisterPanelPro
 
   function handleSaved(rowOutcomes: RowOutcome[]) {
     setOutcomes(rowOutcomes);
+    setCleared(false);
     load();
   }
+
+  // Errors propagate so ConfirmDialog shows them inline and stays open.
+  async function handleClear() {
+    if (!register) return;
+    await clearRegister(register.classId, register.date, register.session);
+    setConfirmingClear(false);
+    setOutcomes(null);
+    setCleared(true);
+    load();
+  }
+
+  const registerSaved = register?.rows.some((row) => row.status) ?? false;
+  const sessionSuffix = twoSessionAttendance ? ` (${session.toLowerCase()})` : "";
 
   const classOptions = (classes ?? []).map((teacherClass) => ({
     id: teacherClass.classId,
@@ -155,8 +176,34 @@ export function TeacherRegisterPanel({ initialClassId }: TeacherRegisterPanelPro
           description="No pupils are enrolled in this class for this session."
         />
       )}
+      {cleared && (
+        <Alert variant="success" title="Register unmarked">
+          Every pupil&apos;s mark for {date}
+          {sessionSuffix} has been removed. You can mark this register again.
+        </Alert>
+      )}
+
+      {register && register.editable && registerSaved && (
+        <div className="flex justify-end">
+          <Button type="button" variant="accent" onClick={() => setConfirmingClear(true)}>
+            Unmark register
+          </Button>
+        </div>
+      )}
+
       {register && register.rows.length > 0 && (
         <AttendanceRegisterGrid register={register} onSaved={handleSaved} />
+      )}
+
+      {confirmingClear && register && (
+        <ConfirmDialog
+          title="Unmark this register?"
+          message={`Every pupil's mark for ${register.className} on ${register.date}${sessionSuffix} will be removed, and the day will stop counting towards their term attendance. This can't be undone.`}
+          confirmLabel="Unmark register"
+          variant="danger"
+          onConfirm={handleClear}
+          onClose={() => setConfirmingClear(false)}
+        />
       )}
 
       {outcomes && (
