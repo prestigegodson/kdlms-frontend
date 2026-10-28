@@ -29,6 +29,7 @@ import { Tabs } from "@/components/ui/Tabs";
 import { formatMoney, fromMinor } from "@/utils/currency";
 import { cyclesOf } from "@/utils/planPricing";
 import { PackageFormModal } from "./components/PackageFormModal";
+import { TutorCurrenciesCard } from "./components/TutorCurrenciesCard";
 
 type ListState =
   | { kind: "loading" }
@@ -107,6 +108,8 @@ export function PackagesPage() {
       />
 
       <Tabs ariaLabel="Package audience" value={audience} onChange={switchAudience} items={AUDIENCE_TABS} />
+
+      {isCreator && <TutorCurrenciesCard />}
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
 

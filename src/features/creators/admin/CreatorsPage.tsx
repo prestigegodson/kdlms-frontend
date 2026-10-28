@@ -207,7 +207,7 @@ function OnboardCreatorModal({ onClose, onOnboarded }: OnboardCreatorModalProps)
             onChange={(event) => setEmail(event.target.value)}
           />
         </FormField>
-        <CreatorProfileFields value={profile} onChange={setProfile} idPrefix="onboard" />
+        <CreatorProfileFields value={profile} onChange={setProfile} idPrefix="onboard" preselectDefaultCurrency />
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel

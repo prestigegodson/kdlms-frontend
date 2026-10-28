@@ -7,6 +7,7 @@ import * as dashboardApi from "@/api/dashboard";
 import type { CreatorAdminView } from "@/api/creators";
 import { CreatorsPage } from "@/features/creators/admin/CreatorsPage";
 
+vi.mock("@/api/tutorCurrencies");
 vi.mock("@/api/creators", async () => {
   const actual = await vi.importActual<typeof import("@/api/creators")>("@/api/creators");
   return { ...actual, listCreators: vi.fn(), onboardCreator: vi.fn() };

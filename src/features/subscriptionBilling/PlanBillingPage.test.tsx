@@ -5,11 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/api/client";
 import * as creatorsApi from "@/api/creators";
 import * as billingApi from "@/api/subscriptionBilling";
+import * as tutorCurrenciesApi from "@/api/tutorCurrencies";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 import { EMPTY_PAGE, payment, plan, subscription } from "./fixtures";
 import { PlanBillingPage } from "./PlanBillingPage";
 
 vi.mock("@/api/subscriptionBilling");
+vi.mock("@/api/tutorCurrencies");
 vi.mock("@/api/creators", async () => {
   const actual = await vi.importActual<typeof import("@/api/creators")>("@/api/creators");
   return { ...actual, getMyCreatorProfile: vi.fn() };
@@ -59,6 +61,7 @@ describe("PlanBillingPage", () => {
       },
     });
     vi.mocked(creatorsApi.getMyCreatorProfile).mockRejectedValue(new Error("no profile"));
+    vi.mocked(tutorCurrenciesApi.getPublicTutorCurrencies).mockRejectedValue(new Error("offline"));
     vi.mocked(billingApi.listBillablePlans).mockResolvedValue([PRO, FREE, BASIC]);
     vi.mocked(billingApi.listPaymentTransactions).mockResolvedValue(EMPTY_PAGE);
   });
@@ -177,6 +180,35 @@ describe("PlanBillingPage", () => {
     await userEvent.selectOptions(screen.getByLabelText("Currency"), "USD");
 
     expect(screen.getAllByRole("button", { name: "Not available in USD" })).toHaveLength(2);
+  });
+
+  it("offers a tutor only the tutor currencies, plus their subscription's own", async () => {
+    vi.mocked(tutorCurrenciesApi.getPublicTutorCurrencies).mockResolvedValue({
+      enabled: ["USD"],
+      defaultCurrency: "USD",
+    });
+    vi.mocked(billingApi.getBillingSubscription).mockResolvedValue(PAID_PRO);
+    renderPage();
+
+    await screen.findByLabelText("Currency");
+    const select = screen.getByLabelText("Currency");
+    await waitFor(() =>
+      expect(Array.from(select.querySelectorAll("option")).map((option) => option.value)).toEqual(["NGN", "USD"]),
+    );
+    expect(select).toHaveValue("NGN");
+  });
+
+  it("starts a tutor with no subscription currency on the admin's default", async () => {
+    vi.mocked(tutorCurrenciesApi.getPublicTutorCurrencies).mockResolvedValue({
+      enabled: ["NGN", "USD"],
+      defaultCurrency: "USD",
+    });
+    vi.mocked(billingApi.getBillingSubscription).mockResolvedValue(subscription());
+    renderPage();
+
+    const select = await screen.findByLabelText("Currency");
+    await waitFor(() => expect(select).toHaveValue("USD"));
+    expect(screen.getAllByRole("button", { name: "Not available in USD" }).length).toBeGreaterThan(0);
   });
 
   it("schedules a cheaper plan instead of charging and reloads the subscription", async () => {

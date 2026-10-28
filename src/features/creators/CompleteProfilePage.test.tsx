@@ -9,6 +9,7 @@ import { CompleteProfilePage } from "@/features/creators/CompleteProfilePage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
 
 vi.mock("@/api/auth");
+vi.mock("@/api/tutorCurrencies");
 vi.mock("@/api/creators", async () => {
   const actual = await vi.importActual<typeof import("@/api/creators")>("@/api/creators");
   return { ...actual, updateMyCreatorProfile: vi.fn() };

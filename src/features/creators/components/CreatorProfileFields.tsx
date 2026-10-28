@@ -1,7 +1,9 @@
-import { SUPPORTED_CURRENCIES, type CreatorProfileInput, type SupportedCurrency } from "@/api/creators";
+import { useEffect, useRef } from "react";
+import type { CreatorProfileInput, SupportedCurrency } from "@/api/creators";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { tutorCurrencyOptions, useTutorCurrencies } from "@/features/creators/hooks/useTutorCurrencies";
 
 /** Every IANA zone the runtime knows, with `current` kept in the list even if it isn't one of them. */
 function timezoneOptions(current: string): string[] {
@@ -22,10 +24,41 @@ interface CreatorProfileFieldsProps {
   onChange: (value: CreatorProfileInput) => void;
   /** Prefixes each input id, so two forms on one page never collide. */
   idPrefix?: string;
+  /**
+   * A new profile: once the tutor currencies load, start the currency on the system admin's
+   * default unless the user has already picked one. An existing profile keeps its own.
+   */
+  preselectDefaultCurrency?: boolean;
 }
 
-/** The business-profile inputs shared by creator sign-up, the creator's Profile page, and admin onboarding. */
-export function CreatorProfileFields({ value, onChange, idPrefix = "creator" }: CreatorProfileFieldsProps) {
+/**
+ * The business-profile inputs shared by creator sign-up, the creator's Profile page, and admin
+ * onboarding. The currency picker offers only what the system admin has made available to tutors,
+ * plus the profile's own currency if it has since been switched off.
+ */
+export function CreatorProfileFields({
+  value,
+  onChange,
+  idPrefix = "creator",
+  preselectDefaultCurrency = false,
+}: CreatorProfileFieldsProps) {
+  const currencies = useTutorCurrencies();
+  const currencyTouched = useRef(false);
+  const latest = useRef({ value, onChange });
+
+  // Declared first, so it has run before the effect below reads it.
+  useEffect(() => {
+    latest.current = { value, onChange };
+  });
+
+  useEffect(() => {
+    if (!preselectDefaultCurrency || !currencies || currencyTouched.current) return;
+    const { value: current, onChange: change } = latest.current;
+    if (current.currency !== currencies.defaultCurrency) {
+      change({ ...current, currency: currencies.defaultCurrency });
+    }
+  }, [currencies, preselectDefaultCurrency]);
+
   function set<K extends keyof CreatorProfileInput>(key: K, next: CreatorProfileInput[K]) {
     onChange({ ...value, [key]: next });
   }
@@ -106,9 +139,12 @@ export function CreatorProfileFields({ value, onChange, idPrefix = "creator" }: 
             id={id("currency")}
             required
             value={value.currency}
-            onChange={(event) => set("currency", event.target.value as SupportedCurrency)}
+            onChange={(event) => {
+              currencyTouched.current = true;
+              set("currency", event.target.value as SupportedCurrency);
+            }}
           >
-            {SUPPORTED_CURRENCIES.map((currency) => (
+            {tutorCurrencyOptions(currencies, value.currency).map((currency) => (
               <option key={currency} value={currency}>
                 {currency}
               </option>

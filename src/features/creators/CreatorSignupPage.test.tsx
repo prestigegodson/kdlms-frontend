@@ -5,10 +5,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as authApi from "@/api/auth";
 import { ApiError } from "@/api/client";
 import * as creatorsApi from "@/api/creators";
+import * as tutorCurrenciesApi from "@/api/tutorCurrencies";
 import { CreatorSignupPage } from "@/features/creators/CreatorSignupPage";
 import { resetAuthStore } from "@/stores/authStore";
 
 vi.mock("@/api/auth");
+vi.mock("@/api/tutorCurrencies");
 vi.mock("@/api/creators", async () => {
   const actual = await vi.importActual<typeof import("@/api/creators")>("@/api/creators");
   return { ...actual, registerCreator: vi.fn() };
@@ -53,6 +55,21 @@ describe("CreatorSignupPage", () => {
     resetAuthStore();
     vi.clearAllMocks();
     delete window.turnstile;
+    vi.mocked(tutorCurrenciesApi.getPublicTutorCurrencies).mockRejectedValue(new Error("offline"));
+  });
+
+  it("offers only the tutor currencies and starts on the admin's default", async () => {
+    vi.mocked(tutorCurrenciesApi.getPublicTutorCurrencies).mockResolvedValue({
+      enabled: ["KES", "USD"],
+      defaultCurrency: "USD",
+    });
+
+    renderPage();
+
+    const select = screen.getByLabelText("Preferred currency");
+    await vi.waitFor(() => expect(select).toHaveValue("USD"));
+    const options = Array.from(select.querySelectorAll("option")).map((option) => option.value);
+    expect(options).toEqual(["KES", "USD"]);
   });
 
   it("registers, signs in at the root domain, and lands in the tutor portal", async () => {

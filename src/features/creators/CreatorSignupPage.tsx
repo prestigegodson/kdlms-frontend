@@ -96,7 +96,7 @@ export function CreatorSignupPage() {
             onChange={(event) => setPassword(event.target.value)}
           />
         </FormField>
-        <CreatorProfileFields value={profile} onChange={setProfile} idPrefix="signup" />
+        <CreatorProfileFields value={profile} onChange={setProfile} idPrefix="signup" preselectDefaultCurrency />
         <TurnstileWidget key={captchaKey} onToken={setCaptchaToken} onAvailable={setCaptchaRequired} />
         <Button
           type="submit"

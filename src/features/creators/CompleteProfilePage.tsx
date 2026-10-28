@@ -73,7 +73,7 @@ export function CompleteProfilePage() {
     >
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
         {status.kind === "error" && <Alert variant="error">{status.message}</Alert>}
-        <CreatorProfileFields value={profile} onChange={setProfile} idPrefix="complete" />
+        <CreatorProfileFields value={profile} onChange={setProfile} idPrefix="complete" preselectDefaultCurrency />
         <Button type="submit" loading={status.kind === "submitting"} className="w-full">
           {status.kind === "submitting" ? "Saving…" : "Continue"}
         </Button>

@@ -21,6 +21,8 @@ interface PlanCatalogProps {
   plans: PackageView[];
   subscription: BillingSubscriptionView;
   currency: SupportedCurrency;
+  /** The currencies the picker offers - every supported one unless narrowed (a tutor's). */
+  currencies?: readonly SupportedCurrency[];
   onCurrencyChange: (currency: SupportedCurrency) => void;
   /**
    * A downgrade was scheduled, or a coupon covering the whole price activated the plan - nothing
@@ -89,6 +91,7 @@ export function PlanCatalog({
   plans,
   subscription,
   currency,
+  currencies = SUPPORTED_CURRENCIES,
   onCurrencyChange,
   onChanged,
   redirect = (url) => window.location.assign(url),
@@ -205,7 +208,7 @@ export function PlanCatalog({
               value={currency}
               onChange={(event) => onCurrencyChange(event.target.value as SupportedCurrency)}
             >
-              {SUPPORTED_CURRENCIES.map((code) => (
+              {currencies.map((code) => (
                 <option key={code} value={code}>
                   {code}
                 </option>

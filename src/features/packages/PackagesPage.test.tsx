@@ -3,8 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as packagesApi from "@/api/packages";
 import type { PackageView } from "@/api/packages";
+import * as tutorCurrenciesApi from "@/api/tutorCurrencies";
 import { PackagesPage } from "@/features/packages/PackagesPage";
 
+vi.mock("@/api/tutorCurrencies");
 vi.mock("@/api/packages", async () => {
   const actual = await vi.importActual<typeof import("@/api/packages")>("@/api/packages");
   return {
@@ -75,6 +77,11 @@ function mockList(packages: PackageView[]) {
 describe("PackagesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(tutorCurrenciesApi.getTutorCurrencies).mockResolvedValue({
+      enabled: ["NGN", "GHS", "ZAR", "KES", "USD"],
+      defaultCurrency: "NGN",
+      supported: ["NGN", "GHS", "ZAR", "KES", "USD"],
+    });
   });
 
   it("lists school packages with their price and status", async () => {
