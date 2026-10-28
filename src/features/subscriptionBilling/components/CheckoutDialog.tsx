@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { getErrorMessage } from "@/api/client";
-import type { PackageView } from "@/api/packages";
+import type { BillingCycle, PackageView } from "@/api/packages";
 import {
   type CheckoutResult,
   type CouponQuoteView,
@@ -17,8 +17,10 @@ import { durationLabel } from "../couponText";
 
 interface CheckoutDialogProps {
   plan: PackageView;
+  /** The cycle being bought - a creator plan may be sold both monthly and annually. */
+  cycle: BillingCycle;
   currency: SupportedCurrency;
-  /** The plan's list price in `currency`. */
+  /** The plan's list price for `cycle` in `currency`. */
   priceMinor: number;
   /**
    * The plan replaces a paid plan that still has time left, starting today with nothing carried
@@ -37,6 +39,7 @@ interface CheckoutDialogProps {
  */
 export function CheckoutDialog({
   plan,
+  cycle,
   currency,
   priceMinor,
   replacesCurrentPlan = false,
@@ -60,7 +63,7 @@ export function CheckoutDialog({
     setApplying(true);
     setCouponError(null);
     try {
-      setQuote(await validateCoupon(trimmed, plan.id, currency));
+      setQuote(await validateCoupon(trimmed, plan.id, cycle, currency));
     } catch (caught) {
       setQuote(null);
       setCouponError(getErrorMessage(caught, "That coupon can't be used."));
@@ -79,7 +82,7 @@ export function CheckoutDialog({
     setPaying(true);
     setError(null);
     try {
-      onResult(await checkout(plan.id, currency, quote?.code ?? null));
+      onResult(await checkout(plan.id, cycle, currency, quote?.code ?? null));
     } catch (caught) {
       setError(getErrorMessage(caught, "Couldn't start the payment. Please try again."));
       setPaying(false);
@@ -94,7 +97,7 @@ export function CheckoutDialog({
             <dt className="text-slate-600">{plan.name}</dt>
             <dd className="text-slate-900">
               {money(priceMinor)}
-              {plan.billingCycle === "ANNUAL" ? " / year" : " / month"}
+              {cycle === "ANNUAL" ? " / year" : " / month"}
             </dd>
           </div>
           {quote && (

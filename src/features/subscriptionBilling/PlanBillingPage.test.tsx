@@ -20,7 +20,7 @@ const PRO = plan();
 const BASIC = plan({
   id: "pkg-basic",
   name: "Basic",
-  prices: [{ currency: "NGN", amountMinor: 200_000 }],
+  prices: [{ currency: "NGN", billingCycle: "MONTHLY", amountMinor: 200_000 }],
 });
 const PAID_PRO = subscription({
   packageId: "pkg-pro",
@@ -80,7 +80,7 @@ describe("PlanBillingPage", () => {
     const dialog = await screen.findByRole("dialog");
     await userEvent.click(within(dialog).getByRole("button", { name: /^Pay / }));
 
-    expect(billingApi.checkout).toHaveBeenCalledWith("pkg-pro", "NGN", null);
+    expect(billingApi.checkout).toHaveBeenCalledWith("pkg-pro", "MONTHLY", "NGN", null);
     expect(redirect).toHaveBeenCalledWith("https://checkout.paystack.com/abc");
   });
 
@@ -112,11 +112,11 @@ describe("PlanBillingPage", () => {
     await userEvent.type(within(dialog).getByLabelText("Coupon code"), "launch20");
     await userEvent.click(within(dialog).getByRole("button", { name: "Apply" }));
 
-    expect(billingApi.validateCoupon).toHaveBeenCalledWith("launch20", "pkg-pro", "NGN");
+    expect(billingApi.validateCoupon).toHaveBeenCalledWith("launch20", "pkg-pro", "MONTHLY", "NGN");
     expect(await within(dialog).findByText(/first 3 payments/)).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("button", { name: /^Pay .*4,000/ }));
 
-    expect(billingApi.checkout).toHaveBeenCalledWith("pkg-pro", "NGN", "LAUNCH20");
+    expect(billingApi.checkout).toHaveBeenCalledWith("pkg-pro", "MONTHLY", "NGN", "LAUNCH20");
     expect(redirect).toHaveBeenCalledWith("https://checkout.paystack.com/def");
   });
 
@@ -250,5 +250,80 @@ describe("PlanBillingPage", () => {
     expect(screen.getByText(/plan stays active until 8 November, 2026/)).toBeInTheDocument();
     expect(await screen.findByText("KDL-2")).toBeInTheDocument();
     expect(screen.getAllByText("Failed").length).toBeGreaterThan(0);
+  });
+
+  it("switches the catalog to annual prices and checks out the annual cycle", async () => {
+    const proBoth = plan({
+      prices: [
+        { currency: "NGN", billingCycle: "MONTHLY", amountMinor: 500_000 },
+        { currency: "NGN", billingCycle: "ANNUAL", amountMinor: 5_000_000 },
+      ],
+    });
+    vi.mocked(billingApi.listBillablePlans).mockResolvedValue([proBoth, FREE, BASIC]);
+    vi.mocked(billingApi.getBillingSubscription).mockResolvedValue(subscription());
+    vi.mocked(billingApi.checkout).mockResolvedValue({
+      scheduled: false,
+      activated: false,
+      reference: "KDL-3",
+      authorizationUrl: "https://checkout.paystack.com/ghi",
+      amountMinor: 5_000_000,
+      discountMinor: 0,
+      currency: "NGN",
+    });
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("radio", { name: "Annual" }));
+
+    expect(screen.getByText("Save 17%")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Monthly billing only" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Choose Pro" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/\/ year/)).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: /^Pay / }));
+
+    expect(billingApi.checkout).toHaveBeenCalledWith("pkg-pro", "ANNUAL", "NGN", null);
+  });
+
+  it("offers a running monthly plan's annual cycle as a switch", async () => {
+    const proBoth = plan({
+      prices: [
+        { currency: "NGN", billingCycle: "MONTHLY", amountMinor: 500_000 },
+        { currency: "NGN", billingCycle: "ANNUAL", amountMinor: 5_000_000 },
+      ],
+    });
+    vi.mocked(billingApi.listBillablePlans).mockResolvedValue([proBoth, FREE, BASIC]);
+    vi.mocked(billingApi.getBillingSubscription).mockResolvedValue(PAID_PRO);
+    renderPage();
+
+    expect(await screen.findByRole("button", { name: "Your current plan" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("radio", { name: "Annual" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Switch to annual billing" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/isn't carried over/)).toBeInTheDocument();
+  });
+
+  it("hides the cycle toggle when every plan is sold on one cycle", async () => {
+    vi.mocked(billingApi.getBillingSubscription).mockResolvedValue(subscription());
+    renderPage();
+
+    expect(await screen.findByRole("button", { name: "Choose Pro" })).toBeInTheDocument();
+    expect(screen.queryByRole("radiogroup", { name: "Billing cycle" })).not.toBeInTheDocument();
+  });
+
+  it("names the cycle a scheduled change switches to", async () => {
+    vi.mocked(billingApi.getBillingSubscription).mockResolvedValue({
+      ...PAID_PRO,
+      billingCycle: "ANNUAL",
+      scheduledPackageId: "pkg-pro",
+      scheduledPlanName: "Pro",
+      scheduledBillingCycle: "MONTHLY",
+    });
+    renderPage();
+
+    expect(await screen.findByText(/billing when this plan renews/)).toHaveTextContent(
+      "You'll move to monthly billing when this plan renews on 5 November, 2026.",
+    );
+    expect(screen.getByRole("button", { name: "Keep annual billing" })).toBeInTheDocument();
   });
 });

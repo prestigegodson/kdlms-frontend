@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { getErrorMessage } from "@/api/client";
+import type { BillingCycle } from "@/api/packages";
 import {
   type BillingSubscriptionView,
   cancelScheduledChange,
@@ -30,6 +31,10 @@ function cardText(subscription: BillingSubscriptionView): string | null {
   const brand = card.brand ? card.brand.charAt(0).toUpperCase() + card.brand.slice(1) : "Card";
   const expiry = card.expMonth && card.expYear ? ` · expires ${card.expMonth}/${card.expYear}` : "";
   return `${brand} ending ${card.last4}${expiry}`;
+}
+
+function cycleLabel(cycle: BillingCycle | null): string {
+  return cycle === "ANNUAL" ? "annual" : "monthly";
 }
 
 /**
@@ -118,8 +123,19 @@ export function CurrentSubscriptionCard({
         <Alert variant="info" className="mt-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span>
-              You'll move to <strong>{subscription.scheduledPlanName}</strong> when this plan renews
-              on {formatLongDate(subscription.endDate)}.
+              {subscription.scheduledPackageId === subscription.packageId ? (
+                <>
+                  You'll move to <strong>{cycleLabel(subscription.scheduledBillingCycle)}</strong>{" "}
+                  billing when this plan renews on {formatLongDate(subscription.endDate)}.
+                </>
+              ) : (
+                <>
+                  You'll move to <strong>{subscription.scheduledPlanName}</strong>
+                  {subscription.scheduledBillingCycle &&
+                    ` (${cycleLabel(subscription.scheduledBillingCycle)} billing)`}{" "}
+                  when this plan renews on {formatLongDate(subscription.endDate)}.
+                </>
+              )}
             </span>
             <Button
               size="sm"
@@ -127,7 +143,9 @@ export function CurrentSubscriptionCard({
               loading={busy}
               onClick={() => run(cancelScheduledChange)}
             >
-              Keep {subscription.planName}
+              {subscription.scheduledPackageId === subscription.packageId
+                ? `Keep ${cycleLabel(subscription.billingCycle)} billing`
+                : `Keep ${subscription.planName}`}
             </Button>
           </div>
         </Alert>

@@ -24,7 +24,7 @@ const STARTER_PACKAGE: PackageView = {
   billingCycle: "MONTHLY",
   audience: "SCHOOL",
   free: false,
-  prices: [{ currency: "NGN", amountMinor: 50_000 }],
+  prices: [{ currency: "NGN", billingCycle: "MONTHLY", amountMinor: 50_000 }],
   multiBranch: false,
   branchLimit: 1,
   activeStudentLimit: 50,
@@ -125,8 +125,8 @@ describe("PackagesPage", () => {
         multiBranch: false,
         branchLimit: 1,
         prices: [
-          { currency: "NGN", amountMinor: 50_025 },
-          { currency: "USD", amountMinor: 400 },
+          { currency: "NGN", billingCycle: "MONTHLY", amountMinor: 50_025 },
+          { currency: "USD", billingCycle: "MONTHLY", amountMinor: 400 },
         ],
         maxClasses: null,
         guardianAccess: false,
@@ -226,12 +226,47 @@ describe("PackagesPage", () => {
     expect(within(dialog).getByLabelText("Max session length (minutes)")).toBeEnabled();
 
     await user.type(within(dialog).getByLabelText("Name"), "Pro");
-    await user.type(within(dialog).getByLabelText("NGN"), "5000");
+    const monthly = within(dialog).getByRole("group", { name: "Monthly price" });
+    await user.type(within(monthly).getByLabelText("NGN"), "5000");
     await user.type(within(dialog).getByLabelText("Max session length (minutes)"), "90");
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
     expect(packagesApi.createPackage).toHaveBeenCalledWith(
       expect.objectContaining({ audience: "CREATOR", platformVideo: true, maxSessionMinutes: 90 }),
+    );
+  });
+
+  it("prices a tutor plan monthly and annually, and needs a price on its default cycle", async () => {
+    mockList([]);
+    vi.mocked(packagesApi.createPackage).mockResolvedValue(STARTER_PACKAGE);
+    const user = userEvent.setup();
+
+    render(<PackagesPage />);
+    await screen.findByText(/No packages yet/);
+    await user.click(screen.getByRole("tab", { name: "Tutor" }));
+    await user.click(await screen.findByRole("button", { name: "Add tutor plan" }));
+    const dialog = await screen.findByRole("dialog");
+
+    await user.type(within(dialog).getByLabelText("Name"), "Pro");
+    const annual = within(dialog).getByRole("group", { name: "Annual price" });
+    await user.type(within(annual).getByLabelText("NGN"), "50000");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(await within(dialog).findByText(/Enter a monthly price, or change the default/)).toBeInTheDocument();
+    expect(packagesApi.createPackage).not.toHaveBeenCalled();
+
+    const monthly = within(dialog).getByRole("group", { name: "Monthly price" });
+    await user.type(within(monthly).getByLabelText("NGN"), "5000");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(packagesApi.createPackage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        audience: "CREATOR",
+        billingCycle: "MONTHLY",
+        prices: [
+          { currency: "NGN", billingCycle: "MONTHLY", amountMinor: 500_000 },
+          { currency: "NGN", billingCycle: "ANNUAL", amountMinor: 5_000_000 },
+        ],
+      }),
     );
   });
 });

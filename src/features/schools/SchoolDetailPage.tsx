@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { ApiError } from "@/api/client";
-import { listPackages, type PackageAudience, type PackageView } from "@/api/packages";
+import { type BillingCycle, listPackages, type PackageAudience, type PackageView } from "@/api/packages";
 import {
   activateSchool,
   archiveSchool,
@@ -45,6 +45,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { ImpersonateDialog } from "@/features/schools/components/ImpersonateDialog";
 import { formatDateRange, formatInstant, formatLongDate } from "@/utils/date";
+import { cyclesOf } from "@/utils/planPricing";
 
 type PendingAction =
   | { kind: "suspend" }
@@ -897,6 +898,7 @@ interface AssignSubscriptionModalProps {
 function AssignSubscriptionModal({ schoolId, audience, onClose, onAssigned }: AssignSubscriptionModalProps) {
   const [packages, setPackages] = useState<PackageView[] | null>(null);
   const [packageId, setPackageId] = useState("");
+  const [billingCycle, setBillingCycle] = useState<BillingCycle | "">("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -912,7 +914,10 @@ function AssignSubscriptionModal({ schoolId, audience, onClose, onAssigned }: As
       .catch(() => setPackages([]));
   }, [audience]);
 
-  const selectedIsFree = packages?.find((pkg) => pkg.id === packageId)?.free ?? false;
+  const selected = packages?.find((pkg) => pkg.id === packageId);
+  const selectedIsFree = selected?.free ?? false;
+  /** A tutor plan sold on both cycles - the admin picks which one the assignment runs on. */
+  const selectedCycles = selected && !selected.free ? cyclesOf(selected) : [];
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -921,6 +926,7 @@ function AssignSubscriptionModal({ schoolId, audience, onClose, onAssigned }: As
     try {
       await assignSubscription(schoolId, {
         packageId,
+        billingCycle: selectedCycles.length > 1 && billingCycle ? billingCycle : undefined,
         startDate: startDate || undefined,
         endDate: selectedIsFree ? undefined : endDate || undefined,
       });
@@ -952,7 +958,10 @@ function AssignSubscriptionModal({ schoolId, audience, onClose, onAssigned }: As
                 id="assign-package"
                 required
                 value={packageId}
-                onChange={(event) => setPackageId(event.target.value)}
+                onChange={(event) => {
+                  setPackageId(event.target.value);
+                  setBillingCycle("");
+                }}
               >
                 {packages.map((pkg) => (
                   <option key={pkg.id} value={pkg.id}>
@@ -961,10 +970,25 @@ function AssignSubscriptionModal({ schoolId, audience, onClose, onAssigned }: As
                 ))}
               </Select>
             </FormField>
+            {selectedCycles.length > 1 && selected && (
+              <FormField label="Billing cycle" htmlFor="assign-billing-cycle">
+                <Select
+                  id="assign-billing-cycle"
+                  value={billingCycle || selected.billingCycle}
+                  onChange={(event) => setBillingCycle(event.target.value as BillingCycle)}
+                >
+                  {selectedCycles.map((cycle) => (
+                    <option key={cycle} value={cycle}>
+                      {cycle === "ANNUAL" ? "Annual" : "Monthly"}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            )}
             <p className="text-xs text-slate-500">
               {selectedIsFree
                 ? "The free plan never expires - leave the start date blank to start today."
-                : "Leave the dates blank to start today and run for the package's billing cycle. Set an end date to give a complimentary period."}
+                : "Leave the dates blank to start today and run for one billing cycle. Set an end date to give a complimentary period."}
             </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField label="Start date (optional)" htmlFor="assign-start-date">

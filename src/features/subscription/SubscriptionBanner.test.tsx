@@ -19,7 +19,7 @@ const ACTIVE_SUMMARY: SubscriptionSummaryView = {
   hasSubscription: true,
   packageName: "Growth",
   billingCycle: "ANNUAL",
-  prices: [{ currency: "NGN", amountMinor: 500_000 }],
+  prices: [{ currency: "NGN", billingCycle: "ANNUAL", amountMinor: 500_000 }],
   startDate: "2026-01-01",
   endDate: "2026-12-31",
   status: "ACTIVE",

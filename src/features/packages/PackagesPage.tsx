@@ -27,6 +27,7 @@ import {
 import { TableSkeleton } from "@/components/ui/TableSkeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import { formatMoney, fromMinor } from "@/utils/currency";
+import { cyclesOf } from "@/utils/planPricing";
 import { PackageFormModal } from "./components/PackageFormModal";
 
 type ListState =
@@ -152,14 +153,19 @@ export function PackagesPage() {
                   <TableCell label="Name" className="font-medium text-slate-900">
                     {pkg.name}
                   </TableCell>
-                  <TableCell label="Billing">{pkg.billingCycle}</TableCell>
+                  <TableCell label="Billing">
+                    {cyclesOf(pkg).length > 1 ? "MONTHLY + ANNUAL" : pkg.billingCycle}
+                  </TableCell>
                   <TableCell label="Price" numeric>
                     {pkg.free ? (
                       <Badge variant="success">Free</Badge>
                     ) : (
                       <div className="flex flex-col items-end gap-0.5">
                         {pkg.prices.map((price) => (
-                          <span key={price.currency}>{formatMoney(fromMinor(price.amountMinor), price.currency)}</span>
+                          <span key={`${price.currency}-${price.billingCycle}`}>
+                            {formatMoney(fromMinor(price.amountMinor), price.currency)}
+                            {cyclesOf(pkg).length > 1 && (price.billingCycle === "ANNUAL" ? " / yr" : " / mo")}
+                          </span>
                         ))}
                       </div>
                     )}

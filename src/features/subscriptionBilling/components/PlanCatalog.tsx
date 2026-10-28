@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { PackageView } from "@/api/packages";
+import type { BillingCycle, PackageView } from "@/api/packages";
 import type { BillingSubscriptionView, CheckoutResult } from "@/api/subscriptionBilling";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
@@ -14,6 +14,7 @@ import {
   type SupportedCurrency,
 } from "@/utils/currency";
 import { formatLongDate } from "@/utils/date";
+import { cyclesOf, priceFor } from "@/utils/planPricing";
 import { CheckoutDialog } from "./CheckoutDialog";
 
 interface PlanCatalogProps {
@@ -30,8 +31,20 @@ interface PlanCatalogProps {
   redirect?: (url: string) => void;
 }
 
-function priceOf(plan: PackageView, currency: SupportedCurrency): number | null {
-  return plan.prices.find((price) => price.currency === currency)?.amountMinor ?? null;
+const MONTHS: Record<BillingCycle, number> = { MONTHLY: 1, ANNUAL: 12 };
+
+const CYCLE_OPTIONS: Array<{ value: BillingCycle; label: string }> = [
+  { value: "MONTHLY", label: "Monthly" },
+  { value: "ANNUAL", label: "Annual" },
+];
+
+/** What paying annually saves over twelve monthly payments, as a whole percentage - null if nothing. */
+function annualSaving(plan: PackageView, currency: SupportedCurrency): number | null {
+  const monthly = priceFor(plan, "MONTHLY", currency);
+  const annual = priceFor(plan, "ANNUAL", currency);
+  if (monthly == null || annual == null || monthly === 0) return null;
+  const saving = Math.round((1 - annual / (monthly * 12)) * 100);
+  return saving > 0 ? saving : null;
 }
 
 function limit(value: number | null, unit: string): string {
@@ -66,9 +79,11 @@ function highlights(plan: PackageView): string[] {
 }
 
 /**
- * The plans this tenant can buy (creators.md §6.1), priced in the chosen currency. Choosing one
- * starts a Paystack checkout - the server prices it - or, for a plan cheaper than a running paid
- * one, schedules the switch for the next renewal.
+ * The plans this tenant can buy (creators.md §6.1), priced in the chosen currency and billing
+ * cycle - a Monthly/Annual toggle appears when the plans are sold on both. Choosing one starts a
+ * Paystack checkout - the server prices it - or, for a plan cheaper per month than a running paid
+ * one (the same plan moving from annual to monthly billing included), schedules the switch for the
+ * next renewal.
  */
 export function PlanCatalog({
   plans,
@@ -78,39 +93,70 @@ export function PlanCatalog({
   onChanged,
   redirect = (url) => window.location.assign(url),
 }: PlanCatalogProps) {
-  const [choosing, setChoosing] = useState<{ plan: PackageView; price: number } | null>(null);
+  const offeredCycles = CYCLE_OPTIONS.map((option) => option.value).filter((value) =>
+    plans.some((plan) => cyclesOf(plan).includes(value)),
+  );
+  const [cycle, setCycle] = useState<BillingCycle>(() =>
+    subscription.active &&
+    !subscription.free &&
+    subscription.billingCycle &&
+    offeredCycles.includes(subscription.billingCycle)
+      ? subscription.billingCycle
+      : (offeredCycles[0] ?? "MONTHLY"),
+  );
+  const [choosing, setChoosing] = useState<{
+    plan: PackageView;
+    cycle: BillingCycle;
+    price: number;
+  } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const sorted = [...plans].sort(
-    (a, b) => (priceOf(a, currency) ?? 0) - (priceOf(b, currency) ?? 0),
+    (a, b) => (priceFor(a, cycle, currency) ?? 0) - (priceFor(b, cycle, currency) ?? 0),
   );
   const periodRunning =
     subscription.source === "PAYSTACK" &&
     !subscription.renewalPending &&
     subscription.endDate !== null;
+  const currentPlan = plans.find((candidate) => candidate.id === subscription.packageId);
+  const currentCycle = subscription.billingCycle ?? currentPlan?.billingCycle ?? null;
+  const scheduledCycle =
+    subscription.scheduledBillingCycle ??
+    plans.find((candidate) => candidate.id === subscription.scheduledPackageId)?.billingCycle ??
+    null;
 
   /**
-   * Whether buying `plan` ends a paid plan that still has time left. A cheaper plan than a
-   * running Paystack one is a downgrade the server schedules for the renewal instead.
+   * Whether buying `plan` on `planCycle` ends a paid plan that still has time left. A plan cheaper
+   * per month than a running Paystack one - or the same plan moving from annual to monthly - is a
+   * downgrade the server schedules for the renewal instead.
    */
-  function replacesCurrentPlan(plan: PackageView, price: number): boolean {
+  function replacesCurrentPlan(plan: PackageView, planCycle: BillingCycle, price: number): boolean {
     if (!subscription.active || subscription.free || subscription.endDate === null) return false;
-    if (plan.id === subscription.packageId) return false;
-    const current = plans.find((candidate) => candidate.id === subscription.packageId);
-    const currentPrice = current ? priceOf(current, currency) : null;
-    const downgrade = periodRunning && currentPrice !== null && price < currentPrice;
+    if (plan.id === subscription.packageId) {
+      if (planCycle === currentCycle) return false;
+      return !(periodRunning && planCycle === "MONTHLY");
+    }
+    const currentPrice =
+      currentPlan && currentCycle ? priceFor(currentPlan, currentCycle, currency) : null;
+    const downgrade =
+      periodRunning &&
+      currentPrice !== null &&
+      currentCycle !== null &&
+      price * MONTHS[currentCycle] < currentPrice * MONTHS[planCycle];
     return !downgrade;
   }
 
-  function onResult(plan: PackageView, result: CheckoutResult) {
+  function onResult(plan: PackageView, planCycle: BillingCycle, result: CheckoutResult) {
     if (result.authorizationUrl) {
       redirect(result.authorizationUrl);
       return;
     }
     setChoosing(null);
     if (result.scheduled) {
+      const billed =
+        offeredCycles.length > 1 ? ` (${planCycle === "ANNUAL" ? "annual" : "monthly"} billing)` : "";
       setNotice(
-        `${plan.name} will start when your current plan renews on ${formatLongDate(subscription.endDate)}.`,
+        `${plan.name}${billed} will start when your current plan renews on ${formatLongDate(subscription.endDate)}.`,
       );
     } else if (result.activated) {
       setNotice(`Your coupon covered the full price - ${plan.name} is now active.`);
@@ -127,19 +173,46 @@ export function PlanCatalog({
           </h2>
           <p className="text-sm text-slate-500">Pay securely by card through Paystack.</p>
         </div>
-        <FormField label="Currency" htmlFor="plan-currency" className="w-32">
-          <Select
-            id="plan-currency"
-            value={currency}
-            onChange={(event) => onCurrencyChange(event.target.value as SupportedCurrency)}
-          >
-            {SUPPORTED_CURRENCIES.map((code) => (
-              <option key={code} value={code}>
-                {code}
-              </option>
-            ))}
-          </Select>
-        </FormField>
+        <div className="flex flex-wrap items-end gap-3">
+          {offeredCycles.length > 1 && (
+            <div
+              role="radiogroup"
+              aria-label="Billing cycle"
+              className="inline-flex rounded-control border border-slate-200 bg-white p-1"
+            >
+              {CYCLE_OPTIONS.map((option) => {
+                const selected = cycle === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setCycle(option.value)}
+                    className={`cursor-pointer rounded-control px-3 py-1.5 text-sm font-medium mobile:min-h-11 ${
+                      selected ? "bg-brand-50 text-brand-800" : "text-slate-600 hover:text-slate-800"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <FormField label="Currency" htmlFor="plan-currency" className="w-32">
+            <Select
+              id="plan-currency"
+              value={currency}
+              onChange={(event) => onCurrencyChange(event.target.value as SupportedCurrency)}
+            >
+              {SUPPORTED_CURRENCIES.map((code) => (
+                <option key={code} value={code}>
+                  {code}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        </div>
       </div>
 
       {!subscription.paymentsAvailable && (
@@ -151,22 +224,39 @@ export function PlanCatalog({
 
       <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {sorted.map((plan) => {
-          const price = priceOf(plan, currency);
-          const current = subscription.active && plan.id === subscription.packageId;
-          const scheduled = plan.id === subscription.scheduledPackageId;
+          const price = priceFor(plan, cycle, currency);
+          const onThisPlan = subscription.active && plan.id === subscription.packageId;
+          const current = onThisPlan && (plan.free || cycle === currentCycle);
+          const scheduled = plan.id === subscription.scheduledPackageId && cycle === scheduledCycle;
+          const otherCycle: BillingCycle = cycle === "ANNUAL" ? "MONTHLY" : "ANNUAL";
+          const saving = cycle === "ANNUAL" ? annualSaving(plan, currency) : null;
           let disabledReason: string | null = null;
           if (plan.free) disabledReason = current ? "Your current plan" : "Included free";
-          else if (price == null) disabledReason = `Not available in ${currency}`;
+          else if (price == null)
+            disabledReason =
+              priceFor(plan, otherCycle, currency) != null
+                ? otherCycle === "ANNUAL"
+                  ? "Annual billing only"
+                  : "Monthly billing only"
+                : `Not available in ${currency}`;
           else if (current && periodRunning) disabledReason = "Your current plan";
           else if (scheduled) disabledReason = "Starts at renewal";
           else if (!subscription.paymentsAvailable) disabledReason = "Unavailable";
+          const action = current
+            ? "Renew now"
+            : onThisPlan
+              ? `Switch to ${cycle === "ANNUAL" ? "annual" : "monthly"} billing`
+              : `Choose ${plan.name}`;
 
           return (
             <li key={plan.id}>
               <Card className="flex h-full flex-col">
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-display text-lg font-medium text-slate-900">{plan.name}</h3>
-                  {current && <Badge variant="brand">Current</Badge>}
+                  <div className="flex flex-wrap justify-end gap-1">
+                    {saving != null && <Badge variant="success">Save {saving}%</Badge>}
+                    {current && <Badge variant="brand">Current</Badge>}
+                  </div>
                 </div>
                 <p className="mt-1 text-2xl font-semibold text-slate-900">
                   {plan.free
@@ -176,7 +266,7 @@ export function PlanCatalog({
                       : formatMoney(fromMinor(price), currency)}
                   {!plan.free && price != null && (
                     <span className="text-sm font-normal text-slate-500">
-                      {plan.billingCycle === "ANNUAL" ? " / year" : " / month"}
+                      {cycle === "ANNUAL" ? " / year" : " / month"}
                     </span>
                   )}
                 </p>
@@ -194,10 +284,10 @@ export function PlanCatalog({
                   disabled={disabledReason !== null}
                   onClick={() => {
                     setNotice(null);
-                    if (price != null) setChoosing({ plan, price });
+                    if (price != null) setChoosing({ plan, cycle, price });
                   }}
                 >
-                  {disabledReason ?? (current ? "Renew now" : `Choose ${plan.name}`)}
+                  {disabledReason ?? action}
                 </Button>
               </Card>
             </li>
@@ -208,11 +298,12 @@ export function PlanCatalog({
       {choosing && (
         <CheckoutDialog
           plan={choosing.plan}
+          cycle={choosing.cycle}
           currency={currency}
           priceMinor={choosing.price}
-          replacesCurrentPlan={replacesCurrentPlan(choosing.plan, choosing.price)}
+          replacesCurrentPlan={replacesCurrentPlan(choosing.plan, choosing.cycle, choosing.price)}
           onClose={() => setChoosing(null)}
-          onResult={(result) => onResult(choosing.plan, result)}
+          onResult={(result) => onResult(choosing.plan, choosing.cycle, result)}
         />
       )}
     </section>

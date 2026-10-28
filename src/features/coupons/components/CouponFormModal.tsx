@@ -19,6 +19,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { fromMinor, SUPPORTED_CURRENCIES, type SupportedCurrency, toMinor } from "@/utils/currency";
 import { instantToLocalDate, localDateToEndInstant, localDateToStartInstant } from "@/utils/date";
+import { cyclesOf } from "@/utils/planPricing";
 
 interface CouponFormModalProps {
   /** The coupon being edited; absent to create one. */
@@ -191,6 +192,11 @@ export function CouponFormModal({ coupon, onClose, onSaved }: CouponFormModalPro
               label={type === "PERCENT" ? "Percent off" : "Amount off"}
               htmlFor="coupon-value"
               className="flex-1"
+              description={
+                type === "FIXED"
+                  ? "Taken off each payment, whether the plan is billed monthly or annually."
+                  : undefined
+              }
             >
               <Input
                 id="coupon-value"
@@ -300,7 +306,9 @@ export function CouponFormModal({ coupon, onClose, onSaved }: CouponFormModalPro
                     />
                     {plan.name}
                     <span className="text-xs text-slate-500">
-                      {plan.billingCycle === "ANNUAL" ? "annual" : "monthly"}
+                      {cyclesOf(plan)
+                        .map((cycle) => (cycle === "ANNUAL" ? "annual" : "monthly"))
+                        .join(" & ")}
                     </span>
                   </label>
                 </li>

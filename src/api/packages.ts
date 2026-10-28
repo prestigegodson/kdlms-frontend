@@ -7,11 +7,17 @@ export type PackageStatus = "ACTIVE" | "RETIRED";
 /** Which tenant kind a package is sold to; fixed once the package exists. */
 export type PackageAudience = "SCHOOL" | "CREATOR";
 
-/** One of a package's prices, in the currency's minor unit (kobo for NGN). Mirrors backend PriceView. */
+/**
+ * One of a package's prices for one billing cycle, in the currency's minor unit (kobo for NGN).
+ * Mirrors backend PriceView. A CREATOR plan may be priced monthly, annually or both; a SCHOOL
+ * package only in its own `billingCycle`.
+ */
 export interface PackagePrice {
   currency: SupportedCurrency;
+  billingCycle: BillingCycle;
   amountMinor: number;
 }
+
 
 /**
  * The five CREATOR-plan limits (creators.md §5); `null` means unlimited. Always `null` on a
@@ -30,11 +36,12 @@ export interface PackageView extends CreatorPlanLimitFields {
   id: string;
   name: string;
   description?: string;
+  /** The default cycle - preselected at checkout; the only cycle a SCHOOL package is priced in. */
   billingCycle: BillingCycle;
   audience: PackageAudience;
   /** The platform's Free creator plan - no prices, never expires. At most one is ACTIVE. */
   free: boolean;
-  /** Empty only for the free plan; at most one per currency. */
+  /** Empty only for the free plan; at most one per currency and cycle. */
   prices: PackagePrice[];
   multiBranch: boolean;
   branchLimit: number;

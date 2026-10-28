@@ -56,6 +56,8 @@ export interface BillingSubscriptionView {
   card: SavedCardView | null;
   scheduledPackageId: string | null;
   scheduledPlanName: string | null;
+  /** The cycle a scheduled change switches to - the same plan on another cycle included. */
+  scheduledBillingCycle: BillingCycle | null;
   /** The coupon still discounting renewals (Phase C9), or null. */
   coupon: RunningCouponView | null;
   /** Whether Paystack is switched on for this deployment - checkout is a 503 when it isn't. */
@@ -70,6 +72,8 @@ export interface PaymentTransactionView {
   status: PaymentTransactionStatus;
   packageId: string;
   planName: string | null;
+  /** The cycle the payment bought. */
+  billingCycle: BillingCycle;
   currency: SupportedCurrency;
   /** What was due after any coupon. */
   amountMinor: number;
@@ -127,13 +131,16 @@ export function getBillingSubscription(): Promise<BillingSubscriptionView> {
 /** `couponCode` is optional; the server prices the checkout either way. */
 export function checkout(
   packageId: string,
+  billingCycle: BillingCycle,
   currency: SupportedCurrency,
   couponCode?: string | null,
 ): Promise<CheckoutResult> {
   return apiFetch<CheckoutResult>(`${BASE}/checkout`, {
     method: "POST",
     body: JSON.stringify(
-      couponCode ? { packageId, currency, couponCode } : { packageId, currency },
+      couponCode
+        ? { packageId, billingCycle, currency, couponCode }
+        : { packageId, billingCycle, currency },
     ),
   });
 }
@@ -142,11 +149,12 @@ export function checkout(
 export function validateCoupon(
   code: string,
   packageId: string,
+  billingCycle: BillingCycle,
   currency: SupportedCurrency,
 ): Promise<CouponQuoteView> {
   return apiFetch<CouponQuoteView>(`${BASE}/coupons/validate`, {
     method: "POST",
-    body: JSON.stringify({ code, packageId, currency }),
+    body: JSON.stringify({ code, packageId, billingCycle, currency }),
   });
 }
 

@@ -22,7 +22,7 @@ const ACTIVE_SUMMARY: SubscriptionSummaryView = {
   hasSubscription: true,
   packageName: "Growth",
   billingCycle: "ANNUAL",
-  prices: [{ currency: "NGN", amountMinor: 500_000 }],
+  prices: [{ currency: "NGN", billingCycle: "ANNUAL", amountMinor: 500_000 }],
   startDate: "2026-01-01",
   endDate: "2026-12-31",
   status: "ACTIVE",
@@ -51,7 +51,7 @@ const GROWTH = plan({
   name: "Growth",
   audience: "SCHOOL",
   billingCycle: "ANNUAL",
-  prices: [{ currency: "NGN", amountMinor: 500_000 }],
+  prices: [{ currency: "NGN", billingCycle: "ANNUAL", amountMinor: 500_000 }],
   activeStudentLimit: 500,
   branchLimit: 5,
 });
@@ -60,7 +60,7 @@ const SCALE = plan({
   name: "Scale",
   audience: "SCHOOL",
   billingCycle: "ANNUAL",
-  prices: [{ currency: "NGN", amountMinor: 900_000 }],
+  prices: [{ currency: "NGN", billingCycle: "ANNUAL", amountMinor: 900_000 }],
   activeStudentLimit: 2000,
   branchLimit: 10,
 });
@@ -194,7 +194,7 @@ describe("SubscriptionPage", () => {
     expect(within(dialog).getByText(/Scale starts today/)).toBeInTheDocument();
 
     await userEvent.click(within(dialog).getByRole("button", { name: /^Pay / }));
-    expect(billingApi.checkout).toHaveBeenCalledWith("pkg-scale", "NGN", null);
+    expect(billingApi.checkout).toHaveBeenCalledWith("pkg-scale", "ANNUAL", "NGN", null);
     expect(redirect).toHaveBeenCalledWith("https://checkout.paystack.com/abc");
   });
 

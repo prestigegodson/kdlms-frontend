@@ -1,5 +1,5 @@
 import { apiFetch } from "@/api/client";
-import type { PackagePrice } from "@/api/packages";
+import type { BillingCycle, PackagePrice } from "@/api/packages";
 import type { Page } from "@/api/types";
 
 export type SubscriptionStatus = "ACTIVE" | "EXPIRED" | "SUSPENDED" | "CANCELLED";
@@ -10,6 +10,8 @@ export interface SubscriptionView {
   schoolId: string;
   packageId: string;
   packageName: string;
+  /** `null` for an open-ended Free row, or one assigned before cycles were recorded. */
+  billingCycle: BillingCycle | null;
   startDate: string;
   /** `null` for an open-ended Free creator plan row, which never expires. */
   endDate: string | null;
@@ -20,6 +22,8 @@ export interface SubscriptionView {
 
 export interface AssignSubscriptionRequest {
   packageId: string;
+  /** Defaults to the package's own; a tutor plan may be sold on both. */
+  billingCycle?: BillingCycle;
   startDate?: string;
   endDate?: string;
 }

@@ -1,5 +1,11 @@
 import { type FormEvent, type ReactNode, useState } from "react";
-import type { BillingCycle, PackageAudience, PackageView, SavePackageRequest } from "@/api/packages";
+import type {
+  BillingCycle,
+  PackageAudience,
+  PackagePrice,
+  PackageView,
+  SavePackageRequest,
+} from "@/api/packages";
 import { ApiError } from "@/api/client";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -21,6 +27,7 @@ interface PackageFormModalProps {
 }
 
 type PriceInputs = Record<SupportedCurrency, string>;
+type CyclePrices = Record<BillingCycle, PriceInputs>;
 type LimitKey =
   | "maxClasses"
   | "maxStudentsPerClass"
@@ -40,12 +47,32 @@ const PLATFORM_VIDEO_LIMITS: { key: LimitKey; label: string }[] = [
   { key: "maxMonthlySessionHours", label: "Max live hours per month" },
 ];
 
-function initialPrices(initial?: PackageView): PriceInputs {
-  const inputs = Object.fromEntries(SUPPORTED_CURRENCIES.map((currency) => [currency, ""])) as PriceInputs;
+const CYCLES: { cycle: BillingCycle; label: string }[] = [
+  { cycle: "MONTHLY", label: "Monthly" },
+  { cycle: "ANNUAL", label: "Annual" },
+];
+
+function blankPrices(): PriceInputs {
+  return Object.fromEntries(SUPPORTED_CURRENCIES.map((currency) => [currency, ""])) as PriceInputs;
+}
+
+function initialPrices(initial?: PackageView): CyclePrices {
+  const inputs: CyclePrices = { MONTHLY: blankPrices(), ANNUAL: blankPrices() };
   for (const price of initial?.prices ?? []) {
-    inputs[price.currency] = String(fromMinor(price.amountMinor));
+    inputs[price.billingCycle ?? initial?.billingCycle ?? "MONTHLY"][price.currency] = String(
+      fromMinor(price.amountMinor),
+    );
   }
   return inputs;
+}
+
+/** Every filled-in price for `cycle`; a blank currency simply isn't offered. */
+function pricesIn(inputs: PriceInputs, cycle: BillingCycle): PackagePrice[] {
+  return SUPPORTED_CURRENCIES.filter((currency) => inputs[currency].trim() !== "").map((currency) => ({
+    currency,
+    billingCycle: cycle,
+    amountMinor: toMinor(Number(inputs[currency])),
+  }));
 }
 
 function initialLimits(initial?: PackageView): Record<LimitKey, string> {
@@ -68,7 +95,9 @@ function limitValue(text: string): number | null {
  * Create/edit form for a package. A SCHOOL package has branch and active-student limits and the
  * school feature flags; a CREATOR plan has the five creator limits (blank = unlimited), guardian
  * access, and may be the platform's one free plan - which carries no prices. Either kind is priced
- * per currency: a blank currency simply isn't offered.
+ * per currency: a blank currency simply isn't offered. A CREATOR plan may be priced monthly,
+ * annually or both - its billing cycle is then the default one, preselected at checkout, and needs
+ * a price; a SCHOOL package is priced in its one billing cycle only.
  */
 export function PackageFormModal({ title, audience, initial, onClose, onSubmit, onSaved }: PackageFormModalProps) {
   const isCreator = audience === "CREATOR";
@@ -76,7 +105,7 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
   const [description, setDescription] = useState(initial?.description ?? "");
   const [billingCycle, setBillingCycle] = useState<BillingCycle>(initial?.billingCycle ?? "MONTHLY");
   const [free, setFree] = useState(initial?.free ?? false);
-  const [prices, setPrices] = useState<PriceInputs>(() => initialPrices(initial));
+  const [prices, setPrices] = useState<CyclePrices>(() => initialPrices(initial));
   const [multiBranch, setMultiBranch] = useState(initial?.multiBranch ?? false);
   const [branchLimit, setBranchLimit] = useState(initial ? String(initial.branchLimit) : "1");
   const [activeStudentLimit, setActiveStudentLimit] = useState(
@@ -108,12 +137,17 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
     event.preventDefault();
     const pricedIn = free
       ? []
-      : SUPPORTED_CURRENCIES.filter((currency) => prices[currency].trim() !== "").map((currency) => ({
-          currency,
-          amountMinor: toMinor(Number(prices[currency])),
-        }));
+      : isCreator
+        ? CYCLES.flatMap(({ cycle }) => pricesIn(prices[cycle], cycle))
+        : pricesIn(prices[billingCycle], billingCycle);
     if (!free && pricedIn.length === 0) {
       setError("Enter a price in at least one currency.");
+      return;
+    }
+    if (!free && !pricedIn.some((price) => price.billingCycle === billingCycle)) {
+      setError(
+        `Enter a ${billingCycle === "ANNUAL" ? "annual" : "monthly"} price, or change the default billing cycle.`,
+      );
       return;
     }
     setSubmitting(true);
@@ -171,11 +205,22 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
             onChange={(event) => setDescription(event.target.value)}
           />
         </FormField>
-        <FormField label="Billing cycle" htmlFor="package-billing-cycle">
+        <FormField
+          label={isCreator ? "Default billing cycle" : "Billing cycle"}
+          htmlFor="package-billing-cycle"
+          description={isCreator ? "Preselected for tutors at checkout. It needs a price below." : undefined}
+        >
           <Select
             id="package-billing-cycle"
             value={billingCycle}
-            onChange={(event) => setBillingCycle(event.target.value as BillingCycle)}
+            onChange={(event) => {
+              const next = event.target.value as BillingCycle;
+              // A school package has one cycle: its prices move with it.
+              if (!isCreator) {
+                setPrices((current) => ({ ...current, [next]: current[billingCycle], [billingCycle]: blankPrices() }));
+              }
+              setBillingCycle(next);
+            }}
           >
             <option value="MONTHLY">Monthly</option>
             <option value="ANNUAL">Annual</option>
@@ -196,27 +241,34 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
           />
         )}
 
-        {!free && (
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium text-slate-700">Price per billing cycle</legend>
-            <p className="text-xs text-slate-500">Leave a currency blank to not sell the plan in it.</p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {SUPPORTED_CURRENCIES.map((currency) => (
-                <FormField key={currency} label={currency} htmlFor={`package-price-${currency}`}>
-                  <Input
-                    id={`package-price-${currency}`}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={prices[currency]}
-                    onChange={(event) => setPrices((current) => ({ ...current, [currency]: event.target.value }))}
-                  />
-                </FormField>
-              ))}
-            </div>
-          </fieldset>
-        )}
+        {!free &&
+          (isCreator ? (
+            CYCLES.map(({ cycle, label }) => (
+              <PriceFieldset
+                key={cycle}
+                idPrefix={`package-price-${cycle.toLowerCase()}`}
+                legend={`${label} price`}
+                help={`Leave a currency blank to not sell the plan ${cycle === "ANNUAL" ? "annually" : "monthly"} in it.`}
+                values={prices[cycle]}
+                onChange={(currency, value) =>
+                  setPrices((current) => ({ ...current, [cycle]: { ...current[cycle], [currency]: value } }))
+                }
+              />
+            ))
+          ) : (
+            <PriceFieldset
+              idPrefix="package-price"
+              legend="Price per billing cycle"
+              help="Leave a currency blank to not sell the plan in it."
+              values={prices[billingCycle]}
+              onChange={(currency, value) =>
+                setPrices((current) => ({
+                  ...current,
+                  [billingCycle]: { ...current[billingCycle], [currency]: value },
+                }))
+              }
+            />
+          ))}
 
         {isCreator ? (
           <>
@@ -406,6 +458,38 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
         </div>
       </form>
     </Modal>
+  );
+}
+
+interface PriceFieldsetProps {
+  idPrefix: string;
+  legend: string;
+  help: string;
+  values: PriceInputs;
+  onChange: (currency: SupportedCurrency, value: string) => void;
+}
+
+function PriceFieldset({ idPrefix, legend, help, values, onChange }: PriceFieldsetProps) {
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-medium text-slate-700">{legend}</legend>
+      <p className="text-xs text-slate-500">{help}</p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {SUPPORTED_CURRENCIES.map((currency) => (
+          <FormField key={currency} label={currency} htmlFor={`${idPrefix}-${currency}`}>
+            <Input
+              id={`${idPrefix}-${currency}`}
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              value={values[currency]}
+              onChange={(event) => onChange(currency, event.target.value)}
+            />
+          </FormField>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 
