@@ -1,7 +1,14 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { ApiError } from "@/api/client";
-import { type BillingCycle, listPackages, type PackageAudience, type PackageView } from "@/api/packages";
+import {
+  type FeatureGrantView,
+  type GrantableFeature,
+  listFeatureGrants,
+  removeFeatureGrant,
+  saveFeatureGrant,
+} from "@/api/featureGrants";
+import { type BillingCycle, getPackage, listPackages, type PackageAudience, type PackageView } from "@/api/packages";
 import {
   activateSchool,
   archiveSchool,
@@ -244,6 +251,8 @@ export function SchoolDetailPage() {
           )}
 
           <SubscriptionCard schoolId={state.school.id} />
+
+          <FeatureGrantsCard schoolId={state.school.id} />
 
           <SchoolAdminsCard schoolId={state.school.id} refreshKey={adminsRefreshKey} />
 
@@ -883,6 +892,214 @@ export function SubscriptionCard({ schoolId, audience = "SCHOOL" }: { schoolId: 
           onConfirm={() => confirmAndRun(cancelSubscription, state.subscription.id)}
           onClose={() => setPending(null)}
         />
+      )}
+    </Card>
+  );
+}
+
+/** A grantable feature, its label (matching PackagesPage's badges), and the package flag it mirrors. */
+interface GrantableFeatureOption {
+  feature: GrantableFeature;
+  label: string;
+  packageFlag: keyof PackageView;
+  audiences: PackageAudience[];
+}
+
+const GRANTABLE_FEATURES: GrantableFeatureOption[] = [
+  { feature: "COMMUNICATION", label: "Messaging", packageFlag: "communication", audiences: ["SCHOOL", "CREATOR"] },
+  { feature: "TIMETABLE", label: "Timetables", packageFlag: "timetable", audiences: ["SCHOOL"] },
+  { feature: "LESSON_NOTES", label: "Lesson notes", packageFlag: "lessonNotes", audiences: ["SCHOOL", "CREATOR"] },
+  {
+    feature: "AI_LESSON_NOTES",
+    label: "AI lesson notes",
+    packageFlag: "aiLessonNotes",
+    audiences: ["SCHOOL", "CREATOR"],
+  },
+  { feature: "TAKE_HOME_QUIZ", label: "CBT/Quizzes", packageFlag: "takeHomeQuiz", audiences: ["SCHOOL", "CREATOR"] },
+  {
+    feature: "INTERACTIVE_QUESTIONS",
+    label: "Interactive questions",
+    packageFlag: "interactiveQuestions",
+    audiences: ["SCHOOL", "CREATOR"],
+  },
+  { feature: "BILLING", label: "Fees & bills", packageFlag: "billing", audiences: ["SCHOOL"] },
+  {
+    feature: "ON_DEMAND_LEARNING",
+    label: "Learning",
+    packageFlag: "onDemandLearning",
+    audiences: ["SCHOOL", "CREATOR"],
+  },
+  {
+    feature: "LEARNING_MEDIA",
+    label: "Learning media",
+    packageFlag: "learningMedia",
+    audiences: ["SCHOOL", "CREATOR"],
+  },
+  { feature: "INTERACTIVE_VIDEO", label: "Interactive video", packageFlag: "interactiveVideo", audiences: ["SCHOOL"] },
+  { feature: "STUDENT_LOGINS", label: "Student logins", packageFlag: "studentLogins", audiences: ["SCHOOL"] },
+  { feature: "STAFF_ATTENDANCE", label: "Staff clock-in", packageFlag: "staffAttendance", audiences: ["SCHOOL"] },
+  { feature: "GUARDIAN_ACCESS", label: "Guardian access", packageFlag: "guardianAccess", audiences: ["CREATOR"] },
+  {
+    feature: "PLATFORM_VIDEO",
+    label: "Platform Video Conferencing",
+    packageFlag: "platformVideo",
+    audiences: ["CREATOR"],
+  },
+];
+
+type FeatureGrantsLoadState =
+  | { kind: "loading" }
+  | { kind: "loaded"; grants: FeatureGrantView[]; currentPackage: PackageView | null }
+  | { kind: "error"; message: string };
+
+/**
+ * Features turned on for this one tenant on top of its package (subscription.domain.SchoolFeatureGrant),
+ * without changing the package for every other school on it. Grant-only: a feature the package
+ * already includes shows as "In package" and can't be toggled here. A grant only counts while the
+ * school has an active subscription. Each checkbox saves right away.
+ */
+export function FeatureGrantsCard({ schoolId, audience = "SCHOOL" }: { schoolId: string; audience?: PackageAudience }) {
+  const [state, setState] = useState<FeatureGrantsLoadState>({ kind: "loading" });
+  const [busy, setBusy] = useState<GrantableFeature | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [aiLimit, setAiLimit] = useState("");
+
+  function fetchGrants() {
+    const currentPackage = getCurrentSubscription(schoolId)
+      .then((subscription) => getPackage(subscription.packageId))
+      .catch((error: unknown) => {
+        if (error instanceof ApiError && error.status === 404) return null;
+        throw error;
+      });
+    Promise.all([listFeatureGrants(schoolId), currentPackage])
+      .then(([grants, pkg]) => {
+        setState({ kind: "loaded", grants, currentPackage: pkg });
+        const aiGrant = grants.find((grant) => grant.feature === "AI_LESSON_NOTES");
+        setAiLimit(aiGrant?.aiGenerationLimit != null ? String(aiGrant.aiGenerationLimit) : "");
+      })
+      .catch((error: unknown) =>
+        setState({
+          kind: "error",
+          message: error instanceof ApiError ? error.message : "Failed to load extra features",
+        }),
+      );
+  }
+
+  useEffect(fetchGrants, [schoolId]);
+
+  async function run(feature: GrantableFeature, action: () => Promise<unknown>) {
+    setBusy(feature);
+    setActionError(null);
+    try {
+      await action();
+      fetchGrants();
+    } catch (error) {
+      setActionError(error instanceof ApiError ? error.message : "That change failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function toggle(feature: GrantableFeature, granted: boolean) {
+    if (granted) {
+      void run(feature, () => removeFeatureGrant(schoolId, feature));
+      return;
+    }
+    if (feature === "AI_LESSON_NOTES") {
+      const limit = Number(aiLimit);
+      if (!Number.isInteger(limit) || limit < 1) {
+        setActionError("Enter the monthly AI generations (at least 1) before turning on AI lesson notes.");
+        return;
+      }
+      void run(feature, () => saveFeatureGrant(schoolId, feature, limit));
+      return;
+    }
+    void run(feature, () => saveFeatureGrant(schoolId, feature));
+  }
+
+  const options = GRANTABLE_FEATURES.filter((option) => option.audiences.includes(audience));
+
+  return (
+    <Card>
+      <h2 className="text-sm font-semibold text-slate-900">Extra features</h2>
+      <p className="mt-1 text-sm text-slate-500">
+        Turn a feature on for this {audience === "CREATOR" ? "tutor" : "school"} only, without changing its
+        package. Extra features only work while there is an active subscription.
+      </p>
+
+      {state.kind === "loading" && (
+        <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
+          <Spinner /> Loading…
+        </div>
+      )}
+      {state.kind === "error" && (
+        <Alert variant="error" className="mt-3">
+          {state.message}
+        </Alert>
+      )}
+      {actionError && (
+        <Alert variant="error" className="mt-3">
+          {actionError}
+        </Alert>
+      )}
+
+      {state.kind === "loaded" && (
+        <ul className="mt-3 divide-y divide-slate-100">
+          {options.map((option) => {
+            const grant = state.grants.find((item) => item.feature === option.feature);
+            const inPackage = state.currentPackage?.[option.packageFlag] === true;
+            const id = `feature-grant-${option.feature}`;
+            return (
+              <li key={option.feature} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <label htmlFor={id} className="flex items-center gap-2 text-sm text-slate-900">
+                  <Checkbox
+                    id={id}
+                    checked={inPackage || grant !== undefined}
+                    disabled={inPackage || busy !== null}
+                    onChange={() => toggle(option.feature, grant !== undefined)}
+                  />
+                  {option.label}
+                </label>
+                <div className="flex items-center gap-2">
+                  {option.feature === "AI_LESSON_NOTES" && !inPackage && (
+                    <>
+                      <label htmlFor="feature-grant-ai-limit" className="text-xs text-slate-500">
+                        Monthly AI generations
+                      </label>
+                      <Input
+                        id="feature-grant-ai-limit"
+                        type="number"
+                        min={1}
+                        className="w-24"
+                        value={aiLimit}
+                        onChange={(event) => setAiLimit(event.target.value)}
+                      />
+                      {grant && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={busy !== null || aiLimit === String(grant.aiGenerationLimit)}
+                          onClick={() => {
+                            const limit = Number(aiLimit);
+                            if (!Number.isInteger(limit) || limit < 1) {
+                              setActionError("Monthly AI generations must be at least 1.");
+                              return;
+                            }
+                            void run(option.feature, () => saveFeatureGrant(schoolId, option.feature, limit));
+                          }}
+                        >
+                          Save
+                        </Button>
+                      )}
+                    </>
+                  )}
+                  {inPackage && <Badge variant="neutral">In package</Badge>}
+                  {!inPackage && grant && <Badge variant="brand">Extra</Badge>}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </Card>
   );

@@ -130,6 +130,11 @@ import { TakeHomeQuizEditorRoute } from "@/routes/TakeHomeQuizEditorRoute";
 import { TakeHomeQuizResultsRoute } from "@/routes/TakeHomeQuizResultsRoute";
 import { LiveSessionRoute } from "@/routes/LiveSessionRoute";
 import { TakeHomeQuizRoute } from "@/routes/TakeHomeQuizRoute";
+import { StaffAttendancePage } from "@/features/staffAttendance/StaffAttendancePage";
+import { ClockInPage } from "@/features/staffAttendance/pages/ClockInPage";
+import { GatePage } from "@/features/staffAttendance/pages/GatePage";
+import { StaffDetailPage } from "@/features/staffAttendance/pages/StaffDetailPage";
+import { StaffEnrollPage } from "@/features/staffAttendance/pages/StaffEnrollPage";
 import { TemplateDesignerRoute } from "@/routes/TemplateDesignerRoute";
 import { WardLessonNotesRoute } from "@/routes/WardLessonNotesRoute";
 
@@ -174,6 +179,11 @@ export const routes: RouteObject[] = [
       { path: "unsubscribe", element: <UnsubscribePage /> },
       { path: "invite/:token", element: <InviteAcceptPage /> },
       { path: "take-home-quiz", element: <TakeHomeQuizRoute /> },
+      // Staff clock-in (Phase 46) - public, full-screen, no session: the gate display (paired by its
+      // own station token), the phone page a gate QR opens, and the one-time passkey enrollment link.
+      { path: "gate", element: <GatePage /> },
+      { path: "clock", element: <ClockInPage /> },
+      { path: "staff-enroll/:token", element: <StaffEnrollPage /> },
       {
         // Paystack sends the browser back here after checkout (creators.md §6.1, Phase C8).
         path: "billing/callback",
@@ -392,6 +402,22 @@ export const routes: RouteObject[] = [
             ),
           },
           { path: "attendance", element: <AttendancePage /> },
+          {
+            path: "staff-attendance",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
+                <StaffAttendancePage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "staff-attendance/staff/:staffMemberId",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
+                <StaffDetailPage />
+              </RequireRole>
+            ),
+          },
           { path: "messages", element: <MessagesPage /> },
           { path: "reports", element: <ReportsPage /> },
           {

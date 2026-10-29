@@ -124,6 +124,15 @@ export const can = {
     return role === "TEACHER" && (scope?.isClassTeacher ?? false);
   },
 
+  /**
+   * Staff roster and biometric clock-in (Phase 46) - SCHOOL_ADMIN for every branch, BRANCH_ADMIN for
+   * their own, and only on a package with `staffAttendance`. A Head of Level gets nothing here: it's
+   * HR, not academics.
+   */
+  manageStaffAttendance(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN");
+  },
+
   /** Only a class teacher marks/edits attendance - admins are read-only, even SCHOOL_ADMIN. */
   markAttendance(role: Role | undefined, scope: TeacherScope | null): boolean {
     return role === "TEACHER" && (scope?.isClassTeacher ?? false);

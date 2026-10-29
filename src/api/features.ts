@@ -26,6 +26,8 @@ export interface MyFeaturesView {
   interactiveQuestions: boolean;
   /** V161 - the caller's own school may author interactive video learning resources. */
   interactiveVideo: boolean;
+  /** V168 (Phase 46) - the caller's own school has the staff roster and biometric clock-in. */
+  staffAttendance: boolean;
 }
 
 export function getMyFeatures(): Promise<MyFeaturesView> {

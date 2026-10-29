@@ -130,6 +130,7 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
   const [studentLogins, setStudentLogins] = useState(initial?.studentLogins ?? false);
   const [guardianAccess, setGuardianAccess] = useState(initial?.guardianAccess ?? false);
   const [platformVideo, setPlatformVideo] = useState(initial?.platformVideo ?? false);
+  const [staffAttendance, setStaffAttendance] = useState(initial?.staffAttendance ?? false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -182,6 +183,7 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
         studentLogins: !isCreator && studentLogins,
         guardianAccess: isCreator && guardianAccess,
         platformVideo: isCreator && platformVideo,
+        staffAttendance: !isCreator && staffAttendance,
       });
       onSaved();
     } catch (err) {
@@ -445,6 +447,14 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
             onChange={setBilling}
             label="Fees & bills"
             help="Entitlement for the per-term parent billing module - a school without it loses the Fees & Bills screen entirely. Never confuse with this package's own price above, which is the SaaS operator billing the school."
+          />
+        )}
+        {!isCreator && (
+          <Flag
+            checked={staffAttendance}
+            onChange={setStaffAttendance}
+            label="Staff biometric clock-in"
+            help="The staff roster - including non-academic staff such as nannies, cleaners, drivers and security - with clock-in on fingerprint terminals or a phone passkey at a gate QR. A school without it loses the Staff & clock-in screen entirely."
           />
         )}
 

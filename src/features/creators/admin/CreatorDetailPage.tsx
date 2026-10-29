@@ -12,7 +12,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { CREATOR_STATUS_LABEL, CREATOR_STATUS_VARIANT } from "@/features/creators/admin/creatorStatus";
 import { ImpersonateDialog } from "@/features/schools/components/ImpersonateDialog";
-import { SubscriptionCard } from "@/features/schools/SchoolDetailPage";
+import { FeatureGrantsCard, SubscriptionCard } from "@/features/schools/SchoolDetailPage";
 import { formatInstant } from "@/utils/date";
 
 type LoadState =
@@ -137,6 +137,7 @@ export function CreatorDetailPage() {
       </Card>
 
       <SubscriptionCard schoolId={creator.schoolId} audience="CREATOR" />
+      <FeatureGrantsCard schoolId={creator.schoolId} audience="CREATOR" />
 
       {confirmSuspend && (
         <ConfirmDialog

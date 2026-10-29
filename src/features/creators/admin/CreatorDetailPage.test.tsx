@@ -13,6 +13,7 @@ vi.mock("@/api/creators", async () => {
 
 vi.mock("@/features/schools/SchoolDetailPage", () => ({
   SubscriptionCard: () => <div>Subscription</div>,
+  FeatureGrantsCard: () => <div>Extra features</div>,
 }));
 
 const CREATOR: CreatorAdminView = {

@@ -49,6 +49,7 @@ const STARTER_PACKAGE: PackageView = {
   interactiveQuestions: false,
   interactiveVideo: false,
   platformVideo: false,
+  staffAttendance: false,
   status: "ACTIVE",
 };
 

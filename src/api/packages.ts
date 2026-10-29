@@ -82,6 +82,8 @@ export interface PackageView extends CreatorPlanLimitFields {
    * session-length/participant/monthly-hours limits don't apply.
    */
   platformVideo: boolean;
+  /** SCHOOL packages only (V168): the staff roster (academic and non-academic) and biometric clock-in. */
+  staffAttendance: boolean;
   status: PackageStatus;
 }
 
@@ -109,6 +111,7 @@ export interface SavePackageRequest extends CreatorPlanLimitFields {
   interactiveQuestions: boolean;
   interactiveVideo: boolean;
   platformVideo: boolean;
+  staffAttendance: boolean;
 }
 
 const BASE = "/api/v1/admin/packages";

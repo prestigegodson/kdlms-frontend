@@ -982,3 +982,22 @@ describe("can.viewClassReports", () => {
     }
   });
 });
+
+describe("can.manageStaffAttendance", () => {
+  it("is true for an entitled SCHOOL_ADMIN or BRANCH_ADMIN", () => {
+    expect(can.manageStaffAttendance("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.manageStaffAttendance("BRANCH_ADMIN", true)).toBe(true);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.manageStaffAttendance("SCHOOL_ADMIN", false)).toBe(false);
+    expect(can.manageStaffAttendance("BRANCH_ADMIN", false)).toBe(false);
+  });
+
+  it("is false for every other role, even when entitled", () => {
+    expect(can.manageStaffAttendance("TEACHER", true)).toBe(false);
+    expect(can.manageStaffAttendance("INVENTORY_MANAGER", true)).toBe(false);
+    expect(can.manageStaffAttendance("GUARDIAN", true)).toBe(false);
+    expect(can.manageStaffAttendance(undefined, true)).toBe(false);
+  });
+});

@@ -4,6 +4,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   Clock,
+  Fingerprint,
   Contact,
   CreditCard,
   FileText,
@@ -243,6 +244,18 @@ const NAV_ITEMS: NavItem[] = [
     },
   },
   {
+    label: "Staff & clock-in",
+    href: "/school/staff-attendance",
+    icon: Fingerprint,
+    group: "People",
+    // SCHOOL_ADMIN/BRANCH_ADMIN on a package with staff clock-in - see auth/permissions.ts's
+    // manageStaffAttendance.
+    visible: () => {
+      const role = useAuthStore.getState().user?.role;
+      return can.manageStaffAttendance(role, useFeatureStore.getState().staffAttendance);
+    },
+  },
+  {
     label: "Pupils",
     href: "/school/students",
     icon: GraduationCap,
@@ -378,6 +391,7 @@ export function SchoolLayout() {
   useFeatureStore((state) => state.lessonNotes);
   useFeatureStore((state) => state.takeHomeQuiz);
   useFeatureStore((state) => state.onDemandLearning);
+  useFeatureStore((state) => state.staffAttendance);
   useUnreadMessagesStore((state) => state.count);
   usePendingLessonNotesStore((state) => state.count);
   usePendingFeePaymentsStore((state) => state.count);
