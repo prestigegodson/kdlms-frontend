@@ -22,6 +22,16 @@ export function formatDuration(minutes: number): string {
   return hours > 0 ? `${hours}h ${rest.toString().padStart(2, "0")}m` : `${rest}m`;
 }
 
+/** "39m" under an hour, "1hr 39m" (or "2hr" on the hour) from 60 minutes up. */
+export function formatLateMinutes(minutes: number): string {
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest > 0 ? `${hours}hr ${rest}m` : `${hours}hr`;
+}
+
 /** "HH:mm" from the API's "HH:mm:ss" (or already "HH:mm"). */
 export function shortTime(value: string | null): string {
   return value ? value.slice(0, 5) : "";
@@ -67,7 +77,7 @@ export const DAY_STATUS_VARIANT: Record<DayStatus, BadgeVariant> = {
 export function dayFlags(day: DayView): Array<{ label: string; variant: BadgeVariant }> {
   const flags: Array<{ label: string; variant: BadgeVariant }> = [];
   if (day.late) {
-    flags.push({ label: `Late ${day.lateMinutes}m`, variant: "warning" });
+    flags.push({ label: `Late ${formatLateMinutes(day.lateMinutes)}`, variant: "warning" });
   }
   if (day.earlyLeave) {
     flags.push({ label: "Left early", variant: "warning" });
