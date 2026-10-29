@@ -28,7 +28,7 @@ export function UpdateBanner() {
         <p className="font-display text-sm font-medium text-slate-900">A new version is available</p>
         <p className="mt-0.5 text-sm text-slate-600">Reload to get the latest features and fixes.</p>
       </div>
-      <Button size="sm" onClick={reload} className="shrink-0">
+      <Button size="sm" variant="accent" onClick={reload} className="shrink-0">
         Reload
       </Button>
     </Card>
