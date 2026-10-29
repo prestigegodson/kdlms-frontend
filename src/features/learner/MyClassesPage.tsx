@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { getMyClassAttendance } from "@/api/liveSessions";
+import { getMyClassTopics } from "@/api/classTopics";
 import { OnlineClassCard } from "@/features/virtualclass/components/OnlineClassCard";
 import { UpcomingSessionsPanel } from "@/features/virtualclass/components/UpcomingSessionsPanel";
 import { loadLearnerUpcoming } from "@/features/virtualclass/upcomingSessions";
@@ -51,6 +52,7 @@ export function MyClassesPage() {
               key={onlineClass.id}
               onlineClass={onlineClass}
               loadAttendance={() => getMyClassAttendance(onlineClass.id)}
+              loadTopics={() => getMyClassTopics(onlineClass.id)}
               saveReminders={(enabled) => setMyClassReminders(onlineClass.id, enabled)}
               lessonNotesHref={`/learner/lesson-notes?classId=${onlineClass.id}`}
               quizzesHref={`/learner/quizzes?classId=${onlineClass.id}`}

@@ -13,6 +13,7 @@ import { LevelHeadViewSwitch } from "@/features/levelHeads/LevelHeadViewSwitch";
 import { useIsLevelHead } from "@/features/levelHeads/useLevelHead";
 
 type TeacherTab = "scores" | "remarks" | "broadsheet";
+type LevelsTab = "results" | "scores";
 
 /**
  * Assessments, split by role like SubjectsPage/StudentsPage: a TEACHER
@@ -29,7 +30,9 @@ type TeacherTab = "scores" | "remarks" | "broadsheet";
  * (from SubjectsPage's "Record assessment" row action) additionally seeds
  * the subject, TEACHER-only - the admin panel is class-level; an optional
  * `?tab=broadsheet` opens the teacher's Broadsheet tab. A Head of Level
- * is both, so they get the two as a "My levels"/"My classes" tab pair.
+ * is both, so they get the two as a "My levels"/"My classes" tab pair; their
+ * "My levels" side adds a Scores tab, since a head records scores (and the
+ * class teacher's remark, on the Results tab) for any class at their levels.
  */
 export function AssessmentsPage() {
   const role = useAuthStore((state) => state.user?.role);
@@ -40,6 +43,7 @@ export function AssessmentsPage() {
   const showsBroadsheet = role === "TEACHER" && can.viewBroadsheet(role, capabilities);
   const [tab, setTab] = useState<TeacherTab>(searchParams.get("tab") === "broadsheet" ? "broadsheet" : "scores");
   const levelHead = useIsLevelHead();
+  const [levelsTab, setLevelsTab] = useState<LevelsTab>("results");
   // Capabilities load after mount - until they say class teacher, a ?tab=broadsheet falls back to Scores.
   const activeTab = tab === "broadsheet" && !showsBroadsheet ? "scores" : tab;
 
@@ -75,7 +79,24 @@ export function AssessmentsPage() {
       <LevelHeadViewSwitch
         ariaLabel="Assessment scopes"
         teachingView={teachingView}
-        levelsView={<AdminResultsPanel initialClassId={initialClassId} />}
+        levelsView={
+          <div className="space-y-6">
+            <Tabs
+              ariaLabel="Level assessment views"
+              value={levelsTab}
+              onChange={setLevelsTab}
+              items={[
+                { value: "results", label: "Results" },
+                { value: "scores", label: "Scores" },
+              ]}
+            />
+            {levelsTab === "results" ? (
+              <AdminResultsPanel initialClassId={initialClassId} />
+            ) : (
+              <TeacherEntryPanel levelClasses initialClassId={initialClassId} />
+            )}
+          </div>
+        }
       />
     );
   }

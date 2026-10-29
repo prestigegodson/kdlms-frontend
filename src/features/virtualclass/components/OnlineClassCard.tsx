@@ -1,6 +1,7 @@
-import { BookOpen, ClipboardCheck, ClipboardList, NotebookPen, Video } from "lucide-react";
+import { BookOpen, ClipboardCheck, ClipboardList, ListChecks, NotebookPen, Video } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import type { MyClassTopics } from "@/api/classTopics";
 import type { AttendanceHistory } from "@/api/liveSessions";
 import { getErrorMessage } from "@/api/client";
 import type { OnlineClass, OnlineSession, ReminderPreference } from "@/api/onlineClasses";
@@ -11,6 +12,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { meetingNote } from "../meeting/meetingLink";
 import { dateInZone, longDate, scheduleSummary, timeInZone } from "../scheduleUtils";
 import { AttendanceHistoryModal } from "./AttendanceModals";
+import { ClassTopicsModal } from "./ClassTopicsModal";
 import { MeetingNote } from "./UpcomingSessionsPanel";
 
 const UPCOMING_SHOWN = 5;
@@ -26,6 +28,8 @@ interface OnlineClassCardProps {
   joinLabel?: string;
   /** Loads the viewer's attendance history in this class - the learner's own, or a guardian's learner's. */
   loadAttendance: () => Promise<AttendanceHistory>;
+  /** Loads the class's topics with the viewer's published grades on them; omitted hides the button. */
+  loadTopics?: () => Promise<MyClassTopics>;
   /** Saves the viewer's reminder-email choice for this class (Phase C7); omitted hides the toggle. */
   saveReminders?: (enabled: boolean) => Promise<ReminderPreference>;
   /** Where this class's published lesson notes open (Phase C12); omitted hides the link. */
@@ -43,12 +47,14 @@ interface OnlineClassCardProps {
  * history is a click away (Phase C6). The viewer can turn this class's reminder emails off and on
  * again (Phase C7) - saved straight away, and put back if the save fails. Since Phase C12 the card
  * also links to the class's published lesson notes, since Phase C13 to its quizzes, and since
- * Phase C14 to its learning resources.
+ * Phase C14 to its learning resources. Its topics, with the tutor's published grades and comments,
+ * open in a modal.
  */
 export function OnlineClassCard({
   onlineClass,
   joinLabel = "Join",
   loadAttendance,
+  loadTopics,
   saveReminders,
   lessonNotesHref,
   quizzesHref,
@@ -58,6 +64,7 @@ export function OnlineClassCard({
   const zone = viewerZone();
   const upcoming = onlineClass.upcoming.slice(0, UPCOMING_SHOWN);
   const [showAttendance, setShowAttendance] = useState(false);
+  const [showTopics, setShowTopics] = useState(false);
   return (
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -85,6 +92,12 @@ export function OnlineClassCard({
             <Button type="button" variant="ghost" size="sm" onClick={() => navigate(resourcesHref)}>
               <BookOpen className="h-4 w-4" aria-hidden="true" />
               Resources
+            </Button>
+          )}
+          {loadTopics && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => setShowTopics(true)}>
+              <ListChecks className="h-4 w-4" aria-hidden="true" />
+              Topics & grades
             </Button>
           )}
           <Button type="button" variant="ghost" size="sm" onClick={() => setShowAttendance(true)}>
@@ -120,6 +133,13 @@ export function OnlineClassCard({
           timezone={zone}
           load={loadAttendance}
           onClose={() => setShowAttendance(false)}
+        />
+      )}
+      {showTopics && loadTopics && (
+        <ClassTopicsModal
+          title={`Topics & grades · ${onlineClass.name}`}
+          load={loadTopics}
+          onClose={() => setShowTopics(false)}
         />
       )}
     </Card>

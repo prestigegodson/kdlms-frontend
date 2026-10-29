@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react";
-import { getErrorMessage } from "@/api/client";
 import {
   getOccurrenceAttendance,
   type AttendanceHistory,
@@ -11,31 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { dateInZone, longDate, timeInZone } from "../scheduleUtils";
-
-/** Loads once per open (and on retry); `load` is captured on first render. */
-function useLoaded<T>(load: () => Promise<T>, fallback: string) {
-  const [loader] = useState(() => load);
-  const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [attempt, setAttempt] = useState(0);
-  useEffect(() => {
-    let current = true;
-    loader()
-      .then((value) => current && setData(value))
-      .catch((err: unknown) => current && setError(getErrorMessage(err, fallback)));
-    return () => {
-      current = false;
-    };
-  }, [loader, fallback, attempt]);
-  return {
-    data,
-    error,
-    retry: () => {
-      setError(null);
-      setAttempt((n) => n + 1);
-    },
-  };
-}
+import { useLoaded } from "./useLoaded";
 
 function PresentBadge({ present }: { present: boolean }) {
   return present ? <Badge variant="success">Present</Badge> : <Badge variant="neutral">Absent</Badge>;

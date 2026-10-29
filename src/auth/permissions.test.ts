@@ -332,13 +332,17 @@ describe("can.manageNewsletters", () => {
 });
 
 describe("can.recordRemarks", () => {
-  it("is true only for a class-teaching TEACHER", () => {
+  it("is true for a class-teaching TEACHER", () => {
     expect(can.recordRemarks("TEACHER", { isClassTeacher: true })).toBe(true);
   });
 
   it("is false for a subject-teacher-only account", () => {
     expect(can.recordRemarks("TEACHER", { isClassTeacher: false })).toBe(false);
     expect(can.recordRemarks("TEACHER", null)).toBe(false);
+  });
+
+  it("is true for a Head of Level who class-teaches nothing", () => {
+    expect(can.recordRemarks("TEACHER", { isClassTeacher: false, headOfLevelIds: ["level-1"] })).toBe(true);
   });
 
   it("is false for every admin role, even class-teacher scope aside", () => {

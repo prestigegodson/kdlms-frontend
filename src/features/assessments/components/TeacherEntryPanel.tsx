@@ -8,6 +8,7 @@ import {
   type RowOutcome,
 } from "@/api/assessments";
 import { ApiError } from "@/api/client";
+import { listClasses } from "@/api/classes";
 import { listMyClasses, listRecordableSubjects, type TeacherClassView } from "@/api/me";
 import type { SubjectView } from "@/api/subjects";
 import { Alert } from "@/components/ui/Alert";
@@ -21,6 +22,7 @@ import { ClassTermPicker } from "@/features/assessments/components/ClassTermPick
 import { RatingEntryGrid } from "@/features/assessments/components/RatingEntryGrid";
 import { SaveOutcomeList } from "@/features/assessments/components/SaveOutcomeList";
 import { ScoreEntryGrid } from "@/features/assessments/components/ScoreEntryGrid";
+import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 import { ClipboardCheck } from "lucide-react";
 
 /** The Subject picker's "All subjects" key - never a subject id (a UUID) or a `group:` key. */
@@ -31,6 +33,12 @@ interface TeacherEntryPanelProps {
   initialClassId?: string;
   /** Seeds the initial subject selection (e.g. from SubjectsPage's "Record assessment" row action). */
   initialSubjectId?: string;
+  /**
+   * A Head of Level's "My levels" view: the picker lists every class at the levels they head
+   * (not the classes they teach), each recordable like its class teacher's - see
+   * AssessmentAccessGuard.isHeadOf server-side.
+   */
+  levelClasses?: boolean;
 }
 
 /**
@@ -38,9 +46,11 @@ interface TeacherEntryPanelProps {
  * the sheet. Renders as the "Scores" tab body under `AssessmentsPage`'s own
  * PageHeader, so it carries no title of its own. A class/assistant teacher
  * also gets an "All subjects" choice for their own classes, which opens the
- * transposed all-subjects sheet (`AllSubjectsEntryGrid`) instead.
+ * transposed all-subjects sheet (`AllSubjectsEntryGrid`) instead. With
+ * `levelClasses`, a Head of Level records for their headed levels' classes.
  */
-export function TeacherEntryPanel({ initialClassId, initialSubjectId }: TeacherEntryPanelProps = {}) {
+export function TeacherEntryPanel({ initialClassId, initialSubjectId, levelClasses = false }: TeacherEntryPanelProps = {}) {
+  const headOfLevelIds = useTeacherScopeStore((state) => state.capabilities?.headOfLevelIds);
   const [classes, setClasses] = useState<TeacherClassView[] | null>(null);
   const [classId, setClassId] = useState(initialClassId ?? "");
   const [subjects, setSubjects] = useState<SubjectView[] | null>(null);
@@ -54,10 +64,33 @@ export function TeacherEntryPanel({ initialClassId, initialSubjectId }: TeacherE
   const [cellOutcomes, setCellOutcomes] = useState<CellOutcome[] | null>(null);
 
   useEffect(() => {
-    listMyClasses()
-      .then(setClasses)
+    if (!levelClasses) {
+      listMyClasses()
+        .then(setClasses)
+        .catch(() => setClasses([]));
+      return;
+    }
+    if (!headOfLevelIds) return;
+    // The server's class list for a head is their levels' classes plus any class they teach
+    // elsewhere - narrow to the headed levels, each one recordable like its class teacher's.
+    listClasses(undefined, undefined, 0, 200)
+      .then((page) =>
+        setClasses(
+          page.content
+            .filter((c) => headOfLevelIds.includes(c.levelId))
+            .map((c) => ({
+              classId: c.id,
+              branchId: c.branchId,
+              levelId: c.levelId,
+              className: c.name,
+              isClassTeacher: true,
+              isAssistantTeacher: false,
+              subjectIds: [],
+            })),
+        ),
+      )
       .catch(() => setClasses([]));
-  }, []);
+  }, [levelClasses, headOfLevelIds]);
 
   const allSubjects = subjectId === ALL_SUBJECTS_KEY;
   // `isClassTeacher` already covers an assistant (see TeacherClassView) - a subject teacher never gets "All subjects".
@@ -143,14 +176,18 @@ export function TeacherEntryPanel({ initialClassId, initialSubjectId }: TeacherE
     <div className="space-y-6">
       {classes === null && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Spinner /> Loading your classrooms…
+          <Spinner /> {levelClasses ? "Loading classes…" : "Loading your classrooms…"}
         </div>
       )}
       {classes !== null && classes.length === 0 && (
         <EmptyState
           icon={ClipboardCheck}
-          title="No classrooms assigned yet"
-          description="You'll see this page once you're assigned as a class or subject teacher."
+          title={levelClasses ? "No classes at your levels yet" : "No classrooms assigned yet"}
+          description={
+            levelClasses
+              ? "Classes at the levels you head will appear here."
+              : "You'll see this page once you're assigned as a class or subject teacher."
+          }
         />
       )}
 

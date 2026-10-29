@@ -173,6 +173,38 @@ describe("AdminResultsPanel", () => {
     expect(await screen.findByText("Head of Primary's end-of-term remarks")).toBeInTheDocument();
   });
 
+  it("shows the class teacher's remark composer only when the server marks it editable", async () => {
+    const user = userEvent.setup();
+    vi.mocked(assessmentsApi.getPublicationStatus).mockResolvedValue({ published: false });
+    vi.mocked(assessmentsApi.getRemarksSheet).mockResolvedValue({
+      classId: "class-1",
+      className: "Primary 1A",
+      termId: "term-1",
+      scope: "TERM",
+      classTeacherEditable: true,
+      principalRemarkEditable: true,
+      headRemarkTitle: "Head of Primary",
+      traitCategories: [],
+      rows: [],
+    });
+
+    renderPanel();
+    await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
+
+    expect(await screen.findByText("Class teacher's end-of-term remarks")).toBeInTheDocument();
+  });
+
+  it("leaves the class teacher's remark composer out when it isn't editable", async () => {
+    const user = userEvent.setup();
+    vi.mocked(assessmentsApi.getPublicationStatus).mockResolvedValue({ published: false });
+
+    renderPanel();
+    await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
+
+    expect(await screen.findByText("Principal's end-of-term remarks")).toBeInTheDocument();
+    expect(screen.queryByText("Class teacher's end-of-term remarks")).not.toBeInTheDocument();
+  });
+
   it("offers CSV download and print once the broadsheet has rows", async () => {
     const user = userEvent.setup();
     vi.mocked(assessmentsApi.getPublicationStatus).mockResolvedValue({ published: false });

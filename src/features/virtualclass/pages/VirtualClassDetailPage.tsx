@@ -1,4 +1,15 @@
-import { Archive, ArchiveRestore, BookOpen, ClipboardCheck, NotebookPen, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  BookOpen,
+  ClipboardCheck,
+  ListChecks,
+  NotebookPen,
+  Pencil,
+  Plus,
+  Sheet,
+  Trash2,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { getErrorMessage } from "@/api/client";
@@ -211,6 +222,16 @@ export function VirtualClassDetailPage() {
                     },
                   ]
                 : []),
+              {
+                label: "Topics",
+                icon: ListChecks,
+                onSelect: () => navigate(`/tutor/classes/${virtualClass.id}/topics`),
+              },
+              {
+                label: "Grades",
+                icon: Sheet,
+                onSelect: () => navigate(`/tutor/classes/${virtualClass.id}/grades`),
+              },
               archived
                 ? {
                     label: "Restore",

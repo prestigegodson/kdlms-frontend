@@ -262,7 +262,11 @@ export const can = {
     return role === "SCHOOL_ADMIN";
   },
 
-  /** Score/rating entry - TEACHER only, no admin correction path (mirrors markAttendance). */
+  /**
+   * Score/rating entry - TEACHER only, no admin correction path (mirrors markAttendance). A Head
+   * of Level is a TEACHER, so this admits them too; the server lets them record any subject of a
+   * class at the levels they head.
+   */
   recordAssessments(role: Role | undefined): boolean {
     return role === "TEACHER";
   },
@@ -295,16 +299,16 @@ export const can = {
   },
 
   /**
-   * Writing a class's holistic term remark - the class teacher only, not
-   * every recordAssessments-eligible teacher: a remark is the class
-   * teacher's alone, narrower than recordAssessments' class-teach ∪
-   * subject-teach union (mirrors markAttendance's scoping). A
+   * Writing a class's holistic term remark - the class teacher (or a Head
+   * of Level, for classes at their levels), not every
+   * recordAssessments-eligible teacher: narrower than recordAssessments'
+   * class-teach ∪ subject-teach union (mirrors markAttendance's scoping). A
    * subject-teacher-only TEACHER can still read the sheet - RemarksEntryGrid
    * renders it read-only for them based on the server's own
    * `classTeacherEditable` flag, not this check.
    */
   recordRemarks(role: Role | undefined, scope: TeacherScope | null): boolean {
-    return role === "TEACHER" && (scope?.isClassTeacher ?? false);
+    return role === "TEACHER" && ((scope?.isClassTeacher ?? false) || isLevelHead(role, scope));
   },
 
   /**

@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { getWardClassAttendance } from "@/api/liveSessions";
+import { getWardClassTopics } from "@/api/classTopics";
 import { OnlineClassCard } from "@/features/virtualclass/components/OnlineClassCard";
 
 /**
@@ -58,6 +59,7 @@ export function OnlineClassesPage() {
                     onlineClass={onlineClass}
                     joinLabel="Watch"
                     loadAttendance={() => getWardClassAttendance(learner.learnerId, onlineClass.id)}
+                    loadTopics={() => getWardClassTopics(learner.learnerId, onlineClass.id)}
                     saveReminders={(enabled) => setWardClassReminders(onlineClass.id, enabled)}
                     lessonNotesHref={`/guardian/class-lesson-notes?classId=${onlineClass.id}&learnerId=${learner.learnerId}`}
                     quizzesHref={`/guardian/class-quizzes?classId=${onlineClass.id}&learnerId=${learner.learnerId}`}

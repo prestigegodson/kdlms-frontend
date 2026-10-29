@@ -43,7 +43,12 @@ interface AdminResultsPanelProps {
   initialClassId?: string;
 }
 
-/** An admin's read-only view: pick a class + term, see (and download/print) the broadsheet, and publish/unpublish results for guardians. */
+/**
+ * An admin's read-only view: pick a class + term, see (and download/print) the broadsheet, and
+ * publish/unpublish results for guardians. A Head of Level additionally writes the class
+ * teacher's remark and trait ratings here - shown only when the server's remarks sheet says
+ * `classTeacherEditable`, so SCHOOL_ADMIN/BRANCH_ADMIN never see it.
+ */
 export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {}) {
   const role = useAuthStore((state) => state.user?.role);
   const capabilities = useTeacherScopeStore((state) => state.capabilities);
@@ -218,6 +223,15 @@ export function AdminResultsPanel({ initialClassId }: AdminResultsPanelProps = {
 
       {broadsheet && broadsheet.rows.length === 0 && (
         <EmptyState icon={BarChart3} title="No results recorded for this term yet" />
+      )}
+
+      {remarksSheet?.classTeacherEditable && (
+        <div className="space-y-4">
+          <h2 className="font-display text-lg font-medium text-slate-900">
+            Class teacher&apos;s {scope === "MIDTERM" ? "mid-term" : "end-of-term"} remarks
+          </h2>
+          <RemarksEntryGrid sheet={remarksSheet} field="classTeacher" onSaved={handleRemarksSaved} />
+        </div>
       )}
 
       {canRecordPrincipalRemark && remarksSheet && (

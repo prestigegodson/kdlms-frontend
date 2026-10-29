@@ -51,6 +51,9 @@ import { CreatorQuizResultsPage } from "@/features/takeHomeQuizzes/creator/Creat
 import { CreatorQuizzesPage } from "@/features/takeHomeQuizzes/creator/CreatorQuizzesPage";
 import { OnlineClassesPage } from "@/features/guardian/OnlineClassesPage";
 import { VirtualClassDetailPage } from "@/features/virtualclass/pages/VirtualClassDetailPage";
+import { ClassGradesPage } from "@/features/virtualclass/pages/ClassGradesPage";
+import { ClassTopicsPage } from "@/features/virtualclass/pages/ClassTopicsPage";
+import { TopicGradesPage } from "@/features/virtualclass/pages/TopicGradesPage";
 import { VirtualClassesPage } from "@/features/virtualclass/pages/VirtualClassesPage";
 import { AdminDashboardPage } from "@/features/dashboard/AdminDashboardPage";
 import { SchoolDashboardPage } from "@/features/dashboard/SchoolDashboardPage";
@@ -509,6 +512,9 @@ export const routes: RouteObject[] = [
           { path: "profile", element: <CreatorProfilePage /> },
           { path: "classes", element: <VirtualClassesPage /> },
           { path: "classes/:classId", element: <VirtualClassDetailPage /> },
+          { path: "classes/:classId/topics", element: <ClassTopicsPage /> },
+          { path: "classes/:classId/grades", element: <ClassGradesPage /> },
+          { path: "classes/:classId/topics/:topicId", element: <TopicGradesPage /> },
           { path: "sessions", element: <SessionsCalendarPage /> },
           { path: "learners", element: <LearnersPage /> },
           { path: "messages", element: <CreatorMessagesPage /> },
