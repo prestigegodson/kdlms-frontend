@@ -131,8 +131,12 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
   const [guardianAccess, setGuardianAccess] = useState(initial?.guardianAccess ?? false);
   const [platformVideo, setPlatformVideo] = useState(initial?.platformVideo ?? false);
   const [staffAttendance, setStaffAttendance] = useState(initial?.staffAttendance ?? false);
+  const [studentInsights, setStudentInsights] = useState(initial?.studentInsights ?? false);
+  const [aiRemarks, setAiRemarks] = useState(initial?.aiRemarks ?? false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Both AI add-ons draw on the one monthly generation pool.
+  const hasAiFeature = aiLessonNotes || (!isCreator && aiRemarks);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -177,13 +181,15 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
         timetable: !isCreator && timetable,
         lessonNotes,
         aiLessonNotes,
-        aiGenerationLimit: aiLessonNotes ? Number(aiGenerationLimit) : 0,
+        aiGenerationLimit: hasAiFeature ? Number(aiGenerationLimit) : 0,
         billing: !isCreator && billing,
         learningMedia,
         studentLogins: !isCreator && studentLogins,
         guardianAccess: isCreator && guardianAccess,
         platformVideo: isCreator && platformVideo,
         staffAttendance: !isCreator && staffAttendance,
+        studentInsights: !isCreator && studentInsights,
+        aiRemarks: !isCreator && aiRemarks,
       });
       onSaved();
     } catch (err) {
@@ -423,14 +429,22 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
           label="AI lesson notes"
           help="A second, independent gate on top of Lesson notes for AI drafting only."
         />
+        {!isCreator && (
+          <Flag
+            checked={aiRemarks}
+            onChange={setAiRemarks}
+            label="AI remarks"
+            help="Class teachers can draft a student's termly remark with AI from their scores, traits, attendance and insights. Shares the monthly AI generations below with AI lesson notes."
+          />
+        )}
         <FormField label="AI generations per month" htmlFor="package-ai-generation-limit">
           <Input
             id="package-ai-generation-limit"
             type="number"
             min="0"
             required
-            disabled={!aiLessonNotes}
-            value={aiLessonNotes ? aiGenerationLimit : "0"}
+            disabled={!hasAiFeature}
+            value={hasAiFeature ? aiGenerationLimit : "0"}
             onChange={(event) => setAiGenerationLimit(event.target.value)}
           />
         </FormField>
@@ -455,6 +469,15 @@ export function PackageFormModal({ title, audience, initial, onClose, onSubmit, 
             onChange={setStaffAttendance}
             label="Staff biometric clock-in"
             help="The staff roster - including non-academic staff such as nannies, cleaners, drivers and security - with clock-in on fingerprint terminals or a phone passkey at a gate QR. A school without it loses the Staff & clock-in screen entirely."
+          />
+        )}
+
+        {!isCreator && (
+          <Flag
+            checked={studentInsights}
+            onChange={setStudentInsights}
+            label="Student insights"
+            help="Early warning on which students are slipping and why - falling averages, failing subjects, poor attendance, missed quizzes and unopened learning resources - refreshed every night."
           />
         )}
 

@@ -24,6 +24,7 @@ import {
   School,
   Settings,
   ShieldCheck,
+  TrendingDown,
   Users,
 } from "lucide-react";
 import { useEffect } from "react";
@@ -127,6 +128,18 @@ const NAV_ITEMS: NavItem[] = [
       const isClassTeacher = useTeacherScopeStore.getState().capabilities?.isClassTeacher ?? false;
       const entitled = useFeatureStore.getState().timetable;
       return can.viewTimetable(role, { isClassTeacher }, entitled);
+    },
+  },
+  {
+    label: "Insights",
+    href: "/school/insights",
+    icon: TrendingDown,
+    group: "Academics",
+    // Admins, heads and teachers on a package with student insights - each sees their own slice,
+    // narrowed server-side. See auth/permissions.ts's viewInsights.
+    visible: () => {
+      const role = useAuthStore.getState().user?.role;
+      return can.viewInsights(role, useFeatureStore.getState().studentInsights);
     },
   },
   {
@@ -392,6 +405,7 @@ export function SchoolLayout() {
   useFeatureStore((state) => state.takeHomeQuiz);
   useFeatureStore((state) => state.onDemandLearning);
   useFeatureStore((state) => state.staffAttendance);
+  useFeatureStore((state) => state.studentInsights);
   useUnreadMessagesStore((state) => state.count);
   usePendingLessonNotesStore((state) => state.count);
   usePendingFeePaymentsStore((state) => state.count);

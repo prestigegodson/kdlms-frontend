@@ -28,6 +28,10 @@ export interface MyFeaturesView {
   interactiveVideo: boolean;
   /** V168 (Phase 46) - the caller's own school has the staff roster and biometric clock-in. */
   staffAttendance: boolean;
+  /** V170 (insights Phase I1) - the caller's own school has early-warning student insights. */
+  studentInsights: boolean;
+  /** V172 (insights Phase I5) - the caller's own school can AI-draft class-teacher remarks. */
+  aiRemarks: boolean;
 }
 
 export function getMyFeatures(): Promise<MyFeaturesView> {

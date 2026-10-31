@@ -1,4 +1,4 @@
-import { apiFetch } from "@/api/client";
+import { apiFetch, apiStream } from "@/api/client";
 import type { AssessmentMode, GradeBoundary, RatingOption } from "@/api/gradingSystems";
 import type { ResultScope } from "@/api/types";
 import type { SubjectAssessmentPeriods } from "@/api/subjects";
@@ -383,6 +383,43 @@ export function saveTeacherRemarks(
     method: "PUT",
     body: JSON.stringify({ entries }),
   });
+}
+
+/** Callbacks for each SSE frame `generateRemarkDraft` relays. */
+export interface GenerateRemarkHandlers {
+  onDelta: (text: string) => void;
+  onResult: (remark: string) => void;
+  onError: (detail: string) => void;
+}
+
+/**
+ * AI-drafts one student's class-teacher remark, streamed as SSE (insights Phase I5). A refusal before
+ * the stream opens (no AI remarks on the plan, not this class's class teacher, the monthly AI quota
+ * spent) rejects with the usual {@link ApiError}; then `onDelta` fires per chunk, and `onResult` once
+ * with the cleaned-up draft. Nothing is saved - the teacher saves the remark like any other.
+ */
+export function generateRemarkDraft(
+  classId: string,
+  termId: string,
+  enrollmentId: string,
+  scope: ResultScope,
+  request: { extraInstructions: string | null },
+  handlers: GenerateRemarkHandlers,
+  signal?: AbortSignal,
+): Promise<void> {
+  return apiStream(
+    `/api/v1/classes/${classId}/terms/${termId}/remarks/${enrollmentId}/generate?scope=${scope}`,
+    (event, data) => {
+      if (event === "delta") {
+        handlers.onDelta((JSON.parse(data) as { text: string }).text);
+      } else if (event === "result") {
+        handlers.onResult((JSON.parse(data) as { remark: string }).remark);
+      } else if (event === "error") {
+        handlers.onError((JSON.parse(data) as { detail: string }).detail);
+      }
+    },
+    { method: "POST", body: JSON.stringify(request), signal },
+  );
 }
 
 export function savePrincipalRemarks(

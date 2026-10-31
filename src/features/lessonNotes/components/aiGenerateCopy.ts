@@ -24,3 +24,15 @@ export const CREATOR_AI_COPY: AiGenerateCopy = {
   hintLabel: "Audience (optional)",
   hintPlaceholder: "e.g. adult beginners, or 12-14 year olds",
 };
+
+/** The AI remark sheet's wording (insights Phase I5) - it has no topic or hint field, only extra instructions. */
+export interface AiRemarkCopy {
+  description: string;
+  extraInstructionsPlaceholder: string;
+}
+
+export const REMARK_AI_COPY: AiRemarkCopy = {
+  description:
+    "Drafts a class teacher's remark from this pupil's scores, behaviour ratings, attendance and insights, using their first name only. Review and edit it, then save the remarks as usual - this doesn't save anything on its own.",
+  extraInstructionsPlaceholder: "e.g. mention their improvement in reading, or keep it brief",
+};

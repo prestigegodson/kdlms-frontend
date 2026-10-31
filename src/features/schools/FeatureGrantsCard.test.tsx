@@ -90,9 +90,21 @@ describe("FeatureGrantsCard", () => {
     expect(featureGrantsApi.saveFeatureGrant).not.toHaveBeenCalled();
     expect(screen.getByText(/Enter the monthly AI generations/)).toBeInTheDocument();
 
-    await userEvent.type(screen.getByLabelText("Monthly AI generations"), "40");
+    await userEvent.type(screen.getByLabelText("Monthly AI generations for AI lesson notes"), "40");
     await userEvent.click(screen.getByLabelText("AI lesson notes"));
     expect(featureGrantsApi.saveFeatureGrant).toHaveBeenCalledWith("school-1", "AI_LESSON_NOTES", 40);
+  });
+
+  it("grants AI remarks with their own monthly limit", async () => {
+    render(<FeatureGrantsCard schoolId="school-1" />);
+
+    await userEvent.click(await screen.findByLabelText("AI remarks"));
+    expect(featureGrantsApi.saveFeatureGrant).not.toHaveBeenCalled();
+    expect(screen.getByText(/before turning on AI remarks/)).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText("Monthly AI generations for AI remarks"), "25");
+    await userEvent.click(screen.getByLabelText("AI remarks"));
+    expect(featureGrantsApi.saveFeatureGrant).toHaveBeenCalledWith("school-1", "AI_REMARKS", 25);
   });
 
   it("still lists features when the school has no subscription", async () => {

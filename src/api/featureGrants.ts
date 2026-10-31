@@ -15,12 +15,14 @@ export type GrantableFeature =
   | "INTERACTIVE_QUESTIONS"
   | "INTERACTIVE_VIDEO"
   | "PLATFORM_VIDEO"
-  | "STAFF_ATTENDANCE";
+  | "STAFF_ATTENDANCE"
+  | "STUDENT_INSIGHTS"
+  | "AI_REMARKS";
 
 /**
  * Mirrors backend subscription.application.port.in.FeatureGrantView - one feature a system admin
  * turned on for a single tenant on top of its package. Only counts while the tenant has an
- * active subscription. `aiGenerationLimit` is set on AI_LESSON_NOTES only.
+ * active subscription. `aiGenerationLimit` is set on AI_LESSON_NOTES and AI_REMARKS only.
  */
 export interface FeatureGrantView {
   feature: GrantableFeature;
@@ -36,7 +38,7 @@ export function listFeatureGrants(schoolId: string): Promise<FeatureGrantView[]>
   return apiFetch<FeatureGrantView[]>(adminBase(schoolId));
 }
 
-/** Grants the feature, or updates an existing AI_LESSON_NOTES grant's limit. */
+/** Grants the feature, or updates an existing AI_LESSON_NOTES/AI_REMARKS grant's limit. */
 export function saveFeatureGrant(
   schoolId: string,
   feature: GrantableFeature,

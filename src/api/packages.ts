@@ -62,7 +62,7 @@ export interface PackageView extends CreatorPlanLimitFields {
    * a school can have the lesson-notes module without the AI add-on. Paired with aiGenerationLimit.
    */
   aiLessonNotes: boolean;
-  /** Per-school AI lesson-note generations allowed per calendar month. 0 = none (also the effective value whenever aiLessonNotes is false). */
+  /** Per-school AI generations (lesson notes and remarks together) allowed per calendar month. 0 = none (also the effective value whenever neither aiLessonNotes nor aiRemarks is on). */
   aiGenerationLimit: number;
   /** Also actually gates the feature, the same hard-lockout shape `communication`/`timetable`/`lessonNotes` use - see CLAUDE.md. Never confuse with the SaaS operator's own billing of the school (this package's own `price`/`billingCycle`). */
   billing: boolean;
@@ -84,6 +84,13 @@ export interface PackageView extends CreatorPlanLimitFields {
   platformVideo: boolean;
   /** SCHOOL packages only (V168): the staff roster (academic and non-academic) and biometric clock-in. */
   staffAttendance: boolean;
+  /** SCHOOL packages only (V170): early-warning insights on which students are slipping, and why. */
+  studentInsights: boolean;
+  /**
+   * SCHOOL packages only (V172): AI-drafted class-teacher remarks. Sold separately from aiLessonNotes,
+   * but both draw on the one aiGenerationLimit pool.
+   */
+  aiRemarks: boolean;
   status: PackageStatus;
 }
 
@@ -112,6 +119,8 @@ export interface SavePackageRequest extends CreatorPlanLimitFields {
   interactiveVideo: boolean;
   platformVideo: boolean;
   staffAttendance: boolean;
+  studentInsights: boolean;
+  aiRemarks: boolean;
 }
 
 const BASE = "/api/v1/admin/packages";

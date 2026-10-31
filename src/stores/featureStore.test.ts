@@ -19,6 +19,8 @@ const FEATURES: MyFeaturesView = {
   interactiveQuestions: false,
   interactiveVideo: false,
   staffAttendance: false,
+  studentInsights: false,
+  aiRemarks: false,
 };
 
 const MAX_AGE = 5 * 60_000;

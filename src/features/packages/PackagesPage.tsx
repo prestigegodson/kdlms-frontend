@@ -204,6 +204,8 @@ export function PackagesPage() {
                       {pkg.guardianAccess && <Badge variant="neutral">Guardian access</Badge>}
                       {pkg.platformVideo && <Badge variant="neutral">Platform Video Conferencing</Badge>}
                       {pkg.staffAttendance && <Badge variant="brand">Staff clock-in</Badge>}
+                      {pkg.studentInsights && <Badge variant="brand">Student insights</Badge>}
+                      {pkg.aiRemarks && <Badge variant="brand">AI remarks</Badge>}
                     </div>
                   </TableCell>
                   <TableCell label="Status">

@@ -20,9 +20,11 @@ import { NeedsAttentionCard } from "@/features/dashboard/components/NeedsAttenti
 import { SubjectClassesCard } from "@/features/dashboard/components/SubjectClassesCard";
 import { TeacherTodoTiles } from "@/features/dashboard/components/TeacherTodoTiles";
 import { TermProgressCard } from "@/features/dashboard/components/TermProgressCard";
+import { StudentsNeedingAttentionCard } from "@/features/insights/components/StudentsNeedingAttentionCard";
 import { AgeDistributionCard } from "@/features/students/components/AgeDistributionCard";
 import { UpcomingBirthdaysCard } from "@/features/students/components/UpcomingBirthdaysCard";
 import { useAuthStore } from "@/stores/authStore";
+import { useFeatureStore } from "@/stores/featureStore";
 import { useTeacherScopeStore } from "@/stores/teacherScopeStore";
 
 type LoadState =
@@ -89,7 +91,10 @@ export function SchoolDashboardPage() {
       {state.kind === "loaded" && state.view.admin && (
         <AdminDashboard admin={state.view.admin} currentTerm={state.view.currentTerm} nextTerm={state.view.nextTerm} />
       )}
-      {state.kind === "loaded" && state.view.teacher && <TeacherDashboard teacher={state.view.teacher} />}
+      {state.kind === "loaded" && state.view.teacher && (
+        // A Head of Level gets both sections; the insights card already sits in the admin one.
+        <TeacherDashboard teacher={state.view.teacher} showInsights={!state.view.admin} />
+      )}
       {state.kind === "loaded" && state.view.inventory && (
         <InventoryDashboardSection inventory={state.view.inventory} />
       )}
@@ -111,6 +116,7 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
   // A Head of Level's tiles are their own levels (server-narrowed); their teacher section below
   // already carries the birthdays card, and the age distribution is a branch-wide admin read.
   const levelHead = isLevelHead(role, capabilities);
+  const insightsEntitled = useFeatureStore((state) => state.studentInsights);
   const { classesMarked, totalClasses } = admin.attendanceToday;
   // A two-session school's rate and counts span both of today's registers; the
   // "Registers marked" tile keeps them apart.
@@ -179,6 +185,8 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
 
       {currentTerm && <TermProgressCard currentTerm={currentTerm} nextTerm={nextTerm} />}
 
+      {can.viewInsights(role, insightsEntitled) && <StudentsNeedingAttentionCard />}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-1 lg:grid-cols-2">
         <NeedsAttentionCard setupGaps={admin.setupGaps} />
 
@@ -240,8 +248,15 @@ function AdminDashboard({ admin, currentTerm, nextTerm }: AdminDashboardProps) {
   );
 }
 
-function TeacherDashboard({ teacher }: { teacher: NonNullable<SchoolDashboardView["teacher"]> }) {
+interface TeacherDashboardProps {
+  teacher: NonNullable<SchoolDashboardView["teacher"]>;
+  showInsights: boolean;
+}
+
+function TeacherDashboard({ teacher, showInsights }: TeacherDashboardProps) {
   const { subjectClasses } = teacher;
+  const role = useAuthStore((state) => state.user?.role);
+  const insightsEntitled = useFeatureStore((state) => state.studentInsights);
 
   if (teacher.classes.length === 0 && subjectClasses.length === 0) {
     return (
@@ -256,6 +271,7 @@ function TeacherDashboard({ teacher }: { teacher: NonNullable<SchoolDashboardVie
   return (
     <>
       <TeacherTodoTiles teacher={teacher} />
+      {showInsights && can.viewInsights(role, insightsEntitled) && <StudentsNeedingAttentionCard />}
       {subjectClasses.length > 0 && <SubjectClassesCard rows={subjectClasses} />}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {teacher.classes.length > 0 && <YourClassesCard rows={teacher.classes} />}

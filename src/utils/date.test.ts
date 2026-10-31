@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatAge,
+  formatUpdated,
   formatClockTime,
   formatDateRange,
   formatInstantDate,
@@ -180,5 +181,16 @@ describe("formatInstantDate", () => {
     expect(formatInstantDate(null)).toBe("—");
     expect(formatInstantDate("")).toBe("—");
     expect(formatInstantDate("garbage")).toBe("—");
+  });
+});
+
+describe("formatUpdated", () => {
+  it("prefixes a formatted instant with 'Updated'", () => {
+    expect(formatUpdated("2026-03-10T14:00:00Z")).toMatch(/^Updated .*2026/);
+  });
+
+  it("says 'Not computed yet' for missing/unparseable input", () => {
+    expect(formatUpdated(undefined)).toBe("Not computed yet");
+    expect(formatUpdated("garbage")).toBe("Not computed yet");
   });
 });

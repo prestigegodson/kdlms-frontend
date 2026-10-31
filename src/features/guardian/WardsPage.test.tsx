@@ -14,6 +14,7 @@ vi.mock("@/api/wards", async () => {
     listMyWards: vi.fn(),
     listWardTerms: vi.fn(),
     getWardAttendance: vi.fn(),
+    getWardInsights: vi.fn(),
     loginAsWard: vi.fn(),
   };
 });
@@ -49,6 +50,7 @@ describe("WardsPage", () => {
     resetWardStore();
     vi.mocked(wardsApi.listWardTerms).mockResolvedValue([]);
     vi.mocked(wardsApi.getWardAttendance).mockRejectedValue(new Error("no term"));
+    vi.mocked(wardsApi.getWardInsights).mockRejectedValue(new Error("not included"));
   });
 
   it("shows an empty state when the guardian has no linked wards", async () => {

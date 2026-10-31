@@ -5,8 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as attendanceApi from "@/api/attendance";
 import * as birthdaysApi from "@/api/birthdays";
 import * as dashboardApi from "@/api/dashboard";
+import * as insightsApi from "@/api/insights";
 import { SchoolDashboardPage } from "@/features/dashboard/SchoolDashboardPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetFeatureStore, useFeatureStore } from "@/stores/featureStore";
 
 vi.mock("@/api/dashboard", async () => {
   const actual = await vi.importActual<typeof import("@/api/dashboard")>("@/api/dashboard");
@@ -24,6 +26,12 @@ vi.mock("@/api/attendance", async () => {
 vi.mock("@/api/birthdays", async () => {
   const actual = await vi.importActual<typeof import("@/api/birthdays")>("@/api/birthdays");
   return { ...actual, listUpcomingBirthdays: vi.fn() };
+});
+
+// StudentsNeedingAttentionCard self-fetches the insights summary when the school is entitled.
+vi.mock("@/api/insights", async () => {
+  const actual = await vi.importActual<typeof import("@/api/insights")>("@/api/insights");
+  return { ...actual, getInsightsSummary: vi.fn() };
 });
 
 function classRow(registerMarkedToday: boolean) {
@@ -611,6 +619,76 @@ describe("SchoolDashboardPage", () => {
     expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
     expect(screen.getByText("Upcoming birthdays")).toBeInTheDocument();
     expect(screen.getByText("Ada Obi").closest("a")).toBeNull();
+  });
+
+  describe("students needing attention card", () => {
+    const adminView = {
+      admin: {
+        activeStudents: 10,
+        activeGirls: 5,
+        activeBoys: 5,
+        activeClasses: 1,
+        registersMarkable: false,
+        attendanceToday: { totalClasses: 1, classesMarked: 0, present: 0, absent: 0, late: 0, excused: 0 },
+        setupGaps: { classesWithoutClassTeacher: [], studentsWithoutGuardian: 0 },
+      },
+    };
+
+    function signInAs(role: "SCHOOL_ADMIN" | "TEACHER") {
+      useAuthStore.setState({
+        user: { id: "u-1", email: "u@school.example", firstName: "A", lastName: "B", role, schoolId: "school-1" },
+        accessToken: "access",
+        refreshToken: "refresh",
+      });
+    }
+
+    beforeEach(() => {
+      resetFeatureStore();
+      vi.mocked(insightsApi.getInsightsSummary).mockResolvedValue({
+        termName: "First Term",
+        atRisk: 2,
+        watch: 1,
+        none: 20,
+        computedAt: "2026-10-30T02:00:00Z",
+        classes: [{ classId: "c1", className: "Primary 3", atRisk: 2, watch: 1, total: 23 }],
+      });
+    });
+
+    it("shows on the admin dashboard when the school is entitled", async () => {
+      signInAs("SCHOOL_ADMIN");
+      useFeatureStore.setState({ studentInsights: true, status: "loaded" });
+      vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue(adminView);
+
+      renderPage();
+
+      expect(await screen.findByText("Students needing attention")).toBeInTheDocument();
+      expect(await screen.findByText("2 at risk")).toBeInTheDocument();
+    });
+
+    it("shows once on the teacher dashboard", async () => {
+      signInAs("TEACHER");
+      useFeatureStore.setState({ studentInsights: true, status: "loaded" });
+      vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue({
+        teacher: { classes: [{ classId: "c1", className: "Primary 3", ...classRow(true) }], subjectClasses: [] },
+      });
+
+      renderPage();
+
+      expect(await screen.findByText("Students needing attention")).toBeInTheDocument();
+      expect(screen.getAllByText("Students needing attention")).toHaveLength(1);
+    });
+
+    it("is hidden, and never fetched, when the school isn't entitled", async () => {
+      signInAs("SCHOOL_ADMIN");
+      useFeatureStore.setState({ studentInsights: false, status: "loaded" });
+      vi.mocked(dashboardApi.getSchoolDashboard).mockResolvedValue(adminView);
+
+      renderPage();
+
+      expect(await screen.findByText("Active pupils")).toBeInTheDocument();
+      expect(screen.queryByText("Students needing attention")).not.toBeInTheDocument();
+      expect(insightsApi.getInsightsSummary).not.toHaveBeenCalled();
+    });
   });
 
   describe("INVENTORY_MANAGER", () => {

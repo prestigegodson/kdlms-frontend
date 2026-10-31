@@ -131,6 +131,9 @@ import { TakeHomeQuizResultsRoute } from "@/routes/TakeHomeQuizResultsRoute";
 import { LiveSessionRoute } from "@/routes/LiveSessionRoute";
 import { TakeHomeQuizRoute } from "@/routes/TakeHomeQuizRoute";
 import { StaffAttendancePage } from "@/features/staffAttendance/StaffAttendancePage";
+import { InsightSettingsPage } from "@/features/insights/InsightSettingsPage";
+import { InsightsPage } from "@/features/insights/InsightsPage";
+import { StudentInsightPage } from "@/features/insights/StudentInsightPage";
 import { ClockInPage } from "@/features/staffAttendance/pages/ClockInPage";
 import { GatePage } from "@/features/staffAttendance/pages/GatePage";
 import { StaffDetailPage } from "@/features/staffAttendance/pages/StaffDetailPage";
@@ -415,6 +418,30 @@ export const routes: RouteObject[] = [
             element: (
               <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN"]}>
                 <StaffDetailPage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "insights",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER"]}>
+                <InsightsPage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "insights/students/:studentId",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN", "BRANCH_ADMIN", "TEACHER"]}>
+                <StudentInsightPage />
+              </RequireRole>
+            ),
+          },
+          {
+            path: "insights/settings",
+            element: (
+              <RequireRole roles={["SCHOOL_ADMIN"]}>
+                <InsightSettingsPage />
               </RequireRole>
             ),
           },

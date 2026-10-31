@@ -938,6 +938,8 @@ const GRANTABLE_FEATURES: GrantableFeatureOption[] = [
   { feature: "INTERACTIVE_VIDEO", label: "Interactive video", packageFlag: "interactiveVideo", audiences: ["SCHOOL"] },
   { feature: "STUDENT_LOGINS", label: "Student logins", packageFlag: "studentLogins", audiences: ["SCHOOL"] },
   { feature: "STAFF_ATTENDANCE", label: "Staff clock-in", packageFlag: "staffAttendance", audiences: ["SCHOOL"] },
+  { feature: "STUDENT_INSIGHTS", label: "Student insights", packageFlag: "studentInsights", audiences: ["SCHOOL"] },
+  { feature: "AI_REMARKS", label: "AI remarks", packageFlag: "aiRemarks", audiences: ["SCHOOL"] },
   { feature: "GUARDIAN_ACCESS", label: "Guardian access", packageFlag: "guardianAccess", audiences: ["CREATOR"] },
   {
     feature: "PLATFORM_VIDEO",
@@ -946,6 +948,9 @@ const GRANTABLE_FEATURES: GrantableFeatureOption[] = [
     audiences: ["CREATOR"],
   },
 ];
+
+/** The grants that carry their own monthly limit - both draw on the one AI generations pool. */
+const AI_FEATURES: GrantableFeature[] = ["AI_LESSON_NOTES", "AI_REMARKS"];
 
 type FeatureGrantsLoadState =
   | { kind: "loading" }
@@ -962,7 +967,7 @@ export function FeatureGrantsCard({ schoolId, audience = "SCHOOL" }: { schoolId:
   const [state, setState] = useState<FeatureGrantsLoadState>({ kind: "loading" });
   const [busy, setBusy] = useState<GrantableFeature | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [aiLimit, setAiLimit] = useState("");
+  const [aiLimits, setAiLimits] = useState<Partial<Record<GrantableFeature, string>>>({});
 
   function fetchGrants() {
     const currentPackage = getCurrentSubscription(schoolId)
@@ -974,8 +979,14 @@ export function FeatureGrantsCard({ schoolId, audience = "SCHOOL" }: { schoolId:
     Promise.all([listFeatureGrants(schoolId), currentPackage])
       .then(([grants, pkg]) => {
         setState({ kind: "loaded", grants, currentPackage: pkg });
-        const aiGrant = grants.find((grant) => grant.feature === "AI_LESSON_NOTES");
-        setAiLimit(aiGrant?.aiGenerationLimit != null ? String(aiGrant.aiGenerationLimit) : "");
+        setAiLimits(
+          Object.fromEntries(
+            AI_FEATURES.map((feature) => {
+              const limit = grants.find((grant) => grant.feature === feature)?.aiGenerationLimit;
+              return [feature, limit != null ? String(limit) : ""];
+            }),
+          ),
+        );
       })
       .catch((error: unknown) =>
         setState({
@@ -1005,10 +1016,11 @@ export function FeatureGrantsCard({ schoolId, audience = "SCHOOL" }: { schoolId:
       void run(feature, () => removeFeatureGrant(schoolId, feature));
       return;
     }
-    if (feature === "AI_LESSON_NOTES") {
-      const limit = Number(aiLimit);
+    if (AI_FEATURES.includes(feature)) {
+      const limit = Number(aiLimits[feature] ?? "");
       if (!Number.isInteger(limit) || limit < 1) {
-        setActionError("Enter the monthly AI generations (at least 1) before turning on AI lesson notes.");
+        const label = feature === "AI_REMARKS" ? "AI remarks" : "AI lesson notes";
+        setActionError(`Enter the monthly AI generations (at least 1) before turning on ${label}.`);
         return;
       }
       void run(feature, () => saveFeatureGrant(schoolId, feature, limit));
@@ -1061,26 +1073,29 @@ export function FeatureGrantsCard({ schoolId, audience = "SCHOOL" }: { schoolId:
                   {option.label}
                 </label>
                 <div className="flex items-center gap-2">
-                  {option.feature === "AI_LESSON_NOTES" && !inPackage && (
+                  {AI_FEATURES.includes(option.feature) && !inPackage && (
                     <>
-                      <label htmlFor="feature-grant-ai-limit" className="text-xs text-slate-500">
+                      <label htmlFor={`${id}-limit`} className="text-xs text-slate-500">
                         Monthly AI generations
                       </label>
                       <Input
-                        id="feature-grant-ai-limit"
+                        id={`${id}-limit`}
+                        aria-label={`Monthly AI generations for ${option.label}`}
                         type="number"
                         min={1}
                         className="w-24"
-                        value={aiLimit}
-                        onChange={(event) => setAiLimit(event.target.value)}
+                        value={aiLimits[option.feature] ?? ""}
+                        onChange={(event) =>
+                          setAiLimits((current) => ({ ...current, [option.feature]: event.target.value }))
+                        }
                       />
                       {grant && (
                         <Button
                           variant="secondary"
                           size="sm"
-                          disabled={busy !== null || aiLimit === String(grant.aiGenerationLimit)}
+                          disabled={busy !== null || aiLimits[option.feature] === String(grant.aiGenerationLimit)}
                           onClick={() => {
-                            const limit = Number(aiLimit);
+                            const limit = Number(aiLimits[option.feature] ?? "");
                             if (!Number.isInteger(limit) || limit < 1) {
                               setActionError("Monthly AI generations must be at least 1.");
                               return;

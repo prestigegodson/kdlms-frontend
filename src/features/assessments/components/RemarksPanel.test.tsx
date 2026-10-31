@@ -9,10 +9,12 @@ import type { TeacherClassView } from "@/api/me";
 import * as sessionsApi from "@/api/sessions";
 import type { AcademicSessionView, TermView } from "@/api/sessions";
 import { RemarksPanel } from "@/features/assessments/components/RemarksPanel";
+import { resetAuthStore, useAuthStore } from "@/stores/authStore";
+import { resetFeatureStore, useFeatureStore } from "@/stores/featureStore";
 
 vi.mock("@/api/assessments", async () => {
   const actual = await vi.importActual<typeof import("@/api/assessments")>("@/api/assessments");
-  return { ...actual, getRemarksSheet: vi.fn(), saveTeacherRemarks: vi.fn() };
+  return { ...actual, getRemarksSheet: vi.fn(), saveTeacherRemarks: vi.fn(), generateRemarkDraft: vi.fn() };
 });
 
 vi.mock("@/api/me", async () => {
@@ -74,6 +76,22 @@ const EDITABLE_SHEET: RemarksSheetView = {
   ],
 };
 
+function signInAsTeacher(aiRemarks: boolean) {
+  useAuthStore.setState({
+    user: {
+      id: "user-1",
+      email: "teacher@school.example",
+      firstName: "Tara",
+      lastName: "Teacher",
+      role: "TEACHER",
+      schoolId: "school-1",
+    },
+    accessToken: "access",
+    refreshToken: "refresh",
+  });
+  useFeatureStore.setState({ aiRemarks, status: "loaded" });
+}
+
 function renderPanel() {
   const router = createMemoryRouter([{ path: "/", element: <RemarksPanel /> }], { initialEntries: ["/"] });
   render(<RouterProvider router={router} />);
@@ -82,6 +100,8 @@ function renderPanel() {
 describe("RemarksPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetAuthStore();
+    resetFeatureStore();
     vi.mocked(sessionsApi.listSessions).mockResolvedValue({
       content: [SESSION],
       totalElements: 1,
@@ -265,5 +285,71 @@ describe("RemarksPanel", () => {
       [{ enrollmentId: "enrollment-1", remark: "A strong start." }],
       "MIDTERM",
     );
+  });
+
+  describe("AI draft", () => {
+    it("fills the pupil's remark from the draft and saves it with the normal save", async () => {
+      const user = userEvent.setup();
+      signInAsTeacher(true);
+      vi.mocked(meApi.listMyClasses).mockResolvedValue([CLASS]);
+      vi.mocked(assessmentsApi.getRemarksSheet).mockResolvedValue(EDITABLE_SHEET);
+      vi.mocked(assessmentsApi.generateRemarkDraft).mockImplementation(
+        async (_classId, _termId, _enrollmentId, _scope, _request, handlers) => {
+          handlers.onDelta("Zara has worked hard.");
+          handlers.onResult("Zara has worked hard.");
+        },
+      );
+      vi.mocked(assessmentsApi.saveTeacherRemarks).mockResolvedValue({
+        outcomes: [{ enrollmentId: "enrollment-1", success: true }],
+      });
+      renderPanel();
+
+      await user.selectOptions(await screen.findByLabelText("Class"), "class-1");
+      await user.click(await screen.findByRole("button", { name: "AI draft for Zara Bello" }));
+      await user.click(await screen.findByRole("button", { name: "Draft remark" }));
+      await user.click(await screen.findByRole("button", { name: "Use this" }));
+
+      expect(assessmentsApi.generateRemarkDraft).toHaveBeenCalledWith(
+        "class-1",
+        "term-1",
+        "enrollment-1",
+        "TERM",
+        { extraInstructions: null },
+        expect.any(Object),
+        expect.any(AbortSignal),
+      );
+      expect(screen.getByLabelText("Class teacher's remark for Zara Bello")).toHaveValue("Zara has worked hard.");
+      expect(assessmentsApi.saveTeacherRemarks).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole("button", { name: "Save changes" }));
+      expect(assessmentsApi.saveTeacherRemarks).toHaveBeenCalledWith(
+        "class-1",
+        "term-1",
+        [{ enrollmentId: "enrollment-1", remark: "Zara has worked hard." }],
+        "TERM",
+      );
+    });
+
+    it("is hidden when the plan has no AI remarks", async () => {
+      signInAsTeacher(false);
+      vi.mocked(meApi.listMyClasses).mockResolvedValue([CLASS]);
+      vi.mocked(assessmentsApi.getRemarksSheet).mockResolvedValue(EDITABLE_SHEET);
+      renderPanel();
+
+      await userEvent.selectOptions(await screen.findByLabelText("Class"), "class-1");
+      expect(await screen.findByLabelText("Class teacher's remark for Zara Bello")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /AI draft/ })).not.toBeInTheDocument();
+    });
+
+    it("is hidden for a teacher who can't write this class's remarks", async () => {
+      signInAsTeacher(true);
+      vi.mocked(meApi.listMyClasses).mockResolvedValue([{ ...CLASS, isClassTeacher: false }]);
+      vi.mocked(assessmentsApi.getRemarksSheet).mockResolvedValue({ ...EDITABLE_SHEET, classTeacherEditable: false });
+      renderPanel();
+
+      await userEvent.selectOptions(await screen.findByLabelText("Class"), "class-1");
+      expect(await screen.findByText("Zara Bello")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /AI draft/ })).not.toBeInTheDocument();
+    });
   });
 });

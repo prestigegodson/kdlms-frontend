@@ -1,21 +1,28 @@
 import { useEffect, useState } from "react";
 import { useBlocker } from "react-router";
 import {
+  generateRemarkDraft,
+  type RemarkSheetRow,
   type RemarksSheetView,
   type RowOutcome,
   saveTeacherRemarks,
   savePrincipalRemarks,
 } from "@/api/assessments";
 import { ApiError } from "@/api/client";
+import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Table, TableBody, TableHead, TableHeaderCell, TableRow } from "@/components/ui/Table";
 import { Tabs } from "@/components/ui/Tabs";
 import { RegisterProgress } from "@/features/attendance/components/RegisterProgress";
+import { AiRemarkSheet } from "@/features/assessments/components/AiRemarkSheet";
 import { type RemarkField, RemarkEntryRow } from "@/features/assessments/components/RemarkEntryRow";
 import { TraitEntryRow } from "@/features/assessments/components/TraitEntryRow";
 import { TraitScaleLegend } from "@/features/assessments/components/TraitScaleLegend";
 import { UnsavedChangesBar } from "@/features/assessments/components/UnsavedChangesBar";
+import { REMARK_AI_COPY } from "@/features/lessonNotes/components/aiGenerateCopy";
+import { useAuthStore } from "@/stores/authStore";
+import { useFeatureStore } from "@/stores/featureStore";
 import { possessive } from "@/utils/text";
 
 /** traitId -> scaleOptionId, `""` meaning not yet rated. */
@@ -67,6 +74,10 @@ interface RemarksEntryGridProps {
  * a scale is a different kind of entry from free-text prose - tabs are a
  * pure view over this one shared draft/dirty state, so switching tabs never
  * loses an edit and one save carries both halves together.
+ * <p>
+ * A class teacher on a plan with AI remarks (insights Phase I5) gets an "AI
+ * draft" button per editable row. "Use this" writes the draft into that row's
+ * remark and marks it dirty, so it goes out with the normal save.
  */
 export function RemarksEntryGrid({ sheet, field, onSaved }: RemarksEntryGridProps) {
   const editable = field === "classTeacher" ? sheet.classTeacherEditable : sheet.principalRemarkEditable;
@@ -82,6 +93,10 @@ export function RemarksEntryGrid({ sheet, field, onSaved }: RemarksEntryGridProp
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<string>("remarks");
+  const [aiRow, setAiRow] = useState<RemarkSheetRow | null>(null);
+  const role = useAuthStore((state) => state.user?.role);
+  const aiRemarksEntitled = useFeatureStore((state) => state.aiRemarks);
+  const canDraftWithAi = editable && field === "classTeacher" && can.draftRemarksWithAi(role, aiRemarksEntitled);
 
   // A new sheet is adopted by comparing against the last-seen sheet during render -
   // see ScoreEntryGrid's identical comment for why this isn't an effect.
@@ -220,6 +235,7 @@ export function RemarksEntryGrid({ sheet, field, onSaved }: RemarksEntryGridProp
                 editable={editable}
                 dirty={dirty.has(row.enrollmentId)}
                 onChange={(value) => updateRemark(row.enrollmentId, value)}
+                onDraftWithAi={canDraftWithAi ? () => setAiRow(row) : undefined}
               />
             ),
           )}
@@ -227,6 +243,26 @@ export function RemarksEntryGrid({ sheet, field, onSaved }: RemarksEntryGridProp
       </Table>
 
       {editable && <UnsavedChangesBar count={dirty.size} saving={saving} onSave={handleSave} onDiscard={discard} />}
+
+      {aiRow && (
+        <AiRemarkSheet
+          studentName={aiRow.studentName}
+          copy={REMARK_AI_COPY}
+          generate={(extraInstructions, handlers, signal) =>
+            generateRemarkDraft(
+              sheet.classId,
+              sheet.termId,
+              aiRow.enrollmentId,
+              sheet.scope,
+              { extraInstructions },
+              handlers,
+              signal,
+            )
+          }
+          onClose={() => setAiRow(null)}
+          onApply={(remark) => updateRemark(aiRow.enrollmentId, remark)}
+        />
+      )}
 
       {blocker.state === "blocked" && (
         <ConfirmDialog

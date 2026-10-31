@@ -133,6 +133,29 @@ export const can = {
     return entitled && (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN");
   },
 
+  /**
+   * Student insights (insights Phase I4) - SCHOOL_ADMIN, BRANCH_ADMIN and TEACHER (a Head of Level
+   * is a TEACHER) on a package with `studentInsights`. The slice each one sees is decided server-side
+   * by `InsightsAccessGuard` (school-wide, branch, headed levels, assigned classes).
+   */
+  viewInsights(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER");
+  },
+
+  /**
+   * "Recompute now" on a class's insights - SCHOOL_ADMIN/BRANCH_ADMIN only, mirroring
+   * `POST /api/v1/insights/classes/{id}/recompute`'s allow-list. A Head of Level can read but not
+   * trigger a recompute.
+   */
+  recomputeInsights(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && (role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN");
+  },
+
+  /** Insight thresholds are school-wide config - SCHOOL_ADMIN only, like `PUT /api/v1/insights/settings`. */
+  manageInsightSettings(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && role === "SCHOOL_ADMIN";
+  },
+
   /** Only a class teacher marks/edits attendance - admins are read-only, even SCHOOL_ADMIN. */
   markAttendance(role: Role | undefined, scope: TeacherScope | null): boolean {
     return role === "TEACHER" && (scope?.isClassTeacher ?? false);
@@ -679,6 +702,17 @@ export const can = {
       return false;
     }
     return role === "SCHOOL_ADMIN" || role === "BRANCH_ADMIN" || role === "TEACHER";
+  },
+
+  /**
+   * Showing the "AI draft" button beside a class-teacher remark (insights Phase I5) - gated on the
+   * school's own `aiRemarks` entitlement, separate from `aiLessonNotes`. Only a TEACHER writes the
+   * class teacher's remark (a head of level is a TEACHER too); which rows are actually editable is
+   * still the sheet's own server-computed `classTeacherEditable`, and the shared monthly AI quota is
+   * enforced by the generate call itself.
+   */
+  draftRemarksWithAi(role: Role | undefined, entitled: boolean): boolean {
+    return entitled && role === "TEACHER";
   },
 
   /**

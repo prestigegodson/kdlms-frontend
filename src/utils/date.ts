@@ -331,3 +331,13 @@ export function formatInstantDate(instant: string | null | undefined): string {
   }
   return `${date.getDate()} ${SHORT_MONTH_FORMATTER.format(date)} ${date.getFullYear()}`;
 }
+
+/**
+ * A snapshot's staleness label - "Updated 10 Mar 2026, 2:00 PM" via {@link formatInstant}, or
+ * "Not computed yet" when there is no computation time (insights reads nightly snapshots, so every
+ * view shows when its numbers were computed).
+ */
+export function formatUpdated(instant: string | null | undefined): string {
+  const formatted = formatInstant(instant);
+  return formatted === "—" ? "Not computed yet" : `Updated ${formatted}`;
+}

@@ -33,6 +33,8 @@ export function plan(overrides: Partial<PackageView> = {}): PackageView {
     interactiveVideo: false,
     platformVideo: true,
     staffAttendance: false,
+    studentInsights: false,
+    aiRemarks: false,
     status: "ACTIVE",
     ...overrides,
   };

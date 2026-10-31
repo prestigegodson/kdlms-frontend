@@ -99,6 +99,7 @@ export function StudentDetailPage() {
   // A class teacher (a Head of Level who teaches included) manages logins from their class page instead.
   const canManageLogins = canManage && can.manageStudentLogins(role, teacherCapabilities, studentLoginsEntitled);
   const canDelete = can.deleteStudents(role);
+  const insightsEntitled = useFeatureStore((state) => state.studentInsights);
   const navigate = useNavigate();
 
   const [state, setState] = useState<LoadState>({ kind: "loading" });
@@ -237,6 +238,11 @@ export function StudentDetailPage() {
               {student.status}
             </Badge>
             {student.specialNeeds && <Badge variant="info">Special needs</Badge>}
+            {can.viewInsights(role, insightsEntitled) && !isDeleted && (
+              <Button variant="secondary" onClick={() => navigate(`/school/insights/students/${student.id}`)}>
+                View insights
+              </Button>
+            )}
             {canEdit && (
               <Button variant="secondary" onClick={() => setEditing(true)}>
                 Edit

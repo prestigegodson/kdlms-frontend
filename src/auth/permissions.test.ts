@@ -827,6 +827,10 @@ describe("can - a STUDENT is denied every staff/guardian capability", () => {
     manageInventoryStock: () => can.manageInventoryStock("STUDENT"),
     manageRequisitions: () => can.manageRequisitions("STUDENT"),
     reviewRequisitions: () => can.reviewRequisitions("STUDENT"),
+    viewInsights: () => can.viewInsights("STUDENT", true),
+    recomputeInsights: () => can.recomputeInsights("STUDENT", true),
+    manageInsightSettings: () => can.manageInsightSettings("STUDENT", true),
+    draftRemarksWithAi: () => can.draftRemarksWithAi("STUDENT", true),
   };
 
   it.each(Object.entries(staffAndGuardianChecks))("%s is false for STUDENT", (_name, check) => {
@@ -999,5 +1003,60 @@ describe("can.manageStaffAttendance", () => {
     expect(can.manageStaffAttendance("INVENTORY_MANAGER", true)).toBe(false);
     expect(can.manageStaffAttendance("GUARDIAN", true)).toBe(false);
     expect(can.manageStaffAttendance(undefined, true)).toBe(false);
+  });
+});
+
+describe("can.viewInsights", () => {
+  it("is true for entitled admins and teachers (a Head of Level is a TEACHER)", () => {
+    expect(can.viewInsights("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.viewInsights("BRANCH_ADMIN", true)).toBe(true);
+    expect(can.viewInsights("TEACHER", true)).toBe(true);
+  });
+
+  it("is false when the school isn't entitled", () => {
+    expect(can.viewInsights("SCHOOL_ADMIN", false)).toBe(false);
+    expect(can.viewInsights("TEACHER", false)).toBe(false);
+  });
+
+  it("is false for every other role, even when entitled", () => {
+    for (const role of ["INVENTORY_MANAGER", "GUARDIAN", "CREATOR", "LEARNER", "SYSTEM_ADMIN", undefined] as const) {
+      expect(can.viewInsights(role, true)).toBe(false);
+    }
+  });
+});
+
+describe("can.recomputeInsights", () => {
+  it("is true for an entitled SCHOOL_ADMIN or BRANCH_ADMIN", () => {
+    expect(can.recomputeInsights("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.recomputeInsights("BRANCH_ADMIN", true)).toBe(true);
+  });
+
+  it("is false when not entitled, and for teachers and heads", () => {
+    expect(can.recomputeInsights("SCHOOL_ADMIN", false)).toBe(false);
+    expect(can.recomputeInsights("TEACHER", true)).toBe(false);
+    expect(can.recomputeInsights(undefined, true)).toBe(false);
+  });
+});
+
+describe("can.manageInsightSettings", () => {
+  it("is true only for an entitled SCHOOL_ADMIN", () => {
+    expect(can.manageInsightSettings("SCHOOL_ADMIN", true)).toBe(true);
+    expect(can.manageInsightSettings("SCHOOL_ADMIN", false)).toBe(false);
+    expect(can.manageInsightSettings("BRANCH_ADMIN", true)).toBe(false);
+    expect(can.manageInsightSettings("TEACHER", true)).toBe(false);
+  });
+});
+
+describe("can.draftRemarksWithAi", () => {
+  it("is true only for an entitled TEACHER - the class teacher's remark writer", () => {
+    expect(can.draftRemarksWithAi("TEACHER", true)).toBe(true);
+    expect(can.draftRemarksWithAi("TEACHER", false)).toBe(false);
+  });
+
+  it("is false for admins, who never write the class teacher's remark", () => {
+    expect(can.draftRemarksWithAi("SCHOOL_ADMIN", true)).toBe(false);
+    expect(can.draftRemarksWithAi("BRANCH_ADMIN", true)).toBe(false);
+    expect(can.draftRemarksWithAi("GUARDIAN", true)).toBe(false);
+    expect(can.draftRemarksWithAi(undefined, true)).toBe(false);
   });
 });

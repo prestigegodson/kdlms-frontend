@@ -17,6 +17,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { StatTile } from "@/components/ui/StatTile";
 import { LogInAsWardDialog } from "@/features/guardian/components/LogInAsWardDialog";
 import { groupWardsBySchool } from "@/features/guardian/groupWardsBySchool";
+import { WardInsightCard } from "@/features/insights/components/WardInsightCard";
 import { StudentMedicalPanel } from "@/features/students/components/StudentMedicalPanel";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
 import { can } from "@/auth/permissions";
@@ -35,7 +36,8 @@ interface WardCardProps {
 
 /**
  * One ward's summary card - bio, current class, and (if the school has
- * marked a current session for this ward) this term's attendance rate.
+ * marked a current session for this ward) this term's attendance rate, plus
+ * the "How {name} is doing" insights summary when the ward's school has it.
  * Selecting either action switches `wardStore`'s selection before
  * navigating, so Results/Attendance land already scoped to this ward.
  */
@@ -116,6 +118,8 @@ function WardCard({ ward, showSchool }: WardCardProps) {
           </Button>
         )}
       </div>
+
+      <WardInsightCard studentId={ward.studentId} firstName={ward.fullName.split(" ")[0]} />
 
       {showMedical && <WardMedicalModal ward={ward} onClose={() => setShowMedical(false)} />}
       {showLogInAs && <LogInAsWardDialog ward={ward} onClose={() => setShowLogInAs(false)} />}

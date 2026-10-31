@@ -50,6 +50,8 @@ const STARTER_PACKAGE: PackageView = {
   interactiveVideo: false,
   platformVideo: false,
   staffAttendance: false,
+  studentInsights: false,
+  aiRemarks: false,
   status: "ACTIVE",
 };
 
@@ -143,6 +145,65 @@ describe("PackagesPage", () => {
         platformVideo: false,
       }),
     );
+  });
+
+  it("offers Student insights on a school package only", async () => {
+    mockList([]);
+    vi.mocked(packagesApi.createPackage).mockResolvedValue(STARTER_PACKAGE);
+    const user = userEvent.setup();
+
+    render(<PackagesPage />);
+    await screen.findByText(/No packages yet/);
+
+    await user.click(screen.getByRole("button", { name: "Add package" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText("Name"), "Insights");
+    await user.type(within(dialog).getByLabelText("NGN"), "500");
+    await user.type(within(dialog).getByLabelText("Active student limit"), "50");
+    await user.click(within(dialog).getByLabelText("Student insights"));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(packagesApi.createPackage).toHaveBeenCalledWith(
+      expect.objectContaining({ audience: "SCHOOL", studentInsights: true }),
+    );
+
+    await user.click(screen.getByRole("tab", { name: "Tutor" }));
+    await screen.findByText(/No tutor plans yet/);
+    await user.click(screen.getByRole("button", { name: "Add tutor plan" }));
+    const tutorDialog = await screen.findByRole("dialog");
+    expect(within(tutorDialog).queryByLabelText("Student insights")).not.toBeInTheDocument();
+  });
+
+  it("offers AI remarks on a school package, sharing the AI generations limit", async () => {
+    mockList([]);
+    vi.mocked(packagesApi.createPackage).mockResolvedValue(STARTER_PACKAGE);
+    const user = userEvent.setup();
+
+    render(<PackagesPage />);
+    await screen.findByText(/No packages yet/);
+
+    await user.click(screen.getByRole("button", { name: "Add package" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText("Name"), "Remarks");
+    await user.type(within(dialog).getByLabelText("NGN"), "500");
+    await user.type(within(dialog).getByLabelText("Active student limit"), "50");
+    const limit = within(dialog).getByLabelText("AI generations per month");
+    expect(limit).toBeDisabled();
+    await user.click(within(dialog).getByLabelText("AI remarks"));
+    expect(limit).toBeEnabled();
+    await user.clear(limit);
+    await user.type(limit, "30");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(packagesApi.createPackage).toHaveBeenCalledWith(
+      expect.objectContaining({ aiRemarks: true, aiLessonNotes: false, aiGenerationLimit: 30 }),
+    );
+
+    await user.click(screen.getByRole("tab", { name: "Tutor" }));
+    await screen.findByText(/No tutor plans yet/);
+    await user.click(screen.getByRole("button", { name: "Add tutor plan" }));
+    const tutorDialog = await screen.findByRole("dialog");
+    expect(within(tutorDialog).queryByLabelText("AI remarks")).not.toBeInTheDocument();
   });
 
   it("refuses to save a paid package with no price", async () => {

@@ -10,6 +10,7 @@ import type { BillView } from "@/api/billing";
 import type { MediaStreamUrlView, MyLearningResourceSummaryView, MyLearningResourceView } from "@/api/learning";
 import type { ResultScope } from "@/api/types";
 import type { ImpersonationSession } from "@/api/users";
+import type { RiskReason, Severity } from "@/api/insights";
 
 /**
  * Self-service views for the currently authenticated GUARDIAN - ward
@@ -22,7 +23,8 @@ import type { ImpersonationSession } from "@/api/users";
  * timetable.adapter.in.web.MyWardTimetableController,
  * lessonnote.adapter.in.web.MyWardLessonNoteController,
  * learning.adapter.in.web.MyWardLearningResourcesController, and
- * billing.adapter.in.web.MyWardBillsController - all under `/api/v1/me/wards`.
+ * billing.adapter.in.web.MyWardBillsController, and
+ * insights.adapter.in.web.MyWardInsightsController - all under `/api/v1/me/wards`.
  */
 const BASE = "/api/v1/me/wards";
 
@@ -100,6 +102,36 @@ export function getWardResult(
   scope: ResultScope = "TERM",
 ): Promise<WardTermResultView> {
   return apiFetch<WardTermResultView>(`${BASE}/${studentId}/results?termId=${termId}&scope=${scope}`);
+}
+
+/**
+ * Mirrors backend insights.application.port.in.ViewWardInsightsUseCase.WardTermInsight - one
+ * published term. Deliberately no position/class size: a guardian is never shown ranking relative
+ * to the class. `severity` is recounted from these `reasons`, so it is always explained by them.
+ */
+export interface WardTermInsight {
+  termId: string;
+  termName: string | null;
+  termNumber: number;
+  sessionName: string | null;
+  severity: Severity;
+  average: number | null;
+  attendanceRate: number | null;
+  reasons: RiskReason[];
+  computedAt: string;
+}
+
+/** `terms` is in term order, latest last; empty (and `computedAt` absent) before any publication. */
+export interface WardInsightsView {
+  studentId: string;
+  firstName: string;
+  computedAt?: string | null;
+  terms: WardTermInsight[];
+}
+
+/** Published terms only; a 403 `feature-not-included` when the ward's school lacks STUDENT_INSIGHTS. */
+export function getWardInsights(studentId: string): Promise<WardInsightsView> {
+  return apiFetch<WardInsightsView>(`${BASE}/${studentId}/insights`);
 }
 
 /** Not publication-gated - attendance is live operational information. */
