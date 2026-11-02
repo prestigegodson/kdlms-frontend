@@ -44,6 +44,9 @@ const QUIZZES: quizApi.MyTakeHomeQuizSummaryView[] = [
     score: null,
     totalPoints: 10,
     closesAt: new Date(Date.now() + 2 * DAY).toISOString(),
+    opensAt: new Date(Date.now() - 7 * DAY).toISOString(),
+    questionCount: 10,
+    timed: false,
   },
   {
     id: "q-done",
@@ -56,6 +59,9 @@ const QUIZZES: quizApi.MyTakeHomeQuizSummaryView[] = [
     score: 8,
     totalPoints: 10,
     closesAt: new Date(Date.now() - 2 * DAY).toISOString(),
+    opensAt: new Date(Date.now() - 7 * DAY).toISOString(),
+    questionCount: 10,
+    timed: false,
   },
 ];
 
@@ -158,7 +164,6 @@ describe("StudentDashboardPage", () => {
 
     expect(await screen.findByText("1 incomplete quiz")).toBeInTheDocument();
     expect(screen.getByText("Learner snapshot")).toBeInTheDocument();
-    expect(screen.getByText("0:10:00")).toBeInTheDocument();
     expect(screen.getByText("Lesson progress by subject")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Quizzes mastered" })).toHaveAttribute("aria-valuenow", "100");
     expect(screen.getByText("Fractions check")).toBeInTheDocument();
@@ -197,7 +202,7 @@ describe("StudentDashboardPage", () => {
 
     expect(await screen.findByText("My quizzes")).toBeInTheDocument();
     expect(learningApi.listMyLearningResources).not.toHaveBeenCalled();
-    expect(screen.queryByText("Learning time")).not.toBeInTheDocument();
+    expect(screen.queryByText("Lessons completed")).not.toBeInTheDocument();
     expect(screen.queryByText("Lesson progress by subject")).not.toBeInTheDocument();
   });
 

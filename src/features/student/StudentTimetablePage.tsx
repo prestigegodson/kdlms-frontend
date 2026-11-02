@@ -6,26 +6,21 @@ import type { ClassTimetableView } from "@/api/timetable";
 import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { FormField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
-import { StickySubHeader } from "@/components/ui/StickySubHeader";
 import { TimetableGrid } from "@/components/TimetableGrid";
 import { useStudentStore } from "@/stores/studentStore";
 
 /**
- * The student portal's own class timetable for one term - deliberately **not**
+ * The student portal's own class timetable for the **current term only** - no term picker. The
+ * term is the school's current term as resolved server-side (`MyStudentView.currentTermId`, from
+ * `academicStructure.currentTerm`), cached in `studentStore.me`. Deliberately **not**
  * publication-gated, the same "live operational information" treatment the guardian ward
- * equivalent gets (CLAUDE.md's Domain Rules). A flat single page, the `WardTimetablePage` shape
- * minus the ward selector (there's one student, no picker) - just a Term `Select` docked in a
- * `StickySubHeader`. Reuses `TimetableGrid` read-only (`editable` is always `false` server-side
- * for this use case). There's no server-exposed "current term" flag on `StudentTermView` (only
- * `currentSession`), so the default selection is the current session's highest term number - the
- * same proxy `WardTimetablePage` documents.
+ * equivalent gets (CLAUDE.md's Domain Rules). Reuses `TimetableGrid` read-only (`editable` is
+ * always `false` server-side for this use case).
  */
 export function StudentTimetablePage() {
-  const terms = useStudentStore((state) => state.terms);
+  const me = useStudentStore((state) => state.me);
   const status = useStudentStore((state) => state.status);
   const errorMessage = useStudentStore((state) => state.errorMessage);
   const fetchIfNeeded = useStudentStore((state) => state.fetchIfNeeded);
@@ -35,22 +30,7 @@ export function StudentTimetablePage() {
     fetchIfNeeded();
   }, [fetchIfNeeded]);
 
-  const [termId, setTermId] = useState("");
-
-  // Once terms load, default to the current session's highest term number - reset during render
-  // (the WardTimetablePage pattern) rather than inside the effect below, which only fetches.
-  // `lastTermsKey` starts at `null`, a sentinel no real key (even an empty one, before terms
-  // load) ever equals - unlike WardTimetablePage's per-page fetch, `studentStore` is a shared
-  // singleton that may already be "loaded" by the time this page mounts (e.g. navigating here
-  // from the dashboard), so the very first render must still pick a default rather than only
-  // reacting to a later idle->loaded transition that may never happen.
-  const termsKey = status === "loaded" ? terms.map((term) => term.termId).join(",") : "";
-  const [lastTermsKey, setLastTermsKey] = useState<string | null>(null);
-  if (status === "loaded" && termsKey !== lastTermsKey) {
-    setLastTermsKey(termsKey);
-    const preferred = [...terms].filter((term) => term.currentSession).sort((a, b) => b.termNumber - a.termNumber)[0];
-    setTermId(preferred?.termId ?? terms[0]?.termId ?? "");
-  }
+  const termId = status === "loaded" ? (me?.currentTermId ?? "") : "";
 
   const [view, setView] = useState<ClassTimetableView | null>(null);
   const [viewError, setViewError] = useState<string | null>(null);
@@ -71,9 +51,13 @@ export function StudentTimetablePage() {
       );
   }, [termId]);
 
+  const description = me?.currentTermName
+    ? `Your class's weekly schedule for ${me.currentTermName}${me.sessionName ? ` · ${me.sessionName}` : ""}.`
+    : "Your class's weekly schedule.";
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Timetable" description="Your class's weekly schedule." />
+      <PageHeader title="Timetable" description={description} />
 
       {status === "error" && (
         <ErrorState message={errorMessage ?? "Failed to load your profile"} onRetry={retry} />
@@ -84,19 +68,12 @@ export function StudentTimetablePage() {
         </div>
       )}
 
-      {status === "loaded" && terms.length > 0 && (
-        <StickySubHeader>
-          <FormField label="Term" htmlFor="student-timetable-term" className="min-w-0 flex-1 lg:max-w-xs">
-            <Select id="student-timetable-term" value={termId} onChange={(event) => setTermId(event.target.value)}>
-              <option value="">Select a term…</option>
-              {terms.map((term) => (
-                <option key={term.termId} value={term.termId}>
-                  {term.termName} · {term.sessionName}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-        </StickySubHeader>
+      {status === "loaded" && !termId && (
+        <EmptyState
+          icon={CalendarDays}
+          title="No current term"
+          description="Your timetable will appear here once the school starts a term."
+        />
       )}
 
       {viewError && <Alert variant="error">{viewError}</Alert>}

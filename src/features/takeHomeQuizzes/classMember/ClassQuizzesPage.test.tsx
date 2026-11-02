@@ -43,6 +43,9 @@ function quiz(overrides: Partial<MyTakeHomeQuizSummaryView>): MyTakeHomeQuizSumm
     score: null,
     totalPoints: 4,
     closesAt: "2026-10-11T09:00:00Z",
+    opensAt: "2026-10-01T09:00:00Z",
+    questionCount: 4,
+    timed: false,
     ...overrides,
   };
 }

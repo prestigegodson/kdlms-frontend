@@ -2,9 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { MyLearningResourceSummaryView } from "@/api/learning";
 import type { MyTakeHomeQuizSummaryView } from "@/api/myTakeHomeQuizzes";
 import {
-  completedLearningSeconds,
   dueSoonQuizzes,
-  formatClock,
   quizProgress,
   quizStatus,
   scorePercent,
@@ -27,6 +25,9 @@ function quiz(overrides: Partial<MyTakeHomeQuizSummaryView> = {}): MyTakeHomeQui
     score: null,
     totalPoints: 20,
     closesAt: new Date(NOW.getTime() + DAY).toISOString(),
+    opensAt: new Date(NOW.getTime() - DAY).toISOString(),
+    questionCount: 5,
+    timed: false,
     ...overrides,
   };
 }
@@ -106,18 +107,6 @@ describe("quizStatus", () => {
 });
 
 describe("resources", () => {
-  it("sums completed durations, treating a missing duration as zero", () => {
-    expect(
-      completedLearningSeconds([
-        resource({ completed: true, durationSeconds: 3725 }),
-        resource({ completed: true, durationSeconds: null }),
-        resource({ completed: false, durationSeconds: 999 }),
-      ]),
-    ).toBe(3725);
-    expect(formatClock(3725)).toBe("1:02:05");
-    expect(formatClock(0)).toBe("0:00:00");
-  });
-
   it("groups completion by subject, highest first", () => {
     expect(
       subjectProgress([

@@ -38,10 +38,6 @@ export interface ResourceCard {
   latestVisibleSince: string | null;
 }
 
-export function cardPath(kind: MyResourceCardKind, id: string): string {
-  return `/student/resources/${kind === "GROUP" ? "group" : "subject"}/${id}`;
-}
-
 /** Parsed rather than compared as strings - the server's ISO instants vary in fractional-second digits. */
 function epochMillis(instant: string | null): number {
   const millis = instant ? Date.parse(instant) : Number.NaN;
@@ -88,11 +84,12 @@ export function groupByCard(resources: MyLearningResourceSummaryView[]): Resourc
   });
 }
 
-/** The resources on one card, in the teacher's own order. */
-export function resourcesOnCard(
-  resources: MyLearningResourceSummaryView[],
-  kind: MyResourceCardKind,
-  id: string,
-): MyLearningResourceSummaryView[] {
-  return groupByCard(resources).find((card) => card.kind === kind && card.id === id)?.resources ?? [];
+/** A flat list, the most recently visible resource first (ties by title) - the student Resources page's order. */
+export function sortNewestFirst(resources: MyLearningResourceSummaryView[]): MyLearningResourceSummaryView[] {
+  return [...resources].sort((a, b) => {
+    const aMillis = epochMillis(a.visibleSince ?? null);
+    const bMillis = epochMillis(b.visibleSince ?? null);
+    if (aMillis !== bMillis) return bMillis > aMillis ? 1 : -1;
+    return a.title.localeCompare(b.title);
+  });
 }

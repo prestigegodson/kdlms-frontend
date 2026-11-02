@@ -33,7 +33,19 @@ export interface MyTakeHomeQuizSummaryView {
   score: number | null;
   totalPoints: number;
   closesAt: string;
+  questionCount: number;
+  timed: boolean;
+  /** Set only when `timed` - absent (not null) otherwise, since the API omits null fields. */
+  durationMinutes?: number | null;
+  opensAt: string;
 }
+
+/**
+ * The Quizzes page's tabs, matched server-side against the caller's own attempt - the same buckets as
+ * the dashboard's "My quizzes" filter: TODO is open and not submitted, UPCOMING hasn't opened yet,
+ * COMPLETED is submitted, MISSED is past its deadline (or results are out) without a submission.
+ */
+export type MyQuizFilter = "TODO" | "UPCOMING" | "COMPLETED" | "MISSED";
 
 export interface MyQuizInterstitialView {
   id: string;
@@ -58,9 +70,17 @@ export interface MyQuizInterstitialView {
   pauseTimerOnLeave?: boolean;
 }
 
-/** The caller's own class's quizzes for the school's current term only - an empty page when no term is marked current. */
-export function listMyTakeHomeQuizzes(page = 0, size = 20): Promise<Page<MyTakeHomeQuizSummaryView>> {
-  return apiFetch<Page<MyTakeHomeQuizSummaryView>>(`${ME_BASE}?page=${page}&size=${size}`);
+/**
+ * The caller's own class's quizzes for the school's current term only - an empty page when no term is marked current.
+ * `filter` narrows to one tab (and sets that tab's order); omitted lists every quiz, latest deadline first.
+ */
+export function listMyTakeHomeQuizzes(
+  page = 0,
+  size = 20,
+  filter?: MyQuizFilter,
+): Promise<Page<MyTakeHomeQuizSummaryView>> {
+  const filterParam = filter ? `&filter=${filter}` : "";
+  return apiFetch<Page<MyTakeHomeQuizSummaryView>>(`${ME_BASE}?page=${page}&size=${size}${filterParam}`);
 }
 
 export function getMyTakeHomeQuiz(quizId: string): Promise<MyQuizInterstitialView> {

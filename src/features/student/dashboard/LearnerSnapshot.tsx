@@ -1,16 +1,10 @@
-import { BookOpenCheck, ClipboardCheck, Clock, TrendingUp } from "lucide-react";
+import { BookOpenCheck, ClipboardCheck, TrendingUp } from "lucide-react";
 import type { MyLearningResourceSummaryView } from "@/api/learning";
 import type { MyTakeHomeQuizSummaryView } from "@/api/myTakeHomeQuizzes";
 import { StatTile } from "@/components/ui/StatTile";
 import { ProgressBar } from "@/features/student/dashboard/ProgressBar";
 import { Sparkline } from "@/features/student/dashboard/Sparkline";
-import {
-  completedLearningSeconds,
-  formatClock,
-  percentOf,
-  quizProgress,
-  scoreTrend,
-} from "@/features/student/dashboard/studentDashboardStats";
+import { percentOf, quizProgress, scoreTrend } from "@/features/student/dashboard/studentDashboardStats";
 
 interface LearnerSnapshotProps {
   /** null = the list isn't available (feature off or failed to load), so its tiles are left out. */
@@ -25,13 +19,6 @@ export function LearnerSnapshot({ quizzes, resources }: LearnerSnapshotProps) {
   if (resources) {
     const completed = resources.filter((resource) => resource.completed).length;
     tiles.push(
-      <StatTile
-        key="time"
-        label="Learning time"
-        value={formatClock(completedLearningSeconds(resources))}
-        hint="Estimated from completed lessons"
-        icon={Clock}
-      />,
       <StatTile
         key="lessons"
         label="Lessons completed"
@@ -92,7 +79,7 @@ export function LearnerSnapshot({ quizzes, resources }: LearnerSnapshotProps) {
       <h2 id="learner-snapshot-heading" className="font-display text-base font-medium text-slate-900">
         Learner snapshot
       </h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">{tiles}</div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">{tiles}</div>
     </section>
   );
 }
