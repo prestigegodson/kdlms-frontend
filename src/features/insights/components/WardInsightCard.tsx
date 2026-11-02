@@ -1,4 +1,5 @@
-import { Sparkles } from "lucide-react";
+import { ChevronDown, Sparkles } from "lucide-react";
+import { useState } from "react";
 import type { Severity } from "@/api/insights";
 import type { WardTermInsight } from "@/api/wards";
 import { Badge } from "@/components/ui/Badge";
@@ -24,14 +25,57 @@ function percent(value: number | null): string {
  * school doesn't have insights, the read fails, or no term has been published yet (so there's no
  * summary to show), like the card's attendance tile.
  */
-export function WardInsightCard({ studentId, firstName }: { studentId: string; firstName: string }) {
+interface WardInsightCardProps {
+  studentId: string;
+  firstName: string;
+  /**
+   * Collapses the section to a one-line header (title + severity badge) that
+   * expands to the full summary - for the guardian's compact ward cards.
+   */
+  collapsible?: boolean;
+}
+
+export function WardInsightCard({ studentId, firstName, collapsible = false }: WardInsightCardProps) {
   const { state } = useWardInsights(studentId);
+  const [expanded, setExpanded] = useState(false);
 
   if (state.kind !== "loaded" || state.data.terms.length === 0) {
     return null;
   }
   const { terms, computedAt } = state.data;
   const name = state.data.firstName || firstName;
+  const latest = terms[terms.length - 1];
+  const previous = terms.length > 1 ? terms[terms.length - 2] : null;
+
+  if (collapsible) {
+    const panelId = `ward-insight-${studentId}`;
+    return (
+      <section aria-label={`How ${name} is doing`} className="mt-4 border-t border-slate-100 pt-3">
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls={panelId}
+          onClick={() => setExpanded((open) => !open)}
+          className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-control px-2 py-1.5 text-left
+            transition-colors hover:bg-slate-50 mobile:min-h-11"
+        >
+          <Sparkles className="h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">How {name} is doing</span>
+          <Badge variant={SEVERITY_BADGE[latest.severity].variant}>{GUARDIAN_SEVERITY[latest.severity].label}</Badge>
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`}
+            aria-hidden="true"
+          />
+        </button>
+        {expanded && (
+          <div id={panelId}>
+            <TermSummary latest={latest} previous={previous} showBadge={false} />
+            {computedAt && <p className="mt-3 text-xs text-slate-500">{formatUpdated(computedAt)}</p>}
+          </div>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section aria-label={`How ${name} is doing`} className="mt-4 rounded-panel border border-slate-200 p-4">
@@ -42,21 +86,32 @@ export function WardInsightCard({ studentId, firstName }: { studentId: string; f
         </div>
         {computedAt && <span className="text-xs text-slate-500">{formatUpdated(computedAt)}</span>}
       </div>
-      <TermSummary latest={terms[terms.length - 1]} previous={terms.length > 1 ? terms[terms.length - 2] : null} />
+      <TermSummary latest={latest} previous={previous} />
     </section>
   );
 }
 
-function TermSummary({ latest, previous }: { latest: WardTermInsight; previous: WardTermInsight | null }) {
+function TermSummary({
+  latest,
+  previous,
+  showBadge = true,
+}: {
+  latest: WardTermInsight;
+  previous: WardTermInsight | null;
+  /** False when the collapsible header already shows the severity badge. */
+  showBadge?: boolean;
+}) {
   const severity = GUARDIAN_SEVERITY[latest.severity];
   const term = [latest.termName, latest.sessionName].filter(Boolean).join(", ");
 
   return (
     <div className="mt-3 space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={SEVERITY_BADGE[latest.severity].variant}>{severity.label}</Badge>
-        {term && <span className="text-xs text-slate-500">{term}</span>}
-      </div>
+      {(showBadge || term) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {showBadge && <Badge variant={SEVERITY_BADGE[latest.severity].variant}>{severity.label}</Badge>}
+          {term && <span className="text-xs text-slate-500">{term}</span>}
+        </div>
+      )}
       <p className="text-sm text-slate-700">{severity.summary}</p>
       {latest.reasons.length > 0 && (
         <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">

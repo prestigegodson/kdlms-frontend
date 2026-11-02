@@ -1,9 +1,10 @@
-type AvatarSize = "sm" | "md" | "lg";
+type AvatarSize = "sm" | "md" | "lg" | "xl";
 
 const SIZE_CLASSES: Record<AvatarSize, string> = {
   sm: "h-8 w-8 text-xs",
   md: "h-12 w-12 text-sm",
   lg: "h-16 w-16 text-lg",
+  xl: "h-20 w-20 text-xl",
 };
 
 interface AvatarProps {

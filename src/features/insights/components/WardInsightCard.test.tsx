@@ -1,4 +1,5 @@
 import { act, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/api/client";
 import * as wardsApi from "@/api/wards";
@@ -64,6 +65,31 @@ describe("WardInsightCard", () => {
     expect(screen.getByText("(last term 96%)")).toBeInTheDocument();
     expect(screen.getByText(/^Updated /)).toBeInTheDocument();
     expect(screen.queryByText(/position|of \d+/i)).not.toBeInTheDocument();
+  });
+
+  it("collapses to a title and severity badge that expands to the full summary", async () => {
+    vi.mocked(wardsApi.getWardInsights).mockResolvedValue(
+      view([
+        term({
+          severity: "WATCH",
+          reasons: [{ signal: "LOW_ATTENDANCE", message: "Attendance is 80% this term.", detail: {} }],
+        }),
+      ]),
+    );
+    const user = userEvent.setup();
+
+    render(<WardInsightCard studentId="s1" firstName="Ada" collapsible />);
+
+    const toggle = await screen.findByRole("button", { name: /How Ada is doing/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("Worth keeping an eye on")).toBeInTheDocument();
+    expect(screen.queryByText("Attendance is 80% this term.")).not.toBeInTheDocument();
+
+    await user.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Attendance is 80% this term.")).toBeInTheDocument();
+    expect(screen.getAllByText("Worth keeping an eye on")).toHaveLength(1);
   });
 
   it("says when nothing needs attention", async () => {

@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, EllipsisVertical } from "lucide-react";
 import type { ComponentType, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -24,6 +24,12 @@ interface ActionMenuProps {
    * Should contain `label` as a substring (WCAG 2.5.3 label-in-name).
    */
   ariaLabel?: string;
+  /**
+   * "kebab" swaps the labelled trigger for an icon-only round "⋮" button, for
+   * cards where a text trigger would be too heavy (e.g. the guardian's ward
+   * cards). Its only accessible name is `ariaLabel`, so always pass one.
+   */
+  variant?: "button" | "kebab";
 }
 
 /**
@@ -50,7 +56,7 @@ interface ActionMenuProps {
  * a modal returns focus to this trigger, not to a menu item that no longer
  * exists in the DOM.
  */
-export function ActionMenu({ items, label = "Actions", ariaLabel }: ActionMenuProps) {
+export function ActionMenu({ items, label = "Actions", ariaLabel, variant = "button" }: ActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
@@ -223,14 +229,26 @@ export function ActionMenu({ items, label = "Actions", ariaLabel }: ActionMenuPr
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={ariaLabel}
+        aria-label={variant === "kebab" ? (ariaLabel ?? label) : ariaLabel}
+        title={variant === "kebab" ? (ariaLabel ?? label) : undefined}
         onClick={handleTriggerClick}
         onKeyDown={handleTriggerKeyDown}
-        className="inline-flex items-center gap-1.5 rounded-control border border-slate-300 bg-white px-3 py-1.5
-          text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50 mobile:min-h-11"
+        className={
+          variant === "kebab"
+            ? `inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-colors
+              hover:bg-slate-100 hover:text-slate-700 aria-expanded:bg-slate-100 mobile:min-h-11 mobile:min-w-11`
+            : `inline-flex items-center gap-1.5 rounded-control border border-slate-300 bg-white px-3 py-1.5
+              text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50 mobile:min-h-11`
+        }
       >
-        {label}
-        <ChevronDown className="h-4 w-4 text-slate-400" aria-hidden="true" />
+        {variant === "kebab" ? (
+          <EllipsisVertical className="h-5 w-5" aria-hidden="true" />
+        ) : (
+          <>
+            {label}
+            <ChevronDown className="h-4 w-4 text-slate-400" aria-hidden="true" />
+          </>
+        )}
       </button>
 
       {open &&

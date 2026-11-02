@@ -35,6 +35,18 @@ describe("ActionMenu", () => {
     expect(screen.getAllByRole("menuitem").map((el) => el.textContent)).toEqual(["Edit", "Comments", "Delete"]);
   });
 
+  it("renders an icon-only kebab trigger named by ariaLabel that opens the same menu", async () => {
+    const user = userEvent.setup();
+    render(<ActionMenu variant="kebab" items={items()} ariaLabel="More actions for Ada Obi" />);
+
+    const trigger = screen.getByRole("button", { name: "More actions for Ada Obi" });
+    expect(trigger).toHaveTextContent("");
+
+    await user.click(trigger);
+
+    expect(screen.getAllByRole("menuitem").map((el) => el.textContent)).toEqual(["Edit", "Comments", "Delete"]);
+  });
+
   it("uses ariaLabel as the trigger's accessible name when given", async () => {
     render(<ActionMenu items={items()} ariaLabel="Actions for Fractions worksheet" />);
     expect(screen.getByRole("button", { name: "Actions for Fractions worksheet" })).toBeInTheDocument();

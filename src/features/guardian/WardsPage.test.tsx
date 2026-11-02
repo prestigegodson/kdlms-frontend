@@ -100,12 +100,19 @@ describe("WardsPage", () => {
       },
     ]);
 
+    const user = userEvent.setup();
+
     renderPage();
     await screen.findByText("Ada Obi");
 
     expect(screen.queryByRole("button", { name: "View results" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "View attendance" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Medical & emergency" })).toBeInTheDocument();
+    // The secondary actions are grouped in the card's kebab menu, not inline buttons.
+    expect(screen.queryByRole("button", { name: "View attendance" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "More actions for Ada Obi" }));
+    expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "View attendance",
+      "Medical & emergency",
+    ]);
   });
 
   it("selects the ward and navigates to Results when its card is tapped", async () => {
@@ -204,6 +211,14 @@ describe("WardsPage", () => {
     await screen.findByText("Ada Obi");
 
     expect(screen.queryByRole("button", { name: "Log in as Bola" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "More actions for Bola Obi" }));
+    expect(screen.queryByRole("menuitem", { name: "Log in as Bola" })).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "More actions for Ada Obi" }));
+    expect(screen.getByRole("menuitem", { name: "Log in as Ada" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+
+    // The one-tap shortcut icon opens the same dialog as the menu item.
     await user.click(screen.getByRole("button", { name: "Log in as Ada" }));
     await user.click(screen.getByRole("button", { name: "Log in" }));
 

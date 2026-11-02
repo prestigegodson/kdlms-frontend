@@ -1,20 +1,19 @@
-import { ChevronRight, Users } from "lucide-react";
+import { CalendarCheck, HeartPulse, LogIn, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { downloadWardPhoto, getWardAttendance, getWardMedical, listWardTerms, type MyWardView } from "@/api/wards";
 import { ApiError } from "@/api/client";
 import type { StudentMedicalView } from "@/api/students";
+import { ActionMenu, type ActionMenuItem } from "@/components/ui/ActionMenu";
 import { Alert } from "@/components/ui/Alert";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
-import { StatTile } from "@/components/ui/StatTile";
 import { LogInAsWardDialog } from "@/features/guardian/components/LogInAsWardDialog";
 import { groupWardsBySchool } from "@/features/guardian/groupWardsBySchool";
 import { WardInsightCard } from "@/features/insights/components/WardInsightCard";
@@ -35,13 +34,15 @@ interface WardCardProps {
 }
 
 /**
- * One ward's summary card - bio, current class, and (if the school has
- * marked a current session for this ward) this term's attendance rate, plus
- * the "How {name} is doing" insights summary when the ward's school has it.
- * Selecting either action switches `wardStore`'s selection before
- * navigating, so Results/Attendance land already scoped to this ward.
+ * One ward's profile card - ringed photo, name, class/level, admission
+ * number, and (if the school has marked a current session for this ward)
+ * this term's attendance rate, plus a collapsed "How {name} is doing"
+ * insights line when the ward's school has it. Tapping the card opens
+ * Results; the other actions live in a kebab menu, with "Log in as" also a
+ * one-tap shortcut icon beside it. Navigating actions switch `wardStore`'s
+ * selection first, so Results/Attendance land already scoped to this ward.
  */
-function WardCard({ ward, showSchool }: WardCardProps) {
+function WardCard({ ward }: WardCardProps) {
   const navigate = useNavigate();
   const select = useWardStore((state) => state.select);
   const [attendanceRate, setAttendanceRate] = useState<number | null>(null);
@@ -72,54 +73,76 @@ function WardCard({ ward, showSchool }: WardCardProps) {
     navigate(path);
   }
 
+  const firstName = ward.fullName.split(" ")[0];
+  const menuItems: ActionMenuItem[] = [
+    {
+      label: "View attendance",
+      icon: CalendarCheck,
+      onSelect: () => goTo(`/guardian/attendance/${ward.studentId}`),
+    },
+    { label: "Medical & emergency", icon: HeartPulse, onSelect: () => setShowMedical(true) },
+  ];
+  if (ward.canLogInAs) {
+    menuItems.push({ label: `Log in as ${firstName}`, icon: LogIn, separated: true, onSelect: () => setShowLogInAs(true) });
+  }
+  const classLine = [ward.currentClassName, ward.levelName].filter(Boolean);
+
   return (
     <Card>
-      <button
-        type="button"
-        onClick={() => goTo(`/guardian/results/${ward.studentId}`)}
-        aria-label={`${ward.fullName} — view results`}
-        className="flex w-full items-start gap-3 rounded-panel text-left transition-colors hover:bg-slate-50"
-      >
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <Avatar initials={initialsOfFullName(ward.fullName)} url={photoUrl} />
-              <div>
-                <h2 className="font-display text-lg font-medium text-slate-900">{ward.fullName}</h2>
-                <p className="text-sm text-slate-500">{ward.admissionNumber}</p>
-              </div>
-            </div>
-            <div className="flex shrink-0 flex-col items-end gap-1">
+      <div className="flex items-start gap-2">
+        <button
+          type="button"
+          onClick={() => goTo(`/guardian/results/${ward.studentId}`)}
+          aria-label={`${ward.fullName} — view results`}
+          className="-m-2 flex min-w-0 flex-1 items-center gap-4 rounded-panel p-2 text-left transition-colors
+            hover:bg-slate-50"
+        >
+          <Avatar
+            initials={initialsOfFullName(ward.fullName)}
+            url={photoUrl}
+            size="xl"
+            className="shadow-md ring-4 ring-white"
+          />
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate font-display text-lg font-medium text-slate-900">{ward.fullName}</h2>
+            <p className="truncate text-sm text-slate-600">
+              {classLine.length === 0
+                ? "—"
+                : classLine.map((part, index) => (
+                    <span key={part}>
+                      {index > 0 && <span aria-hidden="true"> · </span>}
+                      <span>{part}</span>
+                    </span>
+                  ))}
+            </p>
+            <p className="text-xs text-slate-500">{ward.admissionNumber}</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
               <Badge variant="brand">{ward.relationship}</Badge>
-              {showSchool && <Badge variant="neutral">{ward.schoolName}</Badge>}
+              {attendanceRate != null && (
+                <Badge variant="neutral">Attendance {attendanceRate.toFixed(1)}%</Badge>
+              )}
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <StatTile label="Class" value={ward.currentClassName ?? "—"} />
-            <StatTile label="Level" value={ward.levelName ?? "—"} />
-            {attendanceRate != null && (
-              <StatTile label="Attendance (this term)" value={`${attendanceRate.toFixed(1)}%`} />
-            )}
-          </div>
-        </div>
-        <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
-      </button>
+        </button>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant="secondary" size="sm" onClick={() => goTo(`/guardian/attendance/${ward.studentId}`)}>
-          View attendance
-        </Button>
-        <Button variant="secondary" size="sm" onClick={() => setShowMedical(true)}>
-          Medical &amp; emergency
-        </Button>
-        {ward.canLogInAs && (
-          <Button variant="secondary" size="sm" onClick={() => setShowLogInAs(true)}>
-            Log in as {ward.fullName.split(" ")[0]}
-          </Button>
-        )}
+        <div className="flex shrink-0 items-center gap-0.5">
+          {ward.canLogInAs && (
+            <button
+              type="button"
+              onClick={() => setShowLogInAs(true)}
+              aria-label={`Log in as ${firstName}`}
+              title={`Log in as ${firstName}`}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-brand-600 transition-colors
+                hover:bg-brand-50 mobile:min-h-11 mobile:min-w-11"
+            >
+              <LogIn className="h-5 w-5" aria-hidden="true" />
+            </button>
+          )}
+          <ActionMenu variant="kebab" items={menuItems} ariaLabel={`More actions for ${ward.fullName}`} />
+        </div>
       </div>
 
-      <WardInsightCard studentId={ward.studentId} firstName={ward.fullName.split(" ")[0]} />
+      <WardInsightCard studentId={ward.studentId} firstName={firstName} collapsible />
 
       {showMedical && <WardMedicalModal ward={ward} onClose={() => setShowMedical(false)} />}
       {showLogInAs && <LogInAsWardDialog ward={ward} onClose={() => setShowLogInAs(false)} />}
