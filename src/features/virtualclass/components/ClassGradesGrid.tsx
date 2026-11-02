@@ -1,4 +1,4 @@
-import { Eye, EyeOff, MessageSquare } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { Link, useBlocker } from "react-router";
 import { getErrorMessage } from "@/api/client";
@@ -246,7 +246,7 @@ export function ClassGradesGrid({ classId, gradebook, writable, onChange }: Clas
                         loading={publishingTopicId === topic.id}
                         onClick={() => void togglePublished(topic)}
                       >
-                        {published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {published ? "Unpublish" : "Publish"}
                       </Button>
                     )}
                   </span>

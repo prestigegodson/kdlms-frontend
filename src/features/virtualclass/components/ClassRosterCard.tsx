@@ -1,4 +1,4 @@
-import { ClipboardList, MessageSquare, Plus, UserMinus } from "lucide-react";
+import { ClipboardList, MessageSquare, Plus, Sheet, UserMinus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { getErrorMessage } from "@/api/client";
@@ -76,11 +76,22 @@ export function ClassRosterCard({ classId, writable, timezone }: ClassRosterCard
             </p>
           )}
         </div>
-        {writable && (
-          <Button variant="secondary" onClick={() => setEnrolling(true)} disabled={roster === null || full}>
-            <Plus className="h-4 w-4" /> Enroll learners
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {/* Shown on read-only classes too - the broadsheet itself goes read-only there. */}
+          {roster && roster.learners.length > 0 && (
+            <Link
+              to={`/tutor/classes/${classId}/grades`}
+              className="inline-flex items-center justify-center gap-2 rounded-control border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50 mobile:min-h-11"
+            >
+              <Sheet className="h-4 w-4" /> Grades
+            </Link>
+          )}
+          {writable && (
+            <Button variant="secondary" onClick={() => setEnrolling(true)} disabled={roster === null || full}>
+              <Plus className="h-4 w-4" /> Enroll learners
+            </Button>
+          )}
+        </div>
       </div>
       {error && <Alert variant="error">{error}</Alert>}
       {roster === null && !error ? (
