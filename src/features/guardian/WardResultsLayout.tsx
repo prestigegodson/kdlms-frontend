@@ -12,7 +12,7 @@ interface WardResultsContextValue {
   terms: WardTermView[];
 }
 
-/** Read by `WardSessionsPage`/`WardSessionTermsPage`/`WardTermResultPage` - must only be called from inside `WardResultsLayout`'s route subtree. */
+/** Read by `WardResultsHomePage`/`WardTermResultPage` - must only be called from inside `WardResultsLayout`'s route subtree. */
 export function useWardResultsContext(): WardResultsContextValue {
   return useOutletContext<WardResultsContextValue>();
 }
@@ -24,10 +24,10 @@ type TermsState =
   | { status: "error"; message: string };
 
 /**
- * Owns the one `listWardTerms` fetch shared by steps 2-4 of the results
- * drill-down (`/guardian/results/:studentId/**`), resolves `:studentId`
- * against `wardStore`, and renders every loading/error/not-found state once
- * so the three leaf pages don't repeat them. Also keeps `wardStore`'s
+ * Owns the one `listWardTerms` fetch shared by a ward's results pages
+ * (`/guardian/results/:studentId/**`), resolves `:studentId` against
+ * `wardStore`, and renders every loading/error/not-found state once so the
+ * leaf pages don't repeat them. Also keeps `wardStore`'s
  * selection in sync with the URL, so a guardian who switches to Attendance
  * or Messages mid-drill-down lands on the same ward they were just viewing.
  */
@@ -78,7 +78,7 @@ export function WardResultsLayout() {
   }
 
   if (!studentId) {
-    return <EmptyState title="Ward not found" description="Choose a ward from your results list." />;
+    return <EmptyState title="Ward not found" description="Choose a ward from the ward selector on the Results page." />;
   }
 
   if (wardsStatus === "idle" || wardsStatus === "loading" || termsState.status === "loading") {
@@ -95,7 +95,7 @@ export function WardResultsLayout() {
 
   const ward = wards.find((candidate) => candidate.studentId === studentId);
   if (!ward || termsState.status === "not-found") {
-    return <EmptyState title="Ward not found" description="Choose a ward from your results list." />;
+    return <EmptyState title="Ward not found" description="Choose a ward from the ward selector on the Results page." />;
   }
 
   if (termsState.status === "error") {

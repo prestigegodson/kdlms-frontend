@@ -2,7 +2,7 @@ import { apiFetch, apiFetchBlob, apiFetchText } from "@/api/client";
 import type { GradingSystemView } from "@/api/gradingSystems";
 import type { StudentTermResultView } from "@/api/assessments";
 import type { TraitConfigurationView } from "@/api/traits";
-import type { StudentAttendanceSummaryView } from "@/api/attendance";
+import type { DayEntry, StudentAttendanceSummaryView } from "@/api/attendance";
 import type { StudentMedicalView } from "@/api/students";
 import type { ClassTimetableView } from "@/api/timetable";
 import type { LessonNoteView } from "@/api/lessonNotes";
@@ -69,6 +69,8 @@ export interface WardTermView {
   sessionId: string;
   sessionName: string;
   currentSession: boolean;
+  /** The one term the school has marked current - what live screens (the timetable) open on. */
+  currentTerm?: boolean;
   termId: string;
   termName: string;
   termNumber: number;
@@ -137,6 +139,24 @@ export function getWardInsights(studentId: string): Promise<WardInsightsView> {
 /** Not publication-gated - attendance is live operational information. */
 export function getWardAttendance(studentId: string, termId: string): Promise<StudentAttendanceSummaryView> {
   return apiFetch<StudentAttendanceSummaryView>(`${BASE}/${studentId}/attendance?termId=${termId}`);
+}
+
+/** Mirrors backend attendance.application.port.in.WardWeekAttendanceView.WardWeek - a ward with nothing marked that week has empty `days`. */
+export interface WardWeek {
+  studentId: string;
+  days: DayEntry[];
+}
+
+/** Mirrors backend attendance.application.port.in.WardWeekAttendanceView - every linked ward, Monday to Friday. */
+export interface WardWeekAttendanceView {
+  weekStart: string;
+  weekEnd: string;
+  wards: WardWeek[];
+}
+
+/** Every linked ward's attendance for the Monday-Friday week containing `weekStart` (normalised to its Monday server-side). */
+export function getWardsWeekAttendance(weekStart: string): Promise<WardWeekAttendanceView> {
+  return apiFetch<WardWeekAttendanceView>(`${BASE}/attendance/week?weekStart=${weekStart}`);
 }
 
 /** A ward's medical & emergency details, read-only - also not publication-gated. */

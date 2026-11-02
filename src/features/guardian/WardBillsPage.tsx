@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Download, Wallet } from "lucide-react";
+import { useSearchParams } from "react-router";
+import { Wallet } from "lucide-react";
 import { getErrorMessage } from "@/api/client";
 import { getWardFees, type WardFeeTermView } from "@/api/feePayments";
-import { downloadWardBillPdf, getWardBill } from "@/api/wards";
-import type { BillView } from "@/api/billing";
 import { can } from "@/auth/permissions";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -14,31 +13,39 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Pagination } from "@/components/ui/Pagination";
 import { Spinner } from "@/components/ui/Spinner";
 import { StickySubHeader } from "@/components/ui/StickySubHeader";
-import { BillCard } from "@/features/billing/components/BillCard";
+import { Tabs } from "@/components/ui/Tabs";
 import { LogPaymentSheet, type LogPaymentIntent } from "@/features/guardian/components/LogPaymentSheet";
+import { WardBillDetail } from "@/features/guardian/components/WardBillDetail";
 import { WardFeeTermCard } from "@/features/guardian/components/WardFeeTermCard";
 import { WardSelector } from "@/features/guardian/components/WardSelector";
+import { latestBill, pastBills } from "@/features/guardian/wardBillHistory";
 import { usePageParam } from "@/hooks/usePageParam";
 import { useFeatureStore } from "@/stores/featureStore";
 import { useWardStore } from "@/stores/wardStore";
-import { downloadBlob } from "@/utils/download";
 import { paginate } from "@/utils/paginate";
+
+type BillsTab = "latest" | "past";
+
+const TABS: Array<{ value: BillsTab; label: string }> = [
+  { value: "latest", label: "Latest bill" },
+  { value: "past", label: "Past bills" },
+];
 
 const TERMS_PER_PAGE = 6;
 
 /**
- * A ward's bills, term by term (Phase 45G's Fees page, split back into Bills + Payments) - each
- * eligible term as a card with billed / paid / balance and the bill itself. The payments logged
- * against a term live on `WardPaymentsPage`, a table across every ward. The cards come
- * newest-first from `GET /api/v1/me/wards/{id}/fees`, so `WardSelector` alone docks in the
- * `StickySubHeader`, the `WardBillsPage` shape this page grew out of. "View bill" reuses
- * `BillCard` in a `Modal` with the same Download PDF idiom that page had. The cards are paged
- * client-side (`paginate`, `?page=` via `usePageParam`) since they already arrive whole.
+ * A ward's bills, laid out like `WardResultsHomePage`: the latest bill (`latestBill` - the newest
+ * published one, else the current term) in full on the Latest tab, and every other term as a
+ * card one tab over. The tab lives in `?tab=past`; the Past tab pages its cards client-side
+ * (`paginate`, `?page=` via `usePageParam`) since `GET /api/v1/me/wards/{id}/fees` returns them
+ * whole, newest-first. The payments logged against a term live on `WardPaymentsPage`.
  */
 export function WardBillsPage() {
   const { wards, selectedWardId, status, errorMessage: wardsError, fetchIfNeeded, retry } = useWardStore();
   const billingEntitled = useFeatureStore((state) => state.billing);
   const canLog = can.logWardPayment("GUARDIAN", billingEntitled);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab: BillsTab = searchParams.get("tab") === "past" ? "past" : "latest";
 
   useEffect(() => {
     fetchIfNeeded();
@@ -58,10 +65,10 @@ export function WardBillsPage() {
   }
 
   const [pageIndex, setPageIndex] = usePageParam();
-  const page = paginate(terms ?? [], pageIndex, TERMS_PER_PAGE);
 
   // `?page=` lives in the URL, so it can't be reset during render like the cards above - a real
   // ward switch (not the first mount, which may carry a deep-linked page) sends it back to page 1.
+  // `setPageIndex` only drops `page`, so the tab survives the switch.
   const pagedSelectionKey = useRef(selectionKey);
   useEffect(() => {
     if (pagedSelectionKey.current === selectionKey) return;
@@ -84,50 +91,27 @@ export function WardBillsPage() {
     if (selectedWardId) loadTerms(selectedWardId);
   }
 
-  // ----- View bill -----
-  const [billTermId, setBillTermId] = useState<string | null>(null);
-  const [bill, setBill] = useState<BillView | null>(null);
-  const [billError, setBillError] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
-  const [downloadError, setDownloadError] = useState<string | null>(null);
-
-  function openBill(termId: string) {
-    if (!selectedWardId) return;
-    setBillTermId(termId);
-    setBill(null);
-    setBillError(null);
-    setDownloadError(null);
-    getWardBill(selectedWardId, termId)
-      .then(setBill)
-      .catch((error: unknown) => setBillError(getErrorMessage(error, "Failed to load this bill")));
+  function changeTab(next: BillsTab) {
+    // Drops `?page=` too - a page index means nothing on the other tab.
+    setSearchParams(next === "past" ? { tab: "past" } : {});
   }
 
-  function closeBill() {
-    setBillTermId(null);
-    setBill(null);
-    setBillError(null);
-    setDownloadError(null);
-  }
-
-  async function downloadPdf() {
-    if (!selectedWardId || !billTermId || !bill) return;
-    setDownloading(true);
-    setDownloadError(null);
-    try {
-      const blob = await downloadWardBillPdf(selectedWardId, billTermId);
-      downloadBlob(blob, `${bill.admissionNumber}-bill-${bill.termName}.pdf`);
-    } catch (error) {
-      setDownloadError(getErrorMessage(error, "Failed to download the bill"));
-    } finally {
-      setDownloading(false);
-    }
-  }
+  // ----- View bill (Past tab) -----
+  const [billTerm, setBillTerm] = useState<WardFeeTermView | null>(null);
 
   // ----- Log payment -----
   const [formIntent, setFormIntent] = useState<LogPaymentIntent | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
+  function logPaymentFor(studentId: string, term: WardFeeTermView) {
+    setNotice(null);
+    setFormIntent({ kind: "new", studentId, term });
+  }
+
   const hasWards = status === "loaded" && wards.length > 0;
+  const latest = terms ? latestBill(terms) : null;
+  const past = terms ? pastBills(terms, latest) : [];
+  const page = paginate(past, pageIndex, TERMS_PER_PAGE);
 
   return (
     <div className="space-y-6">
@@ -168,53 +152,78 @@ export function WardBillsPage() {
       {notice && <Alert variant="success">{notice}</Alert>}
       {termsError && <Alert variant="error">{termsError}</Alert>}
 
+      {hasWards && <Tabs ariaLabel="Bills" value={tab} onChange={changeTab} items={TABS} />}
+
       {hasWards && terms === null && !termsError && (
         <div className="flex items-center gap-2 text-sm text-slate-500">
           <Spinner /> Loading fees…
         </div>
       )}
 
-      {terms && terms.length === 0 && (
-        <EmptyState
-          icon={Wallet}
-          title="No terms yet"
-          description="Bills appear here once your ward is enrolled for a term."
-        />
-      )}
-
-      {terms && terms.length > 0 && selectedWardId && (
-        <div className="space-y-4">
-          {page.content.map((term) => (
-            <WardFeeTermCard
-              key={term.termId}
-              term={term}
-              canLog={canLog}
-              onLogPayment={() => {
-                setNotice(null);
-                setFormIntent({ kind: "new", studentId: selectedWardId, term });
-              }}
-              onViewBill={() => openBill(term.termId)}
+      {terms && selectedWardId && tab === "latest" && (
+        <>
+          {latest ? (
+            <div className="space-y-4">
+              <WardFeeTermCard
+                term={latest}
+                canLog={canLog}
+                onLogPayment={() => logPaymentFor(selectedWardId, latest)}
+              />
+              {latest.published && latest.billReference && (
+                <WardBillDetail
+                  key={`${selectedWardId}|${latest.termId}`}
+                  studentId={selectedWardId}
+                  termId={latest.termId}
+                />
+              )}
+            </div>
+          ) : (
+            <EmptyState
+              icon={Wallet}
+              title="No bills yet"
+              description="Bills appear here once your ward is enrolled for a term."
             />
-          ))}
-          {page.totalPages > 1 && <Pagination page={page} onPageChange={setPageIndex} />}
-        </div>
+          )}
+        </>
       )}
 
-      <Modal open={billTermId !== null} onClose={closeBill} title={bill ? `${bill.termName} bill` : "Bill"} size="xl">
-        {billError && <Alert variant="error">{billError}</Alert>}
-        {!bill && !billError && (
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <Spinner /> Loading…
-          </div>
-        )}
-        {bill && (
-          <div className="space-y-4">
-            <BillCard bill={bill} />
-            {downloadError && <Alert variant="error">{downloadError}</Alert>}
-            <Button variant="secondary" onClick={downloadPdf} loading={downloading}>
-              <Download className="h-4 w-4" aria-hidden="true" /> Download PDF
-            </Button>
-          </div>
+      {terms && selectedWardId && tab === "past" && (
+        <>
+          {past.length > 0 ? (
+            <div className="space-y-4">
+              {page.content.map((term) => (
+                <WardFeeTermCard
+                  key={term.termId}
+                  term={term}
+                  canLog={canLog}
+                  onLogPayment={() => logPaymentFor(selectedWardId, term)}
+                  onViewBill={() => setBillTerm(term)}
+                />
+              ))}
+              {page.totalPages > 1 && <Pagination page={page} onPageChange={setPageIndex} />}
+            </div>
+          ) : (
+            <EmptyState
+              icon={Wallet}
+              title="No past bills yet"
+              description="Older bills will be listed here once there are some."
+            />
+          )}
+        </>
+      )}
+
+      <Modal
+        open={billTerm !== null}
+        onClose={() => setBillTerm(null)}
+        title={billTerm ? `${billTerm.termName} bill` : "Bill"}
+        size="xl"
+      >
+        {billTerm && selectedWardId && (
+          <WardBillDetail
+            key={`${selectedWardId}|${billTerm.termId}`}
+            studentId={selectedWardId}
+            termId={billTerm.termId}
+          />
         )}
       </Modal>
 
@@ -228,7 +237,6 @@ export function WardBillsPage() {
           refresh();
         }}
       />
-
     </div>
   );
 }

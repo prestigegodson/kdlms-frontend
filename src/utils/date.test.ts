@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  addDaysIso,
+  startOfWeekIso,
   formatAge,
   formatUpdated,
   formatClockTime,
@@ -192,5 +194,25 @@ describe("formatUpdated", () => {
   it("says 'Not computed yet' for missing/unparseable input", () => {
     expect(formatUpdated(undefined)).toBe("Not computed yet");
     expect(formatUpdated("garbage")).toBe("Not computed yet");
+  });
+});
+
+describe("startOfWeekIso", () => {
+  it("returns the Monday of the week, treating Sunday as the end of the previous week", () => {
+    expect(startOfWeekIso(new Date(2026, 10, 2))).toBe("2026-11-02"); // Monday
+    expect(startOfWeekIso(new Date(2026, 10, 6))).toBe("2026-11-02"); // Friday
+    expect(startOfWeekIso(new Date(2026, 10, 8))).toBe("2026-11-02"); // Sunday
+    expect(startOfWeekIso(new Date(2026, 0, 1))).toBe("2025-12-29"); // across a year boundary
+  });
+});
+
+describe("addDaysIso", () => {
+  it("adds and subtracts calendar days across month boundaries", () => {
+    expect(addDaysIso("2026-10-30", 4)).toBe("2026-11-03");
+    expect(addDaysIso("2026-11-02", -7)).toBe("2026-10-26");
+  });
+
+  it("returns unparseable input unchanged", () => {
+    expect(addDaysIso("nope", 1)).toBe("nope");
   });
 });

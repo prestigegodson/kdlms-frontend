@@ -67,8 +67,7 @@ import { WardAttendanceSessionTermsPage } from "@/features/guardian/WardAttendan
 import { WardMessagesPage } from "@/features/guardian/WardMessagesPage";
 import { WardResultsLayout } from "@/features/guardian/WardResultsLayout";
 import { WardResultsPage } from "@/features/guardian/WardResultsPage";
-import { WardSessionsPage } from "@/features/guardian/WardSessionsPage";
-import { WardSessionTermsPage } from "@/features/guardian/WardSessionTermsPage";
+import { WardResultsHomePage } from "@/features/guardian/WardResultsHomePage";
 import { WardTermAttendancePage } from "@/features/guardian/WardTermAttendancePage";
 import { WardResourceDetailPage } from "@/features/guardian/WardResourceDetailPage";
 import { WardResourcesPage } from "@/features/guardian/WardResourcesPage";
@@ -490,8 +489,9 @@ export const routes: RouteObject[] = [
                 path: ":studentId",
                 element: <WardResultsLayout />,
                 children: [
-                  { index: true, element: <WardSessionsPage /> },
-                  { path: ":sessionId", element: <WardSessionTermsPage /> },
+                  { index: true, element: <WardResultsHomePage /> },
+                  // The old session step - kept so a bookmark lands on the Past results tab.
+                  { path: ":sessionId", element: <Navigate to="..?tab=past" replace /> },
                   { path: ":sessionId/:termId", element: <WardTermResultPage /> },
                 ],
               },

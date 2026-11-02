@@ -97,6 +97,23 @@ export function todayIso(): string {
   return toIso(new Date());
 }
 
+/** The Monday of the week containing `date`, as "YYYY-MM-DD" (Sunday belongs to the week before, like the backend's `DayOfWeek.MONDAY`). */
+export function startOfWeekIso(date: Date): string {
+  const monday = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  return toIso(monday);
+}
+
+/** "2026-11-02", 4 -> "2026-11-06". Local-calendar arithmetic, so DST shifts never skip or repeat a day. */
+export function addDaysIso(iso: string, days: number): string {
+  const date = parseIsoDate(iso);
+  if (!date) {
+    return iso;
+  }
+  date.setDate(date.getDate() + days);
+  return toIso(date);
+}
+
 /** True for Saturday/Sunday - see `ClassDatePicker`'s weekday-only default (CLAUDE.md's attendance rules). */
 export function isWeekend(date: Date): boolean {
   const day = date.getDay();

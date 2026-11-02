@@ -11,7 +11,8 @@ interface WardFeeTermCardProps {
   /** `can.logWardPayment` - the role/entitlement half; the term's own `canLogPayment` is the paid-in-full half. */
   canLog: boolean;
   onLogPayment: () => void;
-  onViewBill: () => void;
+  /** Omitted where the bill is already on screen (the Latest bill tab), which hides "View bill". */
+  onViewBill?: () => void;
 }
 
 function Figure({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) {
@@ -35,7 +36,7 @@ export function WardFeeTermCard({ term, canLog, onLogPayment, onViewBill }: Ward
   const balanceLabel = term.balance != null && term.balance < 0 ? "Credit" : "Balance";
   const balanceValue = term.balance == null ? "No bill" : formatMoney(Math.abs(term.balance), term.currency);
   const showLog = canLog && term.canLogPayment;
-  const showViewBill = term.published && !!term.billReference;
+  const showViewBill = !!onViewBill && term.published && !!term.billReference;
 
   return (
     <Card className="space-y-4" aria-label={`${term.termName}, ${term.sessionName}`}>

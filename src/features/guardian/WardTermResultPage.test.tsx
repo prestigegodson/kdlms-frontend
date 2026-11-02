@@ -103,7 +103,7 @@ function renderPage(initialPath = "/guardian/results/s1/sess-1/term-1") {
   render(<RouterProvider router={router} />);
 }
 
-describe("WardTermResultPage (step 4 - the report)", () => {
+describe("WardTermResultPage (a past report)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetWardStore();
@@ -136,5 +136,16 @@ describe("WardTermResultPage (step 4 - the report)", () => {
 
     expect(await screen.findByText("Mid-term results not published yet")).toBeInTheDocument();
     expect(wardsApi.getWardResult).toHaveBeenCalledWith("s1", "term-1", "MIDTERM");
+  });
+
+  it("links back to the Past results tab", async () => {
+    vi.mocked(wardsApi.getWardResult).mockResolvedValue(RESULT_1);
+
+    renderPage();
+
+    expect(await screen.findByRole("link", { name: "Past results" })).toHaveAttribute(
+      "href",
+      "/guardian/results/s1?tab=past",
+    );
   });
 });

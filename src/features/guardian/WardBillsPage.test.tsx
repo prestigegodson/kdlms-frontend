@@ -120,7 +120,7 @@ const BILL: BillView = {
   advance: false,
 };
 
-function renderPage() {
+function renderPage(path = "/") {
   resetAuthStore();
   useAuthStore.setState({
     user: {
@@ -134,7 +134,7 @@ function renderPage() {
     accessToken: "access",
     refreshToken: "refresh",
   });
-  const router = createMemoryRouter([{ path: "/", element: <WardBillsPage /> }], { initialEntries: ["/"] });
+  const router = createMemoryRouter([{ path: "/", element: <WardBillsPage /> }], { initialEntries: [path] });
   render(<RouterProvider router={router} />);
 }
 
@@ -168,24 +168,26 @@ describe("WardBillsPage", () => {
     expect(within(card).getByRole("button", { name: "Log payment" })).toBeInTheDocument();
   });
 
-  it("pages the term cards six at a time", async () => {
-    const terms = Array.from({ length: 8 }, (_, i) =>
-      term({ termId: `term-${i}`, termName: `Term ${i + 1}`, sessionName: "2026/2027" }),
+  it("pages the past term cards six at a time", async () => {
+    const terms = Array.from({ length: 9 }, (_, i) =>
+      term({ termId: `term-${i}`, termName: `Term ${i + 1}`, sessionName: "2026/2027", current: i === 0 }),
     );
     vi.mocked(feePaymentsApi.getWardFees).mockResolvedValue(terms);
 
-    renderPage();
+    renderPage("/?tab=past");
 
-    expect(await screen.findByLabelText("Term 1, 2026/2027")).toBeInTheDocument();
-    expect(screen.getByLabelText("Term 6, 2026/2027")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Term 7, 2026/2027")).not.toBeInTheDocument();
+    // Term 1 is the latest bill, so the Past tab starts at Term 2.
+    expect(await screen.findByLabelText("Term 2, 2026/2027")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Term 1, 2026/2027")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Term 7, 2026/2027")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Term 8, 2026/2027")).not.toBeInTheDocument();
     expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Next page" }));
 
-    expect(await screen.findByLabelText("Term 7, 2026/2027")).toBeInTheDocument();
-    expect(screen.getByLabelText("Term 8, 2026/2027")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Term 1, 2026/2027")).not.toBeInTheDocument();
+    expect(await screen.findByLabelText("Term 8, 2026/2027")).toBeInTheDocument();
+    expect(screen.getByLabelText("Term 9, 2026/2027")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Term 2, 2026/2027")).not.toBeInTheDocument();
   });
 
   it("shows no pagination when every term fits on one page", async () => {
@@ -206,6 +208,7 @@ describe("WardBillsPage", () => {
     expect(within(card).getAllByText("No bill")).toHaveLength(2);
     expect(within(card).queryByRole("button", { name: "View bill" })).not.toBeInTheDocument();
     expect(within(card).getByRole("button", { name: "Log payment" })).toBeInTheDocument();
+    expect(wardsApi.getWardBill).not.toHaveBeenCalled();
   });
 
   it("shows an overpayment as a credit", async () => {
@@ -269,18 +272,81 @@ describe("WardBillsPage", () => {
     expect(within(card).queryByRole("button", { name: "Withdraw" })).not.toBeInTheDocument();
   });
 
-  it("opens the bill from View bill and downloads its PDF", async () => {
+  it("shows the latest bill inline and downloads its PDF", async () => {
     const blob = new Blob(["%PDF-"]);
     vi.mocked(wardsApi.downloadWardBillPdf).mockResolvedValue(blob);
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(await screen.findByRole("button", { name: "View bill" }));
+    expect(await screen.findByRole("tab", { name: "Latest bill", selected: true })).toBeInTheDocument();
+    expect(await screen.findByText("Tuition")).toBeInTheDocument();
+    const card = screen.getByLabelText("First Term, 2026/2027");
+    expect(within(card).queryByRole("button", { name: "View bill" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Download PDF/ }));
+
+    await waitFor(() => expect(downloadBlob).toHaveBeenCalledWith(blob, "SCH/2026/0001-bill-First Term.pdf"));
+    expect(wardsApi.getWardBill).toHaveBeenCalledWith("s1", "term-1");
+  });
+
+  it("makes an early-published advance bill the latest and moves the current term to Past", async () => {
+    vi.mocked(feePaymentsApi.getWardFees).mockResolvedValue([
+      term({ termId: "term-2", termName: "Second Term", termNumber: 2, current: false, advance: true }),
+      term(),
+    ]);
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByLabelText("Second Term, 2026/2027")).toBeInTheDocument();
+    expect(screen.queryByLabelText("First Term, 2026/2027")).not.toBeInTheDocument();
+    await waitFor(() => expect(wardsApi.getWardBill).toHaveBeenCalledWith("s1", "term-2"));
+
+    await user.click(screen.getByRole("tab", { name: "Past bills" }));
+
+    expect(await screen.findByLabelText("First Term, 2026/2027")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Second Term, 2026/2027")).not.toBeInTheDocument();
+  });
+
+  it("prefers an older published bill over an unpublished current term", async () => {
+    vi.mocked(feePaymentsApi.getWardFees).mockResolvedValue([
+      term({ termId: "term-2", termName: "Second Term", published: false, billReference: null, billed: null, balance: null }),
+      term({ termId: "term-1", current: false }),
+    ]);
+    renderPage();
+
+    // The published First Term wins over the unpublished current term.
+    expect(await screen.findByLabelText("First Term, 2026/2027")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Second Term, 2026/2027")).not.toBeInTheDocument();
+  });
+
+  it("shows empty states when there are no terms", async () => {
+    vi.mocked(feePaymentsApi.getWardFees).mockResolvedValue([]);
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText("No bills yet")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Past bills" }));
+    expect(await screen.findByText("No past bills yet")).toBeInTheDocument();
+  });
+
+  it("opens a past bill from View bill and downloads its PDF", async () => {
+    vi.mocked(feePaymentsApi.getWardFees).mockResolvedValue([
+      term({ termId: "term-2", termName: "Second Term", termNumber: 2 }),
+      term({ current: false }),
+    ]);
+    const blob = new Blob(["%PDF-"]);
+    vi.mocked(wardsApi.downloadWardBillPdf).mockResolvedValue(blob);
+    const user = userEvent.setup();
+    renderPage("/?tab=past");
+
+    const card = await screen.findByLabelText("First Term, 2026/2027");
+    await user.click(within(card).getByRole("button", { name: "View bill" }));
     const dialog = await screen.findByRole("dialog", { name: "First Term bill" });
-    expect(within(dialog).getByText("Tuition")).toBeInTheDocument();
+    expect(await within(dialog).findByText("Tuition")).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: /Download PDF/ }));
 
     await waitFor(() => expect(downloadBlob).toHaveBeenCalledWith(blob, "SCH/2026/0001-bill-First Term.pdf"));
     expect(wardsApi.getWardBill).toHaveBeenCalledWith("s1", "term-1");
+    expect(wardsApi.downloadWardBillPdf).toHaveBeenCalledWith("s1", "term-1");
   });
 });

@@ -1,25 +1,28 @@
 import { useEffect } from "react";
+import { Navigate } from "react-router";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
-import { DrillRow } from "@/features/guardian/components/DrillRow";
-import { groupWardsBySchool } from "@/features/guardian/groupWardsBySchool";
 import { useWardStore } from "@/stores/wardStore";
 
 /**
- * Step 1 of the results drill-down (School › Ward › Session › Term › Report)
- * - every linked ward, grouped under a school heading (shown even for a
- * single-school guardian, unlike `WardsPage`'s grid). Selecting a ward goes
- * to step 2 (`WardResultsLayout` + `WardSessionsPage`) rather than fetching
- * anything itself, so this stays a single request.
+ * `/guardian/results` - the nav entry point. Sends the guardian straight to
+ * the selected ward's latest result (`WardResultsHomePage`), or the first
+ * ward when none is selected yet, so there's no ward list to tap through.
+ * Only the loading, error and "no wards" states render here.
  */
 export function WardResultsPage() {
-  const { wards, status, errorMessage, fetchIfNeeded, retry } = useWardStore();
+  const { wards, selectedWardId, status, errorMessage, fetchIfNeeded, retry } = useWardStore();
 
   useEffect(() => {
     fetchIfNeeded();
   }, [fetchIfNeeded]);
+
+  if (status === "loaded" && wards.length > 0) {
+    const target = wards.some((ward) => ward.studentId === selectedWardId) ? selectedWardId : wards[0].studentId;
+    return <Navigate to={`/guardian/results/${target}`} replace />;
+  }
 
   return (
     <div className="space-y-6">
@@ -31,30 +34,8 @@ export function WardResultsPage() {
         </div>
       )}
       {status === "error" && <ErrorState message={errorMessage ?? "Failed to load your wards"} onRetry={retry} />}
-      {status === "loaded" && wards.length === 0 && (
+      {status === "loaded" && (
         <EmptyState title="No wards linked yet" description="Contact your school if you believe this is a mistake." />
-      )}
-
-      {status === "loaded" && wards.length > 0 && (
-        <div className="space-y-6">
-          {groupWardsBySchool(wards).map(([schoolName, schoolWards]) => (
-            <div key={schoolName}>
-              <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-slate-500">
-                {schoolName}
-              </h2>
-              <div className="space-y-3">
-                {schoolWards.map((ward) => (
-                  <DrillRow
-                    key={ward.studentId}
-                    to={`/guardian/results/${ward.studentId}`}
-                    title={ward.fullName}
-                    meta={`${ward.admissionNumber}${ward.currentClassName ? ` · ${ward.currentClassName}` : ""}`}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
       )}
     </div>
   );

@@ -10,7 +10,16 @@ import { useWardStore } from "@/stores/wardStore";
  * yet or the guardian has none - the caller (e.g. `WardsPage`) is
  * responsible for its own loading/empty states.
  */
-export function WardSelector() {
+interface WardSelectorProps {
+  /**
+   * Called instead of `wardStore.select` when the guardian picks a ward - for
+   * a page whose URL carries the ward (e.g. Results), which navigates and lets
+   * its layout sync the store from the URL.
+   */
+  onSelect?: (studentId: string) => void;
+}
+
+export function WardSelector({ onSelect }: WardSelectorProps = {}) {
   const { wards, selectedWardId, status, fetchIfNeeded, select } = useWardStore();
 
   useEffect(() => {
@@ -30,7 +39,7 @@ export function WardSelector() {
       <Select
         id="ward-selector"
         value={selectedWardId ?? ""}
-        onChange={(event) => select(event.target.value)}
+        onChange={(event) => (onSelect ?? select)(event.target.value)}
       >
         {wards.map((ward) => (
           <option key={ward.studentId} value={ward.studentId}>

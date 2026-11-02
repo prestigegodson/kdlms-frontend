@@ -1,11 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createMemoryRouter, RouterProvider } from "react-router";
+import { createMemoryRouter, RouterProvider, useParams } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as wardsApi from "@/api/wards";
 import { WardResultsPage } from "@/features/guardian/WardResultsPage";
 import { resetAuthStore, useAuthStore } from "@/stores/authStore";
-import { resetWardStore } from "@/stores/wardStore";
+import { resetWardStore, useWardStore } from "@/stores/wardStore";
 
 vi.mock("@/api/wards", async () => {
   const actual = await vi.importActual<typeof import("@/api/wards")>("@/api/wards");
@@ -35,6 +35,11 @@ const WARD_2 = {
   schoolName: "Sunrise Academy",
 };
 
+function WardResultsStub() {
+  const { studentId } = useParams();
+  return <p>Results for {studentId}</p>;
+}
+
 function renderPage() {
   resetAuthStore();
   useAuthStore.setState({
@@ -52,14 +57,14 @@ function renderPage() {
   const router = createMemoryRouter(
     [
       { path: "/", element: <WardResultsPage /> },
-      { path: "/guardian/results/:studentId", element: <p>Ward sessions page</p> },
+      { path: "/guardian/results/:studentId", element: <WardResultsStub /> },
     ],
     { initialEntries: ["/"] },
   );
   render(<RouterProvider router={router} />);
 }
 
-describe("WardResultsPage (step 1 - wards by school)", () => {
+describe("WardResultsPage (entry point - redirects to a ward)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetWardStore();
@@ -82,37 +87,23 @@ describe("WardResultsPage (step 1 - wards by school)", () => {
     expect(await screen.findByRole("button", { name: "Try again" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Try again" }));
 
-    expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
+    expect(await screen.findByText("Results for s1")).toBeInTheDocument();
   });
 
-  it("groups wards under a school heading, even for a single-school guardian", async () => {
-    vi.mocked(wardsApi.listMyWards).mockResolvedValue([WARD]);
-
-    renderPage();
-
-    expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Bright Star Academy" })).toBeInTheDocument();
-  });
-
-  it("groups wards under separate school headings when the guardian has wards at more than one school", async () => {
+  it("redirects to the first ward's results when none is selected yet", async () => {
     vi.mocked(wardsApi.listMyWards).mockResolvedValue([WARD, WARD_2]);
 
     renderPage();
 
-    expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
-    expect(screen.getByText("Bode Obi")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Bright Star Academy" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Sunrise Academy" })).toBeInTheDocument();
+    expect(await screen.findByText("Results for s1")).toBeInTheDocument();
   });
 
-  it("navigates to the ward's session list when a ward row is tapped", async () => {
-    vi.mocked(wardsApi.listMyWards).mockResolvedValue([WARD]);
-    const user = userEvent.setup();
+  it("redirects to the already-selected ward's results", async () => {
+    vi.mocked(wardsApi.listMyWards).mockResolvedValue([WARD, WARD_2]);
+    useWardStore.setState({ selectedWardId: "s2" });
 
     renderPage();
-    await screen.findByText("Ada Obi");
-    await user.click(screen.getByText("Ada Obi"));
 
-    expect(await screen.findByText("Ward sessions page")).toBeInTheDocument();
+    expect(await screen.findByText("Results for s2")).toBeInTheDocument();
   });
 });
