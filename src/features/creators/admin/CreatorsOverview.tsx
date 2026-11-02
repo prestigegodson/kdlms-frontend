@@ -149,7 +149,7 @@ function Overview({ view }: { view: CreatorDashboardView }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatTile icon={CheckCircle2} label="Active" value={n(creators.active)} />
           <StatTile icon={PauseCircle} label="Suspended" value={n(creators.suspended)} />
-          <StatTile icon={Archive} label="Archived" value={n(creators.archived)} />
+          <StatTile icon={Archive} label="Deleted" value={n(creators.archived)} />
           <StatTile
             icon={MailWarning}
             label="Email not verified"

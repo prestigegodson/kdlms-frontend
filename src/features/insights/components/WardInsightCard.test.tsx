@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/api/client";
 import * as wardsApi from "@/api/wards";
@@ -75,14 +75,16 @@ describe("WardInsightCard", () => {
     expect(screen.queryByText(/last term/)).not.toBeInTheDocument();
   });
 
-  it("explains that the summary waits for published results", async () => {
+  it("renders nothing when no term has been published yet", async () => {
     vi.mocked(wardsApi.getWardInsights).mockResolvedValue(view([]));
 
-    render(<WardInsightCard studentId="s1" firstName="Ada" />);
+    const { container } = render(<WardInsightCard studentId="s1" firstName="Ada" />);
 
-    expect(
-      await screen.findByText("A summary appears once this term’s results are published."),
-    ).toBeInTheDocument();
+    await vi.waitFor(() => expect(wardsApi.getWardInsights).toHaveBeenCalledWith("s1"));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("renders nothing when the ward's school doesn't have insights", async () => {

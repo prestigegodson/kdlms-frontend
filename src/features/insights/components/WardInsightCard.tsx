@@ -21,12 +21,13 @@ function percent(value: number | null): string {
  * The guardian portal's "How {name} is doing" section of a ward's card (insights Phase I6): the
  * latest published term's summary from `GET /api/v1/me/wards/{id}/insights`, with last term's
  * numbers beside it when there are two. Never shows class position. Hidden entirely when the ward's
- * school doesn't have insights (or the read fails), like the card's attendance tile.
+ * school doesn't have insights, the read fails, or no term has been published yet (so there's no
+ * summary to show), like the card's attendance tile.
  */
 export function WardInsightCard({ studentId, firstName }: { studentId: string; firstName: string }) {
   const { state } = useWardInsights(studentId);
 
-  if (state.kind !== "loaded") {
+  if (state.kind !== "loaded" || state.data.terms.length === 0) {
     return null;
   }
   const { terms, computedAt } = state.data;
@@ -41,11 +42,7 @@ export function WardInsightCard({ studentId, firstName }: { studentId: string; f
         </div>
         {computedAt && <span className="text-xs text-slate-500">{formatUpdated(computedAt)}</span>}
       </div>
-      {terms.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-500">A summary appears once this term&rsquo;s results are published.</p>
-      ) : (
-        <TermSummary latest={terms[terms.length - 1]} previous={terms.length > 1 ? terms[terms.length - 2] : null} />
-      )}
+      <TermSummary latest={terms[terms.length - 1]} previous={terms.length > 1 ? terms[terms.length - 2] : null} />
     </section>
   );
 }
