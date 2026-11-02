@@ -11,6 +11,10 @@ vi.mock("@/api/creators", async () => {
   return { ...actual, getCreator: vi.fn(), deleteCreator: vi.fn() };
 });
 
+vi.mock("@/features/creators/admin/CreatorReportCard", () => ({
+  CreatorReportCard: () => <div>Report</div>,
+}));
+
 vi.mock("@/features/schools/SchoolDetailPage", () => ({
   SubscriptionCard: () => <div>Subscription</div>,
   FeatureGrantsCard: () => <div>Extra features</div>,

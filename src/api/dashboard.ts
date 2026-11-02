@@ -1,4 +1,5 @@
 import { apiFetch } from "@/api/client";
+import type { TakeHomeQuizStatus } from "@/api/takeHomeQuizzes";
 
 /** Mirrors backend dashboard.application.port.in.AdminDashboardView.ExpiringSchoolRow - one row on the renewal worklist. */
 export interface AdminDashboardExpiringSchool {
@@ -350,4 +351,59 @@ export interface CreatorDashboardView {
 
 export function getCreatorDashboard(): Promise<CreatorDashboardView> {
   return apiFetch<CreatorDashboardView>("/api/v1/admin/dashboard/creators");
+}
+
+/** Mirrors backend dashboard.application.port.in.CreatorReportView.CurrencyPayments. */
+export interface CreatorReportCurrencyPayments {
+  currency: string;
+  /** Successful charges only. */
+  paidMinor: number;
+  last30DaysMinor: number;
+  discountMinor: number;
+  successfulCharges: number;
+  /** Charges still awaiting the payment gateway. */
+  pendingCharges: number;
+  pendingMinor: number;
+  failedCharges: number;
+  abandonedCharges: number;
+}
+
+/** Mirrors backend CreatorReportView.QuizRow - one of the tutor's class quizzes. */
+export interface CreatorReportQuizRow {
+  quizId: string;
+  title: string;
+  /** Null when the quiz's class no longer resolves. */
+  className: string | null;
+  status: TakeHomeQuizStatus;
+  createdAt: string;
+  learnersAttempted: number;
+  submitted: number;
+}
+
+/** Mirrors backend CreatorReportView - one tutor's activity and what they've paid the platform. */
+export interface CreatorReportView {
+  classes: CreatorDashboardView["classes"];
+  learners: CreatorDashboardView["learners"];
+  quizzes: {
+    total: number;
+    /** Published or results-published. */
+    published: number;
+    drafts: number;
+    archived: number;
+    /** Distinct learners who started any of the tutor's quizzes. */
+    learnersAttempted: number;
+    attempts: number;
+    submittedAttempts: number;
+  };
+  /** The ten most recently created quizzes, newest first. */
+  recentQuizzes: CreatorReportQuizRow[];
+  /** One row per currency, ordered by currency code - never added together. */
+  payments: CreatorReportCurrencyPayments[];
+  lastPaidAt: string | null;
+  generatedAt: string;
+}
+
+/** The system admin's report on one tutor (creator tenant). */
+export function getCreatorReport(schoolId: string): Promise<CreatorReportView> {
+  return apiFetch<CreatorReportView>(`/api/v1/admin/dashboard/creators/${encodeURIComponent(schoolId)}`);
 }

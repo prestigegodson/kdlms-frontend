@@ -184,15 +184,19 @@ export function listPaymentTransactions(
   return apiFetch<Page<PaymentTransactionView>>(`${BASE}/transactions?${params}`);
 }
 
-/** The system admin's cross-tenant list; `status` is optional. */
+/** The system admin's cross-tenant list; `status` is optional, `schoolId` narrows to one tenant. */
 export function listAdminPaymentTransactions(
   status: PaymentTransactionStatus | "",
   page = 0,
   size = 20,
+  schoolId?: string,
 ): Promise<Page<PaymentTransactionView>> {
   const params = new URLSearchParams({ page: String(page), size: String(size) });
   if (status) {
     params.set("status", status);
+  }
+  if (schoolId) {
+    params.set("schoolId", schoolId);
   }
   return apiFetch<Page<PaymentTransactionView>>(`/api/v1/admin/payments/transactions?${params}`);
 }

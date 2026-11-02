@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
+import { CreatorReportCard } from "@/features/creators/admin/CreatorReportCard";
 import { CREATOR_STATUS_LABEL, CREATOR_STATUS_VARIANT } from "@/features/creators/admin/creatorStatus";
 import { ImpersonateDialog } from "@/features/schools/components/ImpersonateDialog";
 import { FeatureGrantsCard, SubscriptionCard } from "@/features/schools/SchoolDetailPage";
@@ -88,6 +89,8 @@ export function CreatorDetailPage() {
       />
 
       {actionError && <Alert variant="error">{actionError}</Alert>}
+
+      <CreatorReportCard key={creator.schoolId} schoolId={creator.schoolId} />
 
       <Card>
         <h2 className="text-sm font-semibold text-slate-900">Profile</h2>
