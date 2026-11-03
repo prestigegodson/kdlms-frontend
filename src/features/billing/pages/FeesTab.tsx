@@ -38,8 +38,8 @@ export function FeesTab() {
   useEffect(load, []);
 
   // ConfirmDialog itself catches a rejection and renders it inline, staying open (the
-  // LevelsPage.confirmDelete precedent) - the delete guard's 422 (a fee that's been priced)
-  // surfaces there rather than crashing the tab.
+  // LevelsPage.confirmDelete precedent) - the delete guard's 422 (a fee a recorded payment has
+  // claimed) surfaces there rather than crashing the tab.
   async function confirmDelete(fee: FeeView) {
     await deleteFee(fee.id);
     setDeletingFee(null);
@@ -152,7 +152,9 @@ export function FeesTab() {
       {deletingFee && (
         <ConfirmDialog
           title="Delete fee"
-          message={`Delete "${deletingFee.name}"? This can't be undone.`}
+          message={`Delete "${deletingFee.name}"? Its prices${
+            deletingFee.kind === "TRANSPORT" ? " and routes" : ""
+          } are removed too, and it disappears from every bill that uses it, including published ones. This can't be undone.`}
           confirmLabel="Delete"
           variant="danger"
           onConfirm={() => confirmDelete(deletingFee)}

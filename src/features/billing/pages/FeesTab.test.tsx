@@ -121,7 +121,7 @@ describe("FeesTab", () => {
   it("renders a delete rejection's message inline, without closing the confirm dialog", async () => {
     vi.mocked(billingApi.listFees).mockResolvedValue([TUITION]);
     vi.mocked(billingApi.deleteFee).mockRejectedValue(
-      new ApiError(422, "'Tuition' has been priced and can no longer be deleted - deactivate it instead."),
+      new ApiError(422, "'Tuition' has recorded payments and can no longer be deleted - deactivate it instead."),
     );
     const user = userEvent.setup();
 
@@ -133,7 +133,7 @@ describe("FeesTab", () => {
     await user.click(within(dialog).getByRole("button", { name: "Delete" }));
 
     expect(
-      await screen.findByText("'Tuition' has been priced and can no longer be deleted - deactivate it instead."),
+      await screen.findByText("'Tuition' has recorded payments and can no longer be deleted - deactivate it instead."),
     ).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "Delete fee" })).toBeInTheDocument();
   });
