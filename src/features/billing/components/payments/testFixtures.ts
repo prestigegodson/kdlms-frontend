@@ -16,6 +16,8 @@ export function termStatus(overrides: Partial<TermStatusView> = {}): TermStatusV
     balance: 50000,
     hasPending: true,
     inCredit: false,
+    creditApplied: 0,
+    creditTransferred: 0,
     ...overrides,
   };
 }

@@ -24,6 +24,7 @@ import {
   type LogOtherPaymentIntent,
 } from "@/features/guardian/components/LogOtherPaymentSheet";
 import { LogPaymentSheet, type LogPaymentIntent } from "@/features/guardian/components/LogPaymentSheet";
+import { WardCreditSummary } from "@/features/guardian/components/WardCreditSummary";
 import { PAYMENT_STATUS_BADGES } from "@/features/guardian/components/paymentStatus";
 import { WardPaymentsTable, type WardPaymentRowData } from "@/features/guardian/components/WardPaymentsTable";
 import { usePageParam } from "@/hooks/usePageParam";
@@ -63,6 +64,8 @@ export function WardPaymentsPage() {
   const [currencyBySchool, setCurrencyBySchool] = useState<Map<string, string>>(new Map());
   // Guards against an older refetch resolving after a newer one.
   const requestId = useRef(0);
+  // Bumped on every reload, so the credit summary re-reads alongside the payments.
+  const [creditRefreshKey, setCreditRefreshKey] = useState(0);
 
   const loadPayments = useCallback(() => {
     if (status !== "loaded" || wards.length === 0) return;
@@ -96,6 +99,7 @@ export function WardPaymentsPage() {
       );
       setRows(loaded);
       setFailedWards(failed);
+      setCreditRefreshKey((key) => key + 1);
       setOtherByStudent(others);
       setCurrencyBySchool(currencies);
     });
@@ -218,6 +222,8 @@ export function WardPaymentsPage() {
       {failedWards.length > 0 && (
         <Alert variant="warning">Couldn't load payments for {failedWards.join(", ")}.</Alert>
       )}
+
+      {hasWards && rows !== null && <WardCreditSummary wards={wards} refreshKey={creditRefreshKey} />}
 
       {hasWards && rows === null && (
         <div className="flex items-center gap-2 text-sm text-slate-500">

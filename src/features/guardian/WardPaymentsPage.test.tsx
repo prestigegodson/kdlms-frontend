@@ -24,6 +24,7 @@ vi.mock("@/api/feePayments", async () => {
     getWardFees: vi.fn(),
     getWardOtherPayments: vi.fn(),
     getWardOtherPaymentItems: vi.fn(),
+    getWardCredit: vi.fn(),
     withdrawFeePayment: vi.fn(),
     downloadFeeReceiptPdf: vi.fn(),
     downloadFeePaymentAttachment: vi.fn(),
@@ -95,6 +96,8 @@ function term(overrides: Partial<WardFeeTermView> = {}): WardFeeTermView {
     status: "UNPAID",
     hasPending: false,
     inCredit: false,
+    creditApplied: 0,
+    creditTransferred: 0,
     canLogPayment: true,
     optionalFees: [],
     payments: [],
@@ -135,6 +138,14 @@ describe("WardPaymentsPage", () => {
     vi.mocked(wardsApi.listMyWards).mockResolvedValue([ADA, BEN]);
     vi.mocked(feePaymentsApi.getWardOtherPayments).mockResolvedValue({ currency: "NGN", payments: [] });
     vi.mocked(feePaymentsApi.getWardOtherPaymentItems).mockResolvedValue([]);
+    vi.mocked(feePaymentsApi.getWardCredit).mockResolvedValue({
+      studentId: "s1",
+      currency: "NGN",
+      available: 0,
+      sources: [],
+      targets: [],
+      applications: [],
+    });
     vi.mocked(feePaymentsApi.getWardFees).mockImplementation((studentId) =>
       Promise.resolve(
         studentId === "s1"

@@ -9,6 +9,7 @@ import {
   paymentFormData,
   type ReceiptStatus,
   type Settlement,
+  type StudentCreditView,
   type TermPaymentState,
 } from "@/api/feePayments";
 
@@ -49,6 +50,10 @@ export interface TermStatusView {
   balance: number | null;
   hasPending: boolean;
   inCredit: boolean;
+  /** Carried-forward credit applied to this term from another term's overpayment (D10'). */
+  creditApplied: number;
+  /** This term's overpayment moved on to another term (D10'). */
+  creditTransferred: number;
 }
 
 export interface StaffAttachmentView {
@@ -370,6 +375,34 @@ export function getStudentPaymentLedger(
   return apiFetch<StudentPaymentLedgerView>(
     `${BASE}/students/${studentId}/payments${query ? `?${query}` : ""}`,
   );
+}
+
+/** A student's overpayment credit wallet (D10'). */
+export function getStudentCredit(studentId: string): Promise<StudentCreditView> {
+  return apiFetch<StudentCreditView>(`${BASE}/students/${studentId}/credit`);
+}
+
+/** Applies some of a student's credit to a term, drawn oldest term first. */
+export function applyStudentCredit(
+  studentId: string,
+  body: { targetTermId: string; amount: number; settlement: Settlement; note: string | null },
+): Promise<StudentCreditView> {
+  return apiFetch<StudentCreditView>(`${BASE}/students/${studentId}/credit/applications`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** Reverses one credit application - refused if the target already passed that credit on. */
+export function reverseCreditApplication(
+  applicationId: string,
+  version: number,
+  reason: string,
+): Promise<StudentCreditView> {
+  return apiFetch<StudentCreditView>(`${BASE}/credit-applications/${applicationId}/reverse`, {
+    method: "POST",
+    body: JSON.stringify({ version, reason }),
+  });
 }
 
 /** `branchId` is required for a SCHOOL_ADMIN, derived server-side for a BRANCH_ADMIN. */

@@ -48,9 +48,12 @@ export function CorrectAmountDialog({
 
   const amountMinor = parseAmount(amountText);
   const billMinor = allocation.bill ? toMinorUnits(allocation.bill.total) : null;
+  // everything else that has gone toward the bill: other confirmed cash, plus carried-forward credit in, less credit moved out
   const otherConfirmed =
     toMinorUnits(allocation.termStatus.confirmedPaid) -
-    toMinorUnits(allocation.confirmedAmount ?? 0);
+    toMinorUnits(allocation.confirmedAmount ?? 0) +
+    toMinorUnits(allocation.termStatus.creditApplied) -
+    toMinorUnits(allocation.termStatus.creditTransferred);
   const suggested = suggestSettlement(billMinor, otherConfirmed + (amountMinor ?? 0));
   const settlement: Settlement = otherPayment ? "FULL" : (chosen ?? suggested);
   const valid = amountMinor !== null && reason.trim() !== "";

@@ -58,6 +58,22 @@ export function WardFeeTermCard({ term, canLog, onLogPayment, onViewBill }: Ward
         <Figure label={balanceLabel} value={balanceValue} emphasis />
       </dl>
 
+      {(term.creditApplied > 0 || term.inCredit) && (
+        <ul className="space-y-1 text-sm text-slate-600">
+          {term.creditApplied > 0 && (
+            <li>Includes {formatMoney(term.creditApplied, term.currency)} credit carried from an earlier overpayment</li>
+          )}
+          {term.inCredit && term.balance != null && (
+            <li>
+              {formatMoney(Math.abs(term.balance), term.currency)} held as credit - see{" "}
+              <Link to="/guardian/payments" className="font-medium text-brand-700 hover:underline">
+                Payments
+              </Link>
+            </li>
+          )}
+        </ul>
+      )}
+
       {term.pendingAmount > 0 && (
         <p className="text-sm text-blue-700">{formatMoney(term.pendingAmount, term.currency)} pending confirmation</p>
       )}

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { TermPaymentStatusBadge } from "@/features/billing/components/TermPaymentStatusBadge";
 import { AllocationStatusBadge } from "@/features/billing/components/payments/AllocationStatusBadge";
+import { CreditWalletPanel } from "@/features/billing/components/payments/CreditWalletPanel";
 import { ReceiptDownloads } from "@/features/billing/components/payments/ReceiptDownloads";
 import {
   RecordPaymentModal,
@@ -30,7 +31,8 @@ interface StudentPaymentsSectionProps {
 /**
  * One student's payments for a term inside their bill preview (Phase 45I): the term's paid /
  * pending / balance, each payment with its status and receipts, Void and Correct amount on a
- * confirmed one (D11), and Record payment prefilled with this student.
+ * confirmed one (D11), and Record payment prefilled with this student. Also the student's
+ * overpayment credit wallet (D10'), with Apply credit and Reverse.
  */
 export function StudentPaymentsSection({
   student,
@@ -110,6 +112,30 @@ export function StudentPaymentsSection({
               </dd>
             </div>
           </dl>
+          {(term.status.creditApplied > 0 || term.status.creditTransferred > 0) && (
+            <ul className="space-y-1 text-xs text-slate-600">
+              {term.status.creditApplied > 0 && (
+                <li>
+                  Includes {formatMoney(term.status.creditApplied, ledger.currency)} credit carried
+                  from another term
+                </li>
+              )}
+              {term.status.creditTransferred > 0 && (
+                <li>
+                  {formatMoney(term.status.creditTransferred, ledger.currency)} of this term's
+                  overpayment was applied to another term
+                </li>
+              )}
+            </ul>
+          )}
+
+          <CreditWalletPanel
+            studentId={student.id}
+            studentName={student.name}
+            termId={termId}
+            refreshKey={refreshKey}
+            onChanged={changed}
+          />
 
           {term.payments.length === 0 ? (
             <p className="text-sm text-slate-500">No payments for this term yet.</p>

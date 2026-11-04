@@ -152,6 +152,58 @@ export interface WardFeeTermView {
   canLogPayment: boolean;
   optionalFees: OptionalFeeView[];
   payments: WardFeePaymentView[];
+  /** Carried-forward credit applied to this term from another term's overpayment (D10'). */
+  creditApplied: number;
+  /** This term's overpayment moved on to another term (D10'). */
+  creditTransferred: number;
+}
+
+/** Mirrors backend billing.domain.FeeCreditStatus. */
+export type FeeCreditStatus = "APPLIED" | "REVERSED";
+
+/**
+ * Mirrors backend billing.application.port.in.StudentCreditView - a student's overpayment credit
+ * wallet (D10'). `available` is every term's remaining surplus; `targets` (staff only, empty for a
+ * guardian) are the terms credit can be applied to, each with how much could go toward it.
+ * `applications` is the history, newest first. Note/reason fields arrive undefined for a guardian.
+ */
+export interface StudentCreditView {
+  studentId: string;
+  currency: string;
+  available: number;
+  sources: { termId: string; termName: string; sessionName?: string | null; available: number }[];
+  targets: {
+    termId: string;
+    termName: string;
+    sessionName?: string | null;
+    balance: number;
+    applicable: number;
+  }[];
+  applications: CreditApplicationView[];
+}
+
+export interface CreditApplicationView {
+  id: string;
+  version: number;
+  sourceTermId: string;
+  sourceTermName?: string | null;
+  sourceSessionName?: string | null;
+  targetTermId: string;
+  targetTermName?: string | null;
+  targetSessionName?: string | null;
+  amount: number;
+  settlement: Settlement;
+  note?: string | null;
+  status: FeeCreditStatus;
+  appliedAt: string;
+  reversedAt?: string | null;
+  reverseReason?: string | null;
+}
+
+/** "First Term (2025/2026)" - a term label that stays unambiguous across sessions. */
+export function creditTermLabel(termName?: string | null, sessionName?: string | null): string {
+  const term = termName ?? "Another term";
+  return sessionName ? `${term} (${sessionName})` : term;
 }
 
 /** One child on a submission - mirrors backend MyFeePaymentsController.ChildRequest. */
@@ -208,6 +260,11 @@ const ME = "/api/v1/me";
 /** One card per eligible term for a ward, newest first. */
 export function getWardFees(studentId: string): Promise<WardFeeTermView[]> {
   return apiFetch<WardFeeTermView[]>(`${ME}/wards/${studentId}/fees`);
+}
+
+/** A ward's overpayment credit wallet (D10'), read-only. */
+export function getWardCredit(studentId: string): Promise<StudentCreditView> {
+  return apiFetch<StudentCreditView>(`${ME}/wards/${studentId}/fees/credit`);
 }
 
 /** A ward's OTHER payments - kept off the term cards, since none of them settles a bill. */

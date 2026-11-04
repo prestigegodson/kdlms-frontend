@@ -148,6 +148,8 @@ const PREVIEW_WITH_STUDENTS: AdvanceBillPreviewView = {
       termPaymentStatus: "UNPAID",
       hasPending: false,
       inCredit: false,
+      creditApplied: 0,
+      creditTransferred: 0,
     },
   ],
 };

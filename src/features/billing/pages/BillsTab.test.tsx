@@ -99,6 +99,8 @@ const ROSTER: BillSummaryView[] = [
     termPaymentStatus: "PART_PAID",
     hasPending: true,
     inCredit: false,
+    creditApplied: 0,
+    creditTransferred: 0,
   },
   {
     studentId: "student-2",
@@ -115,6 +117,8 @@ const ROSTER: BillSummaryView[] = [
     termPaymentStatus: "UNPAID",
     hasPending: false,
     inCredit: false,
+    creditApplied: 0,
+    creditTransferred: 0,
   },
 ];
 

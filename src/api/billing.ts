@@ -243,6 +243,10 @@ export interface BillSummaryView {
   termPaymentStatus: TermPaymentState;
   hasPending: boolean;
   inCredit: boolean;
+  /** Carried-forward credit applied to this term from another term's overpayment (D10'). */
+  creditApplied: number;
+  /** This term's overpayment moved on to another term (D10'). */
+  creditTransferred: number;
 }
 
 /** Mirrors backend billing.application.port.in.BranchBillingSummaryView.LevelSummary. */

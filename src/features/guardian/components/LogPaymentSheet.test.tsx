@@ -89,6 +89,8 @@ function term(overrides: Partial<WardFeeTermView> = {}): WardFeeTermView {
     status: "PART_PAID",
     hasPending: false,
     inCredit: false,
+    creditApplied: 0,
+    creditTransferred: 0,
     canLogPayment: true,
     optionalFees: [],
     payments: [],
