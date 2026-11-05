@@ -30,6 +30,8 @@ describe("QuestionEditor passages (Phase 20L)", () => {
     expect(latest.questions[1].stimulusKey).toBe(latest.stimuli[0].key);
     expect(within(section).getByRole("radio", { name: "Passage" })).toHaveAttribute("aria-checked", "true");
 
+    // Adding the passage's question collapsed q1, so open it again to reach its Passage link.
+    await user.click(screen.getByRole("button", { name: "Expand question 1" }));
     await user.selectOptions(screen.getByLabelText("Passage", { selector: `#question-stimulus-q1` }), "Passage 1");
     expect(latest.questions.map((question) => question.stimulusKey)).toEqual([
       latest.stimuli[0].key,

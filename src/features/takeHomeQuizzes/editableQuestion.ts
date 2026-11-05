@@ -133,6 +133,42 @@ export function fromQuestionCommand(question: QuestionCommand): EditableQuestion
   };
 }
 
+/**
+ * An unsaved copy of `question`, keeping its passage link. Everything with server identity gets a
+ * fresh key and a `null` id, so the backend mints new rows. The interaction config can be shared by
+ * reference because editing it replaces it rather than mutating it.
+ */
+export function duplicateQuestion(question: EditableQuestion): EditableQuestion {
+  return {
+    ...question,
+    key: crypto.randomUUID(),
+    id: null,
+    options: question.options.map((option) => ({ ...option, key: crypto.randomUUID(), id: null })),
+    answerKeys: question.answerKeys.map((key) => ({ ...key, key: crypto.randomUUID(), id: null })),
+    tags: [...question.tags],
+  };
+}
+
+/**
+ * Saving swaps each new row's local key for its server id, which would reopen every collapsed new
+ * question. This maps `collapsed` across that swap by position: a row that had no id and now has one
+ * is the same question. Any other change to the list's length leaves `collapsed` as it is.
+ */
+export function carryCollapsedKeys(
+  previous: EditableQuestion[],
+  next: EditableQuestion[],
+  collapsed: ReadonlySet<string>,
+): ReadonlySet<string> {
+  if (previous.length !== next.length) return collapsed;
+  const carried = new Set(collapsed);
+  previous.forEach((question, index) => {
+    if (question.id === null && next[index].id !== null && carried.delete(question.key)) {
+      carried.add(next[index].key);
+    }
+  });
+  return carried;
+}
+
 /** This editor's shape back as a save command - the mapping both editor pages send to `PUT .../questions`. */
 export function toQuestionCommand(question: EditableQuestion): QuestionCommand {
   return {

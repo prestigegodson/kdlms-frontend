@@ -1,5 +1,5 @@
-import { BookmarkPlus, BookOpen, ChevronDown, ChevronUp, FileSpreadsheet, Library, Play, Plus, X } from "lucide-react";
-import { Suspense, useState } from "react";
+import { BookmarkPlus, BookOpen, ChevronDown, ChevronUp, Copy, FileSpreadsheet, Library, Play, Plus, X } from "lucide-react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { getErrorMessage } from "@/api/client";
 import type { QuestionType, ScoringMode } from "@/api/takeHomeQuizzes";
 import { Button } from "@/components/ui/Button";
@@ -16,6 +16,8 @@ import { QuestionTagsField } from "@/features/takeHomeQuizzes/components/Questio
 import { TryInteractionModal } from "@/features/takeHomeQuizzes/components/TryInteractionModal";
 import {
   blankQuestion,
+  carryCollapsedKeys,
+  duplicateQuestion,
   type EditableQuestion,
   fromQuestionCommand,
   isUntouchedQuestion,
@@ -36,6 +38,7 @@ import {
 } from "@/features/takeHomeQuizzes/editableStimulus";
 import { StimulusSectionHeader } from "@/features/takeHomeQuizzes/components/StimulusFields";
 import { isInteractive, pluginFor } from "@/features/takeHomeQuizzes/interactions/registry";
+import { describeLabel } from "@/features/takeHomeQuizzes/interactions/shared/labels";
 import { useFeatureStore } from "@/stores/featureStore";
 
 interface QuestionEditorProps {
@@ -100,6 +103,38 @@ export function QuestionEditor({
   // The INTERACTIVE_QUESTIONS add-on gates authoring them; a question keeps showing its own type,
   // so a downgraded tenant can still keep the ones a quiz already holds (interaction-quiz.md §12).
   const interactiveAllowed = useFeatureStore((state) => state.interactiveQuestions);
+  // Held here, not on `EditableQuestion`: the pages' dirty check stringifies the questions, and collapsing isn't an edit.
+  const [collapsedKeys, setCollapsedKeys] = useState<ReadonlySet<string>>(() => new Set());
+  const [previousQuestions, setPreviousQuestions] = useState(questions);
+  if (previousQuestions !== questions) {
+    setPreviousQuestions(questions);
+    setCollapsedKeys(carryCollapsedKeys(previousQuestions, questions, collapsedKeys));
+  }
+  const scrollToKey = useRef<string | null>(null);
+
+  // Collapsing the cards above a new question moves it, so bring it back into view once it has rendered.
+  useEffect(() => {
+    if (scrollToKey.current === null) return;
+    // Optional call: jsdom has no scrollIntoView.
+    document.getElementById(`question-card-${scrollToKey.current}`)?.scrollIntoView?.({ block: "nearest" });
+    scrollToKey.current = null;
+  }, [questions]);
+
+  function toggleCollapsed(key: string) {
+    setCollapsedKeys((current) => {
+      const next = new Set(current);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+  }
+
+  /** Every add goes through here: the questions already written collapse, and only what was just added stays open. */
+  function addQuestions(next: EditableQuestion[]) {
+    const existing = questions.map((question) => question.key);
+    setCollapsedKeys((current) => new Set([...current, ...existing]));
+    scrollToKey.current = next.find((question) => !existing.includes(question.key))?.key ?? null;
+    onChange(next);
+  }
 
   function setStatus(key: string, status: BankSaveStatus) {
     setBankStatus((current) => ({ ...current, [key]: status }));
@@ -118,7 +153,7 @@ export function QuestionEditor({
 
   /** Appended after the questions already written; an empty row never filled in is dropped rather than left above them. */
   function append(added: EditableQuestion[]) {
-    onChange([...questions.filter((question) => !isUntouchedQuestion(question)), ...added]);
+    addQuestions([...questions.filter((question) => !isUntouchedQuestion(question)), ...added]);
   }
 
   function updateAt(index: number, patch: Partial<EditableQuestion>) {
@@ -129,6 +164,11 @@ export function QuestionEditor({
     onChange(questions.filter((_, i) => i !== index));
   }
 
+  /** The copy lands directly after its original, so a passage's questions stay contiguous. */
+  function duplicateAt(index: number) {
+    addQuestions([...questions.slice(0, index + 1), duplicateQuestion(questions[index]), ...questions.slice(index + 1)]);
+  }
+
   const passagesEnabled = onStimuliChange !== undefined;
 
   function addStimulus() {
@@ -136,7 +176,7 @@ export function QuestionEditor({
     const stimulus = blankStimulus("PASSAGE");
     onStimuliChange([...stimuli, stimulus]);
     // A new passage starts with one question of its own, so it is never an empty, unpublishable shell.
-    onChange([
+    addQuestions([
       ...questions.filter((question) => !isUntouchedQuestion(question)),
       { ...blankQuestion(), stimulusKey: stimulus.key },
     ]);
@@ -192,10 +232,27 @@ export function QuestionEditor({
   }
 
   function renderQuestion(question: EditableQuestion, index: number) {
+    const collapsed = collapsedKeys.has(question.key);
+    const bodyId = `question-body-${question.key}`;
     return (
-    <Card key={question.key} className="space-y-4">
+    <Card key={question.key} id={`question-card-${question.key}`} className="space-y-4">
       <div className="flex items-start justify-between gap-2">
-        <h3 className="font-display text-sm font-medium text-slate-700">Question {index + 1}</h3>
+        <h3 className="font-display text-sm font-medium text-slate-700">
+          <button
+            type="button"
+            aria-expanded={!collapsed}
+            aria-controls={bodyId}
+            aria-label={`${collapsed ? "Expand" : "Collapse"} question ${index + 1}`}
+            onClick={() => toggleCollapsed(question.key)}
+            className="flex min-h-9 cursor-pointer items-center gap-2 text-left"
+          >
+            <ChevronDown
+              className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${collapsed ? "" : "rotate-180"}`}
+              aria-hidden="true"
+            />
+            <span>Question {index + 1}</span>
+          </button>
+        </h3>
         <div className="flex flex-wrap items-center justify-end gap-1">
           {bank && (
             <Button
@@ -232,6 +289,18 @@ export function QuestionEditor({
               >
                 <ChevronDown className="h-4 w-4" aria-hidden="true" />
               </Button>
+              {(interactiveAllowed || !isInteractive(question.questionType)) && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Duplicate question ${index + 1}`}
+                  title="Duplicate"
+                  onClick={() => duplicateAt(index)}
+                >
+                  <Copy className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="ghost"
@@ -247,6 +316,12 @@ export function QuestionEditor({
       </div>
       <BankStatusMessage status={bankStatus[question.key]} />
 
+      {collapsed ? (
+        <p className="truncate text-sm text-slate-600">
+          {QUESTION_TYPE_LABELS[question.questionType]} · {describeLabel(question.prompt, "No text yet")}
+        </p>
+      ) : (
+      <div id={bodyId} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
         <FormField label="Question type" htmlFor={`question-type-${question.key}`}>
           <Select
@@ -342,6 +417,8 @@ export function QuestionEditor({
         onChange={(tags) => updateAt(index, { tags })}
         disabled={structureDisabled}
       />
+      </div>
+      )}
     </Card>
     );
   }
@@ -384,7 +461,7 @@ export function QuestionEditor({
                 type="button"
                 variant="secondary"
                 size="sm"
-                onClick={() => onChange(addQuestionToStimulus(questions, stimulus.key))}
+                onClick={() => addQuestions(addQuestionToStimulus(questions, stimulus.key))}
               >
                 <Plus className="h-4 w-4" aria-hidden="true" /> Add question to {stimulusName(stimulus).toLowerCase()}
               </Button>
@@ -395,7 +472,7 @@ export function QuestionEditor({
 
       {!structureDisabled && (
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" onClick={() => onChange([...questions, blankQuestion()])}>
+          <Button type="button" variant="secondary" onClick={() => addQuestions([...questions, blankQuestion()])}>
             <Plus className="h-4 w-4" aria-hidden="true" /> Add question
           </Button>
           {passagesEnabled && (
