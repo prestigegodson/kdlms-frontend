@@ -81,6 +81,19 @@ export function CreatorPublishResultsModal({ classId, quizId, onClose, onPublish
               submitted. Publishing shows each learner their score and the correct answers.
             </p>
 
+            {preflight.guestsInProgress > 0 && (
+              <p className="text-sm text-slate-700">
+                {preflight.guestsInProgress} guest{preflight.guestsInProgress === 1 ? " is" : "s are"} still taking
+                the quiz. Publishing submits their answers as they stand.
+              </p>
+            )}
+
+            {preflight.guestsToEmail > 0 && (
+              <p className="text-sm text-slate-700">
+                {preflight.guestsToEmail} guest{preflight.guestsToEmail === 1 ? "" : "s"} will be emailed their score.
+              </p>
+            )}
+
             {hasNonSubmitters && (
               <div className="space-y-2">
                 <p className="text-sm text-slate-700">

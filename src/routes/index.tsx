@@ -127,6 +127,7 @@ import { RequireRole } from "@/routes/RequireRole";
 import { TakeHomeQuizEditorRoute } from "@/routes/TakeHomeQuizEditorRoute";
 import { TakeHomeQuizResultsRoute } from "@/routes/TakeHomeQuizResultsRoute";
 import { LiveSessionRoute } from "@/routes/LiveSessionRoute";
+import { GuestQuizRoute } from "@/routes/GuestQuizRoute";
 import { TakeHomeQuizRoute } from "@/routes/TakeHomeQuizRoute";
 import { StaffAttendancePage } from "@/features/staffAttendance/StaffAttendancePage";
 import { InsightSettingsPage } from "@/features/insights/InsightSettingsPage";
@@ -180,6 +181,7 @@ export const routes: RouteObject[] = [
       { path: "unsubscribe", element: <UnsubscribePage /> },
       { path: "invite/:token", element: <InviteAcceptPage /> },
       { path: "take-home-quiz", element: <TakeHomeQuizRoute /> },
+      { path: "take-home-quiz/guest", element: <GuestQuizRoute /> },
       // Staff clock-in (Phase 46) - public, full-screen, no session: the gate display (paired by its
       // own station token), the phone page a gate QR opens, and the one-time passkey enrollment link.
       { path: "gate", element: <GatePage /> },

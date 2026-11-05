@@ -138,6 +138,30 @@ export interface ClassQuizResultsView {
   submittedCount: number;
   rows: LearnerResultRowView[];
   nonSubmitters: LearnerRef[];
+  /** Took the quiz through its guest link - never part of `rosterSize`. */
+  guests: GuestResultRowView[];
+}
+
+/** Mirrors backend `GuestResultRowView`. */
+export interface GuestResultRowView {
+  guestId: string;
+  fullName: string;
+  email?: string | null;
+  attemptState: TakeHomeQuizAttemptState;
+  autoScore: number | null;
+  adjustedScore: number | null;
+  effectiveScore: number | null;
+  submittedAt: string | null;
+  autoSubmitted: boolean;
+  scoreEmailedAt?: string | null;
+}
+
+/** Mirrors backend `CreatorGuestQuizzesUseCase.GuestLinkView`. */
+export interface GuestLinkView {
+  active: boolean;
+  /** Absent when no link is live, or a live one can't be shown again. */
+  url?: string | null;
+  createdAt?: string | null;
 }
 
 /** Mirrors backend `LearnerAttemptDetailView`. */
@@ -162,6 +186,10 @@ export interface ClassQuizPreflightView {
   nonSubmitters: LearnerRef[];
   submittedCount: number;
   rosterSize: number;
+  /** Guests still taking the quiz, whose attempts publishing finalizes. */
+  guestsInProgress: number;
+  /** Guests who'll be emailed a score by publishing. */
+  guestsToEmail: number;
 }
 
 const creatorBase = (classId: string) => `/api/v1/virtual-classes/${classId}/take-home-quizzes`;
@@ -334,6 +362,48 @@ export function resetLearnerQuizAttempt(
 ): Promise<LearnerResultRowView> {
   return apiFetch<LearnerResultRowView>(`${creatorBase(classId)}/${quizId}/results/${learnerId}/reset`, {
     method: "POST",
+  });
+}
+
+export function getClassQuizGuestLink(classId: string, quizId: string): Promise<GuestLinkView> {
+  return apiFetch<GuestLinkView>(`${creatorBase(classId)}/${quizId}/guest-link`);
+}
+
+export function createClassQuizGuestLink(classId: string, quizId: string): Promise<GuestLinkView> {
+  return apiFetch<GuestLinkView>(`${creatorBase(classId)}/${quizId}/guest-link`, { method: "POST" });
+}
+
+export function revokeClassQuizGuestLink(classId: string, quizId: string): Promise<void> {
+  return apiFetch<void>(`${creatorBase(classId)}/${quizId}/guest-link`, { method: "DELETE" });
+}
+
+export function getGuestQuizResult(
+  classId: string,
+  quizId: string,
+  guestId: string,
+): Promise<LearnerAttemptDetailView> {
+  return apiFetch<LearnerAttemptDetailView>(`${creatorBase(classId)}/${quizId}/guest-results/${guestId}`);
+}
+
+export function adjustGuestQuizScore(
+  classId: string,
+  quizId: string,
+  guestId: string,
+  request: AdjustScoreRequest,
+): Promise<GuestResultRowView> {
+  return apiFetch<GuestResultRowView>(`${creatorBase(classId)}/${quizId}/guest-results/${guestId}/score`, {
+    method: "PUT",
+    body: JSON.stringify(request),
+  });
+}
+
+export function clearGuestQuizScoreAdjustment(
+  classId: string,
+  quizId: string,
+  guestId: string,
+): Promise<GuestResultRowView> {
+  return apiFetch<GuestResultRowView>(`${creatorBase(classId)}/${quizId}/guest-results/${guestId}/score`, {
+    method: "DELETE",
   });
 }
 

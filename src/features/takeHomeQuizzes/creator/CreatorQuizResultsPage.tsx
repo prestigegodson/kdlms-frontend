@@ -2,14 +2,18 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { ApiError } from "@/api/client";
 import {
+  adjustGuestQuizScore,
   adjustLearnerQuizScore,
   type ClassQuizResultsView,
   type ClassQuizView,
+  clearGuestQuizScoreAdjustment,
   clearLearnerQuizScoreAdjustment,
   getClassQuiz,
   getClassQuizAnalytics,
   getClassQuizResults,
+  getGuestQuizResult,
   getLearnerQuizResult,
+  type GuestResultRowView,
   type LearnerResultRowView,
   resetLearnerQuizAttempt,
   unpublishClassQuizResults,
@@ -42,6 +46,16 @@ function toTableRow(row: LearnerResultRowView): StudentResultRowView {
   };
 }
 
+/** A guest row on the same table: the guest id in `studentId`, and their email under their name. */
+function toGuestTableRow(row: GuestResultRowView): StudentResultRowView {
+  return {
+    ...row,
+    studentId: row.guestId,
+    admissionNumber: `${row.email ?? "No email given"}${row.scoreEmailedAt ? " · score emailed" : ""}`,
+    resetCount: 0,
+  };
+}
+
 /**
  * A creator's results for one class quiz (creators Phase C13) at
  * `/tutor/quizzes/:classId/:quizId/results`: every member's attempt, their answers, score
@@ -64,12 +78,15 @@ export function CreatorQuizResultsPage() {
   const [resetTarget, setResetTarget] = useState<StudentResultRowView | null>(null);
   const [publishResultsOpen, setPublishResultsOpen] = useState(false);
   const [unpublishResultsOpen, setUnpublishResultsOpen] = useState(false);
+  // Which of the shared targets above is a guest: their answers and scores have their own endpoints.
+  const [guestIds, setGuestIds] = useState<ReadonlySet<string>>(new Set());
 
   const load = useCallback(() => {
     Promise.all([getClassQuiz(classId, quizId), getClassQuizResults(classId, quizId)])
       .then(([quizView, resultsView]) => {
         setQuiz(quizView);
         setResults(resultsView);
+        setGuestIds(new Set(resultsView.guests.map((guest) => guest.guestId)));
       })
       .catch((err: unknown) => setLoadError(err instanceof ApiError ? err.message : "Failed to load results"));
   }, [classId, quizId]);
@@ -87,7 +104,11 @@ export function CreatorQuizResultsPage() {
   async function handleClearAdjustment(row: StudentResultRowView) {
     setActionError(null);
     try {
-      await clearLearnerQuizScoreAdjustment(classId, quizId, row.studentId);
+      await (guestIds.has(row.studentId) ? clearGuestQuizScoreAdjustment : clearLearnerQuizScoreAdjustment)(
+        classId,
+        quizId,
+        row.studentId,
+      );
       refetch();
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : "Could not clear this adjustment");
@@ -157,7 +178,7 @@ export function CreatorQuizResultsPage() {
           </div>
 
           {results.rows.length === 0 ? (
-            <EmptyState title="No learners in this class yet" />
+            results.guests.length === 0 && <EmptyState title="No learners in this class yet" />
           ) : (
             <ResultsTable
               rows={results.rows.map(toTableRow)}
@@ -171,6 +192,23 @@ export function CreatorQuizResultsPage() {
               onReset={setResetTarget}
             />
           )}
+
+          {results.guests.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="font-display text-lg font-medium text-slate-900">Guests ({results.guests.length})</h2>
+              <ResultsTable
+                rows={results.guests.map(toGuestTableRow)}
+                totalPoints={results.totalPoints}
+                participantLabel="Guest"
+                canAdjust={writable}
+                canReset={false}
+                onViewAnswers={setAnswersTarget}
+                onAdjust={setAdjustTarget}
+                onClearAdjustment={handleClearAdjustment}
+                onReset={setResetTarget}
+              />
+            </div>
+          )}
         </>
       )}
 
@@ -179,7 +217,13 @@ export function CreatorQuizResultsPage() {
           quizId={quizId}
           studentId={answersTarget.studentId}
           studentName={answersTarget.fullName}
-          load={() => getLearnerQuizResult(classId, quizId, answersTarget.studentId)}
+          load={() =>
+            (guestIds.has(answersTarget.studentId) ? getGuestQuizResult : getLearnerQuizResult)(
+              classId,
+              quizId,
+              answersTarget.studentId,
+            )
+          }
           onClose={() => setAnswersTarget(null)}
         />
       )}
@@ -191,7 +235,14 @@ export function CreatorQuizResultsPage() {
           studentName={adjustTarget.fullName}
           currentScore={adjustTarget.effectiveScore}
           totalPoints={results.totalPoints}
-          adjust={(request) => adjustLearnerQuizScore(classId, quizId, adjustTarget.studentId, request)}
+          adjust={(request) =>
+            (guestIds.has(adjustTarget.studentId) ? adjustGuestQuizScore : adjustLearnerQuizScore)(
+              classId,
+              quizId,
+              adjustTarget.studentId,
+              request,
+            )
+          }
           onClose={() => setAdjustTarget(null)}
           onAdjusted={() => {
             setAdjustTarget(null);

@@ -39,6 +39,7 @@ import { QuestionEditor } from "@/features/takeHomeQuizzes/components/QuestionEd
 import { QuizPreviewModal } from "@/features/takeHomeQuizzes/components/QuizPreviewModal";
 import { QuestionTemplateDownload } from "@/features/takeHomeQuizzes/components/QuestionImportModal";
 import { QuizWindowFields } from "@/features/takeHomeQuizzes/components/QuizWindowFields";
+import { CreatorGuestLinkCard } from "@/features/takeHomeQuizzes/creator/CreatorGuestLinkCard";
 import { isQuizOpenNow } from "@/features/takeHomeQuizzes/takeHomeQuizStatus";
 import { ShuffleFields } from "@/features/takeHomeQuizzes/components/ShuffleFields";
 import { NO_THEME, type ThemeChoice } from "@/features/takeHomeQuizzes/theme/themeChoice";
@@ -419,6 +420,16 @@ export function CreatorQuizEditorPage() {
             offerMine={false}
             quizTitle={form.title}
           />
+
+          {quiz && (
+            <CreatorGuestLinkCard
+              classId={classId}
+              quizId={quiz.id}
+              readOnly={readOnly}
+              draft={quiz.status === "DRAFT"}
+              revealResultsOnSubmit={quiz.revealResultsOnSubmit}
+            />
+          )}
         </div>
       )}
 

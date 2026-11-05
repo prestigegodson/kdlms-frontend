@@ -30,8 +30,8 @@ const STATE_VARIANTS: Record<TakeHomeQuizAttemptState, "neutral" | "info" | "suc
   SUBMITTED: "success",
 };
 
-function formatScore(score: number | null, totalPoints: number): string {
-  return !score ? "—" : `${score} / ${totalPoints}`;
+function formatScore(score: number | null | undefined, totalPoints: number): string {
+  return score == null ? "—" : `${score} / ${totalPoints}`;
 }
 
 /**
@@ -87,9 +87,9 @@ export function ResultsTable({
             <TableCell label="Score">
               <div className="flex items-center gap-2">
                 <span>{formatScore(row.effectiveScore, totalPoints)}</span>
-                {!!row.adjustedScore && <Badge variant="warning">Adjusted</Badge>}
+                {row.adjustedScore != null && <Badge variant="warning">Adjusted</Badge>}
               </div>
-              {!!row.adjustedScore && (
+              {row.adjustedScore != null && (
                 <div className="text-xs text-slate-500">
                   Auto: {formatScore(row.autoScore, totalPoints)}
                 </div>
@@ -115,7 +115,7 @@ export function ResultsTable({
                     Adjust
                   </Button>
                 )}
-                {canAdjust && row.manageable !== false && row.adjustedScore !== null && (
+                {canAdjust && row.manageable !== false && row.adjustedScore != null && (
                   <Button
                     type="button"
                     variant="ghost"
