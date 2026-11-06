@@ -41,6 +41,43 @@ jobs:
             -r
             ./
 
+      # Chrome prints a copy of the report. The overrides expand the collapsed
+      # tables, keep the dark theme and drop the interactive controls. This step
+      # gets no secrets: Chrome runs unsandboxed and loads the template's CDN assets.
+      - name: Render PDF report
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: |
+          if [ ! -s osv-report.html ]; then
+            echo "::warning::No HTML report to render."
+            exit 0
+          fi
+
+          work="$(mktemp -d)"
+          cat > "$work/print.html" <<'EOF'
+          <style>
+            @page { size: A4 landscape; margin: 0 }
+            html, body { print-color-adjust: exact; -webkit-print-color-adjust: exact; overflow: visible !important }
+            .package-details.hide-block { display: block !important }
+            .package-details { max-height: none !important; overflow: visible !important }
+            #tab-switch, #filter-section, .search-box, .improvement-link, .expand-icon { display: none !important }
+            .container { margin: 0 auto; box-shadow: none }
+            .package-tr { break-after: avoid }
+            .package-tr, .vuln-tr { break-inside: avoid }
+          </style>
+          EOF
+          sed '/<head>/r '"$work/print.html" osv-report.html > "$work/report.html"
+
+          timeout 120 google-chrome --headless=new --no-sandbox --disable-gpu \
+            --user-data-dir="$work/profile" --no-pdf-header-footer \
+            --virtual-time-budget=15000 --print-to-pdf=osv-report.pdf \
+            "file://$work/report.html" || true
+
+          if [ "$(head -c5 osv-report.pdf 2>/dev/null)" != "%PDF-" ]; then
+            rm -f osv-report.pdf
+            echo "::warning::Chrome did not produce a PDF report."
+          fi
+
       - name: Upload results
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
@@ -48,12 +85,14 @@ jobs:
           name: osv-scanner-report
           path: |
             osv-report.html
+            osv-report.pdf
             osv-results.json
           if-no-files-found: warn
           retention-days: 30
 
-      # The report is an attachment because it's an interactive page (scripts, a
-      # CDN stylesheet) that mail clients won't render inline.
+      # The report goes out as a PDF because the HTML is an interactive page
+      # (scripts, CDN stylesheets) that mail clients won't render. The HTML stays
+      # in the Actions artifact.
       - name: Email report
         if: ${{ !cancelled() }}
         env:
@@ -155,10 +194,12 @@ jobs:
           : > "$work/attachment.b64"
           if [ ! -s osv-report.html ]; then
             attachment_note="The scanner did not produce an HTML report."
-          elif [ "$(wc -c < osv-report.html)" -gt "$max_attachment_bytes" ]; then
+          elif [ ! -s osv-report.pdf ]; then
+            attachment_note="The PDF report could not be generated. Download the HTML report from the Actions run."
+          elif [ "$(wc -c < osv-report.pdf)" -gt "$max_attachment_bytes" ]; then
             attachment_note="The full report is too large to email. Download it from the Actions run."
           else
-            base64 -w0 osv-report.html > "$work/attachment.b64"
+            base64 -w0 osv-report.pdf > "$work/attachment.b64"
           fi
 
           # --- body ---------------------------------------------------------
@@ -207,12 +248,12 @@ jobs:
             --rawfile attachment "$work/attachment.b64" \
             --arg subject "$subject" \
             --arg text "$headline in $GITHUB_REPOSITORY at $short_sha, triggered by $GITHUB_ACTOR. $attachment_note Actions run: $run_url" \
-            --arg attachment_name "osv-report-$repo_name-$short_sha.html" '
+            --arg attachment_name "osv-report-$repo_name-$short_sha.pdf" '
             {from: {address: "noreply@kdlms.com", name: "KDLMS CI"},
              to: $to[0], subject: $subject, htmlbody: $html, textbody: $text,
              track_clicks: false, track_opens: false}
             | if $attachment == "" then . else
-                .attachments = [{content: $attachment, mime_type: "text/html", name: $attachment_name}]
+                .attachments = [{content: $attachment, mime_type: "application/pdf", name: $attachment_name}]
               end' > "$work/payload.json"
 
           status="$(curl -sS --max-time 60 --retry 2 \
