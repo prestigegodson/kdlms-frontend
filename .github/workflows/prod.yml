@@ -105,12 +105,25 @@ jobs:
 
           # --- summary ------------------------------------------------------
           # A package can be reported under more than one source, hence unique_by.
+          # A finding lists one fix per release line, so the useful one is the
+          # lowest above the installed version. GIT ranges only hold commit hashes.
           scan_ok=true
           if jq -e 'type == "object"' osv-results.json > /dev/null 2>&1; then
             jq -c '
-              [(.results // [])[] | (.packages // [])[] | .package as $p | (.groups // [])[]
+              def version_key: [scan("[0-9]+") | tonumber];
+              [(.results // [])[] | (.packages // [])[] | .package as $p
+                | (.vulnerabilities // []) as $vulns | (.groups // [])[]
+                | .ids as $ids
+                | [$vulns[] | select(.id | IN($ids[])) | (.affected // [])[]
+                    | select(.package.name == $p.name) | (.ranges // [])[]
+                    | select(.type != "GIT") | (.events // [])[] | .fixed // empty] as $fixes
+                | (($p.version // "") | version_key) as $installed
+                | [$fixes[] | select(version_key > $installed)] as $upgrades
                 | {name: $p.name, version: $p.version, ecosystem: $p.ecosystem,
                    ids: (.ids | join(", ")),
+                   fixed: (if ($fixes | length) == 0 then "No known fix"
+                           elif ($upgrades | length) == 0 then "See report"
+                           else ($upgrades | min_by(version_key)) end),
                    severity: ((.max_severity | tonumber?) // -1)}]
               | unique_by([.name, .version, .ids])
               | sort_by(-.severity, .name)' osv-results.json > "$work/rows.json"
@@ -168,12 +181,16 @@ jobs:
                 @html "<p>\($note) <a href=\"\($run_url)\">View the Actions run</a>.</p>",
                 (if ($shown | length) > 0 then
                   ( "<table style=\"border-collapse:collapse\"><tr>"
-                    + (["Package", "Version", "Ecosystem", "IDs", "Severity"]
+                    + (["Package", "Version", "Fixed version", "Ecosystem", "IDs", "Severity"]
                        | map("<th style=\"\(cell);background:#f3f4f6\">\(.)</th>") | join(""))
                     + "</tr>" ),
                   ( $shown[]
-                    | (if .severity < 0 then "n/a" else (.severity | tostring) end) as $severity
-                    | [.name, .version, .ecosystem, .ids, $severity]
+                    | (if .severity < 0 then "Unknown"
+                       elif .severity < 4 then "Low"
+                       elif .severity < 7 then "Medium"
+                       elif .severity < 9 then "High"
+                       else "Critical" end) as $severity
+                    | [.name, .version, .fixed, .ecosystem, .ids, $severity]
                     | "<tr>" + (map("<td style=\"\(cell)\">\(. | @html)</td>") | join("")) + "</tr>" ),
                   "</table>"
                 else empty end),
