@@ -6,15 +6,218 @@ on:
 
 jobs:
   # Report-only: nothing depends on this job, so findings never block a deploy.
+  # Emails the report to OSV_REPORT_ADMIN_EMAILS (repo variable, comma-separated,
+  # since the GitHub API doesn't expose admins' addresses) and the pusher.
   osv-scan:
     name: OSV-Scanner
-    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.7.0
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
-      actions: read
       contents: read
-      security-events: write
-    with:
-      fail-on-vuln: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # The scanner exits non-zero when it finds vulnerabilities, so a step
+      # failure proves nothing: a failed scan is one that wrote no results file.
+      - name: Scan (HTML report)
+        uses: google/osv-scanner-action/osv-scanner-action@0a65f82af05cd58cf587827b0bb0489548c18346 # v2.7.0
+        continue-on-error: true
+        with:
+          scan-args: |-
+            --format=html
+            --output=osv-report.html
+            -r
+            ./
+
+      - name: Scan (JSON summary)
+        uses: google/osv-scanner-action/osv-scanner-action@0a65f82af05cd58cf587827b0bb0489548c18346 # v2.7.0
+        continue-on-error: true
+        with:
+          scan-args: |-
+            --format=json
+            --output=osv-results.json
+            -r
+            ./
+
+      - name: Upload results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: osv-scanner-report
+          path: |
+            osv-report.html
+            osv-results.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      # The report is an attachment because it's an interactive page (scripts, a
+      # CDN stylesheet) that mail clients won't render inline.
+      - name: Email report
+        if: ${{ !cancelled() }}
+        env:
+          ZEPTOMAIL_API_KEY: ${{ secrets.ZEPTOMAIL_API_KEY }}
+          ADMIN_EMAILS: ${{ vars.OSV_REPORT_ADMIN_EMAILS }}
+          PUSHER_EMAIL: ${{ github.event.pusher.email }}
+          AUTHOR_EMAIL: ${{ github.event.head_commit.author.email }}
+          AUTHOR_USERNAME: ${{ github.event.head_commit.author.username }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$ZEPTOMAIL_API_KEY" ]; then
+            echo "::error::The ZEPTOMAIL_API_KEY secret is not set."
+            exit 1
+          fi
+
+          work="$(mktemp -d)"
+          repo_name="${GITHUB_REPOSITORY#*/}"
+          short_sha="${GITHUB_SHA::7}"
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          commit_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$GITHUB_SHA"
+
+          # --- recipients ---------------------------------------------------
+          # A private GitHub email shows up as a noreply address. The commit
+          # author only stands in for the pusher when they're the same person.
+          trigger_email="$PUSHER_EMAIL"
+          if [[ -z "$trigger_email" || "$trigger_email" == *noreply* ]]; then
+            trigger_email=""
+            if [ "$AUTHOR_USERNAME" = "$GITHUB_ACTOR" ]; then
+              trigger_email="$AUTHOR_EMAIL"
+            fi
+          fi
+          if [[ -z "$trigger_email" || "$trigger_email" == *noreply* ]]; then
+            echo "::warning::No usable email for $GITHUB_ACTOR, sending to the admins only."
+          fi
+          if [ -z "$ADMIN_EMAILS" ]; then
+            echo "::warning::The OSV_REPORT_ADMIN_EMAILS variable is not set."
+          fi
+
+          printf '%s,%s' "$ADMIN_EMAILS" "$trigger_email" | jq -Rsc '
+            [splits("[,\\s]+") | ascii_downcase
+              | select(test("^[^@]+@[^@]+$") and (test("noreply") | not))]
+            | unique | map({email_address: {address: .}})' > "$work/to.json"
+
+          if [ "$(jq 'length' "$work/to.json")" -eq 0 ]; then
+            echo "::error::No recipients. Set the OSV_REPORT_ADMIN_EMAILS repository variable."
+            exit 1
+          fi
+
+          # --- summary ------------------------------------------------------
+          # A package can be reported under more than one source, hence unique_by.
+          scan_ok=true
+          if jq -e 'type == "object"' osv-results.json > /dev/null 2>&1; then
+            jq -c '
+              [(.results // [])[] | (.packages // [])[] | .package as $p | (.groups // [])[]
+                | {name: $p.name, version: $p.version, ecosystem: $p.ecosystem,
+                   ids: (.ids | join(", ")),
+                   severity: ((.max_severity | tonumber?) // -1)}]
+              | unique_by([.name, .version, .ids])
+              | sort_by(-.severity, .name)' osv-results.json > "$work/rows.json"
+          else
+            scan_ok=false
+            echo '[]' > "$work/rows.json"
+          fi
+
+          vuln_count="$(jq 'length' "$work/rows.json")"
+          package_count="$(jq '[.[] | [.name, .version]] | unique | length' "$work/rows.json")"
+
+          if [ "$scan_ok" = false ]; then
+            headline="scan FAILED"
+          elif [ "$vuln_count" -eq 0 ]; then
+            headline="no vulnerabilities"
+          else
+            vuln_word="vulnerabilities"
+            package_word="packages"
+            [ "$vuln_count" -eq 1 ] && vuln_word="vulnerability"
+            [ "$package_count" -eq 1 ] && package_word="package"
+            headline="$vuln_count $vuln_word in $package_count $package_word"
+          fi
+          subject="[OSV] $repo_name: $headline ($short_sha)"
+
+          # --- attachment ---------------------------------------------------
+          # Same cap as the backend's kdlms.email.max-attachment-bytes.
+          max_attachment_bytes=8388608
+          attachment_note="The full report is attached."
+          : > "$work/attachment.b64"
+          if [ ! -s osv-report.html ]; then
+            attachment_note="The scanner did not produce an HTML report."
+          elif [ "$(wc -c < osv-report.html)" -gt "$max_attachment_bytes" ]; then
+            attachment_note="The full report is too large to email. Download it from the Actions run."
+          else
+            base64 -w0 osv-report.html > "$work/attachment.b64"
+          fi
+
+          # --- body ---------------------------------------------------------
+          # @html escapes every value: package names and usernames are untrusted.
+          jq -rn \
+            --slurpfile rows "$work/rows.json" \
+            --arg headline "$headline" \
+            --arg note "$attachment_note" \
+            --arg repo "$GITHUB_REPOSITORY" \
+            --arg branch "$GITHUB_REF_NAME" \
+            --arg sha "$short_sha" \
+            --arg actor "$GITHUB_ACTOR" \
+            --arg run_url "$run_url" \
+            --arg commit_url "$commit_url" '
+            def cell: "padding:6px 10px;border:1px solid #d1d5db;text-align:left";
+            ($rows[0]) as $all | ($all[:50]) as $shown
+            | [ "<html><body style=\"font-family:Arial,sans-serif;font-size:14px;color:#111827\">",
+                @html "<h2 style=\"margin:0 0 12px\">OSV-Scanner: \($headline)</h2>",
+                @html "<p>\($repo), branch \($branch), commit <a href=\"\($commit_url)\">\($sha)</a>, triggered by \($actor).</p>",
+                @html "<p>\($note) <a href=\"\($run_url)\">View the Actions run</a>.</p>",
+                (if ($shown | length) > 0 then
+                  ( "<table style=\"border-collapse:collapse\"><tr>"
+                    + (["Package", "Version", "Ecosystem", "IDs", "Severity"]
+                       | map("<th style=\"\(cell);background:#f3f4f6\">\(.)</th>") | join(""))
+                    + "</tr>" ),
+                  ( $shown[]
+                    | (if .severity < 0 then "n/a" else (.severity | tostring) end) as $severity
+                    | [.name, .version, .ecosystem, .ids, $severity]
+                    | "<tr>" + (map("<td style=\"\(cell)\">\(. | @html)</td>") | join("")) + "</tr>" ),
+                  "</table>"
+                else empty end),
+                (if ($all | length) > 50 then
+                  "<p>Showing the 50 most severe of \($all | length). The rest are in the full report.</p>"
+                else empty end),
+                "</body></html>" ]
+            | join("\n")' > "$work/body.html"
+
+          # --- send ---------------------------------------------------------
+          jq -n \
+            --slurpfile to "$work/to.json" \
+            --rawfile html "$work/body.html" \
+            --rawfile attachment "$work/attachment.b64" \
+            --arg subject "$subject" \
+            --arg text "$headline in $GITHUB_REPOSITORY at $short_sha, triggered by $GITHUB_ACTOR. $attachment_note Actions run: $run_url" \
+            --arg attachment_name "osv-report-$repo_name-$short_sha.html" '
+            {from: {address: "noreply@kdlms.com", name: "KDLMS CI"},
+             to: $to[0], subject: $subject, htmlbody: $html, textbody: $text,
+             track_clicks: false, track_opens: false}
+            | if $attachment == "" then . else
+                .attachments = [{content: $attachment, mime_type: "text/html", name: $attachment_name}]
+              end' > "$work/payload.json"
+
+          status="$(curl -sS --max-time 60 --retry 2 \
+            -o "$work/response.json" -w '%{http_code}' \
+            -X POST https://api.zeptomail.com/v1.1/email \
+            -H "Authorization: Zoho-enczapikey $ZEPTOMAIL_API_KEY" \
+            -H 'Content-Type: application/json' \
+            -H 'Accept: application/json' \
+            --data-binary @"$work/payload.json")"
+
+          request_id="$(jq -r '.request_id // .error.request_id // "unknown"' "$work/response.json" 2>/dev/null || echo unknown)"
+          if [[ "$status" != 2* ]]; then
+            echo "::error::ZeptoMail returned HTTP $status (request_id $request_id)."
+            cat "$work/response.json"
+            exit 1
+          fi
+          echo "Sent to $(jq 'length' "$work/to.json") recipient(s), ZeptoMail request_id $request_id."
+
+          if [ "$scan_ok" = false ]; then
+            echo "::error::OSV-Scanner wrote no results. See the scan steps for the cause."
+            exit 1
+          fi
 
   build-and-deploy:
     runs-on: ubuntu-latest
