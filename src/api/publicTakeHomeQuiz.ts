@@ -1,4 +1,4 @@
-import { apiFetch } from "@/api/client";
+import { apiFetch, apiUrl } from "@/api/client";
 import type { QuizThemeStyle } from "@/api/quizThemes";
 import type {
   InteractionConfig,
@@ -184,7 +184,7 @@ function base(token: string): string {
  * `Cache-Control` response header.
  */
 export function publicQuestionImageUrl(token: string, fileId: string): string {
-  return `${base(token)}/images/${encodeURIComponent(fileId)}`;
+  return apiUrl(`${base(token)}/images/${encodeURIComponent(fileId)}`);
 }
 
 export function resolveTakeHomeQuiz(token: string): Promise<QuizInterstitialView> {

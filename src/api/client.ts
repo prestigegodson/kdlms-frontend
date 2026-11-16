@@ -129,8 +129,17 @@ function buildHeaders(options: RequestOptions): Headers {
   return requestHeaders;
 }
 
+/**
+ * An absolute API URL for a request the browser makes itself (an `<img src>`), which can't go
+ * through `apiFetch` - without the `VITE_API_BASE_URL` origin a relative `/api/...` path resolves
+ * against the SPA's own host, which answers every path with `index.html`.
+ */
+export function apiUrl(path: string): string {
+  return `${BASE_URL}${path}`;
+}
+
 function doFetch(path: string, options: RequestOptions): Promise<Response> {
-  return fetch(`${BASE_URL}${path}`, { ...options, headers: buildHeaders(options) });
+  return fetch(apiUrl(path), { ...options, headers: buildHeaders(options) });
 }
 
 /**
@@ -357,7 +366,7 @@ function sendXhr(
 ): Promise<XhrResult> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open(method, `${BASE_URL}${path}`);
+    xhr.open(method, apiUrl(path));
     // Same header rules as fetch: buildHeaders never sets a Content-Type for a FormData body, so
     // the browser writes the multipart boundary itself.
     buildHeaders({ body }).forEach((value, key) => xhr.setRequestHeader(key, value));

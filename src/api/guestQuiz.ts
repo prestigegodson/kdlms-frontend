@@ -1,4 +1,4 @@
-import { apiFetch } from "@/api/client";
+import { apiFetch, apiUrl } from "@/api/client";
 import type {
   AnswerCommand,
   AttemptClockView,
@@ -73,7 +73,7 @@ export function startGuestQuiz(linkToken: string, request: StartGuestQuizRequest
 }
 
 export function guestQuizLinkImageUrl(linkToken: string, fileId: string): string {
-  return `${linkBase(linkToken)}/images/${encodeURIComponent(fileId)}`;
+  return apiUrl(`${linkBase(linkToken)}/images/${encodeURIComponent(fileId)}`);
 }
 
 export function getGuestQuizSession(sessionToken: string): Promise<GuestQuizSessionView> {
@@ -117,5 +117,5 @@ export function getGuestQuizReview(sessionToken: string): Promise<QuizReviewView
 }
 
 export function guestQuizImageUrl(sessionToken: string, fileId: string): string {
-  return `${attemptBase(sessionToken)}/images/${encodeURIComponent(fileId)}`;
+  return apiUrl(`${attemptBase(sessionToken)}/images/${encodeURIComponent(fileId)}`);
 }
