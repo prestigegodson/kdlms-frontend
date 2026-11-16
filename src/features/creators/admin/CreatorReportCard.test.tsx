@@ -57,6 +57,8 @@ const REPORT: CreatorReportView = {
       createdAt: "2026-10-30T10:00:00Z",
       learnersAttempted: 9,
       submitted: 8,
+      guestsAttempted: 13,
+      guestsSubmitted: 11,
     },
   ],
   payments: [
@@ -134,6 +136,10 @@ describe("CreatorReportCard", () => {
     expect(screen.getByText("36 submitted")).toBeInTheDocument();
     expect(screen.getByText("Fractions check")).toBeInTheDocument();
     expect(screen.getByText("Maths Year 5")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Guests attempted" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Guests submitted" })).toBeInTheDocument();
+    expect(screen.getByText("13")).toBeInTheDocument();
+    expect(screen.getByText("11")).toBeInTheDocument();
     expect(billingApi.listAdminPaymentTransactions).toHaveBeenCalledWith("", 0, 5, "tenant-1");
 
     await user.click(screen.getByRole("tab", { name: "USD" }));

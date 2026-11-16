@@ -377,7 +377,11 @@ export interface CreatorReportQuizRow {
   status: TakeHomeQuizStatus;
   createdAt: string;
   learnersAttempted: number;
+  /** Learner attempts submitted. */
   submitted: number;
+  /** People who took the quiz through its guest link. */
+  guestsAttempted: number;
+  guestsSubmitted: number;
 }
 
 /** Mirrors backend CreatorReportView - one tutor's activity and what they've paid the platform. */

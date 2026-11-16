@@ -159,7 +159,9 @@ function QuizzesSection({ report }: { report: CreatorReportView }) {
                 <TableHeaderCell>Status</TableHeaderCell>
                 <TableHeaderCell>Created</TableHeaderCell>
                 <TableHeaderCell numeric>Learners attempted</TableHeaderCell>
-                <TableHeaderCell numeric>Submitted</TableHeaderCell>
+                <TableHeaderCell numeric>Learners submitted</TableHeaderCell>
+                <TableHeaderCell numeric>Guests attempted</TableHeaderCell>
+                <TableHeaderCell numeric>Guests submitted</TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -176,8 +178,14 @@ function QuizzesSection({ report }: { report: CreatorReportView }) {
                   <TableCell label="Learners attempted" numeric>
                     {n(quiz.learnersAttempted)}
                   </TableCell>
-                  <TableCell label="Submitted" numeric>
+                  <TableCell label="Learners submitted" numeric>
                     {n(quiz.submitted)}
+                  </TableCell>
+                  <TableCell label="Guests attempted" numeric>
+                    {n(quiz.guestsAttempted)}
+                  </TableCell>
+                  <TableCell label="Guests submitted" numeric>
+                    {n(quiz.guestsSubmitted)}
                   </TableCell>
                 </TableRow>
               ))}
