@@ -4,9 +4,13 @@ import {
   BANDED_TABLE_BLOCKS,
   BLOCK_DEFAULT_SIZE,
   BLOCK_LABELS,
+  CELL_PADDING_CSS,
+  DEFAULT_TABLE_STYLE,
   type LayoutElement,
   type PageStyle,
   TABLE_HEADER_BLOCKS,
+  type TableStyle,
+  mergeTableStyle,
   resolveHeaderColors,
 } from "@/features/reporting/components/designer/layout";
 import { REPORT_BLOCKS } from "@/features/reporting/components/reportBlocks";
@@ -59,6 +63,15 @@ export function ElementPreview({ element, page }: { element: Exclude<LayoutEleme
               {BANDED_TABLE_BLOCKS.has(element.block) ? "Header row" : BLOCK_LABELS[element.block]}
             </div>
             <div className="px-3 py-2 text-slate-500">{BLOCK_DESCRIPTIONS[element.block]}</div>
+            <TableStyleHint page={page} override={element.style?.tableStyle} />
+          </div>
+        );
+      }
+      if (element.block === "ATTENDANCE_SUMMARY" && (page.tableStyle || element.style?.tableStyle)) {
+        return (
+          <div className="overflow-hidden rounded-control border border-dashed border-slate-400 bg-slate-50 text-center text-xs text-slate-600">
+            <div className="px-3 py-2">{BLOCK_LABELS[element.block]}</div>
+            <TableStyleHint page={page} override={element.style?.tableStyle} />
           </div>
         );
       }
@@ -114,5 +127,33 @@ function ImagePreview({ fileId }: { fileId: string }) {
     <div className="flex h-16 items-center justify-center overflow-hidden rounded-control border border-slate-200 bg-white">
       {url ? <img src={url} alt="" className="max-h-full max-w-full object-contain" /> : <ImageIcon className="h-4 w-4 text-slate-300" aria-hidden="true" />}
     </div>
+  );
+}
+
+/** Two sample body rows in the resolved table style - a hint only; the server Preview shows the real table. */
+function TableStyleHint({ page, override }: { page: PageStyle; override?: TableStyle }) {
+  const style = mergeTableStyle(override, page.tableStyle);
+  if (!style) return null;
+  const width = style.borderWidthPx ?? DEFAULT_TABLE_STYLE.borderWidthPx;
+  const border = width === 0 ? "none" : `${width}px solid ${style.borderColor ?? DEFAULT_TABLE_STYLE.borderColor}`;
+  const cell = {
+    border,
+    padding: CELL_PADDING_CSS[style.cellPadding ?? DEFAULT_TABLE_STYLE.cellPadding],
+    fontSize: `${style.fontSizePx ?? DEFAULT_TABLE_STYLE.fontSizePx}px`,
+  };
+  return (
+    <table className="w-full border-collapse bg-white text-left text-slate-700">
+      <tbody>
+        {[0, 1].map((index) => {
+          const stripe = index === 1 ? style.stripeColor : undefined;
+          return (
+            <tr key={index}>
+              <td style={{ ...cell, backgroundColor: style.labelBackground ?? stripe }}>Subject</td>
+              <td style={{ ...cell, backgroundColor: stripe }}>Value</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }

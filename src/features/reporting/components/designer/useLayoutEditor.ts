@@ -225,6 +225,14 @@ export function useLayoutEditor(initial: ReportLayout) {
     [layout, commit],
   );
 
+  /** Commits a whole new layout as one undoable step - e.g. applying a theme, which touches the page and several blocks at once. */
+  const replaceLayout = useCallback(
+    (next: ReportLayout) => {
+      commit(next);
+    },
+    [commit],
+  );
+
   return {
     layout,
     selection,
@@ -252,6 +260,7 @@ export function useLayoutEditor(initial: ReportLayout) {
     updateRowCondition,
     setColumnWidths,
     updatePage,
+    replaceLayout,
   };
 }
 

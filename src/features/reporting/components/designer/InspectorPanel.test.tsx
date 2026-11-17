@@ -203,3 +203,69 @@ describe("InspectorPanel color reset", () => {
     expect(screen.getByLabelText("Line color")).toHaveValue("#cccccc");
   });
 });
+
+describe("InspectorPanel page look-and-feel", () => {
+  function PageHarness({ paddingPx }: { paddingPx: number }) {
+    const editor = useLayoutEditor({ ...blankLayout(), page: { ...blankLayout().page, paddingPx } });
+    if (editor.selection === null) editor.setSelection({ type: "page" });
+    return (
+      <>
+        <InspectorPanel editor={editor} />
+        <output data-testid="layout">{JSON.stringify(editor.layout.page)}</output>
+      </>
+    );
+  }
+
+  it("switching on the page border seeds a frame and raises a too-small page padding to hold it", async () => {
+    const user = userEvent.setup();
+    render(<PageHarness paddingPx={4} />);
+
+    await user.click(screen.getByLabelText("Border around the page"));
+
+    const page = JSON.parse(screen.getByTestId("layout").textContent ?? "{}");
+    expect(page.frame).toEqual({ widthPx: 2, style: "solid", color: "#1a1a1a", gapPx: 6 });
+    expect(page.paddingPx).toBe(8);
+    expect(screen.getByLabelText("Width (px)")).toHaveValue(2);
+  });
+
+  it("applying a theme fills in header colors and the table style", async () => {
+    const user = userEvent.setup();
+    render(<PageHarness paddingPx={24} />);
+
+    await user.click(screen.getByRole("button", { name: "Apply theme" }));
+
+    const page = JSON.parse(screen.getByTestId("layout").textContent ?? "{}");
+    expect(page.headerColors.headerBackground).toBe("#1f3a8a");
+    expect(page.tableStyle.borderColor).toMatch(/^#[0-9a-f]{6}$/);
+  });
+});
+
+describe("InspectorPanel box border", () => {
+  function BoxHarness() {
+    const editor = useLayoutEditor({
+      ...blankLayout(),
+      rows: [{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [{ id: "box-1", type: "BOX", elements: [] }] }] }],
+    });
+    if (editor.selection === null) editor.setSelection({ type: "element", elementId: "box-1" });
+    return (
+      <>
+        <InspectorPanel editor={editor} />
+        <output data-testid="box-style">{JSON.stringify(editor.layout.rows[0].columns[0].elements[0].style ?? {})}</output>
+      </>
+    );
+  }
+
+  it("showing the border reveals color, width and style, and picking Double widens a thin border to 3px", async () => {
+    const user = userEvent.setup();
+    render(<BoxHarness />);
+    expect(screen.queryByLabelText("Border style")).not.toBeInTheDocument();
+
+    await user.click(screen.getByLabelText("Show border"));
+    expect(screen.getByLabelText("Border color")).toBeInTheDocument();
+    expect(screen.getByLabelText("Border width (px)")).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Border style"), "double");
+
+    expect(JSON.parse(screen.getByTestId("box-style").textContent ?? "{}")).toMatchObject({ border: true, borderStyle: "double", borderWidthPx: 3 });
+  });
+});

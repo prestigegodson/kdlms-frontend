@@ -1,7 +1,9 @@
 import { ChevronsDownUp, ChevronsUpDown, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import "@/features/reporting/components/designer/designerFonts.css";
 import { RowShell } from "@/features/reporting/components/designer/RowShell";
+import type { PageStyle } from "@/features/reporting/components/designer/layout";
 import type { LayoutEditor } from "@/features/reporting/components/designer/useLayoutEditor";
 
 /**
@@ -33,7 +35,7 @@ export function DesignerCanvas({ editor }: { editor: LayoutEditor }) {
     <div className="flex justify-center overflow-x-auto overscroll-x-contain rounded-panel bg-slate-100 p-4 sm:p-8">
       <div
         onClick={() => editor.setSelection({ type: "page" })}
-        className="w-full max-w-[794px] shrink-0 space-y-3 bg-white shadow-lg"
+        className="relative w-full max-w-[794px] shrink-0 space-y-3 bg-white shadow-lg"
         style={{
           padding: `${editor.layout.page.paddingPx}px`,
           fontFamily: editor.layout.page.fontFamily,
@@ -96,7 +98,35 @@ export function DesignerCanvas({ editor }: { editor: LayoutEditor }) {
             </>
           )}
         </div>
+        {editor.layout.page.frame && <PageFrameOverlay page={editor.layout.page} />}
       </div>
     </div>
+  );
+}
+
+/**
+ * The page border, drawn where the PDF draws it: inset by whatever page
+ * padding is left after the border and its gap (mirrors backend
+ * `LayoutHtmlEmitter#framedPageCss`). Purely decorative - it never takes
+ * clicks, so the rows beneath stay selectable.
+ */
+function PageFrameOverlay({ page }: { page: PageStyle }) {
+  const frame = page.frame;
+  if (!frame) return null;
+  const insetPx = Math.max(0, page.paddingPx - frame.widthPx - (frame.gapPx ?? 0));
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute"
+      // top/right/bottom/left, not `inset` (Chrome 87+), for the browserslist floor; marginTop:0 undoes the parent's space-y.
+      style={{
+        top: insetPx,
+        right: insetPx,
+        bottom: insetPx,
+        left: insetPx,
+        border: `${frame.widthPx}px ${frame.style} ${frame.color}`,
+        marginTop: 0,
+      }}
+    />
   );
 }

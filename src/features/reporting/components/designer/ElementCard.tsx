@@ -5,7 +5,7 @@ import { ElementList } from "@/features/reporting/components/designer/ElementLis
 import { ElementPreview } from "@/features/reporting/components/designer/ElementPreview";
 import { TableEditorGrid } from "@/features/reporting/components/designer/TableEditorGrid";
 import { primeDataTransfer, setCurrentDrag } from "@/features/reporting/components/designer/dragTypes";
-import type { LayoutElement } from "@/features/reporting/components/designer/layout";
+import { type LayoutElement, boxBorderCss } from "@/features/reporting/components/designer/layout";
 import type { ContainerKind } from "@/features/reporting/components/designer/layoutOps";
 import type { LayoutEditor } from "@/features/reporting/components/designer/useLayoutEditor";
 
@@ -101,7 +101,11 @@ export function ElementCard({ element, index, siblingCount, editor }: ElementCar
       </div>
 
       {element.type === "BOX" ? (
-        <div className="rounded-control border border-dashed border-slate-300 bg-slate-50/50 p-2">
+        <div
+          className={`rounded-control p-2 ${element.style?.border ? "" : "border border-dashed border-slate-300 bg-slate-50/50"}`}
+          // A bordered box shows its real border and background, like the PDF; an unbordered one keeps the dashed design outline.
+          style={element.style?.border ? { border: boxBorderCss(element.style), backgroundColor: element.style.backgroundColor } : undefined}
+        >
           <ElementList containerId={element.id} elements={element.elements} editor={editor} containerKind="box" />
         </div>
       ) : element.type === "TABLE" ? (

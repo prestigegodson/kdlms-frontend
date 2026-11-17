@@ -1,6 +1,12 @@
 import {
   ALLOWED_FONT_FAMILIES,
   CELL_FORBIDDEN_TYPES,
+  CELL_PADDINGS,
+  FRAME_STYLES,
+  HEADING_BLOCKS,
+  type PageFrame,
+  TABLE_STYLE_BLOCKS,
+  type TableStyle,
   CONDITION_MATCHES,
   type HeaderColors,
   LAYOUT_VERSION,
@@ -51,6 +57,15 @@ const MAX_BACKGROUND_OPACITY = 100;
 const MAX_TABLE_BORDER_WIDTH_PX = 8;
 const MAX_TABLE_CELL_PADDING_PX = 24;
 const REQUIRED_TABLE_COLUMN_WIDTH_SUM = 100;
+const MAX_FRAME_WIDTH_PX = 12;
+const MIN_DOUBLE_FRAME_WIDTH_PX = 3;
+const MAX_FRAME_GAP_PX = 40;
+const MAX_BLOCK_TABLE_BORDER_WIDTH_PX = 4;
+const MIN_BLOCK_TABLE_FONT_SIZE_PX = 8;
+const MAX_BLOCK_TABLE_FONT_SIZE_PX = 16;
+const MAX_ROW_BORDER_WIDTH_PX = 6;
+const MAX_LETTER_SPACING_PX = 10;
+const MAX_BOX_BORDER_WIDTH_PX = 8;
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 const ALIGNMENTS = new Set(["left", "center", "right"]);
@@ -88,6 +103,61 @@ function validatePage(layout: ReportLayout, errors: string[]) {
     errors.push("Page background opacity is required when the school logo background is enabled.");
   }
   validateHeaderColors(page.headerColors, "Page", errors);
+  validateFrame(page.frame, page.paddingPx, errors);
+  validateTableStyle(page.tableStyle, "Page", errors);
+}
+
+/** Mirrors backend `ReportLayoutValidator#validateFrame` - the frame and its gap are carved out of the page padding, so they must fit inside it. */
+function validateFrame(frame: PageFrame | undefined, paddingPx: number, errors: string[]) {
+  if (!frame) return;
+  requireRange(frame.widthPx, 1, MAX_FRAME_WIDTH_PX, "Page border width", errors);
+  if (!FRAME_STYLES.includes(frame.style)) {
+    errors.push(`Page border style must be one of: ${FRAME_STYLES.join(", ")}.`);
+  }
+  if (frame.style === "double" && frame.widthPx < MIN_DOUBLE_FRAME_WIDTH_PX) {
+    errors.push(`A double page border must be at least ${MIN_DOUBLE_FRAME_WIDTH_PX}px wide.`);
+  }
+  requireColor(frame.color, "Page border color", errors);
+  requireRange(frame.gapPx, 0, MAX_FRAME_GAP_PX, "Page border gap", errors);
+  const total = frame.widthPx + (frame.gapPx ?? 0);
+  if (total > paddingPx) {
+    errors.push(`The page border width plus its gap (${total}px) must fit inside the page padding (${paddingPx}px). Increase the page padding.`);
+  }
+}
+
+function validateTableStyle(style: TableStyle | undefined, owner: string, errors: string[]) {
+  if (!style) return;
+  if (style.borderColor !== undefined) requireColor(style.borderColor, `${owner} table border color`, errors);
+  requireRange(style.borderWidthPx, 0, MAX_BLOCK_TABLE_BORDER_WIDTH_PX, `${owner} table border width`, errors);
+  if (style.cellPadding !== undefined && !CELL_PADDINGS.includes(style.cellPadding)) {
+    errors.push(`Table cell padding must be one of: ${CELL_PADDINGS.join(", ")}.`);
+  }
+  requireRange(style.fontSizePx, MIN_BLOCK_TABLE_FONT_SIZE_PX, MAX_BLOCK_TABLE_FONT_SIZE_PX, `${owner} table font size`, errors);
+  if (style.stripeColor !== undefined) requireColor(style.stripeColor, `${owner} table stripe color`, errors);
+  if (style.labelBackground !== undefined) requireColor(style.labelBackground, `${owner} table label column color`, errors);
+}
+
+/** Mirrors backend `ReportLayoutValidator#validateElementTableStyle`/`#validateElementHeading`. */
+function validateElementTableStyleAndHeading(element: LayoutElement, errors: string[]) {
+  const tableStyle = element.style?.tableStyle;
+  if (tableStyle) {
+    if (element.type !== "BLOCK" || !TABLE_STYLE_BLOCKS.has(element.block)) {
+      errors.push("Only a table block may specify a table style.");
+    } else {
+      validateTableStyle(tableStyle, "Element", errors);
+    }
+  }
+  const heading = element.style?.heading;
+  if (heading) {
+    if (element.type !== "BLOCK" || !HEADING_BLOCKS.has(element.block)) {
+      errors.push("Only a school header or remark block may specify a heading style.");
+      return;
+    }
+    requireRange(heading.fontSizePx, MIN_FONT_SIZE_PX, MAX_FONT_SIZE_PX, "Heading font size", errors);
+    if (heading.color !== undefined) requireColor(heading.color, "Heading color", errors);
+    requireRange(heading.letterSpacingPx, 0, MAX_LETTER_SPACING_PX, "Heading letter spacing", errors);
+    if (heading.subColor !== undefined) requireColor(heading.subColor, "Heading secondary color", errors);
+  }
 }
 
 function validateHeaderColors(colors: HeaderColors | undefined, owner: string, errors: string[]) {
@@ -137,6 +207,10 @@ function validateRowStyle(row: LayoutRow, errors: string[]) {
   if (style.backgroundColor !== undefined) {
     requireColor(style.backgroundColor, "Row background color", errors);
   }
+  if (style.borderColor !== undefined) {
+    requireColor(style.borderColor, "Row border color", errors);
+  }
+  requireRange(style.borderWidthPx, 1, MAX_ROW_BORDER_WIDTH_PX, "Row border width", errors);
 }
 
 /**
@@ -373,6 +447,26 @@ function validateElementStyle(element: LayoutElement, errors: string[]) {
     requireColor(style.backgroundColor, "Element background color", errors);
   }
   validateElementHeaderColors(element, errors);
+  validateElementTableStyleAndHeading(element, errors);
+  validateBoxBorder(element, errors);
+}
+
+/** Mirrors backend `ReportLayoutValidator#validateElementBoxBorder`. */
+function validateBoxBorder(element: LayoutElement, errors: string[]) {
+  const style = element.style;
+  if (!style || (style.borderColor === undefined && style.borderWidthPx === undefined && style.borderStyle === undefined)) return;
+  if (element.type !== "BOX") {
+    errors.push("Only a BOX element may specify a border color, width or style.");
+    return;
+  }
+  if (style.borderColor !== undefined) requireColor(style.borderColor, "Box border color", errors);
+  requireRange(style.borderWidthPx, 1, MAX_BOX_BORDER_WIDTH_PX, "Box border width", errors);
+  if (style.borderStyle !== undefined && !FRAME_STYLES.includes(style.borderStyle)) {
+    errors.push(`Box border style must be one of: ${FRAME_STYLES.join(", ")}.`);
+  }
+  if (style.borderStyle === "double" && (style.borderWidthPx ?? 1) < MIN_DOUBLE_FRAME_WIDTH_PX) {
+    errors.push(`A double box border must be at least ${MIN_DOUBLE_FRAME_WIDTH_PX}px wide.`);
+  }
 }
 
 function requireRange(value: number | undefined, min: number, max: number, field: string, errors: string[]) {

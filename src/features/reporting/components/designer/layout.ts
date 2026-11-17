@@ -42,14 +42,32 @@ export const REPORT_BLOCK_NAMES = [
 
 export type ReportBlockName = (typeof REPORT_BLOCK_NAMES)[number];
 
-/** Mirrors backend `ReportLayoutValidator`'s font-family allowlist - every value here maps onto a PDF base-14 font that renders without registration. */
+/**
+ * Mirrors backend `ReportLayoutValidator`'s font-family allowlist. The first
+ * three are PDF base-14 fonts; the rest name a font bundled with the backend
+ * (`shared.domain.EmbeddedFont`), each falling back to a base-14 font of the
+ * same kind. `designerFonts.css` loads the bundled ones for the canvas.
+ */
 export const ALLOWED_FONT_FAMILIES = [
   "Helvetica, Arial, sans-serif",
   "Times New Roman, Times, serif",
   "Courier New, monospace",
+  "Lato, Helvetica, Arial, sans-serif",
+  "Merriweather, Times New Roman, Times, serif",
+  "Noto Serif, Times New Roman, Times, serif",
 ] as const;
 
 export type AllowedFontFamily = (typeof ALLOWED_FONT_FAMILIES)[number];
+
+/** What the font picker shows for each allowed stack. */
+export const FONT_FAMILY_LABELS: Record<AllowedFontFamily, string> = {
+  "Helvetica, Arial, sans-serif": "Helvetica (clean sans-serif)",
+  "Times New Roman, Times, serif": "Times (classic serif)",
+  "Courier New, monospace": "Courier (typewriter)",
+  "Lato, Helvetica, Arial, sans-serif": "Lato (modern sans-serif)",
+  "Merriweather, Times New Roman, Times, serif": "Merriweather (formal serif)",
+  "Noto Serif, Times New Roman, Times, serif": "Noto Serif (book serif)",
+};
 
 export type ElementAlign = "left" | "center" | "right";
 
@@ -66,6 +84,105 @@ export interface ElementStyle {
   border?: boolean;
   /** Per-table override of `PageStyle.headerColors` - only accepted on a `TABLE_HEADER_BLOCKS` block or a TABLE element (and a TABLE has no band). */
   headerColors?: HeaderColors;
+  /** Per-table override of `PageStyle.tableStyle` - only accepted on a `TABLE_STYLE_BLOCKS` block. */
+  tableStyle?: TableStyle;
+  /** Headline styling - only accepted on a `HEADING_BLOCKS` block. */
+  heading?: HeadingStyle;
+  /** A BOX's border while `border` is on - BOX only. Defaults: `#cccccc`. */
+  borderColor?: string;
+  /** 1-8, default 1. */
+  borderWidthPx?: number;
+  /** Default `solid`; `double` needs at least 3px. */
+  borderStyle?: FrameStyle;
+}
+
+/** The CSS border a bordered BOX draws - mirrors backend `LayoutHtmlEmitter#boxElement`. */
+export function boxBorderCss(style: ElementStyle | undefined): string | undefined {
+  if (!style?.border) return undefined;
+  return `${style.borderWidthPx ?? 1}px ${style.borderStyle ?? "solid"} ${style.borderColor ?? "#cccccc"}`;
+}
+
+/** Mirrors backend `ReportLayout.PageFrame` - a border on every printed page, carved out of `PageStyle.paddingPx` (so `widthPx + gapPx` must fit inside it). */
+export interface PageFrame {
+  widthPx: number;
+  style: FrameStyle;
+  color: string;
+  gapPx?: number;
+}
+
+export const FRAME_STYLES = ["solid", "double", "dashed", "dotted"] as const;
+export type FrameStyle = (typeof FRAME_STYLES)[number];
+
+/** Mirrors backend `ReportLayout.CellPadding`. */
+export const CELL_PADDINGS = ["COMPACT", "NORMAL", "ROOMY"] as const;
+export type CellPadding = (typeof CELL_PADDINGS)[number];
+
+/** CSS padding per `CellPadding` - mirrors backend `TemplateRenderer.TableTheme#cellPadding`. */
+export const CELL_PADDING_CSS: Record<CellPadding, string> = {
+  COMPACT: "2px 4px",
+  NORMAL: "4px 6px",
+  ROOMY: "7px 9px",
+};
+
+/**
+ * The look of a platform block table's cells - mirrors backend
+ * `ReportLayout.TableStyle`. Like `HeaderColors`, every field is optional and
+ * resolves on its own: element override, then `PageStyle.tableStyle`, then
+ * the platform default (`DEFAULT_TABLE_STYLE`).
+ */
+export interface TableStyle {
+  borderColor?: string;
+  /** 0-4; 0 removes cell borders. */
+  borderWidthPx?: number;
+  cellPadding?: CellPadding;
+  /** 8-16. */
+  fontSizePx?: number;
+  /** Shades every other body row. */
+  stripeColor?: string;
+  /** Shades the first (label) column of every body row; wins over the stripe there. */
+  labelBackground?: string;
+}
+
+/** The platform's own block-table look - mirrors backend `TemplateRenderer`'s defaults. Stripe and label shading default to none. */
+export const DEFAULT_TABLE_STYLE = {
+  borderColor: "#cccccc",
+  borderWidthPx: 1,
+  cellPadding: "NORMAL" as CellPadding,
+  fontSizePx: 12,
+};
+
+/** Field-by-field `override ?? fallback` - an all-unset result collapses to `undefined`. */
+export function mergeTableStyle(override?: TableStyle, fallback?: TableStyle): TableStyle | undefined {
+  return compactStyle<TableStyle>({
+    borderColor: override?.borderColor ?? fallback?.borderColor,
+    borderWidthPx: override?.borderWidthPx ?? fallback?.borderWidthPx,
+    cellPadding: override?.cellPadding ?? fallback?.cellPadding,
+    fontSizePx: override?.fontSizePx ?? fallback?.fontSizePx,
+    stripeColor: override?.stripeColor ?? fallback?.stripeColor,
+    labelBackground: override?.labelBackground ?? fallback?.labelBackground,
+  });
+}
+
+/**
+ * The headline of a `HEADING_BLOCKS` block - the school name, or a remark's
+ * label. Mirrors backend `ReportLayout.HeadingStyle`; every field falls back
+ * to that block's own platform default. `subColor` is `SCHOOL_HEADER`'s
+ * address/contact line only.
+ */
+export interface HeadingStyle {
+  fontSizePx?: number;
+  color?: string;
+  uppercase?: boolean;
+  /** 0-10. */
+  letterSpacingPx?: number;
+  subColor?: string;
+}
+
+/** Drops unset/empty fields, returning `undefined` when none remain - so a cleared override leaves no empty object in the saved layout. */
+export function compactStyle<T extends object>(value?: T): T | undefined {
+  if (!value) return undefined;
+  const entries = Object.entries(value).filter(([, v]) => v !== undefined && v !== "" && v !== false);
+  return entries.length > 0 ? (Object.fromEntries(entries) as T) : undefined;
 }
 
 /**
@@ -238,6 +355,10 @@ export interface RowStyle {
   backgroundColor?: string;
   borderTop?: boolean;
   borderBottom?: boolean;
+  /** Colour of whichever of `borderTop`/`borderBottom` is on - defaults to `#cccccc`. */
+  borderColor?: string;
+  /** 1-6 - defaults to 1. */
+  borderWidthPx?: number;
 }
 
 /** Mirrors backend `reporting.domain.ReportConditionFlag` - the vocabulary a row's visibility condition (and, independently, the renderer's own blank-block pruning) is built from. Keep this list in exact sync with that enum. */
@@ -306,6 +427,10 @@ export interface PageStyle {
   logoBackgroundOpacity?: number;
   /** Template-wide default table header colours - see `HeaderColors`. Absent means the platform grey. */
   headerColors?: HeaderColors;
+  /** A border around every printed page - see `PageFrame`. Absent means none. */
+  frame?: PageFrame;
+  /** Template-wide default block-table look - see `TableStyle`. Absent means the platform default. */
+  tableStyle?: TableStyle;
 }
 
 export interface ReportLayout {
@@ -419,6 +544,12 @@ export const TABLE_HEADER_BLOCKS: ReadonlySet<ReportBlockName> = new Set([
   "PSYCHOMOTOR_TRAITS",
   "TRAIT_LEGEND",
 ]);
+
+/** Blocks whose cells take a `TableStyle` - every `TABLE_HEADER_BLOCKS` block plus the attendance summary. Mirrors backend `ReportBlock#acceptsTableStyle`. */
+export const TABLE_STYLE_BLOCKS: ReadonlySet<ReportBlockName> = new Set([...TABLE_HEADER_BLOCKS, "ATTENDANCE_SUMMARY"]);
+
+/** Blocks that print a platform headline and accept a `HeadingStyle` - mirrors backend `ReportBlock#hasHeading`. */
+export const HEADING_BLOCKS: ReadonlySet<ReportBlockName> = new Set(["SCHOOL_HEADER", "REMARK_CLASS_TEACHER", "REMARK_PRINCIPAL"]);
 
 /** Of `TABLE_HEADER_BLOCKS`, the ones that also print a band row (subject group or trait title) - the keys/legends have only a header row. */
 export const BANDED_TABLE_BLOCKS: ReadonlySet<ReportBlockName> = new Set([

@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import {
   ALLOWED_FONT_FAMILIES,
   BANDED_TABLE_BLOCKS,
+  FONT_FAMILY_LABELS,
   CONDITION_FLAG_LABELS,
   type ConditionMatch,
   type ConditionRule,
@@ -19,8 +20,11 @@ import {
   SIZABLE_BLOCKS,
   TABLE_BORDER_STYLES,
   TABLE_HEADER_BLOCKS,
+  TABLE_STYLE_BLOCKS,
+  HEADING_BLOCKS,
   conditionRulePolarityLabel,
   type ElementStyle,
+  type FrameStyle,
   type HeaderColors,
   type PageStyle,
   type ReportBlockName,
@@ -31,6 +35,10 @@ import {
 } from "@/features/reporting/components/designer/layout";
 import { ColorField } from "@/features/reporting/components/designer/ColorField";
 import { HeaderColorsFields } from "@/features/reporting/components/designer/HeaderColorsFields";
+import { HeadingFields } from "@/features/reporting/components/designer/HeadingFields";
+import { PageFrameFields } from "@/features/reporting/components/designer/PageFrameFields";
+import { TableStyleFields } from "@/features/reporting/components/designer/TableStyleFields";
+import { ThemePicker } from "@/features/reporting/components/designer/ThemePicker";
 import { findElementLocation } from "@/features/reporting/components/designer/layoutOps";
 import { DEFAULT_PAGE_COLOR } from "@/features/reporting/components/designer/starterLayouts";
 import {
@@ -84,6 +92,7 @@ function PageInspector({ editor }: { editor: LayoutEditor }) {
   return (
     <div className="space-y-3">
       <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Page</h3>
+      <ThemePicker editor={editor} />
       <FormField label="Font family" htmlFor="page-font-family">
         <Select
           id="page-font-family"
@@ -92,7 +101,7 @@ function PageInspector({ editor }: { editor: LayoutEditor }) {
         >
           {ALLOWED_FONT_FAMILIES.map((family) => (
             <option key={family} value={family}>
-              {family}
+              {FONT_FAMILY_LABELS[family]}
             </option>
           ))}
         </Select>
@@ -137,6 +146,22 @@ function PageInspector({ editor }: { editor: LayoutEditor }) {
           onChange={(headerColors) => editor.updatePage({ ...page, headerColors })}
           bandLabel="Group/title row"
         />
+      </div>
+      <div className="space-y-2 border-t border-slate-100 pt-3">
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Table style</span>
+        <p className="text-xs text-slate-500">
+          The default look of every generated table: score/rating, attendance, affective, psychomotor and keys. Each table can override it.
+        </p>
+        <TableStyleFields
+          idPrefix="page-table-style"
+          value={page.tableStyle}
+          inherited={undefined}
+          onChange={(tableStyle) => editor.updatePage({ ...page, tableStyle })}
+        />
+      </div>
+      <div className="space-y-2 border-t border-slate-100 pt-3">
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Page border</span>
+        <PageFrameFields page={page} onChange={(next) => editor.updatePage(next)} />
       </div>
       <div className="space-y-1">
         <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -229,6 +254,28 @@ function RowInspector({ editor, rowId }: { editor: LayoutEditor; rowId: string }
         <Checkbox checked={style.borderBottom ?? false} onChange={(e) => set({ borderBottom: e.target.checked })} />
         Border below
       </label>
+      {(style.borderTop || style.borderBottom) && (
+        <div className="grid grid-cols-2 gap-2">
+          <ColorField
+            id="row-border-color"
+            label="Border color"
+            value={style.borderColor}
+            fallback="#cccccc"
+            onChange={(borderColor) => set({ borderColor })}
+          />
+          <FormField label="Border width (px)" htmlFor="row-border-width">
+            <Input
+              id="row-border-width"
+              type="number"
+              min={1}
+              max={6}
+              placeholder="1"
+              value={style.borderWidthPx ?? ""}
+              onChange={(e) => set({ borderWidthPx: numberOrUndefined(e.target.value) })}
+            />
+          </FormField>
+        </div>
+      )}
       <RowConditionEditor condition={row.condition} onChange={(next) => editor.updateRowCondition(rowId, next)} />
     </div>
   );
@@ -477,6 +524,47 @@ function ElementInspector({ editor, elementId }: { editor: LayoutEditor; element
             <Checkbox checked={style.border ?? false} onChange={(e) => setStyle({ border: e.target.checked })} />
             Show border
           </label>
+          {style.border && (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <ColorField
+                  id="box-border-color"
+                  label="Border color"
+                  value={style.borderColor}
+                  fallback="#cccccc"
+                  onChange={(borderColor) => setStyle({ borderColor })}
+                />
+                <FormField label="Border width (px)" htmlFor="box-border-width">
+                  <Input
+                    id="box-border-width"
+                    type="number"
+                    min={1}
+                    max={8}
+                    placeholder="1"
+                    value={style.borderWidthPx ?? ""}
+                    onChange={(e) => setStyle({ borderWidthPx: numberOrUndefined(e.target.value) })}
+                  />
+                </FormField>
+              </div>
+              <FormField label="Border style" htmlFor="box-border-style">
+                <Select
+                  id="box-border-style"
+                  value={style.borderStyle ?? "solid"}
+                  onChange={(e) => {
+                    const borderStyle = e.target.value as FrameStyle;
+                    // A double line needs 3px to draw; widen a thinner border rather than fail validation.
+                    const borderWidthPx = borderStyle === "double" ? Math.max(style.borderWidthPx ?? 1, 3) : style.borderWidthPx;
+                    setStyle({ borderStyle: borderStyle === "solid" ? undefined : borderStyle, borderWidthPx });
+                  }}
+                >
+                  <option value="solid">Solid</option>
+                  <option value="dashed">Dashed</option>
+                  <option value="dotted">Dotted</option>
+                  <option value="double">Double</option>
+                </Select>
+              </FormField>
+            </>
+          )}
         </>
       )}
 
@@ -532,9 +620,32 @@ function ElementInspector({ editor, elementId }: { editor: LayoutEditor; element
         </div>
       )}
 
+      {element.type === "BLOCK" && TABLE_STYLE_BLOCKS.has(element.block) && (
+        <div className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Table style</span>
+          <TableStyleFields
+            idPrefix="block-table-style"
+            value={style.tableStyle}
+            inherited={editor.layout.page.tableStyle}
+            onChange={(tableStyle) => setStyle({ tableStyle })}
+            clearLabel="Use template default"
+          />
+        </div>
+      )}
+
+      {element.type === "BLOCK" && HEADING_BLOCKS.has(element.block) && (
+        <HeadingFields
+          block={element.block}
+          value={style.heading}
+          inheritedColor={editor.layout.page.color}
+          onChange={(heading) => setStyle({ heading })}
+        />
+      )}
+
       {element.type === "BLOCK" && (
         <p className="text-xs text-slate-500">
-          Filled automatically at render time - its position{TABLE_HEADER_BLOCKS.has(element.block) ? " and header colors are" : " is"} yours to arrange.
+          Filled automatically at render time - its position
+          {TABLE_STYLE_BLOCKS.has(element.block) || HEADING_BLOCKS.has(element.block) ? " and styling are" : " is"} yours to arrange.
         </p>
       )}
 

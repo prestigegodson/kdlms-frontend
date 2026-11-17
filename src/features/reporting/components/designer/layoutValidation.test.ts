@@ -467,3 +467,92 @@ describe("validateLayout header colors", () => {
     expect(validateLayout(layout, "NUMERIC").some((e) => e.includes("band colors"))).toBe(true);
   });
 });
+
+describe("validateLayout look-and-feel styling", () => {
+  function single(element: LayoutElement): ReportLayout {
+    return layoutWith([{ id: "row-1", columns: [{ id: "col-1", widthPercent: 100, elements: [element] }] }]);
+  }
+
+  it("accepts a page border that fits inside the page padding", () => {
+    const layout = single(block("el-1", "SCHOOL_HEADER"));
+    layout.page.frame = { widthPx: 4, style: "double", color: "#1f3a8a", gapPx: 8 };
+
+    expect(validateLayout(layout, "NUMERIC")).toEqual([]);
+  });
+
+  it("rejects a page border wider than the page padding, and a too-thin double border", () => {
+    const tooWide = single(block("el-1", "SCHOOL_HEADER"));
+    tooWide.page.frame = { widthPx: 10, style: "solid", color: "#1f3a8a", gapPx: 20 };
+    const thinDouble = single(block("el-1", "SCHOOL_HEADER"));
+    thinDouble.page.frame = { widthPx: 2, style: "double", color: "#1f3a8a" };
+
+    expect(validateLayout(tooWide, "NUMERIC").some((e) => e.includes("must fit inside the page padding"))).toBe(true);
+    expect(validateLayout(thinDouble, "NUMERIC").some((e) => e.includes("double page border"))).toBe(true);
+  });
+
+  it("accepts a table style on the page and on table blocks including the attendance summary", () => {
+    const tableStyle = { borderColor: "#1f3a8a", borderWidthPx: 2, cellPadding: "ROOMY" as const, fontSizePx: 11, stripeColor: "#f5f7ff" };
+    const layout = layoutWith([
+      {
+        id: "row-1",
+        columns: [
+          {
+            id: "col-1",
+            widthPercent: 100,
+            elements: [
+              { id: "el-1", type: "BLOCK", block: "SCORE_TABLE", style: { tableStyle } },
+              { id: "el-2", type: "BLOCK", block: "ATTENDANCE_SUMMARY", style: { tableStyle: { labelBackground: "#eeeeee" } } },
+            ],
+          },
+        ],
+      },
+    ]);
+    layout.page.tableStyle = tableStyle;
+
+    expect(validateLayout(layout, "NUMERIC")).toEqual([]);
+  });
+
+  it("rejects a table style on a non-table block and an out-of-range table font size", () => {
+    const onBio = single({ id: "el-1", type: "BLOCK", block: "STUDENT_BIO", style: { tableStyle: { borderColor: "#1f3a8a" } } });
+    const bigFont = single(block("el-1", "SCORE_TABLE"));
+    bigFont.page.tableStyle = { fontSizePx: 20 };
+
+    expect(validateLayout(onBio, "NUMERIC").some((e) => e.includes("Only a table block may specify a table style"))).toBe(true);
+    expect(validateLayout(bigFont, "NUMERIC").some((e) => e.includes("table font size"))).toBe(true);
+  });
+
+  it("accepts a heading only on the school header and remark blocks", () => {
+    const heading = { fontSizePx: 24, color: "#1f3a8a", uppercase: true };
+    const onHeader = single({ id: "el-1", type: "BLOCK", block: "SCHOOL_HEADER", style: { heading } });
+    const onTable = single({ id: "el-1", type: "BLOCK", block: "SCORE_TABLE", style: { heading } });
+
+    expect(validateLayout(onHeader, "NUMERIC")).toEqual([]);
+    expect(validateLayout(onTable, "NUMERIC").some((e) => e.includes("heading style"))).toBe(true);
+  });
+
+  it("accepts box border styling on a BOX and rejects it elsewhere or when malformed", () => {
+    const box = (style: LayoutElement["style"]): LayoutElement => ({ id: "box-1", type: "BOX", style, elements: [] });
+
+    expect(validateLayout(single(box({ border: true, borderColor: "#1f3a8a", borderWidthPx: 3, borderStyle: "double" })), "NUMERIC")).toEqual([]);
+    expect(
+      validateLayout(single({ id: "t-1", type: "TEXT", text: "Hi", style: { borderColor: "#1f3a8a" } }), "NUMERIC").some((e) =>
+        e.includes("Only a BOX element may specify a border"),
+      ),
+    ).toBe(true);
+    expect(validateLayout(single(box({ border: true, borderWidthPx: 9 })), "NUMERIC").some((e) => e.includes("Box border width"))).toBe(true);
+    expect(validateLayout(single(box({ border: true, borderStyle: "double" })), "NUMERIC").some((e) => e.includes("double box border"))).toBe(
+      true,
+    );
+  });
+
+  it("validates a row border's color and width", () => {
+    const row = (borderWidthPx: number): LayoutRow => ({
+      id: "row-1",
+      style: { borderTop: true, borderColor: "#1f3a8a", borderWidthPx },
+      columns: [{ id: "col-1", widthPercent: 100, elements: [] }],
+    });
+
+    expect(validateLayout(layoutWith([row(3)]), "NUMERIC")).toEqual([]);
+    expect(validateLayout(layoutWith([row(9)]), "NUMERIC").some((e) => e.includes("Row border width"))).toBe(true);
+  });
+});
