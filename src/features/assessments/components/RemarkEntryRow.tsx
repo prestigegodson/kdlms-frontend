@@ -1,10 +1,14 @@
 import { Sparkles } from "lucide-react";
+import { useState } from "react";
 import type { RemarkSheetRow } from "@/api/assessments";
 import { Button } from "@/components/ui/Button";
 import { TableCell, TableRow } from "@/components/ui/Table";
 import { Textarea } from "@/components/ui/Textarea";
 
 export type RemarkField = "classTeacher" | "principal";
+
+/** Beyond this many characters the class teacher's remark starts clamped to two lines, with a "Show more" toggle. */
+const CLAMP_THRESHOLD = 120;
 
 interface RemarkEntryRowProps {
   row: RemarkSheetRow;
@@ -35,12 +39,12 @@ export function RemarkEntryRow({ row, field, label, value, editable, dirty, onCh
         <span className="font-medium text-slate-900">{row.studentName}</span>
         <span className="block text-xs text-slate-500">{row.admissionNumber}</span>
       </TableCell>
-      <TableCell label={label}>
+      <TableCell label={label} className={field === "principal" ? "min-w-[18rem] align-top" : ""}>
         {editable ? (
           <>
             <Textarea
               aria-label={`${label} for ${row.studentName}`}
-              rows={2}
+              rows={field === "principal" ? 3 : 2}
               className={dirty ? "border-brand-400" : ""}
               value={value}
               onChange={(event) => onChange(event.target.value)}
@@ -64,13 +68,45 @@ export function RemarkEntryRow({ row, field, label, value, editable, dirty, onCh
         )}
       </TableCell>
       {field === "principal" && (
-        <TableCell label="Class teacher's remark" className="text-slate-500">
-          {row.classTeacherRemark || "—"}
-          {row.classTeacherRemarkByName && (
-            <span className="block text-xs text-slate-400">— {row.classTeacherRemarkByName}</span>
-          )}
+        <TableCell label="Class teacher's remark" className="max-w-xs align-top text-slate-500">
+          <ClassTeacherRemark remark={row.classTeacherRemark} byName={row.classTeacherRemarkByName} studentName={row.studentName} />
         </TableCell>
       )}
     </TableRow>
+  );
+}
+
+interface ClassTeacherRemarkProps {
+  remark?: string;
+  byName?: string;
+  studentName: string;
+}
+
+/**
+ * The class teacher's remark, shown read-only beside the head's own composer.
+ * A long remark starts clamped to two lines so it doesn't crowd the head's
+ * Textarea out of the row; "Show more" expands it in place.
+ */
+function ClassTeacherRemark({ remark, byName, studentName }: ClassTeacherRemarkProps) {
+  const [expanded, setExpanded] = useState(false);
+  const collapsible = (remark?.length ?? 0) > CLAMP_THRESHOLD;
+  const clamped = collapsible && !expanded;
+
+  return (
+    <>
+      <p className={`whitespace-pre-line break-words ${clamped ? "line-clamp-2" : ""}`}>{remark || "—"}</p>
+      {collapsible && (
+        <button
+          type="button"
+          className="text-xs font-medium text-brand-600 hover:underline"
+          aria-expanded={expanded}
+          aria-label={`${expanded ? "Show less of" : "Show full"} class teacher's remark for ${studentName}`}
+          onClick={() => setExpanded((current) => !current)}
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      )}
+      {byName && <span className="block text-xs text-slate-400">— {byName}</span>}
+    </>
   );
 }
