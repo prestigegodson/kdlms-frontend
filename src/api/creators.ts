@@ -19,6 +19,16 @@ export interface CreatorProfileInput {
 /** Mirrors backend creator.application.port.in.CreatorProfileView. */
 export interface CreatorProfile extends CreatorProfileInput {
   schoolId: string;
+  /** The business logo's file id; null when none is set. */
+  logoFileId: string | null;
+  /** The business banner's file id; null when none is set. */
+  bannerFileId: string | null;
+}
+
+/** The tutor's business images - ids of files already uploaded via `uploadFile`; null removes one. */
+export interface CreatorBrandingInput {
+  logoFileId: string | null;
+  bannerFileId: string | null;
 }
 
 /** Mirrors backend creator.application.port.in.CreatorAdminView. */
@@ -62,6 +72,14 @@ export function updateMyCreatorProfile(profile: CreatorProfileInput): Promise<Cr
   return apiFetch<CreatorProfile>("/api/v1/creator/profile", {
     method: "PUT",
     body: JSON.stringify(profile),
+  });
+}
+
+/** Sets (or removes) the tutor's business logo and banner - both fields every time. */
+export function updateMyCreatorBranding(branding: CreatorBrandingInput): Promise<CreatorProfile> {
+  return apiFetch<CreatorProfile>("/api/v1/creator/profile/branding", {
+    method: "PUT",
+    body: JSON.stringify(branding),
   });
 }
 

@@ -4,11 +4,18 @@ import { useNavigate } from "react-router";
 import type { MyClassTopics } from "@/api/classTopics";
 import type { AttendanceHistory } from "@/api/liveSessions";
 import { getErrorMessage } from "@/api/client";
-import type { OnlineClass, OnlineSession, ReminderPreference } from "@/api/onlineClasses";
+import {
+  creatorImagePath,
+  fetchCreatorImage,
+  type OnlineClass,
+  type OnlineSession,
+  type ReminderPreference,
+} from "@/api/onlineClasses";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { useObjectUrl } from "@/hooks/useObjectUrl";
 import { meetingNote } from "../meeting/meetingLink";
 import { dateInZone, longDate, scheduleSummary, timeInZone } from "../scheduleUtils";
 import { AttendanceHistoryModal } from "./AttendanceModals";
@@ -24,6 +31,8 @@ function viewerZone(): string {
 
 interface OnlineClassCardProps {
   onlineClass: OnlineClass;
+  /** Who is looking - picks the endpoint the tutor's logo and banner are read from. */
+  viewer?: "learner" | "guardian";
   /** The live-room button's label - "Join" for a learner, "Watch" for a guardian observer. */
   joinLabel?: string;
   /** Loads the viewer's attendance history in this class - the learner's own, or a guardian's learner's. */
@@ -52,6 +61,7 @@ interface OnlineClassCardProps {
  */
 export function OnlineClassCard({
   onlineClass,
+  viewer = "learner",
   joinLabel = "Join",
   loadAttendance,
   loadTopics,
@@ -65,15 +75,43 @@ export function OnlineClassCard({
   const upcoming = onlineClass.upcoming.slice(0, UPCOMING_SHOWN);
   const [showAttendance, setShowAttendance] = useState(false);
   const [showTopics, setShowTopics] = useState(false);
+  const bannerUrl = useObjectUrl(
+    onlineClass.creatorBannerVersion
+      ? creatorImagePath(viewer, onlineClass.creatorId, "banner", onlineClass.creatorBannerVersion)
+      : undefined,
+    fetchCreatorImage,
+  );
+  const logoUrl = useObjectUrl(
+    onlineClass.creatorLogoVersion
+      ? creatorImagePath(viewer, onlineClass.creatorId, "logo", onlineClass.creatorLogoVersion)
+      : undefined,
+    fetchCreatorImage,
+  );
   return (
     <Card>
+      {bannerUrl && (
+        <img
+          src={bannerUrl}
+          alt=""
+          className="-mx-4 -mt-4 mb-4 block h-24 w-[calc(100%+2rem)] max-w-none rounded-t-card object-cover sm:-mx-6 sm:-mt-6 sm:h-28 sm:w-[calc(100%+3rem)]"
+        />
+      )}
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="font-display text-base font-medium text-slate-900">{onlineClass.name}</h3>
-          <p className="text-sm text-slate-500">
-            {onlineClass.creatorName ?? "Your tutor"}
-            {onlineClass.subjectLabel ? ` · ${onlineClass.subjectLabel}` : ""}
-          </p>
+        <div className="flex min-w-0 items-start gap-3">
+          {logoUrl && (
+            <img
+              src={logoUrl}
+              alt={onlineClass.creatorName ? `${onlineClass.creatorName} logo` : "Tutor logo"}
+              className="h-10 w-10 shrink-0 rounded-full border border-slate-200 bg-white object-contain"
+            />
+          )}
+          <div className="min-w-0">
+            <h3 className="font-display text-base font-medium text-slate-900">{onlineClass.name}</h3>
+            <p className="text-sm text-slate-500">
+              {onlineClass.creatorName ?? "Your tutor"}
+              {onlineClass.subjectLabel ? ` · ${onlineClass.subjectLabel}` : ""}
+            </p>
+          </div>
         </div>
         <div className="flex flex-wrap gap-1">
           {lessonNotesHref && (

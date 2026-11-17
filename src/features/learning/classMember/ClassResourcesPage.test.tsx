@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as classResourcesApi from "@/api/classLearningResources";
@@ -26,7 +27,12 @@ const ENGLISH: OnlineClass = {
   slots: [],
   upcoming: [],
   remindersEnabled: true,
+  creatorId: "t1",
+  creatorLogoVersion: null,
+  creatorBannerVersion: null,
 };
+
+const MATHS: OnlineClass = { ...ENGLISH, id: "c2", name: "Maths" };
 
 function resource(overrides: Partial<MyLearningResourceSummaryView>): MyLearningResourceSummaryView {
   return {
@@ -92,9 +98,41 @@ describe("ClassResourcesPage", () => {
     vi.mocked(classResourcesApi.listMemberClassResources).mockRejectedValue(
       new ApiError(403, "Learning resources are not included in the current plan."),
     );
-    renderAt("/resources", "LEARNER");
+    renderAt("/resources?classId=c1", "LEARNER");
 
     expect(await screen.findByText("Resources aren't available")).toBeInTheDocument();
     expect(screen.getByText("Learning resources are not included in the current plan.")).toBeInTheDocument();
+  });
+
+  it("shows a learner every class's resources under \"All classes\" by default, and narrows on pick", async () => {
+    vi.mocked(onlineClassesApi.listMyOnlineClasses).mockResolvedValue([ENGLISH, MATHS]);
+    vi.mocked(classResourcesApi.listMemberClassResources).mockImplementation(async ({ classId }) =>
+      classId === "c1"
+        ? { classId: "c1", className: "English", resources: [resource({ id: "r1", title: "Reading notes" })] }
+        : { classId: "c2", className: "Maths", resources: [resource({ id: "r9", title: "Times tables" })] },
+    );
+    renderAt("/resources", "LEARNER");
+    const user = userEvent.setup();
+
+    expect(await screen.findByRole("link", { name: /Times tables/ })).toHaveAttribute("href", "/learner/resources/c2/r9");
+    expect(screen.getByRole("link", { name: /Reading notes/ })).toHaveAttribute("href", "/learner/resources/c1/r1");
+    expect(screen.getByRole("combobox", { name: "Class" })).toHaveValue("");
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Class" }), "c2:");
+
+    expect(await screen.findByRole("link", { name: /Times tables/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Reading notes/ })).not.toBeInTheDocument();
+  });
+
+  it("leaves out a class whose tutor's plan doesn't include resources under \"All classes\"", async () => {
+    vi.mocked(onlineClassesApi.listMyOnlineClasses).mockResolvedValue([ENGLISH, MATHS]);
+    vi.mocked(classResourcesApi.listMemberClassResources).mockImplementation(async ({ classId }) => {
+      if (classId === "c1") throw new ApiError(403, "Learning resources are not included in the current plan.");
+      return { classId: "c2", className: "Maths", resources: [resource({ id: "r9", title: "Times tables" })] };
+    });
+    renderAt("/resources", "LEARNER");
+
+    expect(await screen.findByRole("link", { name: /Times tables/ })).toBeInTheDocument();
+    expect(screen.queryByText("Resources aren't available")).not.toBeInTheDocument();
   });
 });

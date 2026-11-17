@@ -21,6 +21,16 @@ describe("ImageUploadField", () => {
     expect(screen.getByText(/max 2 MB/)).toBeInTheDocument();
   });
 
+  it("adds a caller's hint and gives a banner a full-width cover preview", async () => {
+    vi.mocked(filesApi.downloadFile).mockResolvedValue(new Blob(["img"], { type: "image/png" }));
+    render(<ImageUploadField label="Banner" variant="banner" fileId="b1" hint="about 1200 × 400" onChange={vi.fn()} />);
+
+    expect(screen.getByText(/max 2 MB · about 1200 × 400/)).toBeInTheDocument();
+    const preview = await screen.findByRole("presentation");
+    expect(preview).toHaveClass("object-cover");
+    expect(preview.parentElement).toHaveClass("w-full");
+  });
+
   it("rejects a file over 2 MB without uploading it", async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();

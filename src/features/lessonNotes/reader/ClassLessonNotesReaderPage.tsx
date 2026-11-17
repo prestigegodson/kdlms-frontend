@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { LessonNoteReadView } from "@/features/lessonNotes/components/LessonNoteReadView";
 import { MathText } from "@/features/lessonNotes/components/MathText";
 import { ClassNoteImage } from "@/features/lessonNotes/reader/ClassNoteImage";
+import { loadAcrossClasses } from "@/features/learner/loadAcrossClasses";
 import { formatLongDate } from "@/utils/date";
 
 export type ClassNotesAudience = "LEARNER" | "GUARDIAN";
@@ -40,15 +41,21 @@ const optionKey = (classId: string, learnerId?: string | null) => `${classId}:${
  * first, and read one. The class, learner and note live in the URL (`?classId=&learnerId=&noteId=`),
  * so an online-class card's "Lesson notes" link lands straight on the class. Images load through
  * the note's own narrow endpoint - `/api/v1/files` never admits a learner or guardian.
+ *
+ * A learner with no class chosen sees "All classes": every class's notes together, newest session
+ * first. There `classId` stays empty (it is the filter) and an open note carries its own class in
+ * `noteClassId`. A guardian lands on their first (child, class).
  */
 export function ClassLessonNotesReaderPage({ audience }: { audience: ClassNotesAudience }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const classId = searchParams.get("classId");
   const learnerId = searchParams.get("learnerId") ?? undefined;
   const noteId = searchParams.get("noteId");
+  const noteClassId = searchParams.get("noteClassId");
 
   const [options, setOptions] = useState<FollowedClassOption[] | null>(null);
   const [loadedList, setList] = useState<ClassLessonNoteListView | null>(null);
+  const [allLists, setAllLists] = useState<ClassLessonNoteListView[] | null>(null);
   const [loadedNote, setNote] = useState<ClassLessonNoteView | null>(null);
   // Keyed by the option it was answered for, so switching class never shows a stale refusal.
   const [refusal, setRefusal] = useState<{ key: string; message: string } | null>(null);
@@ -60,7 +67,17 @@ export function ClassLessonNotesReaderPage({ audience }: { audience: ClassNotesA
   const list = loadedList?.classId === classId ? loadedList : null;
   const currentKey = optionKey(classId ?? "", learnerId);
   const notIncluded = refusal?.key === currentKey ? refusal.message : null;
-  const note = loadedNote?.id === noteId && loadedNote?.classId === classId ? loadedNote : null;
+  const allClasses = audience === "LEARNER" && !classId;
+  // The class the open note belongs to - its own in "All classes", else the chosen one.
+  const openNoteClassId = allClasses ? noteClassId : classId;
+  const noteReader: ClassNotesReader | null = useMemo(
+    () =>
+      openNoteClassId
+        ? { classId: openNoteClassId, learnerId: audience === "GUARDIAN" ? learnerId : undefined }
+        : null,
+    [audience, openNoteClassId, learnerId],
+  );
+  const note = loadedNote?.id === noteId && loadedNote?.classId === openNoteClassId ? loadedNote : null;
 
   useEffect(() => {
     const load: Promise<FollowedClassOption[]> =
@@ -85,15 +102,38 @@ export function ClassLessonNotesReaderPage({ audience }: { audience: ClassNotesA
     load.then(setOptions).catch((err: unknown) => setError(getErrorMessage(err, "We couldn't load your classes.")));
   }, [audience]);
 
-  // Land on the first class when none is chosen yet.
+  // A guardian lands on the first (child, class) when none is chosen yet; a learner stays on "All classes".
   useEffect(() => {
-    if (!classId && options && options.length > 0) {
+    if (audience === "GUARDIAN" && !classId && options && options.length > 0) {
       const first = options[0];
       setSearchParams(first.learnerId ? { classId: first.classId, learnerId: first.learnerId } : { classId: first.classId }, {
         replace: true,
       });
     }
-  }, [classId, options, setSearchParams]);
+  }, [audience, classId, options, setSearchParams]);
+
+  useEffect(() => {
+    if (!allClasses || !options) {
+      return;
+    }
+    let cancelled = false;
+    loadAcrossClasses(
+      options.map((option) => option.classId),
+      (id) => listPublishedClassLessonNotes({ classId: id }),
+    )
+      .then((loaded) => {
+        if (!cancelled) {
+          setAllLists(loaded);
+          setError(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(getErrorMessage(err, "We couldn't load your lesson notes."));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [allClasses, options]);
 
   useEffect(() => {
     if (!reader) {
@@ -122,11 +162,11 @@ export function ClassLessonNotesReaderPage({ audience }: { audience: ClassNotesA
   }, [reader]);
 
   useEffect(() => {
-    if (!reader || !noteId) {
+    if (!noteReader || !noteId) {
       return;
     }
     let cancelled = false;
-    getPublishedClassLessonNote(reader, noteId)
+    getPublishedClassLessonNote(noteReader, noteId)
       .then((loaded) => {
         if (!cancelled) setNote(loaded);
       })
@@ -136,16 +176,35 @@ export function ClassLessonNotesReaderPage({ audience }: { audience: ClassNotesA
     return () => {
       cancelled = true;
     };
-  }, [reader, noteId]);
+  }, [noteReader, noteId]);
 
-  function select(params: { classId: string; learnerId?: string; noteId?: string }) {
-    const next: Record<string, string> = { classId: params.classId };
+  /** `classId` is the filter (absent for "All classes"); `noteClassId` is the open note's class there. */
+  function select(params: { classId?: string; learnerId?: string; noteId?: string; noteClassId?: string }) {
+    const next: Record<string, string> = {};
+    if (params.classId) next.classId = params.classId;
     if (params.learnerId) next.learnerId = params.learnerId;
     if (params.noteId) next.noteId = params.noteId;
+    if (params.noteClassId) next.noteClassId = params.noteClassId;
     setSearchParams(next);
   }
 
   const selectedOption = options?.find((option) => option.key === currentKey);
+  // The rows on screen - every class's notes in "All classes" (newest session first, whole-class
+  // notes last), else just the chosen class's in the server's order.
+  const rows = useMemo(() => {
+    const shownLists = allClasses ? allLists : list ? [list] : null;
+    if (!shownLists) return null;
+    const flat = shownLists.flatMap((shown) => shown.notes.map((summary) => ({ summary, list: shown })));
+    if (!allClasses) return flat;
+    return [...flat].sort((a, b) => {
+      if (a.summary.sessionDate === b.summary.sessionDate) return 0;
+      if (a.summary.sessionDate === null) return 1;
+      if (b.summary.sessionDate === null) return -1;
+      return b.summary.sessionDate.localeCompare(a.summary.sessionDate);
+    });
+  }, [allClasses, allLists, list]);
+  const isOpen = (summaryId: string, summaryClassId: string) =>
+    summaryId === noteId && summaryClassId === openNoteClassId;
 
   return (
     <div className="space-y-6">
@@ -170,15 +229,20 @@ export function ClassLessonNotesReaderPage({ audience }: { audience: ClassNotesA
         />
       ) : (
         <>
-          <FormField label="Class" htmlFor="class-notes-class">
+          <FormField label="Class" htmlFor="class-notes-class" className="w-full sm:w-72">
             <Select
               id="class-notes-class"
-              value={selectedOption?.key ?? ""}
+              value={allClasses ? "" : (selectedOption?.key ?? "")}
               onChange={(event) => {
+                if (event.target.value === "") {
+                  select({});
+                  return;
+                }
                 const option = options.find((candidate) => candidate.key === event.target.value);
                 if (option) select({ classId: option.classId, learnerId: option.learnerId });
               }}
             >
+              {audience === "LEARNER" && <option value="">All classes</option>}
               {options.map((option) => (
                 <option key={option.key} value={option.key}>
                   {option.label}
@@ -187,35 +251,44 @@ export function ClassLessonNotesReaderPage({ audience }: { audience: ClassNotesA
             </Select>
           </FormField>
 
-          {notIncluded ? (
+          {!allClasses && notIncluded ? (
             <EmptyState icon={NotebookPen} title="Lesson notes aren't available" description={notIncluded} />
-          ) : list === null ? (
+          ) : rows === null ? (
             <Skeleton className="h-40" />
-          ) : list.notes.length === 0 ? (
+          ) : rows.length === 0 ? (
             <EmptyState
               icon={NotebookPen}
               title="No lesson notes yet"
-              description="Your tutor hasn't shared any notes for this class yet."
+              description={
+                allClasses
+                  ? "Your tutors haven't shared any notes yet."
+                  : "Your tutor hasn't shared any notes for this class yet."
+              }
             />
           ) : (
             <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
               <ul
                 className={`divide-y divide-slate-100 rounded-card border border-slate-200 bg-white ${noteId ? "max-lg:hidden" : ""}`}
               >
-                {list.notes.map((summary) => (
-                  <li key={summary.id}>
+                {rows.map(({ summary, list: owner }) => (
+                  <li key={`${owner.classId}:${summary.id}`}>
                     <button
                       type="button"
-                      onClick={() => select({ classId: list.classId, learnerId, noteId: summary.id })}
-                      aria-current={summary.id === noteId ? "true" : undefined}
+                      onClick={() =>
+                        allClasses
+                          ? select({ noteId: summary.id, noteClassId: owner.classId })
+                          : select({ classId: owner.classId, learnerId, noteId: summary.id })
+                      }
+                      aria-current={isOpen(summary.id, owner.classId) ? "true" : undefined}
                       className={`flex w-full flex-col items-start gap-0.5 px-4 py-3 text-left hover:bg-slate-50 ${
-                        summary.id === noteId ? "bg-brand-50" : ""
+                        isOpen(summary.id, owner.classId) ? "bg-brand-50" : ""
                       }`}
                     >
                       <span className="text-sm font-medium text-slate-900">
                         <MathText text={summary.topic} />
                       </span>
                       <span className="text-xs text-slate-500">
+                        {allClasses && `${owner.className} · `}
                         {summary.sessionDate ? formatLongDate(summary.sessionDate) : "For the whole class"}
                       </span>
                     </button>
@@ -228,12 +301,12 @@ export function ClassLessonNotesReaderPage({ audience }: { audience: ClassNotesA
                     variant="secondary"
                     size="sm"
                     className="mb-3 lg:hidden"
-                    onClick={() => select({ classId: list.classId, learnerId })}
+                    onClick={() => (allClasses ? select({}) : select({ classId: classId ?? undefined, learnerId }))}
                   >
-                    Back to {list.className}
+                    {allClasses || !list ? "Back to all notes" : `Back to ${list.className}`}
                   </Button>
                 )}
-                {note && reader ? (
+                {note && noteReader ? (
                   <article className="space-y-4 rounded-card border border-slate-200 bg-white p-4">
                     <header>
                       <h2 className="text-lg font-semibold text-slate-900">
@@ -246,7 +319,7 @@ export function ClassLessonNotesReaderPage({ audience }: { audience: ClassNotesA
                     <LessonNoteReadView
                       content={note.content}
                       renderImage={(fileId, alt) => (
-                        <ClassNoteImage reader={reader} noteId={note.id} fileId={fileId} alt={alt} />
+                        <ClassNoteImage reader={noteReader} noteId={note.id} fileId={fileId} alt={alt} />
                       )}
                     />
                   </article>

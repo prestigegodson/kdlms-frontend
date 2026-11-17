@@ -17,6 +17,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { DrillRow } from "@/features/guardian/components/DrillRow";
+import { loadAcrossClasses } from "@/features/learner/loadAcrossClasses";
 import { formatInstant } from "@/utils/date";
 import { formatDuration } from "@/utils/duration";
 
@@ -42,10 +43,10 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 /** Where a resource row opens - the learner's own detail page, or the guardian's for that child. */
-function classResourceHref(audience: ClassResourcesAudience, reader: ClassResourceReader, resourceId: string) {
+function classResourceHref(audience: ClassResourcesAudience, classId: string, learnerId: string | undefined, resourceId: string) {
   return audience === "GUARDIAN"
-    ? `/guardian/class-resources/${reader.learnerId}/${reader.classId}/${resourceId}`
-    : `/learner/resources/${reader.classId}/${resourceId}`;
+    ? `/guardian/class-resources/${learnerId}/${classId}/${resourceId}`
+    : `/learner/resources/${classId}/${resourceId}`;
 }
 
 /**
@@ -53,7 +54,8 @@ function classResourceHref(audience: ClassResourcesAudience, reader: ClassResour
  * C14). Pick a class (a guardian picks a child's class) and open a resource to read, watch or listen
  * to it. A learner's rows show whether they've marked it done; a guardian only reads. The class and
  * learner live in the URL (`?classId=&learnerId=`), so an online-class card's "Resources" link lands
- * straight on the class - the `ClassQuizzesPage` shape.
+ * straight on the class - the `ClassQuizzesPage` shape. A learner with no class chosen sees "All
+ * classes": every class's resources together; a guardian lands on their first (child, class).
  */
 export function ClassResourcesPage({ audience }: { audience: ClassResourcesAudience }) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -62,6 +64,7 @@ export function ClassResourcesPage({ audience }: { audience: ClassResourcesAudie
 
   const [options, setOptions] = useState<FollowedClassOption[] | null>(null);
   const [loadedList, setList] = useState<ClassMemberResourceListView | null>(null);
+  const [allLists, setAllLists] = useState<ClassMemberResourceListView[] | null>(null);
   // Keyed by the option it was answered for, so switching class never shows a stale refusal.
   const [refusal, setRefusal] = useState<{ key: string; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +75,7 @@ export function ClassResourcesPage({ audience }: { audience: ClassResourcesAudie
   const list = loadedList?.classId === classId ? loadedList : null;
   const currentKey = optionKey(classId ?? "", learnerId);
   const notIncluded = refusal?.key === currentKey ? refusal.message : null;
+  const allClasses = audience === "LEARNER" && !classId;
 
   useEffect(() => {
     const load: Promise<FollowedClassOption[]> =
@@ -96,15 +100,38 @@ export function ClassResourcesPage({ audience }: { audience: ClassResourcesAudie
     load.then(setOptions).catch((err: unknown) => setError(getErrorMessage(err, "We couldn't load your classes.")));
   }, [audience]);
 
-  // Land on the first class when none is chosen yet.
+  // A guardian lands on the first (child, class) when none is chosen yet; a learner stays on "All classes".
   useEffect(() => {
-    if (!classId && options && options.length > 0) {
+    if (audience === "GUARDIAN" && !classId && options && options.length > 0) {
       const first = options[0];
       setSearchParams(first.learnerId ? { classId: first.classId, learnerId: first.learnerId } : { classId: first.classId }, {
         replace: true,
       });
     }
-  }, [classId, options, setSearchParams]);
+  }, [audience, classId, options, setSearchParams]);
+
+  useEffect(() => {
+    if (!allClasses || !options) {
+      return;
+    }
+    let cancelled = false;
+    loadAcrossClasses(
+      options.map((option) => option.classId),
+      (id) => listMemberClassResources({ classId: id }),
+    )
+      .then((loaded) => {
+        if (!cancelled) {
+          setAllLists(loaded);
+          setError(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(getErrorMessage(err, "We couldn't load your resources."));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [allClasses, options]);
 
   useEffect(() => {
     if (!reader) {
@@ -135,6 +162,10 @@ export function ClassResourcesPage({ audience }: { audience: ClassResourcesAudie
   const selectedOption = options?.find((option) => option.key === currentKey);
   const guardian = audience === "GUARDIAN";
   const tracksProgress = can.trackClassResources(audience);
+  // The lists on screen - every class's in "All classes", else just the chosen class's.
+  const shownLists = allClasses ? allLists : list ? [list] : null;
+  const rows =
+    shownLists?.flatMap((shown) => shown.resources.map((resource) => ({ resource, list: shown }))) ?? null;
 
   return (
     <div className="space-y-6">
@@ -155,11 +186,15 @@ export function ClassResourcesPage({ audience }: { audience: ClassResourcesAudie
         <EmptyState icon={BookOpen} title="No online classes" description="Resources from your tutors' classes show up here." />
       ) : (
         <>
-          <FormField label="Class" htmlFor="class-resources-class">
+          <FormField label="Class" htmlFor="class-resources-class" className="w-full sm:w-72">
             <Select
               id="class-resources-class"
-              value={selectedOption?.key ?? ""}
+              value={allClasses ? "" : (selectedOption?.key ?? "")}
               onChange={(event) => {
+                if (event.target.value === "") {
+                  setSearchParams({});
+                  return;
+                }
                 const option = options.find((candidate) => candidate.key === event.target.value);
                 if (option) {
                   setSearchParams(
@@ -168,6 +203,7 @@ export function ClassResourcesPage({ audience }: { audience: ClassResourcesAudie
                 }
               }}
             >
+              {!guardian && <option value="">All classes</option>}
               {options.map((option) => (
                 <option key={option.key} value={option.key}>
                   {option.label}
@@ -176,20 +212,25 @@ export function ClassResourcesPage({ audience }: { audience: ClassResourcesAudie
             </Select>
           </FormField>
 
-          {notIncluded ? (
+          {!allClasses && notIncluded ? (
             <EmptyState icon={BookOpen} title="Resources aren't available" description={notIncluded} />
-          ) : list === null || reader === null ? (
+          ) : rows === null ? (
             <Skeleton className="h-40" />
-          ) : list.resources.length === 0 ? (
+          ) : rows.length === 0 ? (
             <EmptyState
               icon={BookOpen}
               title="No resources yet"
-              description="Resources show up here once the tutor shares them with this class."
+              description={
+                allClasses
+                  ? "Resources show up here once your tutors share them with your classes."
+                  : "Resources show up here once the tutor shares them with this class."
+              }
             />
           ) : (
             <div className="space-y-2">
-              {list.resources.map((resource) => {
+              {rows.map(({ resource, list: owner }) => {
                 const meta = [
+                  allClasses ? owner.className : null,
                   TYPE_LABEL[resource.resourceType] ?? resource.resourceType,
                   formatDuration(resource.durationSeconds),
                   resource.availableUntil ? `Available until ${formatInstant(resource.availableUntil)}` : null,
@@ -198,8 +239,8 @@ export function ClassResourcesPage({ audience }: { audience: ClassResourcesAudie
                   .join(" · ");
                 return (
                   <DrillRow
-                    key={resource.id}
-                    to={classResourceHref(audience, reader, resource.id)}
+                    key={`${owner.classId}:${resource.id}`}
+                    to={classResourceHref(audience, owner.classId, reader?.learnerId, resource.id)}
                     title={resource.title}
                     meta={meta}
                     trailing={

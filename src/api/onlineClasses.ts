@@ -1,4 +1,4 @@
-import { apiFetch } from "@/api/client";
+import { apiFetch, apiFetchBlob } from "@/api/client";
 import type {
   MeetingMode,
   MeetingProvider,
@@ -42,6 +42,12 @@ export interface OnlineClass {
   upcoming: OnlineSession[];
   /** Whether the viewer gets this class's session reminder emails (Phase C7). */
   remindersEnabled: boolean;
+  /** The tutor's tenant id, for {@link creatorImagePath}. */
+  creatorId: string;
+  /** Changes whenever the tutor's logo does; null when they have none. */
+  creatorLogoVersion: string | null;
+  /** Changes whenever the tutor's banner does; null when they have none. */
+  creatorBannerVersion: string | null;
 }
 
 export interface LearnerOnlineClasses {
@@ -104,4 +110,25 @@ export function setWardClassReminders(classId: string, enabled: boolean): Promis
     method: "PUT",
     body: JSON.stringify({ enabled }),
   });
+}
+
+export type CreatorImageKind = "logo" | "banner";
+
+/**
+ * Where a tutor's logo or banner is read from - a narrow learner/guardian endpoint, since neither
+ * role can reach `/api/v1/files`. `version` only busts the cache when the tutor changes the image.
+ */
+export function creatorImagePath(
+  viewer: "learner" | "guardian",
+  creatorId: string,
+  kind: CreatorImageKind,
+  version: string,
+): string {
+  const base = viewer === "learner" ? "/api/v1/learner/creators" : "/api/v1/me/online-classes/creators";
+  return `${base}/${creatorId}/${kind}?v=${encodeURIComponent(version)}`;
+}
+
+/** The `useObjectUrl` fetcher for a {@link creatorImagePath}. */
+export function fetchCreatorImage(path: string): Promise<Blob> {
+  return apiFetchBlob(path);
 }

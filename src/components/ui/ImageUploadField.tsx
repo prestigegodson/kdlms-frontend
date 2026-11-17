@@ -11,6 +11,10 @@ interface ImageUploadFieldProps {
   label: string;
   fileId?: string;
   onChange: (fileId: string | undefined) => void;
+  /** `banner` shows a wide preview for a cover image; `square` (the default) a small thumbnail. */
+  variant?: "square" | "banner";
+  /** Extra guidance appended to the format/size hint, e.g. a recommended size. */
+  hint?: string;
 }
 
 /**
@@ -23,7 +27,7 @@ interface ImageUploadFieldProps {
  * rather than a bare `<img src="/api/v1/files/...">` - the files bucket is
  * private and a plain `<img>` tag can't carry an Authorization header.
  */
-export function ImageUploadField({ label, fileId, onChange }: ImageUploadFieldProps) {
+export function ImageUploadField({ label, fileId, onChange, variant = "square", hint }: ImageUploadFieldProps) {
   const previewUrl = useObjectUrl(fileId, downloadFile);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,12 +58,20 @@ export function ImageUploadField({ label, fileId, onChange }: ImageUploadFieldPr
     <div className="space-y-2">
       <span className="block text-sm font-medium text-slate-700">{label}</span>
       {error && <Alert variant="error">{error}</Alert>}
-      <div className="flex items-center gap-3">
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-panel border border-slate-200 bg-slate-50">
+      <div className={variant === "banner" ? "flex flex-wrap items-center gap-3" : "flex items-center gap-3"}>
+        <div
+          className={`flex shrink-0 items-center justify-center overflow-hidden rounded-panel border border-slate-200 bg-slate-50 ${
+            variant === "banner" ? "h-24 w-full" : "h-16 w-16"
+          }`}
+        >
           {uploading ? (
             <Spinner />
           ) : previewUrl ? (
-            <img src={previewUrl} alt="" className="h-full w-full object-contain" />
+            <img
+              src={previewUrl}
+              alt=""
+              className={variant === "banner" ? "h-full w-full object-cover" : "h-full w-full object-contain"}
+            />
           ) : (
             <ImagePlus className="h-6 w-6 text-slate-400" aria-hidden="true" />
           )}
@@ -87,6 +99,7 @@ export function ImageUploadField({ label, fileId, onChange }: ImageUploadFieldPr
       </div>
       <p id={hintId} className="mt-1 text-xs text-slate-500">
         PNG, JPEG or WebP · max {MAX_IMAGE_UPLOAD_LABEL}
+        {hint ? ` · ${hint}` : ""}
       </p>
     </div>
   );

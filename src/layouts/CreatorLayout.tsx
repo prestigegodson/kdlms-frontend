@@ -18,6 +18,7 @@ import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useClassMessagesUnreadStore } from "@/stores/classMessagesUnreadStore";
 import { NAV_GATE_MAX_AGE_MS, useRevalidateOnResume } from "@/hooks/useRevalidateOnResume";
 import { useCreatorPlanStore } from "@/stores/creatorPlanStore";
+import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 
 /**
  * The education-creator portal (creators.md Phase C1; Classes and Sessions since C4, Learners since
@@ -99,6 +100,8 @@ const NAV_ITEMS: NavItem[] = [
 export function CreatorLayout() {
   const fetchPlan = useCreatorPlanStore((state) => state.fetchIfNeeded);
   const fetchUnread = useClassMessagesUnreadStore((state) => state.fetchIfNeeded);
+  // The tutor's business logo for PortalShell's sidebar (their profile branding).
+  const fetchBranding = useSchoolBrandingStore((state) => state.fetchIfNeeded);
   // Subscribed only to re-render once the fetches resolve, so the Messages item's visible()/badge()
   // closures re-evaluate - the GuardianLayout pattern.
   useCreatorPlanStore((state) => state.plan);
@@ -107,7 +110,8 @@ export function CreatorLayout() {
   useEffect(() => {
     fetchPlan();
     fetchUnread("CREATOR");
-  }, [fetchPlan, fetchUnread]);
+    fetchBranding();
+  }, [fetchPlan, fetchUnread, fetchBranding]);
 
   // Heals a plan fetch that failed while the tab was asleep - see useRevalidateOnResume.
   useRevalidateOnResume(() => {

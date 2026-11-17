@@ -20,6 +20,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { DrillRow } from "@/features/guardian/components/DrillRow";
+import { loadAcrossClasses } from "@/features/learner/loadAcrossClasses";
 import { ClassQuizImage } from "@/features/takeHomeQuizzes/classMember/ClassQuizImage";
 import { QuizResultReveal } from "@/features/takeHomeQuizzes/components/QuizResultReveal";
 import { formatInstant } from "@/utils/date";
@@ -61,7 +62,8 @@ function statusBadge(quiz: MyTakeHomeQuizSummaryView): { variant: "success" | "w
  * class (a guardian picks a child's class): a learner opens a quiz to take it in the portal, the
  * `StudentQuizzesPage` rows; a guardian sees only quizzes whose results are out, and opens one to see
  * the child's score and answers. The class and learner live in the URL (`?classId=&learnerId=`), so
- * an online-class card's "Quizzes" link lands straight on the class.
+ * an online-class card's "Quizzes" link lands straight on the class. A learner with no class chosen
+ * sees "All classes": every class's quizzes together; a guardian lands on their first (child, class).
  */
 export function ClassQuizzesPage({ audience }: { audience: ClassQuizzesAudience }) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -70,6 +72,7 @@ export function ClassQuizzesPage({ audience }: { audience: ClassQuizzesAudience 
 
   const [options, setOptions] = useState<FollowedClassOption[] | null>(null);
   const [loadedList, setList] = useState<ClassMemberQuizListView | null>(null);
+  const [allLists, setAllLists] = useState<ClassMemberQuizListView[] | null>(null);
   // Keyed by the option it was answered for, so switching class never shows a stale refusal.
   const [refusal, setRefusal] = useState<{ key: string; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +84,7 @@ export function ClassQuizzesPage({ audience }: { audience: ClassQuizzesAudience 
   const list = loadedList?.classId === classId ? loadedList : null;
   const currentKey = optionKey(classId ?? "", learnerId);
   const notIncluded = refusal?.key === currentKey ? refusal.message : null;
+  const allClasses = audience === "LEARNER" && !classId;
 
   useEffect(() => {
     const load: Promise<FollowedClassOption[]> =
@@ -105,15 +109,38 @@ export function ClassQuizzesPage({ audience }: { audience: ClassQuizzesAudience 
     load.then(setOptions).catch((err: unknown) => setError(getErrorMessage(err, "We couldn't load your classes.")));
   }, [audience]);
 
-  // Land on the first class when none is chosen yet.
+  // A guardian lands on the first (child, class) when none is chosen yet; a learner stays on "All classes".
   useEffect(() => {
-    if (!classId && options && options.length > 0) {
+    if (audience === "GUARDIAN" && !classId && options && options.length > 0) {
       const first = options[0];
       setSearchParams(first.learnerId ? { classId: first.classId, learnerId: first.learnerId } : { classId: first.classId }, {
         replace: true,
       });
     }
-  }, [classId, options, setSearchParams]);
+  }, [audience, classId, options, setSearchParams]);
+
+  useEffect(() => {
+    if (!allClasses || !options) {
+      return;
+    }
+    let cancelled = false;
+    loadAcrossClasses(
+      options.map((option) => option.classId),
+      (id) => listMemberClassQuizzes({ classId: id }),
+    )
+      .then((loaded) => {
+        if (!cancelled) {
+          setAllLists(loaded);
+          setError(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(getErrorMessage(err, "We couldn't load your quizzes."));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [allClasses, options]);
 
   useEffect(() => {
     if (!reader) {
@@ -157,6 +184,9 @@ export function ClassQuizzesPage({ audience }: { audience: ClassQuizzesAudience 
   const guardian = audience === "GUARDIAN";
   // A guardian reads released results; only the learner opens a quiz to take it.
   const taker = can.takeClassQuizzes(audience);
+  // The lists on screen - every class's in "All classes", else just the chosen class's.
+  const shownLists = allClasses ? allLists : list ? [list] : null;
+  const rows = shownLists?.flatMap((shown) => shown.quizzes.map((quiz) => ({ quiz, list: shown }))) ?? null;
 
   return (
     <div className="space-y-6">
@@ -177,11 +207,15 @@ export function ClassQuizzesPage({ audience }: { audience: ClassQuizzesAudience 
         <EmptyState icon={ClipboardCheck} title="No online classes" description="Quizzes from your tutors' classes show up here." />
       ) : (
         <>
-          <FormField label="Class" htmlFor="class-quizzes-class">
+          <FormField label="Class" htmlFor="class-quizzes-class" className="w-full sm:w-72">
             <Select
               id="class-quizzes-class"
-              value={selectedOption?.key ?? ""}
+              value={allClasses ? "" : (selectedOption?.key ?? "")}
               onChange={(event) => {
+                if (event.target.value === "") {
+                  setSearchParams({});
+                  return;
+                }
                 const option = options.find((candidate) => candidate.key === event.target.value);
                 if (option) {
                   setSearchParams(
@@ -190,6 +224,7 @@ export function ClassQuizzesPage({ audience }: { audience: ClassQuizzesAudience 
                 }
               }}
             >
+              {!guardian && <option value="">All classes</option>}
               {options.map((option) => (
                 <option key={option.key} value={option.key}>
                   {option.label}
@@ -198,25 +233,27 @@ export function ClassQuizzesPage({ audience }: { audience: ClassQuizzesAudience 
             </Select>
           </FormField>
 
-          {notIncluded ? (
+          {!allClasses && notIncluded ? (
             <EmptyState icon={ClipboardCheck} title="Quizzes aren't available" description={notIncluded} />
-          ) : list === null ? (
+          ) : rows === null ? (
             <Skeleton className="h-40" />
-          ) : list.quizzes.length === 0 ? (
+          ) : rows.length === 0 ? (
             <EmptyState
               icon={ClipboardCheck}
               title={guardian ? "No results yet" : "No quizzes yet"}
               description={
                 guardian
                   ? "Results show up here once the tutor releases them."
-                  : "Your tutor hasn't set a quiz for this class yet."
+                  : allClasses
+                    ? "Your tutors haven't set any quizzes yet."
+                    : "Your tutor hasn't set a quiz for this class yet."
               }
             />
           ) : (
             <div className="space-y-2">
-              {list.quizzes.map((quiz) => {
+              {rows.map(({ quiz, list: owner }) => {
                 const badge = statusBadge(quiz);
-                const meta = `${list.className} · Closes ${formatInstant(quiz.closesAt)}`;
+                const meta = `${owner.className} · Closes ${formatInstant(quiz.closesAt)}`;
                 const trailing = <Badge variant={badge.variant}>{badge.label}</Badge>;
                 if (!taker) {
                   const reviewable = quiz.attemptState === "SUBMITTED";
@@ -240,8 +277,8 @@ export function ClassQuizzesPage({ audience }: { audience: ClassQuizzesAudience 
                 const awaitingResults = quiz.attemptState === "SUBMITTED" && quiz.score === null;
                 return (
                   <DrillRow
-                    key={quiz.id}
-                    to={`/learner/quizzes/${list.classId}/${quiz.id}`}
+                    key={`${owner.classId}:${quiz.id}`}
+                    to={`/learner/quizzes/${owner.classId}/${quiz.id}`}
                     title={quiz.title}
                     meta={meta}
                     trailing={trailing}

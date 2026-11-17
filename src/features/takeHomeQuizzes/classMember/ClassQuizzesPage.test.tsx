@@ -29,7 +29,12 @@ const MATHS: OnlineClass = {
   slots: [],
   upcoming: [],
   remindersEnabled: true,
+  creatorId: "t1",
+  creatorLogoVersion: null,
+  creatorBannerVersion: null,
 };
+
+const ENGLISH: OnlineClass = { ...MATHS, id: "c2", name: "English" };
 
 function quiz(overrides: Partial<MyTakeHomeQuizSummaryView>): MyTakeHomeQuizSummaryView {
   return {
@@ -109,8 +114,40 @@ describe("ClassQuizzesPage", () => {
     vi.mocked(classQuizzesApi.listMemberClassQuizzes).mockRejectedValue(
       new ApiError(403, "CBT/Quizzes are not included in the current plan."),
     );
-    renderAt("/quizzes", "LEARNER");
+    renderAt("/quizzes?classId=c1", "LEARNER");
 
     expect(await screen.findByText("CBT/Quizzes are not included in the current plan.")).toBeInTheDocument();
+  });
+
+  it("shows a learner every class's quizzes under \"All classes\" by default, and narrows on pick", async () => {
+    vi.mocked(onlineClassesApi.listMyOnlineClasses).mockResolvedValue([MATHS, ENGLISH]);
+    vi.mocked(classQuizzesApi.listMemberClassQuizzes).mockImplementation(async ({ classId }) =>
+      classId === "c1"
+        ? { classId: "c1", className: "Maths", quizzes: [quiz({ id: "q1", title: "Fractions check" })] }
+        : { classId: "c2", className: "English", quizzes: [quiz({ id: "q7", title: "Spelling bee" })] },
+    );
+    renderAt("/quizzes", "LEARNER");
+    const user = userEvent.setup();
+
+    expect(await screen.findByRole("link", { name: /Spelling bee/ })).toHaveAttribute("href", "/learner/quizzes/c2/q7");
+    expect(screen.getByRole("link", { name: /Fractions check/ })).toHaveAttribute("href", "/learner/quizzes/c1/q1");
+    expect(screen.getByRole("combobox", { name: "Class" })).toHaveValue("");
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Class" }), "c1:");
+
+    expect(await screen.findByRole("link", { name: /Fractions check/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Spelling bee/ })).not.toBeInTheDocument();
+  });
+
+  it("leaves out a class whose tutor's plan doesn't include quizzes under \"All classes\"", async () => {
+    vi.mocked(onlineClassesApi.listMyOnlineClasses).mockResolvedValue([MATHS, ENGLISH]);
+    vi.mocked(classQuizzesApi.listMemberClassQuizzes).mockImplementation(async ({ classId }) => {
+      if (classId === "c1") throw new ApiError(403, "CBT/Quizzes are not included in the current plan.");
+      return { classId: "c2", className: "English", quizzes: [quiz({ id: "q7", title: "Spelling bee" })] };
+    });
+    renderAt("/quizzes", "LEARNER");
+
+    expect(await screen.findByRole("link", { name: /Spelling bee/ })).toBeInTheDocument();
+    expect(screen.queryByText("Quizzes aren't available")).not.toBeInTheDocument();
   });
 });

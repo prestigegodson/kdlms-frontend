@@ -35,6 +35,9 @@ const algebra: OnlineClass = {
     },
   ],
   remindersEnabled: true,
+  creatorId: "t1",
+  creatorLogoVersion: null,
+  creatorBannerVersion: null,
 };
 
 const live: OnlineClass = {
@@ -84,6 +87,36 @@ describe("online classes views", () => {
     expect(screen.getByText(/Mon 09:00–10:00/)).toBeInTheDocument();
     expect(screen.getByText("Tutor unwell")).toBeInTheDocument();
     expect(screen.getByText("Cancelled")).toBeInTheDocument();
+  });
+
+  it("shows the tutor's banner and logo through the viewer's own endpoint", async () => {
+    vi.mocked(onlineClassesApi.listWardOnlineClasses).mockResolvedValue([
+      {
+        learnerId: "l1",
+        firstName: "Kemi",
+        lastName: "Obi",
+        classes: [{ ...algebra, creatorLogoVersion: "logo-1", creatorBannerVersion: "banner-1" }],
+      },
+    ]);
+    vi.mocked(onlineClassesApi.creatorImagePath).mockImplementation(
+      (viewer, creatorId, kind, version) => `${viewer}/${creatorId}/${kind}?v=${version}`,
+    );
+    vi.mocked(onlineClassesApi.fetchCreatorImage).mockResolvedValue(new Blob(["img"], { type: "image/png" }));
+
+    renderAt(<OnlineClassesPage />);
+
+    expect(await screen.findByRole("img", { name: "Ada's Studio logo" })).toBeInTheDocument();
+    expect(onlineClassesApi.fetchCreatorImage).toHaveBeenCalledWith("guardian/t1/logo?v=logo-1");
+    expect(onlineClassesApi.fetchCreatorImage).toHaveBeenCalledWith("guardian/t1/banner?v=banner-1");
+  });
+
+  it("fetches no tutor images when the tutor has none", async () => {
+    vi.mocked(onlineClassesApi.listMyOnlineClasses).mockResolvedValue([algebra]);
+
+    renderAt(<MyClassesPage />);
+
+    expect(await screen.findByRole("heading", { name: "Algebra" })).toBeInTheDocument();
+    expect(onlineClassesApi.fetchCreatorImage).not.toHaveBeenCalled();
   });
 
   it("shows an empty state before a learner is enrolled anywhere", async () => {

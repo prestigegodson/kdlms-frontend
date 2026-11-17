@@ -30,7 +30,24 @@ const MATHS: OnlineClass = {
   slots: [],
   upcoming: [],
   remindersEnabled: true,
+  creatorId: "t1",
+  creatorLogoVersion: null,
+  creatorBannerVersion: null,
 };
+
+const SCIENCE: OnlineClass = { ...MATHS, id: "c2", name: "Science" };
+
+function summary(id: string, topic: string, sessionDate: string | null) {
+  return {
+    id,
+    sessionDate,
+    topic,
+    status: "PUBLISHED" as const,
+    aiGenerated: false,
+    updatedAt: "2026-10-04T09:00:00Z",
+    publishedAt: "2026-10-04T09:00:00Z",
+  };
+}
 
 const NOTE: ClassLessonNoteView = {
   id: "n1",
@@ -38,7 +55,7 @@ const NOTE: ClassLessonNoteView = {
   className: "Maths",
   sessionDate: "2026-10-12",
   topic: "Fractions",
-  content: { ...EMPTY_CONTENT, conclusion: "Halves and quarters" },
+  content: { ...EMPTY_CONTENT, mode: "STRUCTURED", conclusion: "Halves and quarters" },
   status: "PUBLISHED",
   aiGenerated: false,
   updatedAt: "2026-10-04T09:00:00Z",
@@ -106,8 +123,45 @@ describe("ClassLessonNotesReaderPage", () => {
     vi.mocked(lessonNotesApi.listPublishedClassLessonNotes).mockRejectedValue(
       new ApiError(403, "Lesson notes are not included in the current plan."),
     );
-    renderAt("/notes", "LEARNER");
+    renderAt("/notes?classId=c1", "LEARNER");
 
     expect(await screen.findByText("Lesson notes are not included in the current plan.")).toBeInTheDocument();
+  });
+
+  it("lists every class's notes newest first under \"All classes\" and opens one through its own class", async () => {
+    vi.mocked(onlineClassesApi.listMyOnlineClasses).mockResolvedValue([MATHS, SCIENCE]);
+    vi.mocked(lessonNotesApi.listPublishedClassLessonNotes).mockImplementation(async ({ classId }) =>
+      classId === "c1"
+        ? { classId: "c1", className: "Maths", writable: false, notes: [summary("n1", "Fractions", "2026-10-12")] }
+        : {
+            classId: "c2",
+            className: "Science",
+            writable: false,
+            notes: [summary("n2", "Plants", "2026-10-20"), summary("n3", "Safety rules", null)],
+          },
+    );
+    vi.mocked(lessonNotesApi.getPublishedClassLessonNote).mockResolvedValue({
+      ...NOTE,
+      id: "n2",
+      classId: "c2",
+      className: "Science",
+      topic: "Plants",
+    });
+    renderAt("/notes", "LEARNER");
+    const user = userEvent.setup();
+
+    await screen.findByRole("button", { name: /Fractions/ });
+    const topics = screen.getAllByRole("listitem").map((item) => item.textContent);
+    expect(topics).toEqual([
+      expect.stringContaining("Plants"),
+      expect.stringContaining("Fractions"),
+      expect.stringContaining("Safety rules"),
+    ]);
+    expect(screen.getByRole("combobox", { name: "Class" })).toHaveValue("");
+
+    await user.click(screen.getByRole("button", { name: /Plants/ }));
+
+    expect(await screen.findByText("Halves and quarters")).toBeInTheDocument();
+    expect(lessonNotesApi.getPublishedClassLessonNote).toHaveBeenCalledWith({ classId: "c2", learnerId: undefined }, "n2");
   });
 });

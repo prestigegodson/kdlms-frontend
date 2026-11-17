@@ -1,28 +1,38 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
 import {
+  type CreatorBrandingInput,
   type CreatorProfile,
   type CreatorProfileInput,
   getMyCreatorProfile,
+  updateMyCreatorBranding,
   updateMyCreatorProfile,
 } from "@/api/creators";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { CreatorProfileFields } from "@/features/creators/components/CreatorProfileFields";
+import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 
 type LoadState =
-  { kind: "loading" } | { kind: "loaded"; profile: CreatorProfileInput } | { kind: "error"; message: string };
+  | { kind: "loading" }
+  | { kind: "loaded"; profile: CreatorProfileInput; branding: CreatorBrandingInput }
+  | { kind: "error"; message: string };
 
 function toInput(profile: CreatorProfile): CreatorProfileInput {
   const { firstName, lastName, businessName, contactAddress, mobile, timezone, currency } = profile;
   return { firstName, lastName, businessName, contactAddress, mobile, timezone, currency };
 }
 
+function toBranding(profile: CreatorProfile): CreatorBrandingInput {
+  return { logoFileId: profile.logoFileId ?? null, bannerFileId: profile.bannerFileId ?? null };
+}
+
 const TITLE = "Profile";
-const DESCRIPTION = "Your business details, timezone and preferred currency.";
+const DESCRIPTION = "Your business details, branding, timezone and preferred currency.";
 
 /** The creator's own business profile - the SchoolProfilePage shape. */
 export function CreatorProfilePage() {
@@ -30,10 +40,13 @@ export function CreatorProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [brandingSaving, setBrandingSaving] = useState(false);
+  const [brandingError, setBrandingError] = useState<string | null>(null);
+  const [brandingSaved, setBrandingSaved] = useState(false);
 
   useEffect(() => {
     getMyCreatorProfile()
-      .then((profile) => setState({ kind: "loaded", profile: toInput(profile) }))
+      .then((profile) => setState({ kind: "loaded", profile: toInput(profile), branding: toBranding(profile) }))
       .catch((error: unknown) =>
         setState({ kind: "error", message: error instanceof ApiError ? error.message : "Failed to load profile" }),
       );
@@ -47,12 +60,35 @@ export function CreatorProfilePage() {
     setSaved(false);
     try {
       const updated = await updateMyCreatorProfile(state.profile);
-      setState({ kind: "loaded", profile: toInput(updated) });
+      setState({ kind: "loaded", profile: toInput(updated), branding: toBranding(updated) });
       setSaved(true);
     } catch (error) {
       setSaveError(error instanceof ApiError ? error.message : "Failed to save profile");
     } finally {
       setSaving(false);
+    }
+  }
+
+  /** Saved straight away, like the upload itself; the sidebar logo is refreshed after a logo change. */
+  async function saveBranding(next: CreatorBrandingInput) {
+    if (state.kind !== "loaded") return;
+    const logoChanged = next.logoFileId !== state.branding.logoFileId;
+    setBrandingSaving(true);
+    setBrandingError(null);
+    setBrandingSaved(false);
+    try {
+      const updated = await updateMyCreatorBranding(next);
+      setState((current) => (current.kind === "loaded" ? { ...current, branding: toBranding(updated) } : current));
+      setBrandingSaved(true);
+      if (logoChanged) {
+        const brandingStore = useSchoolBrandingStore.getState();
+        brandingStore.reset();
+        void useSchoolBrandingStore.getState().fetchIfNeeded();
+      }
+    } catch (error) {
+      setBrandingError(error instanceof ApiError ? error.message : "Failed to save branding");
+    } finally {
+      setBrandingSaving(false);
     }
   }
 
@@ -67,12 +103,39 @@ export function CreatorProfilePage() {
       {state.kind === "error" && <Alert variant="error">{state.message}</Alert>}
       {state.kind === "loaded" && (
         <Card>
+          <div className="space-y-4" aria-busy={brandingSaving}>
+            <div>
+              <h2 className="font-display text-base font-medium text-slate-900">Branding</h2>
+              <p className="text-sm text-slate-500">
+                Your logo shows in your portal and, with your banner, on your learners' class cards.
+              </p>
+            </div>
+            {brandingError && <Alert variant="error">{brandingError}</Alert>}
+            {brandingSaved && <Alert variant="success">Branding updated.</Alert>}
+            <ImageUploadField
+              label="Logo"
+              fileId={state.branding.logoFileId ?? undefined}
+              hint="a square image works best"
+              onChange={(fileId) => saveBranding({ ...state.branding, logoFileId: fileId ?? null })}
+            />
+            <ImageUploadField
+              label="Banner"
+              variant="banner"
+              fileId={state.branding.bannerFileId ?? undefined}
+              hint="wide image, about 1200 × 400"
+              onChange={(fileId) => saveBranding({ ...state.branding, bannerFileId: fileId ?? null })}
+            />
+          </div>
+        </Card>
+      )}
+      {state.kind === "loaded" && (
+        <Card>
           <form className="space-y-4" onSubmit={handleSubmit}>
             {saveError && <Alert variant="error">{saveError}</Alert>}
             {saved && <Alert variant="success">Profile updated.</Alert>}
             <CreatorProfileFields
               value={state.profile}
-              onChange={(profile) => setState({ kind: "loaded", profile })}
+              onChange={(profile) => setState({ ...state, profile })}
               idPrefix="profile"
             />
             <Button type="submit" loading={saving}>

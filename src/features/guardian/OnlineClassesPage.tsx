@@ -57,6 +57,7 @@ export function OnlineClassesPage() {
                   <OnlineClassCard
                     key={onlineClass.id}
                     onlineClass={onlineClass}
+                    viewer="guardian"
                     joinLabel="Watch"
                     loadAttendance={() => getWardClassAttendance(learner.learnerId, onlineClass.id)}
                     loadTopics={() => getWardClassTopics(learner.learnerId, onlineClass.id)}
