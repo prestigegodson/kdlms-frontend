@@ -38,6 +38,7 @@ const algebra: OnlineClass = {
   creatorId: "t1",
   creatorLogoVersion: null,
   creatorBannerVersion: null,
+  creatorBio: null,
 };
 
 const live: OnlineClass = {
@@ -108,6 +109,19 @@ describe("online classes views", () => {
     expect(await screen.findByRole("img", { name: "Ada's Studio logo" })).toBeInTheDocument();
     expect(onlineClassesApi.fetchCreatorImage).toHaveBeenCalledWith("guardian/t1/logo?v=logo-1");
     expect(onlineClassesApi.fetchCreatorImage).toHaveBeenCalledWith("guardian/t1/banner?v=banner-1");
+  });
+
+  it("shows the tutor's bio only when they have one", async () => {
+    vi.mocked(onlineClassesApi.listMyOnlineClasses).mockResolvedValue([
+      { ...algebra, creatorBio: "Maths tutor for ten years." },
+      { ...algebra, id: "c3", name: "Calculus" },
+    ]);
+
+    renderAt(<MyClassesPage />);
+
+    expect(await screen.findByRole("heading", { name: "Calculus" })).toBeInTheDocument();
+    expect(screen.getAllByText("About Ada's Studio")).toHaveLength(1);
+    expect(screen.getByText("Maths tutor for ten years.")).toBeInTheDocument();
   });
 
   it("fetches no tutor images when the tutor has none", async () => {

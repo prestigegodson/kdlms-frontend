@@ -33,6 +33,7 @@ const MATHS: OnlineClass = {
   creatorId: "t1",
   creatorLogoVersion: null,
   creatorBannerVersion: null,
+  creatorBio: null,
 };
 
 const SCIENCE: OnlineClass = { ...MATHS, id: "c2", name: "Science" };

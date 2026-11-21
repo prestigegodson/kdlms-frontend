@@ -114,6 +114,8 @@ export function CreatorDetailPage() {
           <dd className="text-slate-900">{creator.currency}</dd>
           <dt className="text-slate-500">Joined</dt>
           <dd className="text-slate-900">{formatInstant(creator.createdAt)}</dd>
+          <dt className="text-slate-500">Bio</dt>
+          <dd className="whitespace-pre-line text-slate-900">{creator.bio ?? "—"}</dd>
         </dl>
         <div className="mt-4 flex flex-wrap gap-2">
           {creator.status === "SUSPENDED" && (

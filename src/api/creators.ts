@@ -23,7 +23,12 @@ export interface CreatorProfile extends CreatorProfileInput {
   logoFileId: string | null;
   /** The business banner's file id; null when none is set. */
   bannerFileId: string | null;
+  /** The tutor's free-text bio, shown to their learners and guardians; null when none is set. */
+  bio: string | null;
 }
+
+/** Mirrors backend creator.domain.CreatorProfile.MAX_BIO_LENGTH. */
+export const CREATOR_BIO_MAX_LENGTH = 2000;
 
 /** The tutor's business images - ids of files already uploaded via `uploadFile`; null removes one. */
 export interface CreatorBrandingInput {
@@ -39,6 +44,8 @@ export interface CreatorAdminView extends CreatorProfileInput {
   userId: string | null;
   email: string | null;
   emailVerified: boolean;
+  /** The tutor's free-text bio; null when none is set. */
+  bio: string | null;
   createdAt: string;
 }
 
@@ -80,6 +87,14 @@ export function updateMyCreatorBranding(branding: CreatorBrandingInput): Promise
   return apiFetch<CreatorProfile>("/api/v1/creator/profile/branding", {
     method: "PUT",
     body: JSON.stringify(branding),
+  });
+}
+
+/** Sets the tutor's bio - plain text; null or blank removes it. */
+export function updateMyCreatorBio(bio: string | null): Promise<CreatorProfile> {
+  return apiFetch<CreatorProfile>("/api/v1/creator/profile/bio", {
+    method: "PUT",
+    body: JSON.stringify({ bio }),
   });
 }
 

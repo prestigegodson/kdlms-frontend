@@ -31,6 +31,7 @@ const CREATOR: CreatorAdminView = {
   userId: "user-1",
   email: "ada@creator.example",
   emailVerified: false,
+  bio: null,
   createdAt: "2026-10-03T10:00:00Z",
 };
 

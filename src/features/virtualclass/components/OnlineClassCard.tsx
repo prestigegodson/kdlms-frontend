@@ -144,6 +144,14 @@ export function OnlineClassCard({
           </Button>
         </div>
       </div>
+      {onlineClass.creatorBio && (
+        <details className="mt-3 text-sm">
+          <summary className="cursor-pointer font-medium text-slate-700">
+            About {onlineClass.creatorName ?? "your tutor"}
+          </summary>
+          <p className="mt-1 whitespace-pre-line text-slate-700">{onlineClass.creatorBio}</p>
+        </details>
+      )}
       {onlineClass.description && <p className="mt-3 text-sm text-slate-700">{onlineClass.description}</p>}
       {onlineClass.slots.length > 0 && (
         <p className="mt-3 text-sm text-slate-700">

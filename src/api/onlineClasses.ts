@@ -48,6 +48,8 @@ export interface OnlineClass {
   creatorLogoVersion: string | null;
   /** Changes whenever the tutor's banner does; null when they have none. */
   creatorBannerVersion: string | null;
+  /** The tutor's free-text bio (plain text); null when they have none. */
+  creatorBio: string | null;
 }
 
 export interface LearnerOnlineClasses {

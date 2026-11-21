@@ -1,25 +1,29 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
 import {
+  CREATOR_BIO_MAX_LENGTH,
   type CreatorBrandingInput,
   type CreatorProfile,
   type CreatorProfileInput,
   getMyCreatorProfile,
+  updateMyCreatorBio,
   updateMyCreatorBranding,
   updateMyCreatorProfile,
 } from "@/api/creators";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { FormField } from "@/components/ui/FormField";
 import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
+import { Textarea } from "@/components/ui/Textarea";
 import { CreatorProfileFields } from "@/features/creators/components/CreatorProfileFields";
 import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 
 type LoadState =
   | { kind: "loading" }
-  | { kind: "loaded"; profile: CreatorProfileInput; branding: CreatorBrandingInput }
+  | { kind: "loaded"; profile: CreatorProfileInput; branding: CreatorBrandingInput; bio: string }
   | { kind: "error"; message: string };
 
 function toInput(profile: CreatorProfile): CreatorProfileInput {
@@ -32,7 +36,7 @@ function toBranding(profile: CreatorProfile): CreatorBrandingInput {
 }
 
 const TITLE = "Profile";
-const DESCRIPTION = "Your business details, branding, timezone and preferred currency.";
+const DESCRIPTION = "Your business details, branding, bio, timezone and preferred currency.";
 
 /** The creator's own business profile - the SchoolProfilePage shape. */
 export function CreatorProfilePage() {
@@ -43,10 +47,18 @@ export function CreatorProfilePage() {
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [brandingError, setBrandingError] = useState<string | null>(null);
   const [brandingSaved, setBrandingSaved] = useState(false);
+  const [bioSaving, setBioSaving] = useState(false);
+  const [bioError, setBioError] = useState<string | null>(null);
+  const [bioSaved, setBioSaved] = useState(false);
 
   useEffect(() => {
     getMyCreatorProfile()
-      .then((profile) => setState({ kind: "loaded", profile: toInput(profile), branding: toBranding(profile) }))
+      .then((profile) => setState({
+          kind: "loaded",
+          profile: toInput(profile),
+          branding: toBranding(profile),
+          bio: profile.bio ?? "",
+        }))
       .catch((error: unknown) =>
         setState({ kind: "error", message: error instanceof ApiError ? error.message : "Failed to load profile" }),
       );
@@ -60,7 +72,9 @@ export function CreatorProfilePage() {
     setSaved(false);
     try {
       const updated = await updateMyCreatorProfile(state.profile);
-      setState({ kind: "loaded", profile: toInput(updated), branding: toBranding(updated) });
+      setState((current) =>
+        current.kind === "loaded" ? { ...current, profile: toInput(updated), branding: toBranding(updated) } : current,
+      );
       setSaved(true);
     } catch (error) {
       setSaveError(error instanceof ApiError ? error.message : "Failed to save profile");
@@ -89,6 +103,23 @@ export function CreatorProfilePage() {
       setBrandingError(error instanceof ApiError ? error.message : "Failed to save branding");
     } finally {
       setBrandingSaving(false);
+    }
+  }
+
+  async function handleBioSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (state.kind !== "loaded") return;
+    setBioSaving(true);
+    setBioError(null);
+    setBioSaved(false);
+    try {
+      const updated = await updateMyCreatorBio(state.bio.trim() === "" ? null : state.bio);
+      setState((current) => (current.kind === "loaded" ? { ...current, bio: updated.bio ?? "" } : current));
+      setBioSaved(true);
+    } catch (error) {
+      setBioError(error instanceof ApiError ? error.message : "Failed to save bio");
+    } finally {
+      setBioSaving(false);
     }
   }
 
@@ -126,6 +157,38 @@ export function CreatorProfilePage() {
               onChange={(fileId) => saveBranding({ ...state.branding, bannerFileId: fileId ?? null })}
             />
           </div>
+        </Card>
+      )}
+      {state.kind === "loaded" && (
+        <Card>
+          <form className="space-y-4" onSubmit={handleBioSubmit}>
+            <div>
+              <h2 className="font-display text-base font-medium text-slate-900">About you</h2>
+              <p className="text-sm text-slate-500">
+                Shown to your learners and their guardians on your class cards.
+              </p>
+            </div>
+            {bioError && <Alert variant="error">{bioError}</Alert>}
+            {bioSaved && <Alert variant="success">Bio updated.</Alert>}
+            <FormField
+              label="Bio"
+              htmlFor="profile-bio"
+              description={`${state.bio.length}/${CREATOR_BIO_MAX_LENGTH} characters`}
+            >
+              <Textarea
+                id="profile-bio"
+                rows={5}
+                maxLength={CREATOR_BIO_MAX_LENGTH}
+                aria-describedby="profile-bio-description"
+                placeholder="Your teaching experience, subjects and approach."
+                value={state.bio}
+                onChange={(event) => setState({ ...state, bio: event.target.value })}
+              />
+            </FormField>
+            <Button type="submit" loading={bioSaving}>
+              {bioSaving ? "Saving…" : "Save bio"}
+            </Button>
+          </form>
         </Card>
       )}
       {state.kind === "loaded" && (

@@ -30,6 +30,7 @@ const ENGLISH: OnlineClass = {
   creatorId: "t1",
   creatorLogoVersion: null,
   creatorBannerVersion: null,
+  creatorBio: null,
 };
 
 const MATHS: OnlineClass = { ...ENGLISH, id: "c2", name: "Maths" };
