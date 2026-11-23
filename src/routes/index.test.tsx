@@ -36,6 +36,13 @@ describe("router", () => {
               }),
           });
         }
+        if (url.includes("/api/v1/public/tutors/")) {
+          return Promise.resolve({
+            ok: false,
+            status: 404,
+            json: () => Promise.resolve({ status: 404, title: "Not Found" }),
+          });
+        }
         // Anything else (e.g. the system-admin schools list) gets a benign empty page,
         // so pages that fetch on mount don't crash rendering in these routing tests.
         return Promise.resolve({
@@ -113,6 +120,16 @@ describe("router", () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe("/tutors/signup"));
     expect(router.state.location.search).toBe("?ref=old");
+  });
+
+  it("keeps /tutors/signup on the signup route rather than reading it as a public profile handle", () => {
+    const router = createMemoryRouter(routes, { initialEntries: ["/tutors/signup"] });
+    expect(router.state.matches.at(-1)?.route.path).toBe("tutors/signup");
+  });
+
+  it("serves a tutor's public page at /tutors/:handle without signing in", async () => {
+    renderAt("/tutors/ada-maths");
+    expect(await screen.findByRole("heading", { name: "This page isn't available" })).toBeInTheDocument();
   });
 
   describe("as a TEACHER", () => {

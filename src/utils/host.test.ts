@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { platformLoginUrl, resolveSchoolSubdomain } from "@/utils/host";
+import { platformLoginUrl, platformUrl, resolveSchoolSubdomain } from "@/utils/host";
 
 describe("resolveSchoolSubdomain", () => {
   afterEach(() => {
@@ -65,5 +65,14 @@ describe("platformLoginUrl", () => {
   it("leaves an already-unbranded host unchanged", () => {
     const location = { hostname: "localhost", protocol: "http:", port: "5173" } as Location;
     expect(platformLoginUrl(location)).toBe("http://localhost:5173/login");
+  });
+});
+
+describe("platformUrl", () => {
+  it("builds a tutor's public link on the platform host, never a school subdomain", () => {
+    const school = { hostname: "greenwood.kdlms.com", protocol: "https:", port: "" } as Location;
+    expect(platformUrl("/tutors/ada-maths", school)).toBe("https://app.kdlms.com/tutors/ada-maths");
+    const local = { hostname: "localhost", protocol: "http:", port: "5173" } as Location;
+    expect(platformUrl("/tutors/ada-maths", local)).toBe("http://localhost:5173/tutors/ada-maths");
   });
 });

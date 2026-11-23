@@ -12,7 +12,14 @@ vi.mock("@/api/tutorCurrencies");
 vi.mock("@/api/schoolBranding");
 vi.mock("@/api/creators", async () => {
   const actual = await vi.importActual<typeof import("@/api/creators")>("@/api/creators");
-  return { ...actual, getMyCreatorProfile: vi.fn(), updateMyCreatorBranding: vi.fn(), updateMyCreatorBio: vi.fn() };
+  return {
+    ...actual,
+    getMyCreatorProfile: vi.fn(),
+    updateMyCreatorBranding: vi.fn(),
+    updateMyCreatorBio: vi.fn(),
+    updateMyPublicProfile: vi.fn(),
+    checkPublicHandle: vi.fn((handle: string) => Promise.resolve({ handle, available: true, reason: null })),
+  };
 });
 vi.mock("@/api/files", async () => {
   const actual = await vi.importActual<typeof import("@/api/files")>("@/api/files");
@@ -31,6 +38,11 @@ const PROFILE: CreatorProfile = {
   logoFileId: "logo-1",
   bannerFileId: "banner-1",
   bio: null,
+  publicHandle: null,
+  publicProfileEnabled: false,
+  joinRequestsEnabled: false,
+  publicLinks: [],
+  suggestedHandle: "adas-studio",
 };
 
 describe("CreatorProfilePage branding", () => {
@@ -121,5 +133,62 @@ describe("CreatorProfilePage bio", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save bio" }));
 
     expect(creatorsApi.updateMyCreatorBio).toHaveBeenCalledWith(null);
+  });
+});
+
+describe("CreatorProfilePage public page", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetSchoolBrandingStore();
+    vi.mocked(creatorsApi.getMyCreatorProfile).mockResolvedValue(PROFILE);
+    vi.mocked(filesApi.downloadFile).mockResolvedValue(new Blob(["img"], { type: "image/png" }));
+    vi.mocked(schoolBrandingApi.getMySchoolBranding).mockResolvedValue({ schoolName: "Ada's Studio" });
+    vi.mocked(creatorsApi.checkPublicHandle).mockImplementation((handle) =>
+      Promise.resolve({ handle, available: true, reason: null }),
+    );
+  });
+
+  it("offers the suggested link name and publishes the page with a contact link", async () => {
+    const published = {
+      ...PROFILE,
+      publicHandle: "adas-studio",
+      publicProfileEnabled: true,
+      publicLinks: [{ platform: "WHATSAPP" as const, value: "+234 803 000 0000" }],
+    };
+    vi.mocked(creatorsApi.updateMyPublicProfile).mockResolvedValue(published);
+    render(<CreatorProfilePage />);
+
+    expect(await screen.findByLabelText("Link name")).toHaveValue("adas-studio");
+    await userEvent.click(screen.getByRole("switch", { name: "Publish my public page" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add contact link" }));
+    await userEvent.type(screen.getByLabelText("WhatsApp number"), "+234 803 000 0000");
+    await userEvent.click(screen.getByRole("button", { name: "Save public page" }));
+
+    expect(creatorsApi.updateMyPublicProfile).toHaveBeenCalledWith({
+      handle: "adas-studio",
+      enabled: true,
+      joinRequestsEnabled: false,
+      links: [{ platform: "WHATSAPP", value: "+234 803 000 0000" }],
+    });
+    expect(await screen.findByText("Your page is live")).toBeInTheDocument();
+    expect(screen.getByLabelText("Your public page link")).toHaveValue(
+      `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ""}/tutors/adas-studio`,
+    );
+  });
+
+  it("blocks saving a link name another tutor holds", async () => {
+    vi.mocked(creatorsApi.checkPublicHandle).mockResolvedValue({
+      handle: "taken-name",
+      available: false,
+      reason: "That link name is already taken.",
+    });
+    render(<CreatorProfilePage />);
+
+    const input = await screen.findByLabelText("Link name");
+    await userEvent.clear(input);
+    await userEvent.type(input, "taken-name");
+
+    expect(await screen.findByText("That link name is already taken.", {}, { timeout: 2000 })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save public page" })).toBeDisabled();
   });
 });

@@ -364,6 +364,14 @@ export const can = {
     return role === "CREATOR";
   },
 
+  /**
+   * A tutor's Join requests inbox - requests visitors send from their public profile page. The
+   * CREATOR only, on every plan.
+   */
+  manageJoinRequests(role: Role | undefined): boolean {
+    return role === "CREATOR";
+  },
+
   /** An education creator's own virtual classes, schedules and sessions (creators.md Phase C4) - the CREATOR only. */
   manageVirtualClasses(role: Role | undefined): boolean {
     return role === "CREATOR";

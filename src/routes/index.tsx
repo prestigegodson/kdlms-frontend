@@ -29,6 +29,8 @@ import { CreatorDetailPage } from "@/features/creators/admin/CreatorDetailPage";
 import { CreatorsPage } from "@/features/creators/admin/CreatorsPage";
 import { CreatorDashboardPage } from "@/features/creators/CreatorDashboardPage";
 import { CreatorProfilePage } from "@/features/creators/CreatorProfilePage";
+import { JoinRequestsPage } from "@/features/creators/JoinRequestsPage";
+import { PublicTutorPage } from "@/features/creators/public/PublicTutorPage";
 import { CreatorSignupPage } from "@/features/creators/CreatorSignupPage";
 import { CompleteProfilePage } from "@/features/creators/CompleteProfilePage";
 import { SessionsCalendarPage } from "@/features/virtualclass/pages/SessionsCalendarPage";
@@ -174,6 +176,9 @@ export const routes: RouteObject[] = [
       { path: "reset-password", element: <ResetPasswordPage /> },
       { path: "set-password", element: <SetInitialPasswordPage /> },
       { path: "tutors/signup", element: <CreatorSignupPage /> },
+      // A tutor's public profile page - after tutors/signup, which a static segment wins over anyway
+      // (and "signup" is a reserved handle besides).
+      { path: "tutors/:handle", element: <PublicTutorPage /> },
       { path: "tutor/complete-profile", element: <CompleteProfilePage /> },
       { path: "creators/signup", element: <RedirectOldCreatorUrl /> },
       { path: "creator/*", element: <RedirectOldCreatorUrl /> },
@@ -562,6 +567,7 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, element: <CreatorDashboardPage /> },
           { path: "profile", element: <CreatorProfilePage /> },
+          { path: "join-requests", element: <JoinRequestsPage /> },
           { path: "classes", element: <VirtualClassesPage /> },
           { path: "classes/:classId", element: <VirtualClassDetailPage /> },
           { path: "classes/:classId/topics", element: <ClassTopicsPage /> },

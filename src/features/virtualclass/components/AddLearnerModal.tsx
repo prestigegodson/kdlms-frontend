@@ -18,6 +18,8 @@ interface AddLearnerModalProps {
   classes: VirtualClass[];
   onSubmit: (input: AddLearnerInput) => Promise<AddLearnerResult>;
   onClose: () => void;
+  /** Prefills the form - e.g. from a join request sent through the tutor's public page. */
+  initial?: { firstName?: string; lastName?: string; email?: string };
 }
 
 /**
@@ -25,12 +27,12 @@ interface AddLearnerModalProps {
  * guardian gets one when the plan has guardian access; otherwise the minor gets a generated login id
  * and password, shown here once.
  */
-export function AddLearnerModal({ guardianAccess, classes, onSubmit, onClose }: AddLearnerModalProps) {
+export function AddLearnerModal({ guardianAccess, classes, onSubmit, onClose, initial }: AddLearnerModalProps) {
   const [minor, setMinor] = useState(false);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [firstName, setFirstName] = useState(initial?.firstName ?? "");
+  const [lastName, setLastName] = useState(initial?.lastName ?? "");
   const [dateOfBirth, setDateOfBirth] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initial?.email ?? "");
   const [classIds, setClassIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

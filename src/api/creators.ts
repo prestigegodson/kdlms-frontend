@@ -25,7 +25,82 @@ export interface CreatorProfile extends CreatorProfileInput {
   bannerFileId: string | null;
   /** The tutor's free-text bio, shown to their learners and guardians; null when none is set. */
   bio: string | null;
+  /** The public page's link name - `/tutors/{publicHandle}`; null until chosen. */
+  publicHandle: string | null;
+  /** Whether the public page is published. */
+  publicProfileEnabled: boolean;
+  /** Whether the public page shows the "request to join" form. */
+  joinRequestsEnabled: boolean;
+  /** The public page's contact links, in display order. */
+  publicLinks: PublicContactLink[];
+  /** A link name derived from the business name, offered when none is chosen (may be taken). */
+  suggestedHandle: string;
 }
+
+/** Mirrors backend creator.domain.PublicContactPlatform. */
+export type PublicContactPlatform =
+  | "EMAIL"
+  | "PHONE"
+  | "WHATSAPP"
+  | "WEBSITE"
+  | "FACEBOOK"
+  | "INSTAGRAM"
+  | "X"
+  | "LINKEDIN"
+  | "YOUTUBE"
+  | "TIKTOK";
+
+/** In the order the editor offers them. */
+export const PUBLIC_CONTACT_PLATFORMS: PublicContactPlatform[] = [
+  "WHATSAPP",
+  "PHONE",
+  "EMAIL",
+  "WEBSITE",
+  "INSTAGRAM",
+  "FACEBOOK",
+  "X",
+  "TIKTOK",
+  "YOUTUBE",
+  "LINKEDIN",
+];
+
+export const PUBLIC_CONTACT_PLATFORM_LABELS: Record<PublicContactPlatform, string> = {
+  EMAIL: "Email",
+  PHONE: "Phone",
+  WHATSAPP: "WhatsApp",
+  WEBSITE: "Website",
+  FACEBOOK: "Facebook",
+  INSTAGRAM: "Instagram",
+  X: "X (Twitter)",
+  LINKEDIN: "LinkedIn",
+  YOUTUBE: "YouTube",
+  TIKTOK: "TikTok",
+};
+
+/** Mirrors backend creator.application.port.in.CreatorProfileView.PublicLinkView. */
+export interface PublicContactLink {
+  platform: PublicContactPlatform;
+  value: string;
+}
+
+/** Mirrors backend MyCreatorProfileController.PublicProfileRequest. */
+export interface PublicProfileInput {
+  handle: string | null;
+  enabled: boolean;
+  joinRequestsEnabled: boolean;
+  links: PublicContactLink[];
+}
+
+/** Mirrors backend MyCreatorProfileUseCase.HandleAvailability. */
+export interface HandleAvailability {
+  handle: string;
+  available: boolean;
+  /** Why it isn't available; null when it is. */
+  reason: string | null;
+}
+
+/** Mirrors backend creator.domain.PublicHandle - 3-40 lowercase letters, digits or hyphens. */
+export const PUBLIC_HANDLE_PATTERN = /^[a-z0-9]([a-z0-9-]{1,38}[a-z0-9])$/;
 
 /** Mirrors backend creator.domain.CreatorProfile.MAX_BIO_LENGTH. */
 export const CREATOR_BIO_MAX_LENGTH = 2000;
@@ -96,6 +171,21 @@ export function updateMyCreatorBio(bio: string | null): Promise<CreatorProfile> 
     method: "PUT",
     body: JSON.stringify({ bio }),
   });
+}
+
+/** Sets the public profile page - every field, every time. A link name another tutor holds is a 422. */
+export function updateMyPublicProfile(input: PublicProfileInput): Promise<CreatorProfile> {
+  return apiFetch<CreatorProfile>("/api/v1/creator/profile/public", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Live feedback for the link-name field - never an error for a bad name, just `available: false`. */
+export function checkPublicHandle(handle: string): Promise<HandleAvailability> {
+  return apiFetch<HandleAvailability>(
+    `/api/v1/creator/profile/public/handle-availability?handle=${encodeURIComponent(handle)}`,
+  );
 }
 
 const ADMIN_BASE = "/api/v1/admin/creators";

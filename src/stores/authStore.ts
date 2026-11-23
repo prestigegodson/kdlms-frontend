@@ -8,6 +8,7 @@ import * as wardsApi from "@/api/wards";
 import { useAcademicContextStore } from "@/stores/academicContextStore";
 import { useBranchStore } from "@/stores/branchStore";
 import { useClassMessagesUnreadStore } from "@/stores/classMessagesUnreadStore";
+import { useJoinRequestsPendingStore } from "@/stores/joinRequestsPendingStore";
 import { useCreatorPlanStore } from "@/stores/creatorPlanStore";
 import { useFeatureStore } from "@/stores/featureStore";
 import { useLevelStore } from "@/stores/levelStore";
@@ -147,6 +148,7 @@ function resetSessionScopedStores(): void {
   useUnreadMessagesStore.getState().reset();
   useNewResourcesStore.getState().reset();
   useClassMessagesUnreadStore.getState().reset();
+  useJoinRequestsPendingStore.getState().reset();
   useCreatorPlanStore.getState().reset();
   usePendingLessonNotesStore.getState().reset();
   usePendingFeePaymentsStore.getState().reset();

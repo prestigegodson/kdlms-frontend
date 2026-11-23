@@ -19,11 +19,19 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { Textarea } from "@/components/ui/Textarea";
 import { CreatorProfileFields } from "@/features/creators/components/CreatorProfileFields";
+import { PublicProfileCard } from "@/features/creators/components/PublicProfileCard";
 import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 
 type LoadState =
   | { kind: "loading" }
-  | { kind: "loaded"; profile: CreatorProfileInput; branding: CreatorBrandingInput; bio: string }
+  | {
+      kind: "loaded";
+      profile: CreatorProfileInput;
+      branding: CreatorBrandingInput;
+      bio: string;
+      /** The last saved profile as a whole - the public page card works from it. */
+      saved: CreatorProfile;
+    }
   | { kind: "error"; message: string };
 
 function toInput(profile: CreatorProfile): CreatorProfileInput {
@@ -36,7 +44,7 @@ function toBranding(profile: CreatorProfile): CreatorBrandingInput {
 }
 
 const TITLE = "Profile";
-const DESCRIPTION = "Your business details, branding, bio, timezone and preferred currency.";
+const DESCRIPTION = "Your business details, branding, bio, public page, timezone and preferred currency.";
 
 /** The creator's own business profile - the SchoolProfilePage shape. */
 export function CreatorProfilePage() {
@@ -58,6 +66,7 @@ export function CreatorProfilePage() {
           profile: toInput(profile),
           branding: toBranding(profile),
           bio: profile.bio ?? "",
+          saved: profile,
         }))
       .catch((error: unknown) =>
         setState({ kind: "error", message: error instanceof ApiError ? error.message : "Failed to load profile" }),
@@ -73,7 +82,9 @@ export function CreatorProfilePage() {
     try {
       const updated = await updateMyCreatorProfile(state.profile);
       setState((current) =>
-        current.kind === "loaded" ? { ...current, profile: toInput(updated), branding: toBranding(updated) } : current,
+        current.kind === "loaded"
+          ? { ...current, profile: toInput(updated), branding: toBranding(updated), saved: updated }
+          : current,
       );
       setSaved(true);
     } catch (error) {
@@ -92,7 +103,9 @@ export function CreatorProfilePage() {
     setBrandingSaved(false);
     try {
       const updated = await updateMyCreatorBranding(next);
-      setState((current) => (current.kind === "loaded" ? { ...current, branding: toBranding(updated) } : current));
+      setState((current) =>
+        current.kind === "loaded" ? { ...current, branding: toBranding(updated), saved: updated } : current,
+      );
       setBrandingSaved(true);
       if (logoChanged) {
         const brandingStore = useSchoolBrandingStore.getState();
@@ -114,7 +127,9 @@ export function CreatorProfilePage() {
     setBioSaved(false);
     try {
       const updated = await updateMyCreatorBio(state.bio.trim() === "" ? null : state.bio);
-      setState((current) => (current.kind === "loaded" ? { ...current, bio: updated.bio ?? "" } : current));
+      setState((current) =>
+        current.kind === "loaded" ? { ...current, bio: updated.bio ?? "", saved: updated } : current,
+      );
       setBioSaved(true);
     } catch (error) {
       setBioError(error instanceof ApiError ? error.message : "Failed to save bio");
@@ -138,7 +153,8 @@ export function CreatorProfilePage() {
             <div>
               <h2 className="font-display text-base font-medium text-slate-900">Branding</h2>
               <p className="text-sm text-slate-500">
-                Your logo shows in your portal and, with your banner, on your learners' class cards.
+                Your logo shows in your portal and, with your banner, on your learners' class cards and your public
+                page.
               </p>
             </div>
             {brandingError && <Alert variant="error">{brandingError}</Alert>}
@@ -165,7 +181,7 @@ export function CreatorProfilePage() {
             <div>
               <h2 className="font-display text-base font-medium text-slate-900">About you</h2>
               <p className="text-sm text-slate-500">
-                Shown to your learners and their guardians on your class cards.
+                Shown to your learners and their guardians on your class cards, and on your public page.
               </p>
             </div>
             {bioError && <Alert variant="error">{bioError}</Alert>}
@@ -190,6 +206,14 @@ export function CreatorProfilePage() {
             </Button>
           </form>
         </Card>
+      )}
+      {state.kind === "loaded" && (
+        <PublicProfileCard
+          profile={state.saved}
+          onSaved={(updated) =>
+            setState((current) => (current.kind === "loaded" ? { ...current, saved: updated } : current))
+          }
+        />
       )}
       {state.kind === "loaded" && (
         <Card>

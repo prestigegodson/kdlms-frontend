@@ -4,6 +4,7 @@ import {
   ClipboardCheck,
   CreditCard,
   Home,
+  Inbox,
   MessageSquare,
   NotebookPen,
   Presentation,
@@ -18,13 +19,14 @@ import { type NavItem, PortalShell } from "@/layouts/PortalShell";
 import { useClassMessagesUnreadStore } from "@/stores/classMessagesUnreadStore";
 import { NAV_GATE_MAX_AGE_MS, useRevalidateOnResume } from "@/hooks/useRevalidateOnResume";
 import { useCreatorPlanStore } from "@/stores/creatorPlanStore";
+import { useJoinRequestsPendingStore } from "@/stores/joinRequestsPendingStore";
 import { useSchoolBrandingStore } from "@/stores/schoolBrandingStore";
 
 /**
  * The education-creator portal (creators.md Phase C1; Classes and Sessions since C4, Learners since
- * C5, Plan & billing since C8, Messages since C11, Lesson notes since C12, Quizzes since C13). The tab
- * bar holds four primary items, so Learners, Messages, Lesson notes, Quizzes and Plan & billing live
- * in the More drawer.
+ * C5, Plan & billing since C8, Messages since C11, Lesson notes since C12, Quizzes since C13, Join
+ * requests with the public profile page). The tab bar holds four primary items, so Learners, Join
+ * requests, Messages, Lesson notes, Quizzes and Plan & billing live in the More drawer.
  */
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/tutor", icon: Home, primary: ["CREATOR"] },
@@ -47,6 +49,14 @@ const NAV_ITEMS: NavItem[] = [
     href: "/tutor/learners",
     icon: Users,
     visible: () => can.manageLearners("CREATOR"),
+  },
+  {
+    label: "Join requests",
+    href: "/tutor/join-requests",
+    icon: Inbox,
+    // From the tutor's public profile page - every plan.
+    visible: () => can.manageJoinRequests("CREATOR"),
+    badge: () => useJoinRequestsPendingStore.getState().count,
   },
   {
     label: "Messages",
@@ -100,18 +110,21 @@ const NAV_ITEMS: NavItem[] = [
 export function CreatorLayout() {
   const fetchPlan = useCreatorPlanStore((state) => state.fetchIfNeeded);
   const fetchUnread = useClassMessagesUnreadStore((state) => state.fetchIfNeeded);
+  const fetchPendingJoinRequests = useJoinRequestsPendingStore((state) => state.fetchIfNeeded);
   // The tutor's business logo for PortalShell's sidebar (their profile branding).
   const fetchBranding = useSchoolBrandingStore((state) => state.fetchIfNeeded);
   // Subscribed only to re-render once the fetches resolve, so the Messages item's visible()/badge()
   // closures re-evaluate - the GuardianLayout pattern.
   useCreatorPlanStore((state) => state.plan);
   useClassMessagesUnreadStore((state) => state.count);
+  useJoinRequestsPendingStore((state) => state.count);
 
   useEffect(() => {
     fetchPlan();
     fetchUnread("CREATOR");
     fetchBranding();
-  }, [fetchPlan, fetchUnread, fetchBranding]);
+    fetchPendingJoinRequests();
+  }, [fetchPlan, fetchUnread, fetchBranding, fetchPendingJoinRequests]);
 
   // Heals a plan fetch that failed while the tab was asleep - see useRevalidateOnResume.
   useRevalidateOnResume(() => {

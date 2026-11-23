@@ -65,6 +65,15 @@ function devFallback(): string | null {
  * the host doesn't look like a school subdomain at all.
  */
 export function platformLoginUrl(location: Location = window.location): string {
+  return platformUrl("/login", location);
+}
+
+/**
+ * An absolute URL for `path` on the platform's own host - the {@link platformLoginUrl} host
+ * rewrite, for a link that must never carry a school's subdomain (a tutor's shareable public
+ * profile link, `/tutors/{handle}`).
+ */
+export function platformUrl(path: string, location: Location = window.location): string {
   const labels = location.hostname.toLowerCase().split(".");
   let rootHost: string;
   if (labels.length >= 3) {
@@ -75,5 +84,5 @@ export function platformLoginUrl(location: Location = window.location): string {
     rootHost = location.hostname;
   }
   const port = location.port ? `:${location.port}` : "";
-  return `${location.protocol}//${rootHost}${port}/login`;
+  return `${location.protocol}//${rootHost}${port}${path}`;
 }
