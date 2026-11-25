@@ -39,6 +39,7 @@ const PLAN = {
   autoRenew: false,
   graceUntil: null,
   platformVideo: true,
+  directVideo: true,
 } satisfies CreatorPlanView;
 
 function resource(overrides: Partial<LearningResourceSummaryView>): LearningResourceSummaryView {

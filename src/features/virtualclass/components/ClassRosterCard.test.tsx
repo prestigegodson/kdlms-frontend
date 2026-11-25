@@ -8,11 +8,12 @@ import { ClassRosterCard } from "./ClassRosterCard";
 vi.mock("@/api/learners");
 vi.mock("@/api/liveSessions");
 
-function roster(learnerCount: number): ClassRoster {
+function roster(learnerCount: number, oneOnOne = false): ClassRoster {
   return {
     classId: "c1",
     maxStudentsPerClass: 10,
     activeCount: learnerCount,
+    oneOnOne,
     learners: Array.from({ length: learnerCount }, (_, index) => ({
       learnerId: `l${index}`,
       firstName: "Ada",
@@ -54,5 +55,20 @@ describe("ClassRosterCard", () => {
     renderCard();
     await screen.findByText(/no learners yet/i);
     expect(screen.queryByRole("link", { name: "Grades" })).not.toBeInTheDocument();
+  });
+
+  it("stops enrolling a second learner into a one-on-one class and says why", async () => {
+    vi.mocked(learnersApi.getClassRoster).mockResolvedValue(roster(1, true));
+    renderCard();
+    expect(await screen.findByText(/one-on-one classes have a single learner/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /enroll learners/i })).toBeDisabled();
+  });
+
+  it("lets an empty one-on-one class enroll its learner", async () => {
+    vi.mocked(learnersApi.getClassRoster).mockResolvedValue(roster(0, true));
+    renderCard();
+    await screen.findByText(/no learners yet/i);
+    expect(screen.getByRole("button", { name: /enroll learners/i })).toBeEnabled();
+    expect(screen.queryByText(/one-on-one classes have a single learner/i)).not.toBeInTheDocument();
   });
 });

@@ -294,6 +294,18 @@ export interface CreatorDashboardCountRow {
 }
 
 /**
+ * Mirrors backend dashboard.application.port.in.CreatorDashboardView.CallCounts - one-on-one calls,
+ * each counted once: `relay` if its media went through the TURN relay, else `direct` (peer to peer),
+ * else `failed` (never connected). `total` is the sum of the three.
+ */
+export interface CreatorDashboardCallCounts {
+  total: number;
+  direct: number;
+  relay: number;
+  failed: number;
+}
+
+/**
  * Mirrors backend dashboard.application.port.in.CreatorDashboardView - the SYSTEM_ADMIN creators
  * overview above the Creators list. All-time unless a field says otherwise; cached a few minutes
  * server-side.
@@ -345,6 +357,11 @@ export interface CreatorDashboardView {
     byRevenue: CreatorDashboardRevenueRow[];
     byClasses: CreatorDashboardCountRow[];
     byLearners: CreatorDashboardCountRow[];
+  };
+  /** One-on-one video calls, from the browsers' connection reports - counted since that was first kept. */
+  directCalls: {
+    allTime: CreatorDashboardCallCounts;
+    last30Days: CreatorDashboardCallCounts;
   };
   generatedAt: string;
 }

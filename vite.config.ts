@@ -58,6 +58,12 @@ export default defineConfig({
         target: "http://localhost:8080",
         changeOrigin: true,
       },
+      // One-on-one video's signalling socket. The browser's Origin (this dev server) is
+      // passed through for the backend's kdlms.webrtc.allowed-origins check.
+      "/ws": {
+        target: "http://localhost:8080",
+        ws: true,
+      },
     },
   },
   test: {

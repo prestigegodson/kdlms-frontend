@@ -86,6 +86,10 @@ const VIEW: CreatorDashboardView = {
     byClasses: [{ schoolId: "c-1", name: "Ada Academy", count: 9 }],
     byLearners: [{ schoolId: "c-3", name: "Bola Lessons", count: 75 }],
   },
+  directCalls: {
+    allTime: { total: 64, direct: 48, relay: 12, failed: 4 },
+    last30Days: { total: 21, direct: 16, relay: 4, failed: 1 },
+  },
   generatedAt: "2026-10-19T12:00:00Z",
 };
 
@@ -116,6 +120,30 @@ describe("CreatorsOverview", () => {
     expect(screen.getByText("36% on a paid plan")).toBeInTheDocument();
     expect(screen.getByText("Free (free)")).toBeInTheDocument();
     expect(screen.getByText("No plan")).toBeInTheDocument();
+  });
+
+  it("splits one-on-one calls into peer to peer, relayed and failed", async () => {
+    renderOverview();
+
+    const section = (await screen.findByRole("heading", { name: "One-on-one video calls" })).closest("section")!;
+    const calls = within(section);
+    expect(calls.getByText("64")).toBeInTheDocument();
+    expect(calls.getByText("21 in the last 30 days")).toBeInTheDocument();
+    expect(calls.getByText("48")).toBeInTheDocument();
+    expect(calls.getByText("75% of calls · 16 in 30 days")).toBeInTheDocument();
+    expect(calls.getByText("Through TURN relay")).toBeInTheDocument();
+    expect(calls.getByText("19% of calls · 4 in 30 days")).toBeInTheDocument();
+    expect(calls.getByText("6% of calls · 1 in 30 days")).toBeInTheDocument();
+  });
+
+  it("shows zero calls when the response has no call stats", async () => {
+    const withoutCalls: Partial<CreatorDashboardView> = { ...VIEW };
+    delete withoutCalls.directCalls;
+    vi.mocked(dashboardApi.getCreatorDashboard).mockResolvedValue(withoutCalls as CreatorDashboardView);
+    renderOverview();
+
+    const section = (await screen.findByRole("heading", { name: "One-on-one video calls" })).closest("section")!;
+    expect(within(section).getByText("0 in the last 30 days")).toBeInTheDocument();
   });
 
   it("keeps revenue per currency and switches between them", async () => {

@@ -72,6 +72,11 @@ function joinView(role: ParticipantRole): JoinView {
     meetingMode: "PLATFORM",
     meetingUrl: null,
     meetingProvider: null,
+    signallingUrl: null,
+    ticket: null,
+    ticketExpiresAt: null,
+    iceServers: null,
+    peerName: null,
   };
 }
 

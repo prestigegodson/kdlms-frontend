@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Textarea } from "@/components/ui/Textarea";
 import { useCreatorPlanStore } from "@/stores/creatorPlanStore";
-import { meetingLabel } from "../meeting/meetingLink";
+import { joinButtonLabel, meetingLabel } from "../meeting/meetingLink";
 import { SessionMeetingModal } from "../meeting/SessionMeetingModal";
 import { dateInZone, longDate, minutesBetween, timeInZone } from "../scheduleUtils";
 import { OccurrenceAttendanceModal } from "./AttendanceModals";
@@ -133,7 +133,7 @@ export function SessionList({
                   {session.joinable && (
                     <Button type="button" size="sm" onClick={() => navigate(`/live/${session.id}`)}>
                       <Video className="h-4 w-4" aria-hidden="true" />
-                      {session.status === "LIVE" ? "Join" : "Start"}
+                      {joinButtonLabel(session.meetingMode, session.status === "LIVE" ? "Join" : "Start")}
                     </Button>
                   )}
                   {(session.editable || hasAttendance(session) || meetingEditable(session)) && (

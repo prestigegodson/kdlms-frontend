@@ -82,6 +82,8 @@ export interface ClassRoster {
   maxStudentsPerClass: number | null;
   activeCount: number;
   learners: ClassRosterEntry[];
+  /** Held as one-on-one video (by default or through an upcoming session) - at most one learner. */
+  oneOnOne: boolean;
 }
 
 const BASE = "/api/v1/learners";

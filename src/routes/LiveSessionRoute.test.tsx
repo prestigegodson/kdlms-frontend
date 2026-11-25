@@ -15,6 +15,11 @@ vi.mock("@/api/liveSessions", async () => ({
 vi.mock("@/features/virtualclass/pages/LiveSessionPage", () => ({
   LiveSessionPage: () => <p>LiveKit room</p>,
 }));
+vi.mock("@/features/virtualclass/direct/DirectCallPage", () => ({
+  DirectCallPage: ({ session }: { session: JoinView }) => (
+    <p>One-on-one call with {session.peerName}</p>
+  ),
+}));
 
 const external: JoinView = {
   occurrenceId: "o1",
@@ -29,12 +34,20 @@ const external: JoinView = {
   meetingMode: "EXTERNAL",
   meetingUrl: "https://zoom.us/j/123",
   meetingProvider: "ZOOM",
+  signallingUrl: null,
+  ticket: null,
+  ticketExpiresAt: null,
+  iceServers: null,
+  peerName: null,
 };
 
 function renderRoute() {
-  const router = createMemoryRouter([{ path: "/live/:occurrenceId", element: <LiveSessionRoute /> }], {
-    initialEntries: ["/live/o1"],
-  });
+  const router = createMemoryRouter(
+    [{ path: "/live/:occurrenceId", element: <LiveSessionRoute /> }],
+    {
+      initialEntries: ["/live/o1"],
+    },
+  );
   render(<RouterProvider router={router} />);
 }
 
@@ -77,6 +90,25 @@ describe("LiveSessionRoute", () => {
     expect(await screen.findByText("LiveKit room")).toBeInTheDocument();
   });
 
+  it("opens the one-on-one call page for a DIRECT session, never the LiveKit room", async () => {
+    vi.mocked(liveSessionsApi.joinLiveSession).mockResolvedValue({
+      ...external,
+      expiresAt: "2026-10-05T09:15:00Z",
+      meetingMode: "DIRECT",
+      meetingUrl: null,
+      meetingProvider: null,
+      signallingUrl: "/ws/rtc",
+      ticket: "t".repeat(43),
+      ticketExpiresAt: "2026-10-05T08:01:00Z",
+      iceServers: [{ urls: ["stun:turn.test:3478"], username: null, credential: null }],
+      peerName: "Ada Lovelace",
+    });
+    renderRoute();
+
+    expect(await screen.findByText("One-on-one call with Ada Lovelace")).toBeInTheDocument();
+    expect(screen.queryByText("LiveKit room")).not.toBeInTheDocument();
+  });
+
   it("says when the tutor hasn't provided a meeting link yet", async () => {
     vi.mocked(liveSessionsApi.joinLiveSession).mockRejectedValue(
       new ApiError(409, "The meeting link for this session hasn't been provided yet.", {
@@ -88,6 +120,8 @@ describe("LiveSessionRoute", () => {
     );
     renderRoute();
 
-    expect(await screen.findByText("The meeting link for this session hasn't been provided yet.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("The meeting link for this session hasn't been provided yet."),
+    ).toBeInTheDocument();
   });
 });

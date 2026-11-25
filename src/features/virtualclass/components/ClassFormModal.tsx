@@ -8,6 +8,7 @@ import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Textarea } from "@/components/ui/Textarea";
+import { useCreatorPlanStore } from "@/stores/creatorPlanStore";
 import { MeetingFields } from "../meeting/MeetingFields";
 import { meetingLinkError } from "../meeting/meetingLink";
 
@@ -32,6 +33,7 @@ export function ClassFormModal({
   onSubmit,
   onClose,
 }: ClassFormModalProps) {
+  const directVideo = useCreatorPlanStore((state) => state.plan?.directVideo ?? false);
   const [name, setName] = useState(existing?.name ?? "");
   const [subjectLabel, setSubjectLabel] = useState(existing?.subjectLabel ?? "");
   const [description, setDescription] = useState(existing?.description ?? "");
@@ -125,6 +127,7 @@ export function ClassFormModal({
           }}
           onUrlChange={setMeetingUrl}
           platformVideo={platformVideo}
+          directVideo={directVideo}
           urlError={urlError}
         />
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

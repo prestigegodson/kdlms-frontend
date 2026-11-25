@@ -8,18 +8,22 @@ import {
   GraduationCap,
   MailWarning,
   PauseCircle,
+  PhoneCall,
   Radio,
   RefreshCw,
+  Router,
   ShieldCheck,
   UserRound,
   Users,
   Video,
+  Wifi,
   XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { ApiError } from "@/api/client";
 import {
+  type CreatorDashboardCallCounts,
   type CreatorDashboardCountRow,
   type CreatorDashboardCurrencyRevenue,
   type CreatorDashboardView,
@@ -221,6 +225,8 @@ function Overview({ view }: { view: CreatorDashboardView }) {
         </div>
       </section>
 
+      <DirectCallsSection allTime={view.directCalls?.allTime} last30Days={view.directCalls?.last30Days} />
+
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-slate-900">Learners</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -248,6 +254,51 @@ function Overview({ view }: { view: CreatorDashboardView }) {
         </div>
       </section>
     </div>
+  );
+}
+
+const NO_CALLS: CreatorDashboardCallCounts = { total: 0, direct: 0, relay: 0, failed: 0 };
+
+interface DirectCallsSectionProps {
+  allTime: CreatorDashboardCallCounts | undefined;
+  last30Days: CreatorDashboardCallCounts | undefined;
+}
+
+/** One-on-one video calls by how the media flowed - peer to peer, through the TURN relay, or not at all. */
+function DirectCallsSection({ allTime = NO_CALLS, last30Days = NO_CALLS }: DirectCallsSectionProps) {
+  return (
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-sm font-semibold text-slate-900">One-on-one video calls</h2>
+        <p className="text-xs text-slate-500">Counted from the browsers&rsquo; connection reports</p>
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile
+          icon={PhoneCall}
+          label="Calls"
+          value={n(allTime.total)}
+          hint={`${n(last30Days.total)} in the last 30 days`}
+        />
+        <StatTile
+          icon={Wifi}
+          label="Peer to peer"
+          value={n(allTime.direct)}
+          hint={`${percent(allTime.direct, allTime.total)} of calls · ${n(last30Days.direct)} in 30 days`}
+        />
+        <StatTile
+          icon={Router}
+          label="Through TURN relay"
+          value={n(allTime.relay)}
+          hint={`${percent(allTime.relay, allTime.total)} of calls · ${n(last30Days.relay)} in 30 days`}
+        />
+        <StatTile
+          icon={XCircle}
+          label="Failed to connect"
+          value={n(allTime.failed)}
+          hint={`${percent(allTime.failed, allTime.total)} of calls · ${n(last30Days.failed)} in 30 days`}
+        />
+      </div>
+    </section>
   );
 }
 

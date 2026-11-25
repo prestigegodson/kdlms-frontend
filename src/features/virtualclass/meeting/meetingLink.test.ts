@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { meetingLabel, meetingLinkError, meetingProviderOf } from "./meetingLink";
+import { meetingLabel, meetingLinkError, meetingNote, meetingProviderOf } from "./meetingLink";
 
 describe("meetingProviderOf", () => {
   it.each([
@@ -41,5 +41,13 @@ describe("meetingLabel", () => {
     expect(meetingLabel("PLATFORM", null)).toBe("Platform Video Conferencing");
     expect(meetingLabel("EXTERNAL", "ZOOM")).toBe("Zoom");
     expect(meetingLabel("EXTERNAL", "GOOGLE_MEET")).toBe("Google Meet");
+    expect(meetingLabel("DIRECT", null)).toBe("One-on-one video");
+  });
+});
+
+describe("meetingNote", () => {
+  it("names a one-on-one session and stays quiet for the built-in room", () => {
+    expect(meetingNote("DIRECT", null, false)).toEqual({ text: "One-on-one video", warning: false });
+    expect(meetingNote("PLATFORM", null, false)).toBeNull();
   });
 });

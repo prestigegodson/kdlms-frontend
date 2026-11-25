@@ -40,6 +40,7 @@ const PLAN = {
   autoRenew: false,
   graceUntil: null,
   platformVideo: true,
+  directVideo: true,
 } satisfies CreatorPlanView;
 
 const DRAFT: ClassLessonNoteView = {

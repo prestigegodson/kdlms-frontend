@@ -37,6 +37,11 @@ export interface CreatorPlanView {
   graceUntil: string | null;
   /** The built-in LiveKit room ("Platform Video Conferencing"); without it every session needs a Meet/Zoom link. */
   platformVideo: boolean;
+  /**
+   * Whether free one-on-one video (MeetingMode DIRECT) is switched on for the platform - not a plan
+   * entitlement, but read with the plan so the meeting pickers can hide it.
+   */
+  directVideo: boolean;
 }
 
 export function getMyCreatorPlan(): Promise<CreatorPlanView> {

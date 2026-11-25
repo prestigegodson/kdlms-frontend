@@ -35,6 +35,7 @@ const FREE_PLAN: CreatorPlanView = {
   autoRenew: false,
   graceUntil: null,
   platformVideo: true,
+  directVideo: true,
 };
 
 function renderCard() {

@@ -9,6 +9,7 @@ import {
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { useCreatorPlanStore } from "@/stores/creatorPlanStore";
 import { MeetingFields } from "./MeetingFields";
 import { meetingLinkError } from "./meetingLink";
 
@@ -26,6 +27,7 @@ interface SessionMeetingModalProps {
  * later schedule edits from moving the session.
  */
 export function SessionMeetingModal({ session, platformVideo, onSaved, onClose }: SessionMeetingModalProps) {
+  const directVideo = useCreatorPlanStore((state) => state.plan?.directVideo ?? false);
   const [own, setOwn] = useState(session.meetingOverridden);
   const [mode, setMode] = useState<MeetingMode>(
     session.meetingOverridden ? session.meetingMode : platformVideo ? "PLATFORM" : "EXTERNAL",
@@ -87,6 +89,7 @@ export function SessionMeetingModal({ session, platformVideo, onSaved, onClose }
             }}
             onUrlChange={setUrl}
             platformVideo={platformVideo}
+            directVideo={directVideo}
             urlError={urlError}
           />
         )}

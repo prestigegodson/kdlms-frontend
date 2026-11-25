@@ -11,10 +11,11 @@ export type OccurrenceStatus = "SCHEDULED" | "RESCHEDULED" | "CANCELLED" | "LIVE
 
 /**
  * Where sessions are held: the built-in LiveKit room ("Platform Video Conferencing", only on a plan
- * that includes it) or the creator's own Google Meet/Zoom link.
+ * that includes it), the creator's own Google Meet/Zoom link, or a free one-on-one video call
+ * (DIRECT - the creator and exactly one learner, on every plan; see webrtc-video.md).
  */
-export type MeetingMode = "PLATFORM" | "EXTERNAL";
-/** Derived by the server from an EXTERNAL link's host; `null` for PLATFORM. */
+export type MeetingMode = "PLATFORM" | "EXTERNAL" | "DIRECT";
+/** Derived by the server from an EXTERNAL link's host; `null` for PLATFORM and DIRECT. */
 export type MeetingProvider = "GOOGLE_MEET" | "ZOOM";
 
 /** 1 = Monday .. 7 = Sunday (java.time.DayOfWeek). */

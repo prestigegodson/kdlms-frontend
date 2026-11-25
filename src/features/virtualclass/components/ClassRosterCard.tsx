@@ -52,7 +52,11 @@ export function ClassRosterCard({ classId, writable, timezone }: ClassRosterCard
 
   useEffect(load, [load]);
 
-  const full = roster !== null && roster.maxStudentsPerClass !== null && roster.activeCount >= roster.maxStudentsPerClass;
+  const planFull =
+    roster !== null && roster.maxStudentsPerClass !== null && roster.activeCount >= roster.maxStudentsPerClass;
+  // A one-on-one video class holds exactly one learner, whatever the plan allows.
+  const oneOnOneFull = roster !== null && roster.oneOnOne && roster.activeCount >= 1;
+  const full = planFull || oneOnOneFull;
 
   async function remove(learnerId: string) {
     try {
@@ -72,7 +76,12 @@ export function ClassRosterCard({ classId, writable, timezone }: ClassRosterCard
             <p className="text-sm text-slate-500">
               {roster.activeCount}
               {roster.maxStudentsPerClass !== null ? ` of ${roster.maxStudentsPerClass}` : ""} enrolled
-              {full && " - your plan's limit for one class."}
+              {planFull && !oneOnOneFull && " - your plan's limit for one class."}
+            </p>
+          )}
+          {oneOnOneFull && writable && (
+            <p className="text-sm text-slate-500">
+              One-on-one classes have a single learner. Remove them or switch to a group meeting to add another.
             </p>
           )}
         </div>
@@ -153,6 +162,7 @@ export function ClassRosterCard({ classId, writable, timezone }: ClassRosterCard
       {enrolling && roster && (
         <EnrollModal
           enrolledIds={roster.learners.map((entry) => entry.learnerId)}
+          single={roster.oneOnOne}
           onClose={() => setEnrolling(false)}
           onSubmit={async (learnerIds) => {
             setRoster(await enrollLearners(classId, learnerIds));
@@ -166,10 +176,13 @@ export function ClassRosterCard({ classId, writable, timezone }: ClassRosterCard
 
 function EnrollModal({
   enrolledIds,
+  single,
   onSubmit,
   onClose,
 }: {
   enrolledIds: string[];
+  /** A one-on-one video class - picking a learner replaces the pick, since only one can be enrolled. */
+  single: boolean;
   onSubmit: (learnerIds: string[]) => Promise<void>;
   onClose: () => void;
 }) {
@@ -223,6 +236,9 @@ function EnrollModal({
             page.
           </p>
         )}
+        {learners && learners.length > 0 && single && (
+          <p className="text-sm text-slate-600">This is a one-on-one video class, so pick one learner.</p>
+        )}
         {learners && learners.length > 0 && (
           <div className="space-y-2">
             {learners.map((learner) => (
@@ -233,7 +249,9 @@ function EnrollModal({
                     setSelected((current) =>
                       current.includes(learner.id)
                         ? current.filter((id) => id !== learner.id)
-                        : [...current, learner.id],
+                        : single
+                          ? [learner.id]
+                          : [...current, learner.id],
                     )
                   }
                 />

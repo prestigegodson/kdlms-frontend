@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
-import { meetingNote } from "../meeting/meetingLink";
+import { joinButtonLabel, meetingNote } from "../meeting/meetingLink";
 import { dateInZone, longDate, scheduleSummary, timeInZone } from "../scheduleUtils";
 import { AttendanceHistoryModal } from "./AttendanceModals";
 import { ClassTopicsModal } from "./ClassTopicsModal";
@@ -213,7 +213,7 @@ function SessionRow({ session, zone, joinLabel }: { session: OnlineSession; zone
       {session.joinable && (
         <Button type="button" size="sm" onClick={() => navigate(`/live/${session.id}`)}>
           <Video className="h-4 w-4" aria-hidden="true" />
-          {joinLabel}
+          {joinButtonLabel(session.meetingMode, joinLabel)}
         </Button>
       )}
     </li>

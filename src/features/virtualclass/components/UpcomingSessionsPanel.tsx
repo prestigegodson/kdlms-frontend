@@ -2,12 +2,13 @@ import { CalendarClock, Video } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { getErrorMessage } from "@/api/client";
-import type { OccurrenceStatus } from "@/api/virtualClasses";
+import type { MeetingMode, OccurrenceStatus } from "@/api/virtualClasses";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { joinButtonLabel } from "../meeting/meetingLink";
 import { dateInZone, longDate, timeInZone } from "../scheduleUtils";
 
 /** One row of the panel - a creator occurrence or a learner/guardian upcoming session, normalized. */
@@ -20,6 +21,8 @@ export interface UpcomingItem {
   scheduledEnd: string;
   status: OccurrenceStatus;
   joinable: boolean;
+  /** Picks the join button's wording - "Join one-on-one" for a DIRECT session. */
+  meetingMode?: MeetingMode;
   /** Where it's held, when worth saying - see `meetingNote`. */
   meeting?: { text: string; warning: boolean } | null;
 }
@@ -115,7 +118,7 @@ export function UpcomingSessionsPanel({ load, joinLabel, hideWhenEmpty = false }
                       {session.joinable && (
                         <Button type="button" size="sm" onClick={() => navigate(`/live/${session.id}`)}>
                           <Video className="h-4 w-4" aria-hidden="true" />
-                          {joinLabel(session)}
+                          {joinButtonLabel(session.meetingMode ?? "PLATFORM", joinLabel(session))}
                         </Button>
                       )}
                     </div>

@@ -16,6 +16,7 @@ export async function loadCreatorUpcoming(): Promise<UpcomingSessions> {
       scheduledEnd: occurrence.scheduledEnd,
       status: occurrence.status,
       joinable: occurrence.joinable,
+      meetingMode: occurrence.meetingMode,
       meeting: meetingNote(occurrence.meetingMode, occurrence.meetingProvider, occurrence.meetingUnavailable),
     })),
   };
@@ -42,6 +43,7 @@ function toItem(session: UpcomingSession, detail: string | null): UpcomingItem {
     scheduledEnd: session.scheduledEnd,
     status: session.status,
     joinable: session.joinable,
+    meetingMode: session.meetingMode,
     meeting: meetingNote(session.meetingMode, session.meetingProvider, session.linkMissing),
   };
 }

@@ -9,6 +9,9 @@ export const MAX_MEETING_URL_LENGTH = 2048;
 
 export const PLATFORM_VIDEO_LABEL = "Platform Video Conferencing";
 
+/** The free peer-to-peer mode (MeetingMode DIRECT): the creator and exactly one learner. */
+export const DIRECT_VIDEO_LABEL = "One-on-one video";
+
 export function meetingProviderOf(raw: string): MeetingProvider | null {
   const value = raw.trim();
   if (value === "" || value.length > MAX_MEETING_URL_LENGTH || /\s/.test(value)) return null;
@@ -29,7 +32,9 @@ export function meetingProviderOf(raw: string): MeetingProvider | null {
 /** The message to show under the link field, or `null` when the link is fine. */
 export function meetingLinkError(raw: string): string | null {
   if (raw.trim() === "") return "Add a Google Meet or Zoom meeting link.";
-  return meetingProviderOf(raw) ? null : "Enter a Google Meet or Zoom meeting link (starting with https://).";
+  return meetingProviderOf(raw)
+    ? null
+    : "Enter a Google Meet or Zoom meeting link (starting with https://).";
 }
 
 export function providerLabel(provider: MeetingProvider | null): string {
@@ -45,12 +50,14 @@ export function providerLabel(provider: MeetingProvider | null): string {
 
 /** A short "where is this held" label for lists and badges. */
 export function meetingLabel(mode: MeetingMode, provider: MeetingProvider | null): string {
-  return mode === "PLATFORM" ? PLATFORM_VIDEO_LABEL : providerLabel(provider);
+  if (mode === "PLATFORM") return PLATFORM_VIDEO_LABEL;
+  if (mode === "DIRECT") return DIRECT_VIDEO_LABEL;
+  return providerLabel(provider);
 }
 
 /**
  * The one-line note a session row shows about its meeting: a warning while it has no meeting to
- * join, the provider for an external link, nothing for the built-in room (the default).
+ * join, the provider for an external link or "One-on-one video", nothing for the built-in room (the default).
  */
 export function meetingNote(
   mode: MeetingMode,
@@ -59,5 +66,14 @@ export function meetingNote(
 ): { text: string; warning: boolean } | null {
   if (missing) return { text: "Meeting link not yet provided", warning: true };
   if (mode === "EXTERNAL") return { text: `On ${providerLabel(provider)}`, warning: false };
+  if (mode === "DIRECT") return { text: DIRECT_VIDEO_LABEL, warning: false };
   return null;
+}
+
+/**
+ * A session's join button label: "Start"/"Join" become "Start one-on-one"/"Join one-on-one" for a
+ * one-on-one video session; a guardian's "Watch" stays as it is.
+ */
+export function joinButtonLabel(mode: MeetingMode, base: string): string {
+  return mode === "DIRECT" && base !== "Watch" ? `${base} one-on-one` : base;
 }

@@ -37,6 +37,7 @@ const PLAN = {
   autoRenew: false,
   graceUntil: null,
   platformVideo: true,
+  directVideo: true,
 } satisfies CreatorPlanView;
 
 function renderAt(path: string) {
