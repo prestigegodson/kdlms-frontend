@@ -26,6 +26,19 @@ describe("parseSignal", () => {
       sdpMid: null,
       sdpMLineIndex: null,
     });
+    expect(parseSignal('{"type":"media-state","audio":true,"video":true,"screen":true}')).toEqual({
+      type: "media-state",
+      audio: true,
+      video: true,
+      screen: true,
+    });
+    // An older peer leaves `screen` out.
+    expect(parseSignal('{"type":"media-state","audio":false,"video":true}')).toEqual({
+      type: "media-state",
+      audio: false,
+      video: true,
+      screen: false,
+    });
     expect(parseSignal('{"type":"session-ending","minutesLeft":5}')).toEqual({
       type: "session-ending",
       minutesLeft: 5,

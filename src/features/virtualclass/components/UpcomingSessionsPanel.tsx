@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { joinButtonLabel } from "../meeting/meetingLink";
 import { dateInZone, longDate, timeInZone } from "../scheduleUtils";
 
 /** One row of the panel - a creator occurrence or a learner/guardian upcoming session, normalized. */
@@ -21,7 +20,7 @@ export interface UpcomingItem {
   scheduledEnd: string;
   status: OccurrenceStatus;
   joinable: boolean;
-  /** Picks the join button's wording - "Join one-on-one" for a DIRECT session. */
+  /** Picks the join button's wording. */
   meetingMode?: MeetingMode;
   /** Where it's held, when worth saying - see `meetingNote`. */
   meeting?: { text: string; warning: boolean } | null;
@@ -118,7 +117,7 @@ export function UpcomingSessionsPanel({ load, joinLabel, hideWhenEmpty = false }
                       {session.joinable && (
                         <Button type="button" size="sm" onClick={() => navigate(`/live/${session.id}`)}>
                           <Video className="h-4 w-4" aria-hidden="true" />
-                          {joinButtonLabel(session.meetingMode ?? "PLATFORM", joinLabel(session))}
+                          {joinLabel(session)}
                         </Button>
                       )}
                     </div>

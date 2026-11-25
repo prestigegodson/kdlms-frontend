@@ -52,6 +52,17 @@ export class FakeSocket {
 
 type Description = { type: string; sdp?: string };
 
+export class FakeSender {
+  track: MediaStreamTrack | null;
+  replaceTrack = vi.fn(async (track: MediaStreamTrack | null) => {
+    this.track = track;
+  });
+
+  constructor(track: MediaStreamTrack) {
+    this.track = track;
+  }
+}
+
 export class FakePeerConnection {
   static instances: FakePeerConnection[] = [];
   readonly config: RTCConfiguration;
@@ -77,9 +88,16 @@ export class FakePeerConnection {
     this.signalingState = description.type === "offer" ? "have-remote-offer" : "stable";
   });
   addIceCandidate = vi.fn(async () => undefined);
-  addTrack = vi.fn();
-  removeTrack = vi.fn();
-  getSenders = vi.fn(() => []);
+  senders: FakeSender[] = [];
+  addTrack = vi.fn((track: MediaStreamTrack) => {
+    const sender = new FakeSender(track);
+    this.senders.push(sender);
+    return sender;
+  });
+  removeTrack = vi.fn((sender: FakeSender) => {
+    this.senders = this.senders.filter((candidate) => candidate !== sender);
+  });
+  getSenders = vi.fn(() => [...this.senders]);
   getStats = vi.fn(async () => new Map());
   close = vi.fn();
 
@@ -99,7 +117,7 @@ export class FakePeerConnection {
 }
 
 export function fakeTrack(kind: "audio" | "video") {
-  return { kind, enabled: true, stop: vi.fn() } as unknown as MediaStreamTrack;
+  return { kind, enabled: true, stop: vi.fn(), onended: null } as unknown as MediaStreamTrack;
 }
 
 export function fakeStream(tracks: MediaStreamTrack[]): MediaStream {

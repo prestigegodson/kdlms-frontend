@@ -205,3 +205,13 @@ export function dayParts(date: string): { day: string; monthYear: string } {
   );
   return { day: String(day).padStart(2, "0"), monthYear: `${monthName}, ${year}` };
 }
+
+/** "42 min", "1 h 5 min", or "Under a minute". */
+export function formatCallDuration(ms: number): string {
+  const minutes = Math.floor(ms / 60_000);
+  if (minutes < 1) return "Under a minute";
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+}

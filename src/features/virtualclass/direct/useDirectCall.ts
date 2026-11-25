@@ -7,6 +7,8 @@ export interface DirectCall {
   toggleAudio: () => void;
   toggleVideo: () => void;
   switchCamera: (deviceId: string) => Promise<void>;
+  startScreenShare: () => Promise<void>;
+  stopScreenShare: () => Promise<void>;
   hangup: () => void;
 }
 
@@ -32,6 +34,8 @@ export function useDirectCall(
     toggleAudio: () => controller.toggleAudio(),
     toggleVideo: () => controller.toggleVideo(),
     switchCamera: (deviceId) => controller.switchCamera(deviceId),
+    startScreenShare: () => controller.startScreenShare(),
+    stopScreenShare: () => controller.stopScreenShare(),
     hangup: () => controller.hangup(),
   };
 }

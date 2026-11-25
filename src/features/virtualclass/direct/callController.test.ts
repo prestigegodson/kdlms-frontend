@@ -14,6 +14,7 @@ function setup(
   overrides: Partial<JoinView> = {},
   stream: MediaStream | null = null,
   join?: CallDeps["join"],
+  getDisplayMedia: CallDeps["getDisplayMedia"] = null,
 ) {
   const session = directSession(overrides);
   const joinFn = vi.fn(join ?? (async () => directSession({ ...overrides, ticket: "ticket-2" })));
@@ -24,6 +25,7 @@ function setup(
     MediaStream: class {} as unknown as typeof MediaStream,
     join: joinFn,
     getUserMedia: vi.fn(),
+    getDisplayMedia,
     location: { protocol: "https:", host: "app.test" },
     events: null,
     reportConnection,
@@ -149,7 +151,12 @@ describe("DirectCallController", () => {
         sdpMid: "0",
         sdpMLineIndex: 0,
       });
-      expect(socket.sent).toContainEqual({ type: "media-state", audio: true, video: false });
+      expect(socket.sent).toContainEqual({
+        type: "media-state",
+        audio: true,
+        video: false,
+        screen: false,
+      });
     });
 
     it("restarts ICE when the connection fails", async () => {
@@ -261,7 +268,12 @@ describe("DirectCallController", () => {
       expect(pc.setRemoteDescription).toHaveBeenCalledWith({ type: "offer", sdp: "offer-sdp" });
       expect(pc.setLocalDescription).toHaveBeenCalledWith({ type: "answer", sdp: "answer-sdp" });
       expect(socket.sent).toContainEqual({ type: "answer", sdp: "answer-sdp" });
-      expect(socket.sent).toContainEqual({ type: "media-state", audio: true, video: true });
+      expect(socket.sent).toContainEqual({
+        type: "media-state",
+        audio: true,
+        video: true,
+        screen: false,
+      });
       expect(pc.createOffer).not.toHaveBeenCalled();
     });
 
@@ -301,7 +313,12 @@ describe("DirectCallController", () => {
       controller.toggleAudio();
       expect(audio.enabled).toBe(false);
       expect(controller.getState().localAudio).toBe(false);
-      expect(socket.sent).toContainEqual({ type: "media-state", audio: false, video: false });
+      expect(socket.sent).toContainEqual({
+        type: "media-state",
+        audio: false,
+        video: false,
+        screen: false,
+      });
     });
 
     it("only leaves on hangup", async () => {
@@ -440,5 +457,191 @@ describe("analyzeStats", () => {
 
   it("says nothing before a pair is selected", () => {
     expect(analyzeStats(report([])).path).toBeNull();
+  });
+});
+
+describe("DirectCallController screen share", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    FakeSocket.instances = [];
+    FakePeerConnection.instances = [];
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  /** A creator in a call with a learner, sending `tracks`, whose picker hands back `screen`. */
+  async function sharingCreator(tracks: MediaStreamTrack[], screen = fakeTrack("video")) {
+    const display = fakeStream([screen]);
+    const getDisplayMedia = vi.fn(async () => display);
+    const { controller } = setup(
+      { role: "CREATOR" },
+      fakeStream(tracks),
+      undefined,
+      getDisplayMedia,
+    );
+    const socket = await started(controller);
+    socket.receive({ type: "welcome", role: "CREATOR", peerPresent: true, expiresAt: "x" });
+    await flush();
+    const pc = FakePeerConnection.latest();
+    socket.receive({ type: "answer", sdp: "answer-sdp" });
+    await flush();
+    return { controller, socket, pc, screen, display, getDisplayMedia };
+  }
+
+  it("sends the screen in the camera's place and switches the camera off", async () => {
+    const camera = fakeTrack("video");
+    const { controller, socket, pc, screen, display } = await sharingCreator([
+      fakeTrack("audio"),
+      camera,
+    ]);
+    const sender = pc.senders.find((candidate) => candidate.track === camera)!;
+
+    await controller.startScreenShare();
+
+    expect(sender.replaceTrack).toHaveBeenCalledWith(screen);
+    expect(camera.enabled).toBe(false);
+    expect(pc.createOffer).toHaveBeenCalledTimes(1); // no renegotiation needed
+    expect(controller.getState()).toMatchObject({
+      screenSharing: true,
+      screenStream: display,
+      localVideo: false,
+    });
+    expect(socket.sent).toContainEqual({
+      type: "media-state",
+      audio: true,
+      video: true,
+      screen: true,
+    });
+  });
+
+  it("keeps the camera off while sharing", async () => {
+    const camera = fakeTrack("video");
+    const { controller } = await sharingCreator([camera]);
+    await controller.startScreenShare();
+    controller.toggleVideo();
+    expect(camera.enabled).toBe(false);
+    expect(controller.getState().localVideo).toBe(false);
+  });
+
+  it("puts the camera back as it was when sharing stops", async () => {
+    const camera = fakeTrack("video");
+    const { controller, socket, pc, screen } = await sharingCreator([fakeTrack("audio"), camera]);
+    const sender = pc.senders.find((candidate) => candidate.track === camera)!;
+    await controller.startScreenShare();
+
+    await controller.stopScreenShare();
+
+    expect(sender.replaceTrack).toHaveBeenLastCalledWith(camera);
+    expect(camera.enabled).toBe(true);
+    expect(screen.stop).toHaveBeenCalled();
+    expect(controller.getState()).toMatchObject({
+      screenSharing: false,
+      screenStream: null,
+      localVideo: true,
+    });
+    expect(socket.sent[socket.sent.length - 1]).toEqual({
+      type: "media-state",
+      audio: true,
+      video: true,
+      screen: false,
+    });
+  });
+
+  it("leaves a camera that was off, off, when sharing stops", async () => {
+    const camera = fakeTrack("video");
+    const { controller } = await sharingCreator([camera]);
+    controller.toggleVideo();
+    await controller.startScreenShare();
+    await controller.stopScreenShare();
+    expect(camera.enabled).toBe(false);
+    expect(controller.getState().localVideo).toBe(false);
+  });
+
+  it("stops sharing when the browser's own stop button ends the track", async () => {
+    const { controller, screen } = await sharingCreator([fakeTrack("video")]);
+    await controller.startScreenShare();
+    (screen.onended as () => void)();
+    await flush();
+    expect(controller.getState().screenSharing).toBe(false);
+    expect(screen.stop).toHaveBeenCalled();
+  });
+
+  it("adds the screen and offers again when the tutor joined microphone-only", async () => {
+    const { controller, pc, screen } = await sharingCreator([fakeTrack("audio")]);
+    await controller.startScreenShare();
+    await flush();
+    expect(pc.addTrack).toHaveBeenLastCalledWith(screen, expect.anything());
+    expect(pc.createOffer).toHaveBeenCalledTimes(2);
+
+    // Stopping takes it off the wire again.
+    pc.signalingState = "stable";
+    await controller.stopScreenShare();
+    await flush();
+    expect(pc.senders.some((sender) => sender.track === screen)).toBe(false);
+    expect(pc.createOffer).toHaveBeenCalledTimes(3);
+  });
+
+  it("sends the screen, not the camera, to a learner who rejoins mid-share", async () => {
+    const camera = fakeTrack("video");
+    const { controller, socket, screen } = await sharingCreator([fakeTrack("audio"), camera]);
+    await controller.startScreenShare();
+
+    socket.receive({ type: "peer-joined", role: "LEARNER", name: "Grace Hopper" });
+    await flush();
+
+    const fresh = FakePeerConnection.latest();
+    const sent = fresh.addTrack.mock.calls.map(([track]) => track);
+    expect(sent).toContain(screen);
+    expect(sent).not.toContain(camera);
+  });
+
+  it("changes nothing when the picker is cancelled", async () => {
+    const camera = fakeTrack("video");
+    const getDisplayMedia = vi.fn(async () => {
+      throw Object.assign(new Error("cancelled"), { name: "NotAllowedError" });
+    });
+    const { controller } = setup(
+      { role: "CREATOR" },
+      fakeStream([camera]),
+      undefined,
+      getDisplayMedia,
+    );
+    await started(controller);
+    await controller.startScreenShare();
+    expect(camera.enabled).toBe(true);
+    expect(controller.getState()).toMatchObject({ screenSharing: false, localVideo: true });
+  });
+
+  it("is the tutor's alone", async () => {
+    const getDisplayMedia = vi.fn(async () => fakeStream([fakeTrack("video")]));
+    const { controller } = setup(
+      { role: "LEARNER" },
+      fakeStream([fakeTrack("video")]),
+      undefined,
+      getDisplayMedia,
+    );
+    await started(controller);
+    await controller.startScreenShare();
+    expect(getDisplayMedia).not.toHaveBeenCalled();
+    expect(controller.getState().screenSharing).toBe(false);
+  });
+
+  it("stops the screen track when the call ends", async () => {
+    const { controller, screen } = await sharingCreator([fakeTrack("video")]);
+    await controller.startScreenShare();
+    controller.hangup();
+    expect(screen.stop).toHaveBeenCalled();
+    expect(controller.getState()).toMatchObject({ phase: "ended", screenSharing: false });
+  });
+
+  it("shows when the other side is sharing", async () => {
+    const { controller } = setup({ role: "LEARNER" });
+    const socket = await started(controller);
+    socket.receive({ type: "welcome", role: "LEARNER", peerPresent: true, expiresAt: "x" });
+    socket.receive({ type: "media-state", audio: true, video: true, screen: true });
+    expect(controller.getState().peerMedia).toEqual({ audio: true, video: true, screen: true });
   });
 });

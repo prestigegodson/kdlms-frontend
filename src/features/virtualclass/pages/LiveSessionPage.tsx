@@ -2,7 +2,7 @@ import "@livekit/components-styles";
 import { LiveKitRoom, PreJoin, VideoConference, useDataChannel, type LocalUserChoices } from "@livekit/components-react";
 import { DisconnectReason } from "livekit-client";
 import { ArrowLeft, Eye } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { getErrorMessage } from "@/api/client";
 import { endLiveSession, joinLiveSession, parseSessionEnding, type JoinView } from "@/api/liveSessions";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { homePathForRole } from "@/routes/roleHome";
+import { LessonEndedView } from "../components/LessonEndedView";
 import { useAuthStore } from "@/stores/authStore";
 
 /**
@@ -35,6 +36,8 @@ export function LiveSessionPage() {
   const [error, setError] = useState<string | null>(null);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
   const [ended, setEnded] = useState(false);
+  const connectedAt = useRef<number | null>(null);
+  const [endedDurationMs, setEndedDurationMs] = useState<number | null>(null);
 
   const enter = useCallback(
     async (userChoices: LocalUserChoices | null) => {
@@ -54,6 +57,28 @@ export function LiveSessionPage() {
   );
 
   if (ended) {
+    if (session) {
+      return (
+        <LessonEndedView
+          className={session.className}
+          peerName={null}
+          peerRole={null}
+          scheduledStart={session.scheduledStart}
+          scheduledEnd={session.scheduledEnd}
+          mode="group"
+          watched={session.role === "GUARDIAN"}
+          tone="complete"
+          title="Session ended"
+          message={
+            session.role === "CREATOR"
+              ? "The session has ended for everyone."
+              : "The tutor ended the session for everyone."
+          }
+          durationMs={endedDurationMs}
+          home={home}
+        />
+      );
+    }
     return (
       <div className="min-h-dvh bg-slate-50 px-4 py-6">
         <div className="mx-auto flex max-w-2xl flex-col gap-4">
@@ -81,10 +106,14 @@ export function LiveSessionPage() {
         serverUrl={session.serverUrl ?? undefined}
         token={session.token ?? undefined}
         connect
+        onConnected={() => {
+          if (connectedAt.current === null) connectedAt.current = Date.now();
+        }}
         audio={audio}
         video={video}
         onDisconnected={(reason) => {
           if (reason === DisconnectReason.ROOM_DELETED) {
+            setEndedDurationMs(connectedAt.current === null ? null : Date.now() - connectedAt.current);
             setEnded(true);
           } else {
             navigate(home);

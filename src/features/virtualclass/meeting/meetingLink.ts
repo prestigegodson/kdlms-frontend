@@ -69,11 +69,3 @@ export function meetingNote(
   if (mode === "DIRECT") return { text: DIRECT_VIDEO_LABEL, warning: false };
   return null;
 }
-
-/**
- * A session's join button label: "Start"/"Join" become "Start one-on-one"/"Join one-on-one" for a
- * one-on-one video session; a guardian's "Watch" stays as it is.
- */
-export function joinButtonLabel(mode: MeetingMode, base: string): string {
-  return mode === "DIRECT" && base !== "Watch" ? `${base} one-on-one` : base;
-}

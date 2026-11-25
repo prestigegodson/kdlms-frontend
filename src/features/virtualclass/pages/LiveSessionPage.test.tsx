@@ -164,7 +164,10 @@ describe("LiveSessionPage", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: "Simulate room closed" }));
 
-    expect(screen.getByText("This session has ended.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Session ended" })).toBeInTheDocument();
+    expect(screen.getByText("The tutor ended the session for everyone.")).toBeInTheDocument();
+    expect(screen.getByText("Algebra")).toBeInTheDocument();
+    expect(screen.getByText("Watched")).toBeInTheDocument();
     expect(screen.queryByTestId("room")).not.toBeInTheDocument();
   });
 

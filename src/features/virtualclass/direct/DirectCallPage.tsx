@@ -1,7 +1,18 @@
 // adapter.js smooths over Plan B / Unified Plan and old `getStats` shapes (webrtc-video.md §6.1).
 // Imported here only, so it ships in this lazily loaded chunk and nowhere else.
 import "webrtc-adapter";
-import { ArrowLeft, Copy, Eye, Mic, MicOff, PhoneOff, Video, VideoOff } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  Eye,
+  Mic,
+  MicOff,
+  PhoneOff,
+  ScreenShare,
+  ScreenShareOff,
+  Video,
+  VideoOff,
+} from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import type { JoinView } from "@/api/liveSessions";
@@ -14,7 +25,8 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { initialsOfFullName } from "@/utils/initials";
-import type { CallState } from "./callController";
+import { type LessonEndedTone, LessonEndedView } from "../components/LessonEndedView";
+import { type CallState, screenShareSupported } from "./callController";
 import { useDirectCall } from "./useDirectCall";
 import { type LocalMedia, mediaSupported, useLocalMedia, useMicLevel } from "./useLocalMedia";
 
@@ -324,18 +336,48 @@ function StreamVideo({
   );
 }
 
-const ENDED_COPY: Record<string, (creator: boolean) => string> = {
-  "creator-ended": (creator) => (creator ? "You ended the lesson." : "The tutor ended the lesson."),
-  "window-closed": () => "The lesson's time is up.",
-  cancelled: () => "This session was cancelled.",
-  left: () => "You left the call.",
-  unavailable: () => "This lesson can no longer be joined.",
+type EndCopy = { title: string; tone: LessonEndedTone; message: (creator: boolean) => string };
+
+const ENDED_COPY: Record<string, EndCopy> = {
+  "creator-ended": {
+    title: "Lesson ended",
+    tone: "complete",
+    message: (creator) => (creator ? "You ended the lesson." : "The tutor ended the lesson."),
+  },
+  "window-closed": {
+    title: "Lesson ended",
+    tone: "complete",
+    message: () => "The lesson's time is up.",
+  },
+  cancelled: {
+    title: "Lesson cancelled",
+    tone: "cancelled",
+    message: () => "This session was cancelled.",
+  },
+  left: { title: "You left the lesson", tone: "left", message: () => "You left the call." },
+  unavailable: {
+    title: "Can't join this lesson",
+    tone: "problem",
+    message: () => "This lesson can no longer be joined.",
+  },
 };
 
-const REFUSAL_COPY: Record<string, string> = {
-  replaced: "You joined this call from another tab or device, so it continues there.",
-  full: "This call already has two people in it.",
-  refused: "This session can't be joined right now.",
+const REFUSAL_COPY: Record<string, EndCopy> = {
+  replaced: {
+    title: "Lesson continues elsewhere",
+    tone: "left",
+    message: () => "You joined this call from another tab or device, so it continues there.",
+  },
+  full: {
+    title: "Can't join this lesson",
+    tone: "problem",
+    message: () => "This call already has two people in it.",
+  },
+  refused: {
+    title: "Can't join this lesson",
+    tone: "problem",
+    message: () => "This session can't be joined right now.",
+  },
 };
 
 function CallView({
@@ -351,34 +393,48 @@ function CallView({
   onFinished: () => void;
   onRejoin: () => void;
 }) {
-  const { state, toggleAudio, toggleVideo, hangup } = useDirectCall(session, stream);
+  const { state, toggleAudio, toggleVideo, startScreenShare, stopScreenShare, hangup } =
+    useDirectCall(session, stream);
   const creator = session.role === "CREATOR";
   const guardian = session.role === "GUARDIAN";
   const [confirmingEnd, setConfirmingEnd] = useState(false);
   const over = state.phase === "ended" || state.phase === "refused";
+  const connectedAt = useRef<number | null>(null);
+  const [durationMs, setDurationMs] = useState<number | null>(null);
 
   useEffect(() => {
-    if (over) onFinished();
+    if (state.phase === "in-call" && connectedAt.current === null) connectedAt.current = Date.now();
+  }, [state.phase]);
+
+  useEffect(() => {
+    if (!over) return;
+    onFinished();
+    // Frozen once, so the summary doesn't keep counting after the call is over.
+    setDurationMs(connectedAt.current === null ? null : Date.now() - connectedAt.current);
   }, [over, onFinished]);
 
   if (over) {
-    const message =
+    const copy =
       state.phase === "refused"
-        ? REFUSAL_COPY[state.refusal ?? "refused"]
-        : ENDED_COPY[state.endedReason ?? "creator-ended"](creator);
+        ? (REFUSAL_COPY[state.refusal ?? "refused"] ?? REFUSAL_COPY.refused)
+        : (ENDED_COPY[state.endedReason ?? "creator-ended"] ?? ENDED_COPY["creator-ended"]);
     const canRejoin = state.endedReason === "left" || state.refusal === "replaced";
     return (
-      <PageFrame home={home}>
-        <h1 className="font-display text-xl font-semibold text-slate-900">{session.className}</h1>
-        <Card>
-          <p className="text-sm text-slate-700">{message}</p>
-          {canRejoin && (
-            <Button type="button" className="mt-4" onClick={onRejoin}>
-              Rejoin
-            </Button>
-          )}
-        </Card>
-      </PageFrame>
+      <LessonEndedView
+        className={session.className}
+        peerName={state.peerName ?? session.peerName}
+        peerRole={creator ? "learner" : "tutor"}
+        scheduledStart={session.scheduledStart}
+        scheduledEnd={session.scheduledEnd}
+        mode="direct"
+        watched={guardian}
+        tone={copy.tone}
+        title={copy.title}
+        message={copy.message(creator)}
+        durationMs={durationMs}
+        home={home}
+        onRejoin={canRejoin ? onRejoin : undefined}
+      />
     );
   }
 
@@ -389,6 +445,14 @@ function CallView({
     state.remoteStream.getVideoTracks().length > 0;
   const hasLocalVideo = (stream?.getVideoTracks().length ?? 0) > 0;
   const hasLocalAudio = (stream?.getAudioTracks().length ?? 0) > 0;
+  // Tutors only, and only where the browser can share a screen (not iOS or Android).
+  const canShareScreen = creator && stream !== null && screenShareSupported();
+  const sharing = state.screenSharing;
+  const cameraLabel = sharing
+    ? "Camera is off while you share your screen"
+    : state.localVideo
+      ? "Turn camera off"
+      : "Turn camera on";
 
   return (
     <div className="flex flex-col bg-slate-900 text-white" style={{ height: "100dvh" }}>
@@ -412,40 +476,98 @@ function CallView({
         </div>
       )}
       <main className="relative min-h-0 flex-1 overflow-hidden">
-        {state.remoteStream && (
+        {sharing && (
+          // The tutor's own screen fills the main area while they share; the learner moves to
+          // the picture-in-picture box.
           <StreamVideo
-            stream={state.remoteStream}
-            label={`${peerLabel}'s video`}
-            className={`h-full w-full object-contain ${peerVideoShown ? "" : "invisible"}`}
+            stream={state.screenStream}
+            muted
+            label="Your shared screen"
+            className="h-full w-full object-contain"
           />
         )}
-        {!peerVideoShown && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
-            {state.phase === "in-call" ? (
-              <>
-                <Avatar initials={initialsOfFullName(peerLabel)} url={null} size="xl" />
-                <p className="text-sm text-slate-300">
-                  {state.remoteStream
-                    ? `${peerLabel}'s camera is off`
-                    : `Connecting to ${peerLabel}…`}
+        {/* One container for the peer, full-size or picture-in-picture: the remote <video> keeps
+            its place in the tree, so switching layout never remounts it or interrupts its audio. */}
+        <div
+          data-testid="peer-view"
+          className={
+            sharing
+              ? "absolute bottom-3 right-3 z-10 aspect-video w-28 overflow-hidden rounded-card border border-slate-700 bg-slate-800 shadow-lg sm:w-44"
+              : "absolute inset-0"
+          }
+        >
+          {state.remoteStream && (
+            <StreamVideo
+              stream={state.remoteStream}
+              label={`${peerLabel}'s video`}
+              className={`h-full w-full ${sharing ? "object-cover" : "object-contain"} ${
+                peerVideoShown ? "" : "invisible"
+              }`}
+            />
+          )}
+          {!peerVideoShown &&
+            (sharing ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-2 text-center">
+                <Avatar initials={initialsOfFullName(peerLabel)} url={null} size="md" />
+                <p className="truncate text-xs text-slate-300">
+                  {state.phase === "in-call"
+                    ? state.remoteStream
+                      ? "Camera off"
+                      : "Connecting…"
+                    : state.phase === "waiting"
+                      ? "Waiting…"
+                      : "Connecting…"}
                 </p>
-              </>
+              </div>
             ) : (
-              <>
-                <Spinner />
-                <p className="text-sm text-slate-300">
-                  {state.phase === "waiting" ? `Waiting for ${peerLabel} to join…` : "Connecting…"}
-                </p>
-              </>
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
+                {state.phase === "in-call" ? (
+                  <>
+                    <Avatar initials={initialsOfFullName(peerLabel)} url={null} size="xl" />
+                    <p className="text-sm text-slate-300">
+                      {state.remoteStream
+                        ? `${peerLabel}'s camera is off`
+                        : `Connecting to ${peerLabel}…`}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Spinner />
+                    <p className="text-sm text-slate-300">
+                      {state.phase === "waiting"
+                        ? `Waiting for ${peerLabel} to join…`
+                        : "Connecting…"}
+                    </p>
+                  </>
+                )}
+              </div>
+            ))}
+        </div>
+        {(sharing ||
+          (state.phase === "in-call" &&
+            state.remoteStream &&
+            (!state.peerMedia.audio || state.peerMedia.screen))) && (
+          <div className="absolute left-3 top-3 flex flex-col items-start gap-1">
+            {sharing && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-800/80 px-2 py-1 text-xs">
+                <ScreenShare className="h-3.5 w-3.5" aria-hidden="true" /> You're sharing your
+                screen
+              </span>
+            )}
+            {state.phase === "in-call" && state.remoteStream && state.peerMedia.screen && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-800/80 px-2 py-1 text-xs">
+                <ScreenShare className="h-3.5 w-3.5" aria-hidden="true" /> {peerLabel} is sharing
+                their screen
+              </span>
+            )}
+            {state.phase === "in-call" && state.remoteStream && !state.peerMedia.audio && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-800/80 px-2 py-1 text-xs">
+                <MicOff className="h-3.5 w-3.5" aria-hidden="true" /> {peerLabel} is muted
+              </span>
             )}
           </div>
         )}
-        {state.phase === "in-call" && state.remoteStream && !state.peerMedia.audio && (
-          <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-slate-800/80 px-2 py-1 text-xs">
-            <MicOff className="h-3.5 w-3.5" aria-hidden="true" /> {peerLabel} is muted
-          </span>
-        )}
-        {hasLocalVideo && (
+        {!sharing && hasLocalVideo && (
           <div className="absolute bottom-3 right-3 w-28 overflow-hidden rounded-card border border-slate-700 bg-slate-800 shadow-lg sm:w-44">
             <StreamVideo
               stream={stream}
@@ -470,13 +592,27 @@ function CallView({
               {state.localAudio ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
             </ControlButton>
             <ControlButton
-              label={state.localVideo ? "Turn camera off" : "Turn camera on"}
+              label={cameraLabel}
               active={state.localVideo}
-              disabled={!hasLocalVideo}
+              disabled={!hasLocalVideo || sharing}
               onClick={toggleVideo}
             >
               {state.localVideo ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
             </ControlButton>
+            {canShareScreen && (
+              <ControlButton
+                label={sharing ? "Stop sharing your screen" : "Share your screen"}
+                active={!sharing}
+                disabled={false}
+                onClick={() => void (sharing ? stopScreenShare() : startScreenShare())}
+              >
+                {sharing ? (
+                  <ScreenShareOff className="h-5 w-5" />
+                ) : (
+                  <ScreenShare className="h-5 w-5" />
+                )}
+              </ControlButton>
+            )}
           </>
         )}
         <Button

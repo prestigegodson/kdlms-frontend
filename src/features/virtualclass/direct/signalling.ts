@@ -19,7 +19,7 @@ export type SignalIn =
   | { type: "offer"; sdp: string }
   | { type: "answer"; sdp: string }
   | { type: "ice"; candidate: string | null; sdpMid: string | null; sdpMLineIndex: number | null }
-  | { type: "media-state"; audio: boolean; video: boolean }
+  | { type: "media-state"; audio: boolean; video: boolean; screen: boolean }
   | { type: "session-ending"; minutesLeft: number }
   | { type: "ended"; reason: EndedReason | string }
   | { type: "error"; code: string }
@@ -32,7 +32,7 @@ export type SignalOut =
   | { type: "offer"; sdp: string }
   | { type: "answer"; sdp: string }
   | { type: "ice"; candidate: string | null; sdpMid: string | null; sdpMLineIndex: number | null }
-  | { type: "media-state"; audio: boolean; video: boolean }
+  | { type: "media-state"; audio: boolean; video: boolean; screen: boolean }
   | { type: "hangup" }
   | { type: "ping" }
   | { type: "pong" };
@@ -84,7 +84,13 @@ export function parseSignal(text: string): SignalIn | null {
       };
     case "media-state":
       return isBoolean(frame.audio) && isBoolean(frame.video)
-        ? { type: "media-state", audio: frame.audio, video: frame.video }
+        ? {
+            type: "media-state",
+            audio: frame.audio,
+            video: frame.video,
+            // Optional: an older peer never sends it.
+            screen: frame.screen === true,
+          }
         : null;
     case "session-ending":
       return isNumber(frame.minutesLeft)

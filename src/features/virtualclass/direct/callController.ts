@@ -52,9 +52,15 @@ export interface CallState {
   remoteStream: MediaStream | null;
   peerName: string | null;
   peerRole: ParticipantRole | null;
-  peerMedia: { audio: boolean; video: boolean };
+  /** `screen`: the other side is sending a screen share rather than their camera. */
+  peerMedia: { audio: boolean; video: boolean; screen: boolean };
   localAudio: boolean;
+  /** The camera is on and being sent. Always false while this side shares its screen. */
   localVideo: boolean;
+  /** This side (only ever the creator) is sharing its screen in place of its camera. */
+  screenSharing: boolean;
+  /** The screen being shared, for the self-view; null when not sharing. */
+  screenStream: MediaStream | null;
   /** Bumped when the local stream's tracks change (a camera switch), so previews re-render. */
   localVersion: number;
   endedReason: CallEndReason | null;
@@ -68,6 +74,8 @@ export interface CallDeps {
   MediaStream: typeof MediaStream;
   join: (occurrenceId: string) => Promise<JoinView>;
   getUserMedia: (constraints: MediaStreamConstraints) => Promise<MediaStream>;
+  /** Missing where the browser can't share a screen (iOS, Android, Chrome < 72). */
+  getDisplayMedia: ((constraints: MediaStreamConstraints) => Promise<MediaStream>) | null;
   location: Pick<Location, "protocol" | "host">;
   /** `addEventListener` target for `online` - reconnect straight away when the network returns. */
   events: Pick<Window, "addEventListener" | "removeEventListener"> | null;
@@ -155,6 +163,15 @@ export function analyzeStats(report: RTCStatsReport): StatsSample {
   return { path, rttSeconds, packetsLost, packetsReceived };
 }
 
+/** Screen sharing needs `getDisplayMedia`: desktop Chrome 72+, Firefox 66+, Safari 13+ - never iOS or Android. */
+export function screenShareSupported(): boolean {
+  return (
+    typeof navigator !== "undefined" &&
+    !!navigator.mediaDevices &&
+    typeof navigator.mediaDevices.getDisplayMedia === "function"
+  );
+}
+
 function defaultDeps(): CallDeps {
   return {
     RTCPeerConnection: window.RTCPeerConnection,
@@ -162,6 +179,9 @@ function defaultDeps(): CallDeps {
     MediaStream: window.MediaStream,
     join: joinLiveSession,
     getUserMedia: (constraints) => navigator.mediaDevices.getUserMedia(constraints),
+    getDisplayMedia: screenShareSupported()
+      ? (constraints) => navigator.mediaDevices.getDisplayMedia(constraints)
+      : null,
     location: window.location,
     events: window,
     reportConnection: reportCallConnection,
@@ -193,6 +213,12 @@ export class DirectCallController {
   private previousLoss = { lost: 0, received: 0 };
   /** This peer connection's beacon has gone out. */
   private connectionReported = false;
+  /** The screen track being sent in the camera's place, while sharing. */
+  private screenTrack: MediaStreamTrack | null = null;
+  /** Whether the camera was on when sharing began, so stopping puts it back as it was. */
+  private cameraWasOn = false;
+  /** A `getDisplayMedia` picker is open. */
+  private screenPending = false;
 
   private startTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -215,9 +241,11 @@ export class DirectCallController {
       remoteStream: null,
       peerName: session.peerName,
       peerRole: null,
-      peerMedia: { audio: true, video: true },
+      peerMedia: { audio: true, video: true, screen: false },
       localAudio: this.publishes && audio.some((track) => track.enabled),
       localVideo: this.publishes && video.some((track) => track.enabled),
+      screenSharing: false,
+      screenStream: null,
       localVersion: 0,
       endedReason: null,
       refusal: null,
@@ -278,6 +306,7 @@ export class DirectCallController {
     this.socket?.close();
     this.socket = null;
     this.closePeerConnection();
+    this.releaseScreen();
   }
 
   private isOver(): boolean {
@@ -299,6 +328,8 @@ export class DirectCallController {
     this.peerPresent = false;
     this.update({
       endedReason: reason,
+      screenSharing: false,
+      screenStream: null,
       remoteStream: null,
       reconnecting: false,
       connection: "connecting",
@@ -310,7 +341,13 @@ export class DirectCallController {
     this.dispose();
     this.iceConnected = false;
     this.peerPresent = false;
-    this.update({ refusal: reason, remoteStream: null, reconnecting: false });
+    this.update({
+      refusal: reason,
+      remoteStream: null,
+      reconnecting: false,
+      screenSharing: false,
+      screenStream: null,
+    });
   }
 
   // ---- signalling ------------------------------------------------------------------------------
@@ -452,7 +489,9 @@ export class DirectCallController {
         this.onRemoteCandidate(message);
         break;
       case "media-state":
-        this.update({ peerMedia: { audio: message.audio, video: message.video } });
+        this.update({
+          peerMedia: { audio: message.audio, video: message.video, screen: message.screen },
+        });
         break;
       case "session-ending":
         this.update({ endingMinutes: message.minutesLeft });
@@ -488,7 +527,7 @@ export class DirectCallController {
     this.update({
       remoteStream: null,
       connection: "connecting",
-      peerMedia: { audio: true, video: true },
+      peerMedia: { audio: true, video: true, screen: false },
     });
     this.pc = this.createPeerConnection();
   }
@@ -520,7 +559,12 @@ export class DirectCallController {
     });
     if (this.publishes && this.localStream) {
       const stream = this.localStream;
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+      const screen = this.screenTrack;
+      stream.getTracks().forEach((track) => {
+        // While sharing, the screen goes out in the camera's place.
+        if (!(screen && track.kind === "video")) pc.addTrack(track, stream);
+      });
+      if (screen) pc.addTrack(screen, stream);
     }
     pc.onicecandidate = (event) => {
       // The end-of-candidates marker (null) isn't sent: nothing on the floor needs it.
@@ -721,7 +765,13 @@ export class DirectCallController {
   }
 
   private sendMediaState(): void {
-    this.send({ type: "media-state", audio: this.state.localAudio, video: this.state.localVideo });
+    const screen = this.state.screenSharing;
+    this.send({
+      type: "media-state",
+      audio: this.state.localAudio,
+      video: this.state.localVideo || screen,
+      screen,
+    });
   }
 
   toggleAudio(): void {
@@ -735,18 +785,15 @@ export class DirectCallController {
 
   toggleVideo(): void {
     const tracks = this.tracks("video");
-    if (!this.publishes || tracks.length === 0) return;
+    // The camera stays off while the screen is shared; stopping the share brings it back.
+    if (!this.publishes || tracks.length === 0 || this.state.screenSharing) return;
     const enabled = !this.state.localVideo;
     tracks.forEach((track) => (track.enabled = enabled));
     this.update({ localVideo: enabled });
     this.sendMediaState();
   }
 
-  /**
-   * Swaps the camera. `replaceTrack` where it exists; otherwise (Chrome 64's Plan B) remove and
-   * re-add the track, which reaches the other side with the creator's next offer - straight away
-   * when this is the creator.
-   */
+  /** Swaps the camera (see `swapOutgoingVideo`). */
   async switchCamera(deviceId: string): Promise<void> {
     const stream = this.localStream;
     const old = this.tracks("video")[0];
@@ -759,22 +806,124 @@ export class DirectCallController {
       fresh.stop();
       return;
     }
-    fresh.enabled = this.state.localVideo;
+    fresh.enabled = this.state.screenSharing ? false : this.state.localVideo;
+    // While sharing, the screen holds the sender; the new camera takes over when sharing stops.
     const pc = this.pc;
-    const sender = pc?.getSenders().find((candidate) => candidate.track === old);
-    if (pc && sender) {
-      if (typeof sender.replaceTrack === "function") {
-        await sender.replaceTrack(fresh);
-      } else {
-        pc.removeTrack(sender);
-        pc.addTrack(fresh, stream);
-        if (this.isCreator) void this.makeOffer(false);
-      }
+    if (pc && !this.screenTrack && pc.getSenders().some((sender) => sender.track === old)) {
+      await this.swapOutgoingVideo(old, fresh);
     }
     stream.removeTrack(old);
     stream.addTrack(fresh);
     old.stop();
     this.update({ localVersion: this.state.localVersion + 1 });
+  }
+
+  /**
+   * Puts `fresh` on the wire where `old` was: `replaceTrack` where it exists; otherwise (Chrome 64's
+   * Plan B) remove and re-add, which reaches the other side with the creator's next offer - straight
+   * away when this is the creator. With no sender carrying `old` (a creator who joined
+   * microphone-only starting a screen share), `fresh` is added and the creator offers again.
+   */
+  private async swapOutgoingVideo(
+    old: MediaStreamTrack | null,
+    fresh: MediaStreamTrack,
+  ): Promise<void> {
+    const pc = this.pc;
+    const stream = this.localStream;
+    if (!pc || !stream) return;
+    const sender = old ? pc.getSenders().find((candidate) => candidate.track === old) : undefined;
+    if (sender && typeof sender.replaceTrack === "function") {
+      await sender.replaceTrack(fresh);
+      return;
+    }
+    if (sender) pc.removeTrack(sender);
+    pc.addTrack(fresh, stream);
+    if (this.isCreator) void this.makeOffer(false);
+  }
+
+  /** Takes the screen track off the wire: back to the camera, or nothing when there is none. */
+  private async restoreOutgoingVideo(screen: MediaStreamTrack): Promise<void> {
+    const camera = this.tracks("video")[0];
+    if (camera) {
+      await this.swapOutgoingVideo(screen, camera);
+      return;
+    }
+    const pc = this.pc;
+    const sender = pc?.getSenders().find((candidate) => candidate.track === screen);
+    if (pc && sender) {
+      pc.removeTrack(sender);
+      if (this.isCreator) void this.makeOffer(false);
+    }
+  }
+
+  /**
+   * The tutor shares a screen, window or tab in place of their camera, which is switched off for as
+   * long as the share lasts. Only the creator shares: as the offerer it is the side that can
+   * renegotiate when there is no video sender to reuse. A cancelled picker changes nothing.
+   */
+  async startScreenShare(): Promise<void> {
+    const getDisplayMedia = this.deps.getDisplayMedia;
+    if (
+      !this.isCreator ||
+      !this.publishes ||
+      !this.localStream ||
+      !getDisplayMedia ||
+      this.screenTrack ||
+      this.screenPending ||
+      this.isOver()
+    ) {
+      return;
+    }
+    this.screenPending = true;
+    let display: MediaStream;
+    try {
+      display = await getDisplayMedia({ video: true, audio: false });
+    } catch {
+      // NotAllowedError when the picker is cancelled; nothing to undo.
+      return;
+    } finally {
+      this.screenPending = false;
+    }
+    const screen = display.getVideoTracks()[0];
+    if (!screen) return;
+    if (this.disposed || this.isOver()) {
+      display.getTracks().forEach((track) => track.stop());
+      return;
+    }
+    const cameras = this.tracks("video");
+    this.cameraWasOn = this.state.localVideo;
+    cameras.forEach((track) => (track.enabled = false));
+    this.screenTrack = screen;
+    // The browser's own "Stop sharing" bar ends the track.
+    screen.onended = () => void this.stopScreenShare();
+    this.update({ screenSharing: true, screenStream: display, localVideo: false });
+    await this.swapOutgoingVideo(cameras[0] ?? null, screen);
+    this.sendMediaState();
+  }
+
+  /** Stops sharing and puts the camera back the way it was before. */
+  async stopScreenShare(): Promise<void> {
+    const screen = this.screenTrack;
+    if (!screen) return;
+    this.screenTrack = null;
+    screen.onended = null;
+    const cameraOn = this.cameraWasOn && this.tracks("video").length > 0;
+    this.tracks("video").forEach((track) => (track.enabled = cameraOn));
+    this.update({ screenSharing: false, screenStream: null, localVideo: cameraOn });
+    if (!this.disposed && !this.isOver()) {
+      await this.restoreOutgoingVideo(screen);
+      this.sendMediaState();
+    }
+    screen.stop();
+  }
+
+  /** Stops the screen track without renegotiating - the call is going away. */
+  private releaseScreen(): void {
+    const screen = this.screenTrack;
+    if (!screen) return;
+    this.screenTrack = null;
+    screen.onended = null;
+    screen.stop();
   }
 
   /**

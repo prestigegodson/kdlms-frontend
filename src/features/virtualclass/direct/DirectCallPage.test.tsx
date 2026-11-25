@@ -114,6 +114,76 @@ describe("DirectCallPage", () => {
       FakeSocket.instances = [];
     }
   });
+
+  describe("screen share", () => {
+    /** Joins the call as `role`; `display` adds `getDisplayMedia` to the stubbed devices. */
+    async function joinCall(role: JoinView["role"], display: boolean) {
+      const devices = stubMediaDevices(async () =>
+        fakeStream([fakeTrack("audio"), fakeTrack("video")]),
+      );
+      if (display) {
+        Object.assign(devices, {
+          getDisplayMedia: vi.fn(async () => fakeStream([fakeTrack("video")])),
+        });
+      }
+      vi.stubGlobal("WebSocket", FakeSocket);
+      vi.stubGlobal("RTCPeerConnection", FakePeerConnection);
+      renderPage(directSession({ role }));
+      await userEvent.click(await screen.findByRole("button", { name: /Join call/ }));
+      return devices as typeof devices & { getDisplayMedia?: ReturnType<typeof vi.fn> };
+    }
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      FakeSocket.instances = [];
+    });
+
+    it("lets the tutor share their screen, switching the camera off", async () => {
+      const devices = await joinCall("CREATOR", true);
+      await userEvent.click(await screen.findByRole("button", { name: "Share your screen" }));
+
+      expect(devices.getDisplayMedia).toHaveBeenCalled();
+      expect(
+        await screen.findByRole("button", { name: "Stop sharing your screen" }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("You're sharing your screen")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Camera is off while you share your screen" }),
+      ).toBeDisabled();
+    });
+
+    it("shows the tutor's shared screen full-size, with the learner moved to the small box", async () => {
+      await joinCall("CREATOR", true);
+      expect(await screen.findByLabelText("Your video")).toBeInTheDocument();
+      expect(screen.getByTestId("peer-view")).toHaveClass("inset-0");
+
+      await userEvent.click(await screen.findByRole("button", { name: "Share your screen" }));
+
+      const shared = await screen.findByLabelText("Your shared screen");
+      expect(shared).toHaveClass("h-full", "w-full", "object-contain");
+      expect(shared.parentElement).toBe(screen.getByRole("main"));
+      expect(screen.getByTestId("peer-view")).toHaveClass("bottom-3", "right-3");
+      expect(screen.queryByLabelText("Your video")).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "Stop sharing your screen" }));
+
+      expect(await screen.findByLabelText("Your video")).toBeInTheDocument();
+      expect(screen.queryByLabelText("Your shared screen")).not.toBeInTheDocument();
+      expect(screen.getByTestId("peer-view")).toHaveClass("inset-0");
+    });
+
+    it("has no share button where the browser can't share a screen", async () => {
+      await joinCall("CREATOR", false);
+      expect(await screen.findByRole("button", { name: "Turn camera off" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Share your screen" })).not.toBeInTheDocument();
+    });
+
+    it("has no share button for a learner", async () => {
+      await joinCall("LEARNER", true);
+      expect(await screen.findByRole("button", { name: "Turn camera off" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Share your screen" })).not.toBeInTheDocument();
+    });
+  });
 });
 
 describe("useDirectCall", () => {
