@@ -68,12 +68,31 @@ describe("closeKind", () => {
 
 describe("socketUrl", () => {
   it("builds a same-origin socket URL with no credentials in it", () => {
-    expect(socketUrl("/ws/rtc", { protocol: "https:", host: "app.test" })).toBe(
+    expect(socketUrl("/ws/rtc", { protocol: "https:", host: "app.test" }, "")).toBe(
       "wss://app.test/ws/rtc",
     );
-    expect(socketUrl("/ws/rtc", { protocol: "http:", host: "localhost:5173" })).toBe(
+    expect(socketUrl("/ws/rtc", { protocol: "http:", host: "localhost:5173" }, "")).toBe(
       "ws://localhost:5173/ws/rtc",
     );
+  });
+
+  it("follows a cross-origin API base, as production's app/api split needs", () => {
+    const page = { protocol: "https:", host: "app.kdlms.com" };
+    expect(socketUrl("/ws/rtc", page, "https://api.kdlms.com")).toBe(
+      "wss://api.kdlms.com/ws/rtc",
+    );
+    expect(socketUrl("/ws/rtc", page, "https://api.kdlms.com/")).toBe(
+      "wss://api.kdlms.com/ws/rtc",
+    );
+    expect(socketUrl("ws/rtc", page, "http://localhost:8080")).toBe(
+      "ws://localhost:8080/ws/rtc",
+    );
+  });
+
+  it("leaves an already-absolute socket URL alone", () => {
+    expect(
+      socketUrl("wss://rtc.example/ws/rtc", { protocol: "https:", host: "a" }, "https://api.b"),
+    ).toBe("wss://rtc.example/ws/rtc");
   });
 });
 

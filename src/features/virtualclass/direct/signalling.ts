@@ -138,14 +138,26 @@ export function closeKind(code: number): CloseKind {
   }
 }
 
-/** The absolute `ws(s)://` URL for the join's same-origin `signallingUrl` (e.g. `/ws/rtc`). */
+/**
+ * The absolute `ws(s)://` URL for the join's `signallingUrl` (e.g. `/ws/rtc`). A relative path
+ * resolves against the API origin, like `apiUrl()` does for REST: in production the SPA
+ * (`app.kdlms.com`) and the backend (`api.kdlms.com`) are different hosts, and the SPA's static
+ * host answers `/ws/rtc` with `index.html`. With no absolute `VITE_API_BASE_URL` (dev's Vite proxy,
+ * or a same-origin nginx `/ws/` proxy), it falls back to the page's own host.
+ */
 export function socketUrl(
   path: string,
   location: Pick<Location, "protocol" | "host"> = window.location,
+  apiBase: string = import.meta.env.VITE_API_BASE_URL ?? "",
 ): string {
   if (/^wss?:\/\//.test(path)) return path;
+  const normalized = path.charAt(0) === "/" ? path : `/${path}`;
+  const base = /^(https?):\/\/(.+?)\/*$/.exec(apiBase.trim());
+  if (base) {
+    return `${base[1] === "https" ? "wss:" : "ws:"}//${base[2]}${normalized}`;
+  }
   const scheme = location.protocol === "https:" ? "wss:" : "ws:";
-  return `${scheme}//${location.host}${path.charAt(0) === "/" ? path : `/${path}`}`;
+  return `${scheme}//${location.host}${normalized}`;
 }
 
 export interface SignallingHandlers {
